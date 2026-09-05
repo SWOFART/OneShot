@@ -1,0 +1,33 @@
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+*.key
+*.pem
+
+# Editor and IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and temp
+*.log
+tmp/
+temp/
+.gate-context/
+
+# Build artifacts and caches (expand per stack)
+dist/
+build/
+coverage/
+node_modules/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
