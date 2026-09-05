@@ -1,0 +1,30 @@
+name: Bug report
+description: Create a report to help reproduce and fix a defect.
+title: "[Bug]: "
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem description
+      description: Clear and concise description of what happened.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps to trigger the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Environment & context
+      description: OS, branch, commit, logs, or error messages.

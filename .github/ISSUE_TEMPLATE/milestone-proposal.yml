@@ -1,0 +1,58 @@
+name: Milestone or feature proposal
+description: Propose a measurable product, engineering, or feature outcome.
+title: "[Proposal]: "
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome and user value
+      description: Describe the result, not only the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List objective conditions that prove the work is complete.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: In scope
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Out of scope
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Test and measurement plan
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Security, privacy, cost, and operational risks
+    validations:
+      required: true
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback or safe-disable strategy
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Scope checks
+      options:
+        - label: This proposal represents one reviewable milestone outcome.
+          required: true
