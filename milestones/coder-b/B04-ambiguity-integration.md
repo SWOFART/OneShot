@@ -1,7 +1,7 @@
 # B04 — Provider Ambiguity and Production Adapter Pack
 
 Owner: Coder B
-Forecast: 4 working days
+Effort: L — roughly one to two focused weeks
 Branch: `milestone/b04-ambiguity-integration`
 Depends on: B03 only
 Next: hold B05 until project Gate P4

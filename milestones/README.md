@@ -35,10 +35,20 @@ Use these states in the PR or project tracker:
 - Never depend on another coder’s active branch.
 - Never import another coder’s private implementation path.
 - Consume only frozen schemas, fixtures, simulators, or reviewed package exports.
-- Preserve backward compatibility within a delivery wave.
+- Preserve backward compatibility within a delivery phase.
 - Convert breaking proposals into additive versioned contracts.
 - A project integration failure creates a focused ticket for the owning lane; it does not reopen unrelated completed packets.
 - Status meetings and review availability do not gate coding. Record assumptions and continue fail-closed.
+
+## Effort and scheduling
+
+- `S`: less than one focused week.
+- `M`: roughly one focused week.
+- `L`: roughly one to two focused weeks.
+
+These are comparison bands, not delivery promises. The root roadmap defines
+phase order and the approximate six-to-eight-week product range. Packet closure
+still depends on evidence, contracts, and review rather than elapsed time.
 
 ## Small-task sizing
 

@@ -4,6 +4,11 @@ Mission: build the authoritative intent ledger, API, worker, concurrency guarant
 
 Exclusive paths are listed in `plan.md`. Do not implement provider-specific logic; consume `AuthorizationPort`, `SettlementPort`, `EvidencePort`, and `IndexViewPort` through contracts and simulators.
 
+## Technology focus
+
+Node.js, strict TypeScript, pnpm, Fastify, OpenAPI/JSON Schema, PostgreSQL,
+`pg`, Graphile Worker, React/Vite, Vitest, Testcontainers, and Playwright.
+
 ## Sequence
 
 1. [A01 — Foundation and contracts](A01-foundation-contracts.md)

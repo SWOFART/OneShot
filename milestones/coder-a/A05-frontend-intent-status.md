@@ -1,7 +1,7 @@
 # A05 — Frontend Intent and Authoritative Status
 
 Owner: Coder A
-Forecast: 2 working days
+Effort: S — less than one focused week
 Branch: `milestone/a05-frontend-intent-status`
 Depends on: A04 and project Gate P4
 Next: A06 immediately after closure

@@ -1,7 +1,7 @@
 # A04 — Restart Safety, Operations, and Simulator Composition
 
 Owner: Coder A
-Forecast: 4 working days
+Effort: L — roughly one to two focused weeks
 Branch: `milestone/a04-restart-operations-composition`
 Depends on: A03 only
 Next: hold A05 until project Gate P4; improve backend evidence while waiting

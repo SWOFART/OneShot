@@ -4,6 +4,11 @@ Mission: provide a conservative, policy-constrained Privy/Arc adapter with exact
 
 Stay inside B-owned packages and fixtures. Consume domain requests from the frozen contract pack; never redefine durable states or edit migrations.
 
+## Technology focus
+
+Privy Node SDK, Privy execution-wallet policies, `viem`, Arc Testnet RPC and
+ERC-20 USDC, React/Vite, Vitest, and sanitized provider fixtures.
+
 ## Sequence
 
 1. [B01 — SDK and network compatibility](B01-sdk-network-compatibility.md)

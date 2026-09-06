@@ -1,7 +1,7 @@
 # C03 — Cross-Source Failure Injection
 
 Owner: Coder C
-Forecast: 3 working days
+Effort: M — roughly one focused week
 Branch: `milestone/c03-failure-injection`
 Depends on: C02 only
 Next: C04 immediately after closure

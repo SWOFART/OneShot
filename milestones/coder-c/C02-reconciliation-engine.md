@@ -1,7 +1,7 @@
 # C02 — Deterministic Reconciliation Engine
 
 Owner: Coder C
-Forecast: 3 working days
+Effort: M — roughly one focused week
 Branch: `milestone/c02-reconciliation-engine`
 Depends on: C01 only
 Next: C03 immediately after closure
