@@ -1,521 +1,579 @@
-# OneShot Product Implementation Plan
+# OneShot Product Delivery Plan
 
-Status: implementation-ready proposal
-Team: exactly three engineers
-Planning horizon: 20 working days, recalibrated after Milestone 1
-Base for implementation: current `develop` after the agent-infrastructure work is human-reviewed and merged
+Status: implementation-ready planning baseline
+Team: exactly three coders
+Planning horizon: 20 working days, recalibrated after Backend Wave 1
+Implementation base: the human-approved commit containing this plan
 Research basis: `.agent/research/20260906-integration-decisions.md`
+Detailed work packets: [`milestones/README.md`](milestones/README.md)
 
-## 1. Outcome
+## 1. Mission
 
-Deliver a testnet application that accepts one approved Business Intent, safely survives retries, crashes, duplicate delivery, parallel workers, and ambiguous provider responses, and produces at most one committed USDC settlement on Arc Testnet through a Privy-controlled corporate wallet. The Graph supplies live indexed history and recovery evidence without becoming an authorization source.
+Deliver a testnet application that accepts one approved Business Intent, safely survives retries, crashes, duplicate delivery, parallel workers, and ambiguous provider responses, and produces at most one committed ERC-20 USDC settlement on Arc Testnet through a Privy-controlled corporate wallet. The Graph supplies live indexed recovery and history evidence without becoming settlement authority.
 
 The release claim is:
 
 `1 Business Intent / N Attempts / <= 1 committed Settlement`
 
-The milestone plan is deliberately backend-first. No production frontend work begins until the backend integration and failure suite pass in Milestone 4.
+The delivery plan is backend-first. Frontend implementation is deliberately placed in Wave 5 and may start only after the backend contract-freeze gate has passed.
 
-## 2. Success criteria
+## 2. Planning objectives
 
-- A caller creates a Business Intent with a stable `business_intent_id`; identical replays return the same durable result and conflicting payloads under the same ID fail explicitly.
-- Privy authorization and wallet policy constrain every normal settlement path. Wrong network, asset, recipient, method, or above-cap amount results in zero settlement.
-- A valid intent produces a real ERC-20 USDC transfer on Arc Testnet and stores the final receipt and transfer identity.
-- A timeout, lost response, or crash after possible submission produces durable `UNKNOWN`; no new settlement submission is allowed until reconciliation resolves it.
-- Ten sequential retries, ten parallel workers, a restart, and two agent instances cannot produce more than one committed settlement.
-- Live The Graph data explains settlement history and supports recovery. Empty, delayed, or unhealthy indexed data never unlocks another payment.
-- Money remains an integer string/`bigint` in six-decimal ERC-20 USDC atomic units from API through policy evaluation, storage, calldata, indexing, and UI.
-- The final demo proves Privy, Arc, and The Graph requirements with testnet evidence and exposes no secrets.
+This plan optimizes for five properties:
 
-## 3. Scope
+1. Safety: uncertainty never becomes permission to pay again.
+2. Independent progress: no coder waits for another coder’s implementation to close a work packet.
+3. Low merge contention: each coder owns disjoint directories and shared files have a single editor.
+4. Verifiable handoffs: ports, OpenAPI, schemas, fixtures, and simulators are versioned artifacts.
+5. Late frontend: UI work consumes a stable backend contract instead of driving it.
 
-### In scope
+## 3. Product success criteria
 
-- TypeScript backend, worker, shared contracts, PostgreSQL state, and migrations.
-- Privy execution-wallet authorization and a fail-closed wallet policy.
-- Arc Testnet ERC-20 USDC submission, receipt verification, and explorer evidence.
-- Durable reconciliation using OneShot state, Privy identifiers/status, Arc RPC receipts, and The Graph evidence.
-- A custom Subgraph plus freshness and indexing-health classification.
-- Failure injection, concurrency tests, service restart tests, audit-safe structured logs, metrics, and a demo runbook.
-- A minimal operator/user frontend only after backend acceptance.
+- Identical requests reuse the same durable Business Intent; conflicting payloads under the same ID fail explicitly.
+- Privy authorization constrains every normal settlement path. Wrong network, token, method, recipient, value, or above-cap amount produces zero settlement.
+- A valid intent can produce one real ERC-20 USDC transfer on Arc Testnet and persist a verified receipt and Transfer identity.
+- A timeout, disconnect, lost response, or crash after possible submission produces durable `UNKNOWN`; a new payment is forbidden until authoritative reconciliation resolves it.
+- Ten sequential retries, ten parallel workers, restart recovery, queue redelivery, and two agent instances never produce more than one committed settlement.
+- Live The Graph data supports history and recovery. Empty, delayed, unhealthy, or contradictory indexed data never authorizes payment.
+- Money remains a canonical integer string at JSON boundaries and `bigint` internally, using six-decimal ERC-20 USDC atomic units.
+- The demo proves working Privy, Arc, and The Graph integrations with sanitized testnet evidence and no exposed secrets.
 
-### Explicit non-goals
+## 4. Scope
 
-- Mainnet, multi-chain, multi-asset, swaps, bridging, fiat on/off ramps, or custody beyond the configured Privy testnet wallet.
-- Treating The Graph as authoritative settlement state or as permission to retry.
-- Automatic same-nonce transaction replacement in the first release.
-- General workflow automation, arbitrary supplier integrations, accounting/ERP integrations, or production compliance certification.
-- Production-scale multi-region deployment, high availability, or a native mobile client.
+### Included
 
-## 4. Fixed technical decisions
+- Strict TypeScript monorepo, shared contracts, API, worker, PostgreSQL state, migrations, and transactional jobs.
+- Privy execution-wallet authorization and fail-closed wallet policy.
+- Arc Testnet ERC-20 USDC request construction, submission, receipt verification, and explorer evidence.
+- Durable reconciliation using OneShot state, Privy identifiers/status, Arc RPC receipts, and The Graph observations.
+- Custom Subgraph, indexed-history query, freshness and health classification.
+- Contract simulators, failure injection, concurrency and restart testing, structured logs, metrics, and operator runbooks.
+- Minimal operator/user frontend after backend acceptance.
 
-These decisions are frozen for the first implementation. Changing one requires a short ADR, updated contract fixtures, and approval from all affected owners.
+### Excluded
 
-| Area | Decision | Reason |
-| --- | --- | --- |
-| Runtime | Node.js LTS + strict TypeScript; exact versions pinned in Milestone 1 | One language across API, worker, Privy, Arc, Subgraph tooling, and frontend |
-| Repository | `pnpm` workspace with independently testable packages | Each owner can build and test without waiting for root integration |
-| API | HTTP JSON described by OpenAPI; generated schemas are checked for drift | Stable seam for simulators and the late frontend |
-| Durable state | PostgreSQL | Atomic conditional transitions, constraints, transactional enqueueing |
-| Work delivery | Graphile Worker in the same PostgreSQL database | At-least-once work without adding Redis; transactional enqueueing |
-| Money | Decimal-free integer strings at boundaries and `bigint` internally | Prevents floating-point loss and JSON `bigint` ambiguity |
-| Settlement asset | Arc Testnet ERC-20 USDC at `0x3600000000000000000000000000000000000000`, six decimals | One canonical payment representation; native USDC is gas accounting only |
-| Privy | Execution wallet with authorization owner/key quorum and one fail-closed policy | Privy remains a real authorization boundary, not branding |
-| Chain access | Arc RPC with startup checks for chain ID `5042002` and USDC bytecode | Fails closed on misconfiguration |
-| Indexed view | Custom Subgraph on `arc-testnet`, queried with `_meta` and explicit freshness | Live recovery/history with visible limitations |
-| External-effect queueing | `submit_settlement` gets one queue attempt; reconciliation reads may retry | Prevents the queue from blindly repeating an ambiguous payment |
+- Mainnet, additional chains/assets, swaps, bridges, fiat rails, automatic transaction replacement, or unrestricted payment overrides.
+- The Graph as duplicate lock, durable intent store, or proof that another settlement is safe.
+- General workflow automation, arbitrary supplier/ERP integrations, native mobile clients, production compliance certification, or multi-region HA.
+- UI polish that is not necessary to demonstrate the invariant and sponsor requirements.
 
-## 5. Architecture and ownership boundaries
+## 5. Fixed technical baseline
+
+| Area | Decision |
+| --- | --- |
+| Runtime | Node.js LTS and strict TypeScript; A01 pins the workspace runtime, while B01 proves SDK compatibility independently and reports any mismatch at P2 |
+| Workspace | `pnpm` workspace with package-local lint, type, test, and build commands |
+| API | HTTP JSON, OpenAPI source of truth, generated-schema drift check |
+| State | PostgreSQL with constraints, compare-and-set transitions, and transactional enqueueing |
+| Queue | Graphile Worker; at-least-once delivery is assumed |
+| Money | Integer strings at boundaries, `bigint` internally, no JavaScript monetary floats |
+| Settlement | Arc Testnet `eip155:5042002`, ERC-20 USDC `0x3600000000000000000000000000000000000000`, six decimals |
+| Authorization | Privy execution wallet with explicit fail-closed policy and persisted request identity |
+| Submission jobs | One queue attempt; task persists `COMMITTED`, `FAILED_SAFE`, or `UNKNOWN` before returning |
+| Recovery | OneShot and verified Arc evidence authoritative; The Graph is freshness-labeled observation only |
+| Frontend | Begins after Gate P4; consumes frozen OpenAPI and mock server |
+
+The exact v1 contracts, state table, fixture catalog, redaction rules, and change protocol are frozen in [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md).
+
+## 6. Architecture
 
 ```text
 Caller / late frontend
         |
         v
-HTTP API ---------> PostgreSQL authoritative ledger <------ Worker claims
-                         |          |                            |
-                         |          +---- durable outbox/jobs ---+
-                         |
-                         +--> AuthorizationPort --> Privy policy + wallet
-                         +--> SettlementPort ----> Arc ERC-20 USDC
-                         +--> EvidencePort ------> Privy status + Arc RPC
-                         +--> IndexViewPort -----> The Graph (non-authoritative)
+HTTP API ----------> PostgreSQL authoritative ledger <--------- Worker
+                          |          |                              |
+                          |          +-- transactional jobs/outbox -+
+                          |
+                          +--> AuthorizationPort --> Privy policy/wallet
+                          +--> SettlementPort ----> Arc ERC-20 USDC
+                          +--> EvidencePort ------> Privy status + Arc RPC
+                          +--> IndexViewPort -----> The Graph observation
 ```
 
-### Person A — Domain, storage, API, and work delivery
+OneShot decides whether settlement may be attempted. Privy constrains authorized wallet actions. Arc provides final settlement evidence. The Graph explains indexed history and freshness but grants no settlement right.
 
-Owns `packages/contracts`, `packages/domain`, `packages/storage-postgres`, `apps/api`, `apps/worker`, migrations, OpenAPI, and the domain adapter simulator. Person A does not implement Privy, Arc, or The Graph clients.
+## 7. Team topology and exclusive ownership
 
-### Person B — Privy authorization and Arc settlement
+### Coder A — domain and orchestration
 
-Owns `packages/privy-adapter`, `packages/arc-adapter`, policy fixtures, Arc chain configuration, transaction construction, receipt verification, provider error classification, and the settlement-adapter simulator. Person B does not change domain states or database tables directly.
+Owns:
 
-### Person C — Reconciliation, The Graph, and reliability evidence
+- `packages/contracts`
+- `packages/domain`
+- `packages/storage-postgres`
+- `packages/testkit-domain`
+- `apps/api`
+- `apps/worker`
+- root workspace/build configuration after the initial scaffold
+- migrations and OpenAPI
 
-Owns `packages/reconciliation`, `packages/graph-client`, `subgraph`, recovery-view contracts, freshness/health classification, and the failure-injection harness. Person C may propose state transitions only through the frozen reconciliation command port.
+Coder A never implements provider-specific Privy, Arc, or Graph behavior.
 
-### Shared files and conflict rule
+### Coder B — authorization and settlement adapters
 
-- Only Person A edits root workspace/build configuration after Milestone 1.
-- Every package must have a package-local test command so Persons B and C can run independently before root composition exists.
-- Contract changes are additive during a milestone. Breaking changes require an ADR and all three owners' approval; consumers retain the old form until migration is complete.
-- No owner imports another owner's implementation package. Integration happens only through ports and JSON fixtures defined below.
+Owns:
 
-## 6. Contract freeze — the mechanism that removes day-to-day blockers
+- `packages/privy-adapter`
+- `packages/arc-adapter`
+- `packages/testkit-settlement`
+- Privy policy and official-response fixtures
+- Arc network, transaction, and receipt validation
+- human-run provider setup documentation
 
-The following semantics are the Milestone 0 contract. Implementation details may vary, but no track may reinterpret them.
+Coder B never changes domain tables or state meanings directly.
 
-### 6.1 Create-intent command
+### Coder C — reconciliation and indexed recovery
 
-Required input:
+Owns:
 
-- `business_intent_id`: caller-supplied UUID/opaque stable ID.
-- `recipient`: checksummed or normalized EVM address.
-- `amount_atomic`: canonical base-10, non-negative integer string; no signs, decimals, exponent, or leading whitespace.
-- `asset`: exactly `USDC`.
-- `network`: exactly `eip155:5042002`.
-- `purpose`: non-secret, length-bounded human description used only for display/audit.
+- `packages/reconciliation`
+- `packages/graph-client`
+- `packages/testkit-failures`
+- `subgraph/`
+- recovery-view schemas and queries
+- failure matrix orchestration and recovery runbooks
 
-The server computes an immutable payload fingerprint from normalized recipient, amount, asset, network, and purpose. Reusing the ID with the same fingerprint is a replay; reusing it with a different fingerprint is a conflict and never creates another settlement right.
+Coder C issues state commands only through the frozen reconciliation command contract.
 
-### 6.2 Public HTTP seam
+### Shared-file rule
 
-| Operation | Required behavior |
-| --- | --- |
-| `POST /v1/intents` | Create or replay an intent; return `202` for accepted, `200` for identical replay, `409` for same-ID conflict, and no external effect in the request transaction |
-| `GET /v1/intents/{id}` | Return intent, attempts, settlement state, sanitized evidence, and stable version |
-| `POST /v1/intents/{id}/reconcile` | Enqueue/read-trigger reconciliation only; never directly submit settlement |
-| `GET /v1/intents/{id}/recovery-view` | Return authoritative local state plus clearly labeled indexed/provider evidence and freshness |
-| `GET /health/live` | Process liveness without external dependency claims |
-| `GET /health/ready` | Database plus configuration readiness; fail on wrong Arc chain ID or invalid required configuration |
+- Coder A is the sole editor of root workspace files, root scripts, OpenAPI, and migrations after scaffold freeze.
+- B and C provide package-local manifests, fixtures, and integration notes; A composes them through additive root changes.
+- A shared contract change is additive first. Removal occurs only after all consumers have migrated.
+- No package imports another owner’s implementation package. Cross-track use occurs through contracts, fixtures, simulators, or published package entry points.
 
-Every mutation uses service authentication, request-size limits, schema validation, a correlation ID, and rate limiting. API errors use stable machine codes and never expose provider secrets or raw authorization material.
+## 8. Independence model
 
-### 6.3 Port result contracts
+### 8.1 Work-packet closure
 
-| Port | Terminal result families | Required meaning |
-| --- | --- | --- |
-| `AuthorizationPort.evaluate` | `AUTHORIZED`, `DENIED`, `UNAVAILABLE` | `DENIED` and invalid scope produce zero submission; `UNAVAILABLE` is retryable only before submission |
-| `SettlementPort.submit` | `CONFIRMED`, `DEFINITELY_NOT_SUBMITTED`, `POSSIBLY_SUBMITTED` | The adapter must never collapse an ambiguous response into a safe retry |
-| `EvidencePort.lookup` | `FINAL_SUCCESS`, `FINAL_REVERT`, `PENDING`, `NOT_FOUND`, `UNAVAILABLE` | `NOT_FOUND` alone cannot authorize a new submission |
-| `IndexViewPort.lookup` | evidence plus indexed block, timestamp, deployment, lag, health | Data is explanatory; missing/unhealthy data cannot transition `UNKNOWN` to retryable |
+Each file under `milestones/coder-a`, `milestones/coder-b`, or `milestones/coder-c` is an independently closable milestone. A coder closes it when its local acceptance criteria, package checks, handoff artifact, and review requirements pass. Closure never requires another coder’s branch, approval, credentials, service, or unfinished implementation.
 
-All port requests contain the stable Business Intent ID, immutable payload fingerprint, Arc/USDC identifiers, persisted provider idempotency key, correlation ID, and attempt ID. Simulators must read and emit the same checked JSON fixtures as production adapters.
+### 8.2 Allowed prerequisites
 
-### 6.4 Durable state model
+A work packet may depend only on:
 
-Keep separate records for Business Intent, Attempt, and Settlement. A compact settlement state machine is:
+- the frozen v1 contract pack in `milestones/CONTRACTS.md`;
+- committed fixtures or simulators included in that contract pack;
+- the same coder’s immediately preceding packet;
+- human-provided credentials only for explicitly marked live-evidence checks, with an offline fixture path that still allows packet closure.
 
-| Current | Trigger | Next | External submission allowed? |
-| --- | --- | --- | --- |
-| `NONE` | validated intent accepted | `AUTHORIZING` | No |
-| `AUTHORIZING` | Privy policy authorizes | `READY` | No |
-| `AUTHORIZING` | policy denies | `REJECTED` | No, terminal |
-| `READY` | atomic owner grant persists request identity | `SUBMITTING` | Exactly one owner may cross the boundary |
-| `SUBMITTING` | verified final receipt and expected Transfer log | `COMMITTED` | No, terminal |
-| `SUBMITTING` | narrow proof of no broadcast | `FAILED_SAFE` | A new attempt may be scheduled by policy |
-| `SUBMITTING` | timeout, disconnect, lost response, crash, or doubt | `UNKNOWN` | No |
-| `UNKNOWN` | reconciliation finds verified success | `COMMITTED` | No, terminal |
-| `UNKNOWN` | reconciliation proves final revert/no settlement with authoritative evidence | `FAILED_SAFE` | Only then may policy schedule a new attempt |
-| `UNKNOWN` | pending, not found, lagging, unhealthy, or contradictory evidence | `UNKNOWN` | No; operator attention if deadline exceeded |
+Cross-coder artifacts are integration inputs, never closure prerequisites. If a real artifact is unavailable, the consumer uses the versioned simulator and records final live verification under a project gate.
 
-Mandatory storage constraints and records:
+### 8.3 No-wait continuation rule
 
-- Primary/unique Business Intent ID plus immutable fingerprint.
-- At most one Settlement row per Business Intent; provider transaction hash unique when present.
-- N append-only Attempt rows with stage, timestamps, sanitized error class, and correlation ID.
-- Persisted Privy idempotency key, reference ID, request fingerprint, wallet ID, recipient, amount, chain, token contract, transaction ID/hash/nonce when learned, receipt block/hash/status, and verified Transfer log identity.
-- Compare-and-set state transitions with a monotonically increasing version. No database transaction spans an external network call.
-- Transactional outbox/job insertion. Queue delivery and API retries are assumed duplicate and out of order.
-- On worker startup, any orphaned `SUBMITTING` record is conservatively moved/treated as `UNKNOWN` for reconciliation; lease expiry never grants a blind resubmission.
+When a coder closes a packet, they immediately begin their next packet. They do not wait for a global milestone meeting. A broken cross-track contract opens a small additive compatibility ticket; it does not freeze unrelated work.
 
-### 6.5 Agreed test seams
+### 8.4 Contract packs
 
-Tests observe behavior through these public seams only:
+Every producer publishes a package-local contract pack containing:
 
-1. HTTP API plus returned durable state.
-2. Worker task input/output plus durable state and external-submission counter.
-3. Adapter ports with official-response fixtures.
-4. Reconciliation command plus durable transition and evidence record.
-5. Subgraph mappings/GraphQL query plus indexed entity and `_meta` classification.
-6. Browser UI through the public API contract in Milestone 5.
+- version and compatibility range;
+- TypeScript types or JSON Schema;
+- one happy-path fixture and every relevant terminal/error fixture;
+- deterministic simulator;
+- package-local verification command;
+- redaction statement;
+- short migration note for additive changes.
 
-Each implementation ticket uses one red-green vertical slice at a time. Tests must assert both durable state and settlement count; HTTP status alone is insufficient.
+Consumers validate against the pack, not against a producer’s active branch.
 
-## 7. Milestone overview and dependency graph
+### 8.5 Async communication
 
-| Milestone | Days | Exit outcome |
-| --- | ---: | --- |
-| M0 — Contract and safety freeze | 0.5 | This plan, research, ports, fixtures, states, ownership, and test seams accepted |
-| M1 — Three independent walking skeletons | 1–4 | Each track runs locally with its own simulator and no cross-track implementation import |
-| M2 — Safety-critical vertical slices | 5–8 | Domain concurrency, real policy/transaction adapter, and reconciliation logic pass independently |
-| M3 — Failure and operational hardening | 9–12 | Each track passes its assigned fault, restart, and observability evidence |
-| M4 — Integrated backend and live testnet proof | 13–15 | All adapters compose; full matrix passes; one real authorized settlement is recorded and indexed |
-| M5 — Frontend, last | 16–18 | Minimal intent, status, and recovery UI works against the stable backend |
-| M6 — Demo qualification and release candidate | 19–20 | Scripted demo, sponsor evidence, runbooks, and release checks pass |
+- Each PR description is the handoff record: outcome, immutable contract version, commands, evidence, risks, and safe-disable behavior.
+- Questions default to a written assumption plus a fail-closed implementation. Only decisions that could weaken settlement cardinality, money representation, authorization, or `UNKNOWN` handling require synchronous escalation.
+- Daily status is informational and never an approval gate.
+
+## 9. Delivery waves
+
+| Wave | Days | A | B | C | Project gate |
+| --- | ---: | --- | --- | --- | --- |
+| W0 | 0 | Read frozen pack; branch | Read frozen pack; branch | Read frozen pack; branch | P0 plan/contract approval |
+| W1 | 1–4 | A01 | B01 | C01 | Independent toolchains runnable |
+| W2 | 4–7 | A02 | B02 | C02 | Contract packs v1 emitted |
+| W3 | 7–10 | A03 | B03 | C03 | Safety behavior proven independently |
+| W4 | 10–14 | A04 | B04 | C04 | P4 backend convergence and live proof |
+| W5 | 15–18 | A05 | B05 | C05 | P5 frontend acceptance |
+| W6 | 18–20 | A06 | B06 | C06 | P6 release candidate |
+
+Dates are forecasts, not permission to cut safety. Each coder may move to the next packet as soon as their current packet closes.
+
+## 10. Work-packet inventory
+
+| ID | Owner | Estimate | Own-track prerequisite | Independently verifiable output |
+| --- | --- | ---: | --- | --- |
+| [A01](milestones/coder-a/A01-foundation-contracts.md) | A | 3 d | Frozen contract pack | Workspace, contracts package, OpenAPI, domain simulator |
+| [A02](milestones/coder-a/A02-durable-intents.md) | A | 3 d | A01 | PostgreSQL intent/replay/conflict API |
+| [A03](milestones/coder-a/A03-atomic-worker.md) | A | 3 d | A02 | Atomic worker and at-most-once fake-port proof |
+| [A04](milestones/coder-a/A04-restart-operations-composition.md) | A | 4 d | A03 | Restart-safe orchestration and simulator composition |
+| [A05](milestones/coder-a/A05-frontend-intent-status.md) | A | 2 d | A04 + project Gate P4 | Intent/status frontend slice against mock server |
+| [A06](milestones/coder-a/A06-release-operations.md) | A | 2 d | A05 | Operational demo and release bundle |
+| [B01](milestones/coder-b/B01-sdk-network-compatibility.md) | B | 3 d | Frozen contract pack | SDK/network compatibility and readiness package |
+| [B02](milestones/coder-b/B02-request-policy-receipt.md) | B | 3 d | B01 | Canonical request, policy, and receipt verifier |
+| [B03](milestones/coder-b/B03-live-settlement-harness.md) | B | 3 d | B02 | Offline-complete plus live-ready settlement harness |
+| [B04](milestones/coder-b/B04-ambiguity-integration.md) | B | 4 d | B03 | Conservative outcomes and production adapter pack |
+| [B05](milestones/coder-b/B05-frontend-settlement-details.md) | B | 2 d | B04 + project Gate P4 | Authorization/settlement UI slice against fixtures |
+| [B06](milestones/coder-b/B06-sponsor-evidence.md) | B | 2 d | B05 | Privy/Arc sanitized evidence bundle |
+| [C01](milestones/coder-c/C01-subgraph-index-health.md) | C | 3 d | Frozen contract pack | Subgraph mappings and Graph health client |
+| [C02](milestones/coder-c/C02-reconciliation-engine.md) | C | 3 d | C01 | Deterministic reconciliation and evidence contract |
+| [C03](milestones/coder-c/C03-failure-injection.md) | C | 3 d | C02 | Cross-source chaos and restart harness |
+| [C04](milestones/coder-c/C04-recovery-matrix-integration.md) | C | 4 d | C03 | Recovery matrix and simulator integration pack |
+| [C05](milestones/coder-c/C05-frontend-recovery.md) | C | 2 d | C04 + project Gate P4 | Recovery timeline UI slice against fixtures |
+| [C06](milestones/coder-c/C06-qualification-demo.md) | C | 2 d | C05 | Graph/recovery qualification bundle |
+
+Each packet contains smaller, one-commit-sized tasks, exact acceptance criteria, tests, output artifacts, and a no-wait continuation instruction.
+
+## 11. Dependency graph
 
 ```text
-A1 -> A2 -> A3 --\
-B1 -> B2 -> B3 ----> M4 integrated backend -> M5 frontend -> M6 demo/release
-C1 -> C2 -> C3 --/
+Frozen v1 contract pack
+   |--------------------|--------------------|
+   v                    v                    v
+ A01 -> A02 -> A03 -> A04                 A05 -> A06
+ B01 -> B02 -> B03 -> B04 -- P4 backend -> B05 -> B06
+ C01 -> C02 -> C03 -> C04    gate          C05 -> C06
+                              |
+                     real adapters replace simulators
 ```
 
-There are no cross-person blockers through M3. Each task depends only on the same owner's prior task. M4 is the first convergence dependency; its build work can continue against simulators, but its exit test requires all three artifacts. This is intentional and cannot be removed without pretending integration is optional.
+The lane arrows are same-owner dependencies. Gate P4 is the only intentional convergence point before frontend. No backend work packet waits for P4 to close; A04/B04/C04 close against their own contract simulators. P4 only decides whether frontend may begin.
 
-## 8. Detailed milestones
+## 12. Project gates
 
-### M0 — Contract and safety freeze (all three, half day)
+Project gates coordinate the product but are not coder work-packet closure conditions.
 
-Deliverables:
+### P0 — plan and contract approval
 
-- Accept Sections 4–6 as the initial ADR-equivalent contract.
-- Create versioned JSON fixtures for identical replay, conflicting replay, authorization denial, confirmed transfer, final revert, pending transaction, lost response, empty Graph result, lagging Graph result, and indexing error.
-- Confirm package/file ownership and the no-cross-implementation-import rule.
-- Record required environment-variable names in `.env.example` with placeholders only; classify each as secret or public.
-- Confirm the six public test seams before any test is written.
+- Human accepts the product scope, v1 state machine, port semantics, ownership, fixture catalog, and test seams.
+- The plan commit is present on the chosen implementation base.
+- Each coder creates a worktree/branch from the same base SHA.
 
-Exit criteria:
+### P1 — independent toolchains
 
-- Each person can run their package tests with local fakes and no credentials.
-- Every contract field has one owner, type, normalization rule, and redaction rule.
-- No unresolved decision can change settlement cardinality, money representation, or the classification of `UNKNOWN`.
+- A01, B01, and C01 each pass package-local checks without third-party credentials.
+- Every lane can continue using only committed fixtures and simulators.
+- Forecast is recalibrated from actual SDK/tooling friction.
 
-### M1 — Three independent walking skeletons (days 1–4)
+### P2 — contract-pack compatibility
 
-#### A1 — Durable intent skeleton (Person A; blockers: M0 only)
+- A02, B02, and C02 contract packs validate against the frozen schemas.
+- Drift checks show no breaking change.
+- Any additive extension has a compatibility note and old fixture support.
 
-What it delivers: an intent can be accepted, replayed, queried, queued, and observed end to end using fake authorization/settlement ports.
+### P3 — independent safety proofs
 
-Work:
+- A03 proves atomic submission ownership with a fake counter.
+- B03 proves conservative provider outcomes offline and is ready for human-enabled testnet evidence.
+- C03 proves missing, lagging, contradictory, and unavailable evidence cannot unlock payment.
 
-- Create the workspace, strict compiler/lint/test/build commands, API/worker entry points, OpenAPI validation, and package-local commands.
-- Add PostgreSQL migrations for intents, attempts, settlements, outbox/jobs, evidence, and schema versioning.
-- Implement normalized fingerprinting, create/replay/conflict behavior, GET status, atomic state transitions, and a fake adapter with an external-settlement counter.
-- Add containerized PostgreSQL test support and deterministic clock/ID seams.
+### P4 — backend convergence and live proof
 
-Acceptance:
+This is the frontend unlock gate.
 
-- Identical request twice returns the same Business Intent and one queued execution.
-- Conflicting payload under the same ID returns `409`, records the conflict safely, and creates zero extra settlement rights.
-- State survives API and worker restarts.
-- Package tests prove constraints using a real PostgreSQL transaction, not only mocks.
+- A composition branch replaces simulators with reviewed B and C package entry points.
+- Root lint, type, unit, integration, contract, build, migration, concurrency, restart, and failure checks pass.
+- The complete `.agent/TEST_MATRIX.md` records durable final state and external settlement count.
+- One real allowed Arc Testnet payment commits exactly once through Privy.
+- Wrong-scope and above-cap cases produce zero settlement.
+- A lost-response scenario reaches `UNKNOWN` and reconciles to the original transaction without a duplicate.
+- Live Graph evidence is shown with `_meta`, deployment, indexed block, lag, and health.
+- OpenAPI and recovery-view semantics are frozen for frontend.
 
-#### B1 — Privy/Arc adapter skeleton (Person B; blockers: M0 only)
+### P5 — frontend acceptance
 
-What it delivers: a standalone adapter can validate configuration, build exactly one canonical ERC-20 transfer request, classify official-response fixtures, and verify receipts without a real domain service.
+- A05, B05, and C05 compose against the frozen API.
+- Browser tests cover create, replay, conflict, denial, committed, `UNKNOWN`, reconciliation, Graph lag/error, and service-unavailable states.
+- No force-pay or unguarded settlement action exists.
+- Accessibility smoke, responsive layout, lint, type, build, and no-secret checks pass.
 
-Work:
+### P6 — release candidate
 
-- Pin and validate the Privy Node SDK plus Arc client library in a package-local compatibility test.
-- Define Arc Testnet configuration and readiness checks for chain ID, USDC contract code, wallet address, and amount precision.
-- Build six-decimal ERC-20 transfer calldata and the Privy request with stable idempotency/reference identifiers.
-- Implement receipt verification: chain, sender, token contract, status, recipient, amount, transaction hash, block, and unique Transfer log.
-- Draft the fail-closed Privy wallet policy fixture; do not store credentials.
+- A06, B06, and C06 evidence bundles compose into one repeatable testnet demo.
+- Sponsor qualification cites working code, tests, live evidence, network, and limitations.
+- Safe-disable and recovery runbooks work without manual database surgery.
+- Exact candidate tree passes repository checks and mandatory independent review gates before human merge.
 
-Acceptance:
+## 13. Test ownership
 
-- Golden fixtures produce byte-for-byte stable request fingerprints and calldata.
-- Wrong chain, token, recipient, amount format, or native value is rejected before signing.
-- `status: 1` without the expected Transfer log is not `CONFIRMED`; `status: 0` is final revert.
-- Timeout/lost-response fixtures return `POSSIBLY_SUBMITTED`, never safe retry.
-
-#### C1 — Indexed recovery skeleton (Person C; blockers: M0 only)
-
-What it delivers: a standalone Subgraph and recovery package map Arc USDC Transfer fixtures and expose a freshness-labeled recovery view against a fake domain/evidence host.
-
-Work:
-
-- Create Subgraph schema, manifest, mapping, and Matchstick/unit fixtures for the Arc USDC contract.
-- Create the Graph client query including `_meta`, deployment, block, timestamp, and indexing errors.
-- Implement freshness states: `FRESH`, `LAGGING`, `UNHEALTHY`, `UNAVAILABLE`, `UNKNOWN_FRESHNESS`.
-- Create the reconciliation decision table and a simulator for local state, Privy evidence, Arc receipts, and indexed evidence.
-
-Acceptance:
-
-- Mapping identity is transaction hash plus log index; amount remains Graph `BigInt`/decimal string.
-- Empty or lagging Graph fixtures never return permission to resubmit.
-- Recovery output labels which facts are authoritative and which are indexed observations.
-- Package tests run with no network or credentials.
-
-M1 exit: all three package suites pass independently. Re-estimate M2–M6 from actual SDK, chain, and Subgraph friction; do not reduce safety acceptance to preserve the date.
-
-### M2 — Safety-critical vertical slices (days 5–8)
-
-#### A2 — Atomic at-most-once engine (Person A; blockers: A1 only)
-
-What it delivers: duplicate deliveries and concurrent workers converge on one submission owner and at most one committed settlement in the fake-adapter system.
-
-Work and acceptance:
-
-- Implement transactional authorization-to-ready and ready-to-submitting compare-and-set transitions.
-- Configure `submit_settlement` with one queue attempt and catch/classify all adapter results into durable states before returning.
-- Prove one normal job, 10 sequential retries, 10 parallel workers, and two worker/agent instances produce exactly one external submission/commit.
-- Kill before external call: zero settlement and safe retry. Kill after the boundary: durable `UNKNOWN` and no new submission.
-- Preserve a committed Settlement when a downstream/supplier simulation fails.
-
-#### B2 — Authorized Arc Testnet settlement (Person B; blockers: B1 only)
-
-What it delivers: the adapter executes one policy-constrained testnet USDC settlement from the standalone harness and returns verified normalized evidence.
-
-Work and acceptance:
-
-- Provision the execution wallet, owner/key quorum, and one attached policy through a human-run setup procedure; write secrets only to ignored runtime storage/approved CI secrets.
-- Test policy allow and deny cases against Arc Testnet: wrong chain, wrong contract/method, wrong recipient, above cap, non-zero native value, expired authorization.
-- Submit via Privy with `eip155:5042002`, persisted idempotency key, and stable reference ID; capture Privy transaction ID/hash and Arc receipt.
-- Prove one allowed transfer commits once and every denial produces zero settlement.
-- Produce sanitized fixtures from real response shapes for Person A and C without exposing secrets.
-
-#### C2 — UNKNOWN reconciliation engine (Person C; blockers: C1 only)
-
-What it delivers: a deterministic read-only reconciliation decision engine resolves authoritative evidence or holds safely without ever submitting a payment.
-
-Work and acceptance:
-
-- Implement evidence precedence: durable committed record and verified Arc receipt are authoritative; Privy status locates provider activity; Graph corroborates/history only.
-- Resolve verified receipt success to `COMMITTED` and final revert with matching identity to `FAILED_SAFE`.
-- Keep `UNKNOWN` for pending, provider unavailable, RPC unavailable, Graph empty/lagging/unhealthy, identity mismatch, or contradictory evidence.
-- Persist every observation with source, retrieval time, block height, health, and sanitized reason.
-- Prove repeated reconciliation and duplicate webhook/provider events are idempotent and create zero submissions.
-
-### M3 — Failure and operational hardening (days 9–12)
-
-#### A3 — Restart-safe orchestration and auditability (Person A; blockers: A2 only)
-
-What it delivers: the API/worker system recovers after process/database interruptions, exposes useful safe telemetry, and has a deterministic safe-disable path.
-
-Acceptance:
-
-- Restart after intent creation, job claim, `SUBMITTING` persistence, and adapter return; invariant holds at every point.
-- Stale/orphaned work becomes reconciliation work, not a new submission lease.
-- Structured logs carry Business Intent/Attempt IDs and state transitions but redact payload purpose as configured and never include credentials, authorization signatures, raw provider bodies, or private wallet material.
-- Metrics cover state counts, transition failures, queue lag, UNKNOWN age, reconciliation outcomes, policy denials, and duplicate/conflict counts.
-- A kill switch stops new submissions while status and reconciliation reads remain available.
-
-#### B3 — Provider ambiguity and policy hardening (Person B; blockers: B2 only)
-
-What it delivers: provider/RPC outcomes are conservatively classified across realistic failures and the policy remains effective after restart/config changes.
-
-Acceptance:
-
-- Inject DNS failure, connection refusal, timeout before response, truncated response, 429/5xx, malformed payload, lost success response, pending/evicted transaction, final revert, and mismatched receipt.
-- Only documented, proven pre-broadcast failures become `DEFINITELY_NOT_SUBMITTED`; every doubtful result becomes `POSSIBLY_SUBMITTED`.
-- Reusing the persisted Privy idempotency key and identical body is tested; its 24-hour limit is documented and never treated as permanent protection.
-- Policy fingerprint/ID and expected restrictions are checked at readiness; mismatch fails closed.
-- If webhooks are available, signature verification and duplicate/out-of-order delivery tests pass; otherwise polling remains complete and webhooks stay disabled.
-
-#### C3 — Indexer lag, contradiction, and chaos evidence (Person C; blockers: C2 only)
-
-What it delivers: recovery remains safe when The Graph or other evidence sources are delayed, empty, unhealthy, inconsistent, or unavailable.
-
-Acceptance:
-
-- Delay and empty The Graph results, set `hasIndexingErrors`, trail chain head, remove `_meta`, fail the query, and return duplicate/out-of-order events; none unlock a payment.
-- Inject crash/lost response after possible submission and show the record remains `UNKNOWN` until authoritative evidence resolves it.
-- Verify recovery evidence survives service restart and can be replayed for audit without provider secrets.
-- Define UNKNOWN-age alerts and a human escalation runbook; the runbook never tells an operator to “just retry.”
-- Produce a single command that runs the cross-source fixture matrix against the reconciliation package.
-
-M3 exit: each owner passes their package suite and provides a versioned artifact plus fixtures. No cross-track package implementation is required to reach this exit.
-
-### M4 — Integrated backend and live testnet proof (days 13–15)
-
-This is the first cross-track convergence. Each person prepares against simulators immediately; only the final acceptance run waits for all three M3 artifacts.
-
-#### A4 — Composition and migration integration (Person A)
-
-- Wire production ports without importing provider details into the domain package.
-- Run migrations from an empty database and from the previous schema; verify rollback/safe-disable behavior.
-- Validate OpenAPI, generated contract fixtures, root lint/type/test/build, and service readiness.
-- Own conflict resolution only in shared/root files; provider owners resolve their packages.
-
-#### B4 — Live authorization/settlement evidence (Person B)
-
-- Run one allowed Arc Testnet transfer through the integrated worker.
-- Run policy-denied and above-cap intents and prove zero settlement.
-- Capture sanitized transaction ID/hash, receipt, expected Transfer log, chain, policy identity, and explorer link for demo evidence.
-- Trace an intentionally lost local response into `UNKNOWN` without permitting a second transaction.
-
-#### C4 — Integrated reconciliation and matrix (Person C)
-
-- Reconcile the lost-response scenario to the original final transaction using durable/Privy/Arc evidence.
-- Demonstrate live Subgraph history with `_meta`, then simulate lag/empty/error and show safe behavior.
-- Run the full `.agent/TEST_MATRIX.md` suite and publish a sanitized results table with durable state and external settlement count.
-- Verify alerts and recovery-view output distinguish authoritative and indexed evidence.
-
-M4 exit criteria:
-
-- All lint, static analysis, type, unit, integration, contract, build, migration, and focused failure-injection checks pass from the repository root.
-- Every required test-matrix row records stable ID, final durable state, and external settlement count.
-- Real testnet happy path has exactly one committed settlement; denial paths have zero; ambiguous path has no duplicate.
-- Backend API/OpenAPI and recovery semantics are frozen for the frontend. Breaking changes after this point use expand-migrate-contract.
-
-### M5 — Frontend, last (days 16–18)
-
-Frontend work starts only after M4 passes. All three slices use the frozen OpenAPI and mock server, so component work remains parallel.
-
-#### F-A — Intent shell and status (Person A)
-
-- App shell, service-auth handoff suitable for the demo environment, create-intent form, exact atomic-amount parsing/formatting, and status polling.
-- Show replay and same-ID conflict clearly; never generate a new Business Intent ID on a retry unless the user starts a genuinely new obligation.
-- Display only USDC, Arc Testnet, and six payment decimals; keep native gas details separate.
-
-#### F-B — Authorization and settlement details (Person B)
-
-- Policy scope summary, authorization denied state, submission/pending/final state, sanitized transaction details, and Arc explorer link.
-- No bypass button and no “force pay” action. `UNKNOWN` disables new settlement submission.
-- Do not show a confirmation counter: Arc is pending or final.
-
-#### F-C — Recovery timeline and indexed history (Person C)
-
-- Attempt/reconciliation timeline, authoritative local state, Privy/Arc evidence, Graph observations, indexed-through block/time, lag, and health.
-- Empty Graph data is labeled “not observed through block N,” never “not paid.”
-- UNKNOWN state provides safe explanation/escalation, not a retry shortcut.
-
-M5 exit criteria:
-
-- Browser tests cover create, identical replay, conflict, denial, committed, UNKNOWN, reconciliation, Graph lag/error, and service-unavailable paths.
-- Accessibility smoke tests, responsive layout, lint/type/build, and no-secret/source-map checks pass.
-- The UI cannot invoke an unguarded settlement path.
-
-### M6 — Demo qualification and release candidate (days 19–20)
-
-#### Person A — Invariant and operational demo
-
-- Script duplicate requests, 10 parallel workers, restart, lost response, and downstream failure; show durable states and settlement count.
-- Verify clean database bootstrap, safe-disable switch, logs/metrics, README, architecture diagram, and operator runbook.
-
-#### Person B — Privy and Arc evidence
-
-- Demonstrate policy-constrained corporate wallet execution, one real authorized USDC transfer on Arc Testnet, and zero-settlement denials.
-- Record sanitized policy scope, transaction/receipt/Transfer proof, network, explorer URL, and limitations.
-
-#### Person C — The Graph and recovery evidence
-
-- Demonstrate live indexed Arc data in the recovery view and the same flow under delayed/empty/unhealthy indexed data.
-- Run sponsor qualification against working code/tests/demo evidence and report each sponsor `QUALIFIED`, `NOT QUALIFIED`, or `NOT VERIFIED`; never promote missing evidence.
-
-Release-candidate exit:
-
-- Full test matrix and root checks pass on the exact candidate content.
-- Secret scan and intended-file review pass; `.env*`, credentials, wallet material, and authorization responses are absent from review inputs.
-- Each implementation change follows `.agent/IMPLEMENTATION_LOOP.md`: local checks, a fresh FreePi Gate A, draft PR to `develop`, green required CI, a separate fresh Gate B, then human review. Agents never merge.
-- Demo can be reset and repeated using testnet-only funds without manual database surgery.
-
-## 9. Test ownership matrix
-
-| Required case | Primary owner | Independent harness | Integrated verifier |
+| Required case | Producer | Independent local proof | Project-gate proof |
 | --- | --- | --- | --- |
-| Normal job | A | Fake settlement counter | B |
-| Same request twice / conflicting payload | A | HTTP + PostgreSQL | C observes recovery output |
-| 10 sequential retries | A | Worker + fake port | B validates one adapter call |
-| 10 parallel workers | A | Real PostgreSQL concurrency | C captures evidence timeline |
-| Crash before submission | A | Worker kill point | B proves zero call |
-| Crash after possible submission | B | Adapter fault point | C reconciles; A verifies state |
-| Lost payment response | B | Proxy/fixture fault | C resolves original transaction |
-| Graph delay or absence | C | Graph simulator | A verifies no submission grant |
-| Privy denial / above policy | B | Policy testnet harness | A verifies zero settlement |
-| Service restart | A | Process orchestration | C verifies evidence durability |
-| Downstream failure after payment | A | Supplier fake | B verifies original receipt retained |
-| Two agent instances | A | Two workers/processes | C verifies one settlement history |
+| Normal job | A | Domain fake settlement counter | P4 real adapter |
+| Same request twice | A | HTTP + PostgreSQL | P4 composed worker |
+| Conflicting payload, same ID | A | HTTP + PostgreSQL | P4 recovery view |
+| 10 sequential retries | A | Worker + fake port | P4 adapter call count |
+| 10 parallel workers | A | Real PostgreSQL concurrency | P4 composed worker |
+| Crash before submission | A | Worker kill point | P4 zero external settlement |
+| Crash after possible submission | B | Adapter fault fixture | P4 durable `UNKNOWN` |
+| Lost payment response | B | Proxy/fixture | P4 original transaction reconciled |
+| Graph delay/absence/error | C | Graph simulator | P4 no submission grant |
+| Privy denial/above cap | B | Policy fixture/live-ready harness | P4 zero settlement |
+| Service restart | A | Process orchestration | P4 evidence durability |
+| Downstream failure after payment | A | Supplier fake | P4 original receipt retained |
+| Two agent instances | A | Two processes + fake counter | P4 single settlement history |
 
-The primary owner builds the failure fixture and focused proof. Integrated verification is a Milestone 4 responsibility, not a prerequisite for the owner to finish M1–M3.
+## 14. Frontend-last rule
 
-## 10. Branching, review, and merge train
+No production frontend implementation begins before Gate P4. Prior to P4, coders may only define JSON fixtures, OpenAPI examples, and non-production mock-server behavior needed to test backend contracts. They may not build screens, components, styling, or browser flows.
 
-- Do not implement product code on `agents-setup`, `develop`, or `main`. Once this planning/infrastructure change is human-merged to `develop`, create short-lived `milestone/a-*`, `milestone/b-*`, and `milestone/c-*` branches from the same `develop` SHA.
-- One branch/PR delivers one task above. Within M1–M3, each branch is blocked only by the prior branch in the same lettered track.
-- Merge independent package PRs before root composition. If two changes touch a shared contract, use expand-migrate-contract: add the new form, migrate all consumers in independent PRs, then remove the old form.
-- Only Person A edits root composition files during M4. Persons B/C supply reviewed package commits and fixtures, preventing three-way conflicts.
-- Every PR lists exact blockers, acceptance evidence, selected test-matrix cases, invariant impact, safe-disable strategy, and both required review gates.
-- A human controls merge order and performs every merge.
+After P4, the three frontend packets remain independent:
 
-## 11. Human-only configuration plan
+- A05 owns application shell, create/replay/conflict, and authoritative status.
+- B05 owns policy, authorization, transaction, and explorer details.
+- C05 owns recovery timeline, evidence provenance, Graph freshness, and escalation.
 
-Person B owns a repeatable interactive setup wizard after B1 fixes the variable contract. It must guide a human through Privy application/wallet/key-quorum/policy creation, Arc testnet funding, The Graph Studio deployment credentials, and CI secret entry. It must:
+Each slice is built against the frozen mock server. Final composition is a project gate, not a packet closure requirement.
 
-- Open current official URLs before each instruction.
-- Capture secrets with hidden input and write them only to ignored `.env` or approved CI secrets.
-- Keep public chain/contract/deployment identifiers in non-secret variables.
-- Confirm before policy replacement, wallet ownership change, funding, deployment, or any irreversible action.
-- Be statically validated but never run end to end by an agent without the human.
+## 15. Branch and merge strategy
 
-The backend must still boot in fake/local mode with no third-party credentials, so configuration work never blocks Persons A or C.
+- One packet equals one short-lived branch and focused PR, for example `milestone/a01-foundation-contracts`.
+- Branch from the recorded implementation-base SHA. A coder’s next branch may start from their own previous approved packet without waiting for unrelated lanes.
+- Never mix two owners’ directories in one packet PR.
+- Contract changes use expand-migrate-contract: add new form, retain old form, migrate consumers independently, then remove old form in a separate task.
+- Coder A owns root composition and resolves shared/root conflicts. B and C never edit root files simply to make local tooling work; they use package-local commands.
+- Each implementation change follows `.agent/IMPLEMENTATION_LOOP.md`. Agents do not merge PRs.
 
-## 12. Observability and safe operation
+## 16. Human-only external configuration
 
-- Correlation keys: Business Intent ID, Attempt ID, settlement version, Privy reference/transaction ID, Arc transaction hash, and Graph deployment/indexed block. Never log authorization signatures, credentials, private keys, or raw sensitive payloads.
-- Alerts: oldest UNKNOWN age, count of UNKNOWN intents, repeated reconciliation failures, Graph block lag/health, policy denials, provider/RPC failure rate, queue lag, and state-transition conflicts.
-- Safe disable: stop accepting/claiming new settlement submissions while keeping GET status, evidence ingestion, and reconciliation reads operational.
-- Manual escalation: operators inspect durable request identity and evidence; there is no generic retry button. Any future override requires a separate audited design and is outside this plan.
+Coder B produces a repeatable setup guide or wizard, but a human performs Privy application/wallet/key-quorum/policy creation, Arc testnet funding, Graph Studio credential entry, and CI-secret configuration.
 
-## 13. Risks and mitigations
+- Secret input is hidden and written only to ignored runtime files or approved secret stores.
+- Public network, contract, deployment, and policy identifiers are separated from secrets.
+- Policy replacement, ownership change, funding, deployment, or other external mutation requires explicit confirmation.
+- Offline fixtures keep all coder packets closable when credentials or services are unavailable.
+- Agents never paste secrets into context records, reviews, logs, fixtures, or PRs.
 
-| Risk | Mitigation / fail-closed response | Owner |
+## 17. Observability and operations
+
+- Correlation fields: Business Intent ID, Attempt ID, settlement version, Privy reference/transaction ID, Arc transaction hash, and Graph deployment/indexed block.
+- Never log signatures, credentials, private keys, raw authorization bodies, or private wallet material.
+- Metrics: intent states, oldest/count `UNKNOWN`, transition conflicts, queue lag, reconciliation outcomes, policy denials, provider/RPC errors, Graph lag/health, duplicate and conflict counts.
+- Safe disable stops new submission ownership while preserving status, evidence ingestion, and reconciliation reads.
+- Operators inspect durable identity and evidence. There is no generic retry or force-pay button.
+
+## 18. Risk controls
+
+| Risk | Fail-closed mitigation | Owner |
 | --- | --- | --- |
-| Privy idempotency expires after 24 hours | Durable OneShot constraint remains authoritative; reuse stored key/body only as supplemental protection | A/B |
-| SDK or policy syntax changes | Pin after B1 compatibility test; readiness verifies policy ID/fingerprint and network; deny on mismatch | B |
-| Arc native/ERC-20 precision confusion or double counting | Settlement uses six-decimal ERC-20 only; native balance is gas; verify one canonical Transfer identity | B/C |
-| Lost response or process crash after broadcast | Persist request identity before call, enter UNKNOWN, reconcile, forbid new nonce/payment | All |
-| Arc transaction pending/evicted with no receipt | Hold UNKNOWN; no automatic replacement in v1; escalate after threshold | B/C |
-| Graph lag, error, endpoint version drift, or empty result | Query `_meta`, compare chain head, pin deployment for demo, label stale/unhealthy, never authorize from absence | C |
-| Queue redelivery | One queue attempt for submission, domain CAS/unique constraints, idempotent reconciliation | A |
-| Shared-file merge conflicts | File ownership plus independent package commands; root composition owned by A | A |
-| Credential/setup delays | Fakes unblock all tracks; human wizard and live setup occur in B2, before M4 | B |
-| Schedule pressure | Preserve safety acceptance; cut optional webhooks, rolling policies, visual polish, and nonessential telemetry first | All |
+| Privy idempotency expires | PostgreSQL uniqueness remains authoritative; reuse stored key/body only as supplemental guard | A/B |
+| SDK or policy syntax changes | B01 pins after compatibility proof; readiness validates policy identity and network | B |
+| ERC-20/native precision confusion | Six-decimal ERC-20 is the only settlement amount; native balance is gas only | B/C |
+| Lost response after broadcast | Persist identity first, enter `UNKNOWN`, reconcile, forbid another payment | All |
+| Pending/evicted Arc transaction | Hold `UNKNOWN`; no automatic replacement in v1 | B/C |
+| Graph lag/error/empty result | Surface freshness and health; never infer non-payment | C |
+| Queue redelivery | Domain CAS/constraints plus single-attempt submission task | A |
+| Shared-file conflicts | Exclusive path ownership and A-only root composition | A |
+| Credentials unavailable | Offline contract packs and simulators remain sufficient for packet closure | B |
+| Schedule pressure | Cut webhooks, rolling policy support, visual polish, and optional telemetry before safety | All |
 
-## 14. Definition of done for every implementation task
+## 19. Definition of done for every packet
 
-- Outcome and non-goals match the task above; no hidden follow-up is required for claimed behavior.
-- Public-seam test is written red first, then the smallest vertical behavior is implemented; tests avoid private implementation coupling.
-- Relevant unit, contract, integration, concurrency, failure-injection, migration, lint, type, and build checks pass.
-- Durable state and external settlement count are asserted where money or retries are involved.
-- Security boundaries, input validation, integer money, logging redaction, testnet restriction, and safe-disable behavior are reviewed.
-- Documentation, OpenAPI/fixtures, runbooks, and `.env.example` are updated without secrets.
-- The branch/diff is focused and passes the repository's FreePi/CI/human-review policy. No agent merges.
+- Scope, non-goals, consumed contract version, and acceptance criteria are explicit.
+- The smallest public-seam test is written first and passes with the implementation.
+- Package-local format, lint, type, test, and build commands pass where present.
+- Payment/retry work asserts durable state and external settlement count.
+- Boundary validation, integer money, redaction, testnet restriction, and safe-disable impact are covered.
+- Contract pack, fixtures, simulator, docs, and `.env.example` are updated when applicable, without secrets.
+- No unrelated owner path or shared root file is changed.
+- The packet handoff lists exact artifact/version, commands, evidence, residual risks, and next same-owner packet.
+- Repository FreePi/CI/human-review policy is satisfied. Agents never merge.
 
-## 15. First implementation actions after plan approval
+## 20. Packet-to-outcome traceability
 
-1. Human merges the planning/agent-infrastructure change to `develop`; record the exact base SHA.
-2. All three people complete M0 together and create their independent branches/worktrees.
-3. Person A starts A1; Person B starts B1; Person C starts C1 simultaneously.
-4. Hold one 15-minute daily contract check limited to proposed breaking changes, UNKNOWN classification, and risks. Status reporting must not become an approval dependency.
-5. At M1 exit, re-estimate the calendar from evidence while preserving M2–M6 acceptance criteria and the rule that frontend remains last.
+| Packet | Primary product outcome | Principal proof |
+| --- | --- | --- |
+| A01 | Stable public seams and deterministic local development | Contract/schema drift and simulator tests |
+| A02 | Durable create, replay, conflict, and status behavior | Real PostgreSQL API tests |
+| A03 | One submission owner under redelivery/concurrency | Ten-worker/two-process counter proof |
+| A04 | Restart-safe, operable backend composition | Restart matrix, safe disable, simulator root suite |
+| A05 | Safe intent creation and authoritative status UI | Frozen-mock browser/accessibility tests |
+| A06 | Repeatable invariant and operations demo | Clean bootstrap plus scenario result table |
+| B01 | Known-compatible provider/network boundary | SDK spike and fail-closed readiness tests |
+| B02 | Exact request/policy/receipt semantics | Golden calldata, deny matrix, receipt corpus |
+| B03 | Testnet-capable policy-constrained settlement | Offline harness plus optional sanitized live proof |
+| B04 | Conservative handling of provider ambiguity | Fault taxonomy and lookup contract suite |
+| B05 | Safe authorization/transaction UI | Fixture-driven component and redaction tests |
+| B06 | Verifiable Privy/Arc sponsor evidence | Policy denial and real transfer evidence bundle |
+| C01 | Correct Arc transfer indexing and visible freshness | Mapping and Graph-health fixture tests |
+| C02 | Deterministic zero-submit reconciliation | Complete evidence/decision matrix |
+| C03 | Safety under loss, lag, contradiction, and restart | Seeded failure-injection suite |
+| C04 | Recovery service ready for real adapter replacement | Simulator composition and matrix report |
+| C05 | Accurate recovery/index UI | Degraded-evidence component tests |
+| C06 | Verifiable Graph/recovery sponsor evidence | Live health, degraded demo, qualification report |
+
+Every success criterion in Section 3 has at least two independent proof surfaces: a producer packet and a later project-gate verification. Packet closure establishes the producer proof; it never claims final integrated behavior by itself.
+
+## 21. Execution environments
+
+### Offline contract mode
+
+Purpose: default mode for every coder packet.
+
+- Uses synthetic, versioned, schema-checked fixtures only.
+- Requires no Privy, Arc, Graph, or secret configuration.
+- Runs package-local checks and deterministic simulators.
+- Is sufficient to close A01–A04, B01–B04, and C01–C04.
+- Cannot support sponsor qualification or real-settlement claims.
+
+### Local integration mode
+
+Purpose: compose reviewed packages with PostgreSQL and local services before external effects.
+
+- Uses real PostgreSQL and Graphile Worker.
+- Replaces provider/Graph network access with simulators.
+- Runs migrations, API/worker orchestration, concurrency, restart, failure, and recovery suites.
+- Remains the fallback when external providers are unavailable.
+
+### Testnet evidence mode
+
+Purpose: Gate P4 and P6 live proof.
+
+- Requires human-approved Privy/Arc/Graph configuration in ignored/approved secret stores.
+- Checks Arc chain/token/policy/deployment identities before running.
+- Limits settlement to an approved recipient and cap.
+- Produces sanitized public identifiers and result tables only.
+- Stops new submission work on configuration mismatch or doubt.
+
+### Frontend mock mode
+
+Purpose: independently close A05/B05/C05.
+
+- Uses the P4-frozen OpenAPI and sanitized response fixtures.
+- Simulates every authoritative, provider, and Graph state.
+- Contains no provider credentials or direct settlement capability.
+- Must behave identically to production UI for state labeling and disabled actions.
+
+## 22. Gate P4 integration procedure
+
+P4 is deliberately procedural so convergence does not turn into open-ended shared development.
+
+1. Record exact reviewed A04, B04, and C04 package versions and tree SHAs.
+2. Coder A creates the single composition branch from the approved integration base.
+3. Replace the settlement simulator with B04’s public package entry point; run contract compatibility before any live call.
+4. Replace the recovery/index simulators with C04 public entry points; run command/evidence compatibility.
+5. Run offline root checks first. A contract mismatch stops composition and opens one owner-specific compatibility ticket.
+6. Run empty and upgrade migrations, API/worker boot, readiness, and safe-disable checks.
+7. Run the complete local failure matrix with real packages but simulated external services.
+8. A human enables testnet evidence mode and confirms network, token, wallet, policy, recipient, cap, funding, and Graph deployment.
+9. Execute one allowed intent and bind durable identity, Privy identity, Arc receipt/Transfer, and indexed observation.
+10. Execute wrong-scope and above-cap denials; confirm zero settlements.
+11. Inject a lost local response after possible broadcast; confirm durable `UNKNOWN`, zero replacement transaction, and reconciliation to original evidence.
+12. Simulate empty, lagging, unhealthy, unavailable, and contradictory Graph results; confirm no permission change.
+13. Publish a sanitized Gate P4 manifest and freeze OpenAPI/recovery-view semantics.
+
+P4 failures never produce ad hoc edits by multiple coders on the composition branch. The owning coder fixes their package in a focused branch, republishes a reviewed version, and A updates only the version slot.
+
+## 23. Asynchronous merge-conflict prevention
+
+### Path-level controls
+
+- A owns root package manager files, shared compiler/lint/test configuration, OpenAPI, migrations, API, worker, contracts, and domain/storage packages.
+- B owns only provider/chain adapter packages, provider fixtures, and human provider setup docs.
+- C owns only reconciliation/Graph/failure packages, Subgraph files, and recovery docs.
+- Frontend composition reserves one shell/route registry editor; B/C expose components through documented entry points instead of editing the registry concurrently.
+
+### Commit controls
+
+- One small task normally maps to one commit; do not combine unrelated numbered tasks merely to reduce PR count.
+- Generated files stay in the same commit as their source and drift check.
+- Formatting-only repo-wide rewrites are separate, human-scheduled changes, never hidden in a packet.
+- A packet branch contains no merge from another active packet branch. Rebase/merge decisions follow human repository policy.
+
+### Contract controls
+
+- Published fixture/schema digests are immutable.
+- Consumers pin a digest/version rather than a moving branch.
+- New optional fields have deterministic default handling that fails closed.
+- New enum variants are rejected until explicitly supported.
+- Removal/deprecation never occurs in the same wave as introduction.
+
+## 24. Decision and escalation policy
+
+Continue asynchronously with a documented conservative assumption for ordinary implementation details. Stop and request a human/product decision only when the choice could change:
+
+- the one-intent/at-most-one-settlement invariant;
+- stable Business Intent identity or payload-conflict semantics;
+- monetary precision or canonical amount representation;
+- which state grants submission ownership;
+- when `UNKNOWN` may transition to `FAILED_SAFE`;
+- Privy policy scope or bypass availability;
+- Arc network/token identity;
+- The Graph’s non-authoritative role;
+- use of non-testnet funds or irreversible external configuration;
+- public API breaking compatibility after P4.
+
+An escalation record contains the exact decision, safest default, affected contract/version, options, security impact, and owner. While it is unresolved, unaffected packets continue and the affected boundary fails closed.
+
+## 25. Schedule control and scope-cut order
+
+The 20-day horizon is a forecast. Re-estimate at P1 and after any provider compatibility failure. Never change acceptance evidence silently to preserve dates.
+
+If time is constrained, cut in this order:
+
+1. Optional Privy webhooks; retain complete polling.
+2. Rolling/multiple policy support; retain one explicit policy.
+3. Nonessential dashboard panels and telemetry dimensions; retain safety alerts.
+4. Visual animation, theming, and secondary responsive polish; retain accessible core flows.
+5. Extra demo narratives; retain invariant, authorization, settlement, `UNKNOWN`, and Graph-degradation proof.
+
+Never cut:
+
+- durable constraints and atomic submission ownership;
+- ambiguity classification and reconciliation;
+- denial/zero-settlement proof;
+- concurrency, restart, and lost-response tests;
+- exact Arc receipt/Transfer verification;
+- Graph freshness/health labeling and non-authority;
+- secret/redaction checks;
+- independent review and human merge controls.
+
+## 26. Evidence manifest format
+
+Every packet and project gate publishes a concise Markdown or JSON manifest with:
+
+```text
+artifact_id: <packet or gate>
+artifact_version: <semver/fixture version>
+source_commit: <full SHA>
+source_tree: <full tree SHA>
+contract_versions: <name=digest list>
+environment: offline | local-integration | testnet | frontend-mock
+commands: <exact commands with PASS/FAIL>
+acceptance: <criterion and evidence reference>
+external_effect_count: <integer or NOT APPLICABLE>
+secrets_review: PASS | FAIL
+known_gaps: <explicit list>
+next_owner_packet: <same-owner ID or project gate>
+```
+
+Successful command logs are summarized, not pasted wholesale. Failure logs retain only the minimum sanitized evidence needed for diagnosis. External transaction and deployment identifiers are public testnet evidence only after redaction review.
+
+## 27. Final readiness audit
+
+Before Gate P6 can pass, confirm:
+
+- Exact source/tree identities are recorded for all composed artifacts.
+- The implementation base and every contract-pack version are immutable and traceable.
+- Root install, format, lint, type, unit, integration, contract, build, migration, browser, and policy checks pass.
+- Every applicable test-matrix row records stable intent, durable state, and external settlement count.
+- Allowed testnet flow has exactly one committed settlement.
+- Denial and invalid-scope flows have zero settlement.
+- Lost-response flow has no replacement and reconciles to the original transaction or safely remains `UNKNOWN`.
+- Restart and two-agent scenarios preserve the invariant.
+- Graph empty/lag/error/unavailable states never alter settlement permission.
+- Safe disable stops new submissions while status and recovery reads continue.
+- UI has no direct/bypass/force-pay action and labels authority/freshness correctly.
+- Demo/reset instructions require no unsafe database surgery or external-history rewrite.
+- Evidence, repository, logs, screenshots, fixtures, source maps, and reviews contain no secrets.
+- Privy, Arc, and The Graph claims use the qualification standard and cite live evidence or remain `NOT VERIFIED`.
+- Mandatory FreePi gates and required CI apply to the exact candidate tree/head.
+- A human performs the final review and merge.
+
+## 28. Kickoff sequence
+
+1. Human approves this plan and the frozen contract pack.
+2. Record the implementation-base full SHA.
+3. A, B, and C create independent worktrees and start A01, B01, and C01 simultaneously.
+4. Each coder closes and advances through their own lane without waiting for global milestone closure.
+5. Run project gates asynchronously when all required artifacts happen to be available; failures create focused owner tickets and do not halt unaffected work.
+6. Do not start A05, B05, or C05 until P4 passes.
+7. Re-estimate after P1 using measured friction, preserving all safety criteria.
