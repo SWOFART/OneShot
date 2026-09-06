@@ -1,80 +1,65 @@
-## Outcome
+## Summary
 
-<!-- What focused outcome does this PR deliver? -->
+<!-- What changed and why? Keep this concise. -->
 
-## Scope
+## Scope and acceptance criteria
 
-### In scope
+- [ ] The change is limited to the stated milestone or issue.
+- [ ] Acceptance criteria are listed and satisfied.
+- [ ] No unrelated cleanup is included.
 
--
+## Product and security invariants
 
-### Out of scope
+- [ ] Tenant isolation remains fail-closed.
+- [ ] Sponsor authorization, auditability, and daily caps remain enforced where applicable.
+- [ ] Recipients cannot modify sponsor controls or access sponsor-only data.
+- [ ] No secret, token, production identifier, or personal data is committed or pasted into review prompts.
+- [ ] Any non-applicable invariant is explained below.
 
--
+Invariant notes:
 
-## Acceptance criteria
+<!-- Explain affected invariants, or why they are not applicable. -->
 
-- [ ]
+## Validation
 
-## OneShot invariant impact
+Commands and results:
 
-- Business Intent / Attempt / Settlement impact:
-- `business_intent_id` stability:
-- `UNKNOWN` reconciliation behavior:
-- Concurrency and duplicate-settlement protection:
-- Money representation:
+```text
+<!-- command: PASS/FAIL and concise evidence -->
+```
 
-## Sponsor impact
+## Independent review evidence
 
-- Privy:
-- Arc:
-- The Graph:
-- Qualification claims made (if any):
+### Gate A — exact candidate tree before push
 
-## Risk review
+- Base commit SHA:
+- Candidate tree SHA:
+- Candidate commit SHA (if already committed but unpushed):
+- Reviewer tool: `free-pi-cli`
+- Reviewer model:
+- Verdict: `VERDICT: PASS` / `VERDICT: FAIL`
+- Findings or residual risks:
 
-- Security and secrets:
-- Data safety and privacy:
-- External effects and rollback/safe disablement:
-- Architecture and performance:
+- [ ] The reviewed tree equals the committed tree.
 
-## Validation evidence
+### Gate B — exact remote PR head
 
-| Command or check | Result |
-| --- | --- |
-| `<lint/type/test/build command>` | |
-| `<focused/failure-injection command>` | |
-| `git diff --check develop...HEAD` | |
+- Pull request URL/number:
+- Remote head commit SHA:
+- Remote head tree SHA:
+- Reviewer tool: `free-pi-cli`
+- Reviewer model:
+- Verdict: `VERDICT: PASS` / `VERDICT: FAIL`
+- Findings or residual risks:
 
-## FreePi Gate A: pre-push
+- [ ] Gate B reviewed the current remote head and matches Gate A's approved tree, or a fresh Gate A was run for the changed tree.
+- [ ] `Agent policy / repository-policy` and all applicable CI checks pass.
 
-- Fresh `npx free-pi-cli` process/session:
-- Reviewed base SHA:
-- Reviewed target/content identity:
-- Verdict (must be exact `VERDICT: PASS`):
-- Blocking findings resolved:
-- Evidence/summary:
+## Risk and rollback
 
-## Required CI
+- Residual risks:
+- Rollback or recovery plan:
 
-- Exact PR head SHA:
-- [ ] All required checks are green for this SHA.
-- Check names/results:
+## Human merge
 
-## FreePi Gate B: exact draft PR
-
-- Separate fresh `npx free-pi-cli` process/session:
-- PR URL/number:
-- Reviewed head SHA:
-- Verdict (must be exact `VERDICT: PASS`):
-- Blocking findings resolved:
-- Evidence/summary:
-
-## Human review
-
-- [ ] Gate A is valid for current content.
-- [ ] Required CI is green for current head.
-- [ ] Gate B is valid for current head.
-- [ ] Draft is ready for human review.
-- [ ] Human explicitly authorized merge. Agents must leave this unchecked and
-      must never merge.
+- [ ] A human owner has reviewed the evidence and will perform the merge.

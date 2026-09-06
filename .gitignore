@@ -30,6 +30,13 @@ credentials/
 .idea/
 *.swp
 *.swo
+CLAUDE.local.md
+.claude/settings.local.json
+.agent/local/
+.agents/local/
+.agents/rules/*.local.md
+.agents/workflows/*.local.md
+.antigravity/local/
 
 # Logs and temp
 *.log

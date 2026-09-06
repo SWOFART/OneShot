@@ -1,40 +1,36 @@
-# Branch and Quality Policy
+# Branch and review policy
 
-## Branch architecture
+## Protected branches
 
-- `main`: stable release branch. Promote reviewed releases from `develop`.
-- `develop`: integration branch and base for ongoing work.
-- `feature/*`, `fix/*`, `milestone/*`: short-lived branches created from current
-  `develop` and targeting `develop`.
+- `develop` is the integration branch.
+- `main` is the release branch.
+- Do not push directly to either protected branch.
+- Do not merge a pull request as an agent. A human owner merges after the required reviews and checks pass.
 
-No direct pushes, force pushes, history rewrites, or branch deletion on `main`
-or `develop`. Agents never merge any PR. A human performs final review and
-explicitly authorizes merge.
+## Working branches
 
-## Pull request workflow
+Create a focused branch from the latest target branch and keep commits scoped to one concern. Before opening or updating a pull request, follow `.agent/IMPLEMENTATION_LOOP.md` and confirm the exact candidate tree has passed the pre-push FreePi gate.
 
-1. Implement on a short-lived branch from `develop`.
-2. Pass applicable local lint, type, test, build, and failure-injection checks.
-3. Inspect the complete change against `develop` and confirm no secrets or
-   unrelated files.
-4. Run fresh independent FreePi Gate A through `npx free-pi-cli`. Require exact
-   `VERDICT: PASS` before first push or draft PR creation.
-5. Push without force and open a draft PR targeting `develop`.
-6. Wait for every required CI check to be green on the exact PR head SHA.
-7. Run a second fresh independent FreePi Gate B through `npx free-pi-cli`, bound
-   to the exact PR head SHA, full PR diff, and check state.
-8. After explicit Gate B `VERDICT: PASS`, mark ready for human review. Stop
-   before merge.
+## Required pull-request evidence
 
-Gate A and Gate B must use separate new FreePi processes and contexts. Any
-relevant content change after Gate A invalidates Gate A. Any commit or content
-change after Gate B invalidates Gate B. Ambiguous, incomplete, stale, failed, or
-unavailable review output fails closed.
+Every pull request must record:
 
-## Required status checks
+- the base and head commit SHAs;
+- the candidate tree SHA reviewed before push;
+- the independent reviewer tool and model;
+- the exact `VERDICT: PASS` result for Gate A;
+- the validation commands and results;
+- security and product-invariant impact;
+- any residual risks or follow-up work.
 
-As workflows are added, branch protection for `develop` and `main` must require
-applicable lint/static analysis, automated tests, and build/compilation checks.
-Pending, skipped, missing, or failing required checks are not green.
+After push, run the PR-head FreePi gate against the exact remote head. A pass for a different tree or commit is stale and does not satisfy the gate.
 
-See `.agent/IMPLEMENTATION_LOOP.md` for the complete workflow and privacy rules.
+## Required checks
+
+The following checks must pass before human merge:
+
+- `Agent policy / repository-policy`;
+- all applicable build, test, lint, type-check, and security checks;
+- independent FreePi Gate A and Gate B reviews as defined in `.agent/IMPLEMENTATION_LOOP.md`.
+
+If a required check cannot run, stop and document the blocker. Do not weaken, bypass, or silently substitute a gate.

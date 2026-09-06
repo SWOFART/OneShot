@@ -1,0 +1,82 @@
+name: Agent policy
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  repository-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate canonical agent workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_paths=(
+            AGENTS.md
+            .agent/AGENTS.md
+            .agent/PROJECT_CONTEXT.md
+            .agent/SECURITY_INVARIANTS.md
+            .agent/SPONSOR_REQUIREMENTS.md
+            .agent/TEST_MATRIX.md
+            .agent/IMPLEMENTATION_LOOP.md
+            .agent/review-prompts/freepi-prepush-review.md
+            .agent/review-prompts/freepi-pr-review.md
+            .agents/skills/oneshot-failure-injection/SKILL.md
+            .agents/skills/oneshot-idempotency/SKILL.md
+            .agents/skills/sponsor-qualification/SKILL.md
+            .agents/rules/repository-policy.md
+            .antigravity/README.md
+            .claude/CLAUDE.md
+            .github/BRANCH_POLICY.md
+            .github/PULL_REQUEST_TEMPLATE.md
+          )
+
+          for path in "${required_paths[@]}"; do
+            test -f "$path" || { echo "Missing required policy file: $path"; exit 1; }
+          done
+
+          obsolete_paths=(
+            .agent/MILESTONE_IMPLEMENTATION_LOOP.md
+            .agent/milestones/M0_UNIFIED_AGENT_WORKFLOW.md
+            .agent/review-prompts/draft-pr-review.md
+            .agent/review-prompts/implementation-review.md
+            .antigravity/review.md
+          )
+
+          for path in "${obsolete_paths[@]}"; do
+            test ! -e "$path" || { echo "Obsolete policy file must be removed: $path"; exit 1; }
+          done
+
+          grep -Fq '@../../AGENTS.md' .agents/rules/repository-policy.md
+          grep -Fq '../AGENTS.md' .claude/CLAUDE.md
+          grep -Fq '.agents/rules/repository-policy.md' .antigravity/README.md
+          grep -Fq '.agent/IMPLEMENTATION_LOOP.md' AGENTS.md
+          grep -Fq 'free-pi-cli' .agent/IMPLEMENTATION_LOOP.md
+
+          test "$(wc -l < .agents/rules/repository-policy.md)" -le 12
+          test "$(wc -l < .claude/CLAUDE.md)" -le 12
+          test "$(wc -l < .antigravity/README.md)" -le 12
+
+          if git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- . ':!*.lock'; then
+            echo 'Unresolved merge marker found.'
+            exit 1
+          fi
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+            git diff --check "$base_sha" HEAD
+          else
+            git diff --check HEAD^
+          fi
