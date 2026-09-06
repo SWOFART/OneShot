@@ -1,4 +1,4 @@
-# C05 — Frontend Recovery Timeline and Indexed History
+# C05 — Frontend Recovery Timeline and Evidence History
 
 Owner: Coder C
 Branch: `milestone/c05-frontend-recovery`
@@ -22,12 +22,12 @@ An independently composable recovery slice shows authoritative state, attempts, 
 
 ### C05.2 — Evidence provenance
 
-- Label local, Privy, Arc, and Graph sources plus authority class.
+- Label local, Privy, Arc, and The Graph source plus authority class.
 - Show verified transaction binding and contradiction warnings without raw sensitive payloads.
 
-### C05.3 — Graph freshness
+### C05.3 — Graph freshness and candidate state
 
-- Display deployment, indexed-through block/time, chain-head lag, health, indexing errors, and unavailable state.
+- When enabled, display provider/deployment identity, observed-through block/time, chain-head lag, health errors, and unavailable state; hide the section cleanly when the C01 fallback disables Graph.
 - Empty result reads “not observed through block N,” never “not paid.”
 
 ### C05.4 — UNKNOWN experience

@@ -17,11 +17,11 @@ flowchart LR
     Worker --> Privy
     Privy --> Arc[Arc USDC settlement]
     Arc --> SupplierWallet[Supplier wallet]
-    Arc --> Index[The Graph index]
+    Arc --> Graph[The Graph candidate index]
     Ledger --> Recovery[Recovery service and audit view]
     Recovery -->|provider lookup| Privy
     Recovery -->|receipt and log lookup| Arc
-    Recovery -->|indexed history and freshness| Index
+    Recovery -->|candidate query and freshness| Graph
     Recovery --> Agent
     Recovery --> Operator
 ```
@@ -109,7 +109,7 @@ stateDiagram-v2
 ```
 
 Only the domain and PostgreSQL transition rules own these states. Privy, Arc,
-The Graph, queues, and UI components report facts or perform bounded actions;
+optional indexers, queues, and UI components report facts or perform bounded actions;
 none may reinterpret the state machine.
 
 ## Component responsibilities
@@ -124,7 +124,7 @@ none may reinterpret the state machine.
 | Graphile Worker | Deliver execution and reconciliation jobs | Authority to pay because a job was redelivered |
 | Privy adapter | Wallet authorization, policy checks, provider request identity | Durable Business Intent authority |
 | Arc adapter | Transaction construction, submission, receipt and Transfer verification | Deciding whether another attempt is allowed |
-| The Graph Subgraph/client | Indexed transfer history, deployment identity, freshness and health | Proof that an absent payment never happened |
+| The Graph candidate adapter | Indexed transfer discovery, deployment identity, freshness, and health after passing the C01 value gate | Proof that an absent payment never happened |
 | Reconciliation engine | Combine bound evidence and emit versioned safe commands | Settlement submission |
 | Operator console | Explain state, evidence, policy and safe recovery actions | Force-pay or bypass controls |
 | Telemetry/runbooks | Reveal failures, lag, `UNKNOWN` age and safe-disable state | Secrets or mutation of financial truth |
@@ -155,7 +155,7 @@ sequenceDiagram
     Arc-->>Worker: Final receipt and logs
     Worker->>Worker: Verify chain, token, recipient, amount, and Transfer
     Worker->>DB: Persist COMMITTED and settlement identity
-    Arc-->>Graph: Transfer event indexed independently
+    Arc-->>Graph: Transfer and correlation event are indexed independently
     Agent->>API: GET intent status
     API-->>Agent: One committed settlement with evidence
 ```
@@ -168,23 +168,36 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Privy
     participant Arc
-    participant Reconciler
     participant Graph as The Graph
+    participant Reconciler
+    participant Domain
 
     Worker->>DB: Persist SUBMITTING and request identity
     Worker->>Privy: Submit authorized transfer
     Privy->>Arc: Broadcast transaction
-    Arc--xWorker: Success response is lost
+    Arc--xWorker: Success response and hash are lost
     Worker->>DB: Persist UNKNOWN
-    Reconciler->>DB: Load intent, request identity, and observations
+    Reconciler->>DB: Load intent and request identity
     Reconciler->>Privy: Lookup original provider request
-    Reconciler->>Arc: Lookup exact transaction receipt and Transfer
-    Reconciler->>Graph: Query indexed observation plus freshness
-    Note over Reconciler,Graph: Graph may locate or corroborate activity but cannot authorize a retry
-    Reconciler->>Domain: Emit MARK_COMMITTED with expected version
-    Domain->>DB: Compare and set UNKNOWN to COMMITTED
+    Privy-->>Reconciler: Transaction hash or no usable identity
+    alt transaction hash recovered
+        Reconciler->>Arc: Verify recovered receipt and Transfer
+    else transaction hash missing
+        Reconciler->>Graph: Query memo ID or transfer tuple plus freshness
+        Graph-->>Reconciler: Zero, one, or multiple candidates
+        loop each candidate
+            Reconciler->>Arc: Verify receipt, Memo when used, and Transfer
+        end
+    end
+    Note over Reconciler,Graph: Graph discovers candidates, Arc proves, and Graph never authorizes a retry
+    alt exactly one bindable final match
+        Reconciler->>Domain: Emit MARK_COMMITTED with expected version
+        Domain->>DB: Compare and set UNKNOWN to COMMITTED
+    else no safe resolution
+        Reconciler->>DB: Keep UNKNOWN and record escalation evidence
+    end
     Worker->>DB: Check the same intent after redelivery
-    DB-->>Worker: Terminal state means no second submission
+    DB-->>Worker: COMMITTED or UNKNOWN means no second submission
 ```
 
 ## Port and adapter boundary
@@ -206,17 +219,17 @@ flowchart LR
     Settle --> ArcWrite[Arc write adapter]
     Evidence --> PrivyRead[Privy lookup]
     Evidence --> ArcRead[Arc receipt and log lookup]
-    Index --> GraphClient[Graph client]
+    Index --> HistoryAdapter[The Graph adapter]
 
     Privy --> External1[Privy service]
     ArcWrite --> External2[Arc RPC]
     PrivyRead --> External1
     ArcRead --> External2
-    GraphClient --> External3[The Graph]
+    HistoryAdapter --> External3[The Graph live provider]
 ```
 
 The domain consumes stable result families. Adapters translate external SDK,
-RPC, and GraphQL behavior into those results. External response shapes never
+RPC, and Graph-query behavior into those results. External response shapes never
 leak into the state machine.
 
 ## A/B/C ownership and convergence
@@ -242,7 +255,7 @@ flowchart TB
     end
 
     subgraph C[Coder C - evidence and recovery]
-      C1[Subgraph and health]
+      C1[Graph discovery and evidence strategy]
       C2[Reconciliation engine]
       C3[Failure injection]
       C4[Recovery service]

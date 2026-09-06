@@ -11,11 +11,13 @@ Pure adapter logic builds one byte-stable ERC-20 request, expresses the expected
 
 ## Small tasks
 
-### B02.1 — ERC-20 calldata builder
+### B02.1 — Correlated USDC calldata builder
 
-- Encode `transfer(address,uint256)` for the normalized recipient and `bigint` amount.
-- Require exact chain/token/method, zero native transaction value, and six-decimal semantic boundary.
-- Add golden calldata and request-fingerprint vectors.
+- Encode the direct `transfer(address,uint256)` fallback and, when B01 marks it
+  policy-safe, the Arc Memo forwarded call with `memoId = hash(business_intent_id)`.
+- Require exact chain/token/method, recipient, amount, zero native transaction
+  value, and six-decimal semantic boundary.
+- Add golden transfer, memo, call-data-hash, and request-fingerprint vectors.
 
 ### B02.2 — Privy request identity
 
@@ -58,4 +60,4 @@ Start B03 in offline mode. Human provisioning may happen asynchronously.
 
 ## Non-goals
 
-No production credentials, domain state mutation, Graph query, or frontend.
+No production credentials, domain state mutation, external-index query, or frontend.

@@ -56,4 +56,47 @@ contributes to the complete product.
 
 - Branch: `milestone/product-roadmap`
 - Base: `develop` at `5ef6a66313614e67b476f56c98f47c65344fb6ec`
-- Pull request: `https://github.com/SWOFART/OneShot/pull/7`
+- Original roadmap pull request: `https://github.com/SWOFART/OneShot/pull/7`
+  (merged into `develop` before this architecture correction).
+- Follow-up pull request: pending from `milestone/product-roadmap`.
+
+## 2026-09-06 architecture correction
+
+- The working Arc Testnet product remains the first live proof.
+- Mainnet readiness is now part of P0-P6 through a disabled typed profile,
+  deployment/preflight evidence, safe disable, rollback, and a human activation
+  gate. No unavailable Arc Mainnet values are guessed.
+- PostgreSQL remains authoritative. Direct Privy lookup and Arc receipt/log
+  evidence form the required recovery path.
+- The Graph is the selected v1 hashless candidate-discovery layer. C01 must
+  prove live value, freshness, multiple-candidate handling, and AI-track fit;
+  Arc remains authoritative and a failed gate removes the Graph claim.
+- Review gates for this corrected tree are intentionally not embedded here;
+  immutable Gate A/B evidence is recorded on PR #7 so recording it cannot alter
+  the reviewed tree.
+## 2026-09-06 migration options
+
+- Arc with direct Privy/RPC evidence remains the smallest default.
+- The Graph is the primary `IndexViewPort` adapter for hashless discovery;
+  direct Arc or managed RPC remain migration fallbacks.
+- Hedera with Privy and x402/Blocky402 is a coherent alternative settlement
+  rail for the paid-API vertical. It replaces Arc-specific adapter/evidence
+  work while retaining the OneShot domain, PostgreSQL authority, `UNKNOWN`, and
+  reconciliation rules.
+- A Hedera pivot must be selected before P0 and must prove Privy compatibility;
+  it is not a second rail in the same MVP.
+- Bazantic is the closest optional third sponsor after the core Hedera flow,
+  but it must add a real agent-facing capability and cannot replace Blocky402.
+## 2026-09-06 Graph and Arc Memo decision
+
+- Primary submission direction: Privy authorizes, The Graph discovers, Arc
+  proves, and OneShot/PostgreSQL decides.
+- Target The Graph AI Tooling or AI Use Case, not Composable/Standardized.
+- Demonstrate a real Arc payment whose successful response/hash is discarded at
+  the adapter fault boundary, followed by live Graph discovery and direct Arc
+  verification with no second payment.
+- Prefer Arc Memo `memoId = hash(business_intent_id)` for unique correlation only
+  if B01 proves Privy can constrain the forwarded USDC call. Otherwise preserve
+  stricter authorization and use tuple/window search or a narrow typed contract.
+- Hedera + Privy + x402/Blocky402 remains a separate P0 alternative, not a
+  second settlement rail in the Arc MVP.

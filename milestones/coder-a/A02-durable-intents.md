@@ -58,4 +58,4 @@ Start A03 with the settlement simulator. Real B output and C recovery code are n
 
 ## Non-goals
 
-No external wallet call, Arc transaction, Graph query, or frontend.
+No external wallet call, settlement-rail transaction, external-index query, or frontend.

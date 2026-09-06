@@ -57,4 +57,4 @@ Start A04 using B/C simulators. A project gate will later repeat these proofs wi
 
 ## Non-goals
 
-No real Privy/Arc call, Graph lookup, automatic replacement, or UI.
+No real Privy/settlement-rail call, external-index lookup, automatic replacement, or UI.

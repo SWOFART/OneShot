@@ -19,7 +19,7 @@ A deterministic chaos harness proves that crashes, lost responses, duplicate/out
 
 ### C03.2 — Graph degradation suite
 
-- Delay/empty results, trail chain head, set indexing errors, omit `_meta`, fail query, return duplicates/out-of-order events, and switch deployment identity.
+- Delay/empty results, trail chain head, set provider health errors, omit freshness metadata, fail query, return duplicates/out-of-order events, and switch deployment identity.
 - Assert health labels and no permission change.
 
 ### C03.3 — Provider/RPC contradiction suite

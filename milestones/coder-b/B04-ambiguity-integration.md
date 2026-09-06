@@ -58,4 +58,4 @@ B04 closes against the contract host. Do not start production frontend until P4.
 
 ## Non-goals
 
-No reconciliation decision, Graph authority, automatic transaction replacement, or UI.
+No reconciliation decision, external-index authority, automatic transaction replacement, or UI.

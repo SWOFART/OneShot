@@ -32,7 +32,7 @@ A strict, independently runnable workspace exposes the frozen contracts, OpenAPI
 ### A01.4 — Fixture validator
 
 - Create the v1 fixture directories and schema validation command.
-- Include accepted, replay, conflict, authorization, settlement, evidence, and Graph fixture placeholders with safe synthetic values.
+- Include accepted, replay, conflict, authorization, settlement, evidence, and Graph candidate fixture placeholders with safe synthetic values.
 - Reject unversioned, extra-sensitive, malformed, float-money, and unknown-result fixtures.
 
 ### A01.5 — Domain simulator
@@ -59,4 +59,4 @@ Start A02 after A01 local review. Missing provider examples become additive fixt
 
 ## Non-goals
 
-No PostgreSQL persistence, real worker queue, provider SDK, real settlement, Subgraph, or production UI.
+No PostgreSQL persistence, real worker queue, provider SDK, real settlement, external index implementation, or production UI.

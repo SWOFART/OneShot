@@ -34,8 +34,9 @@ OneShot's core promise is: `One job. Many retries. One settlement.`
 - Privy provides corporate wallet access and scoped authorization, policy, and
   spending permissions.
 - Arc is the USDC settlement rail.
-- The Graph provides live indexed history and recovery context. It is never the
-  duplicate-payment lock or authority for creating another Settlement.
+- Direct Privy and Arc evidence resolves known transaction identities. The Graph
+  is the selected v1 hashless candidate-discovery layer after its C01 evidence
+  gate; it is never the duplicate-payment lock or settlement authority.
 
 Read `.agent/PROJECT_CONTEXT.md`, `.agent/SECURITY_INVARIANTS.md`, and
 `.agent/SPONSOR_REQUIREMENTS.md` before changing these boundaries.
@@ -50,7 +51,7 @@ Read `.agent/PROJECT_CONTEXT.md`, `.agent/SECURITY_INVARIANTS.md`, and
 - Make state durable and transitions atomic and concurrency-safe.
 - Represent money as integer atomic units or `bigint`, never JavaScript
   floating point.
-- Graph absence or indexing delay is not proof that payment did not happen.
+- External-index absence or delay is not proof that payment did not happen.
 - Normal execution must not bypass Privy policy or OneShot controls.
 - Use testnet only unless the user explicitly authorizes another network.
 - Never log, expose, persist, commit, or send secrets, private keys, seed

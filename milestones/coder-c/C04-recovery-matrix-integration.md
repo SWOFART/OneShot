@@ -36,19 +36,19 @@ The recovery service composes frozen local-state, provider/Arc, and Graph simula
 ### C04.5 — Gate P4 replacement guide
 
 - Document exact simulator-to-reviewed-package replacement points.
-- Define live Graph deployment checks, lag thresholds, expected package versions, and rollback to safe simulator/read-only mode.
+- Define checks, lag thresholds, expected package versions, and safe-disable behavior for a Graph deployment; keep the no-index baseline runnable.
 
 ## Acceptance evidence
 
 - Package-local lint/type/test/build and full fixture matrix pass.
 - Reconciliation retries are idempotent and zero-submit by construction.
 - Recovery view always distinguishes authority and observation freshness.
-- Contract mismatch, missing `_meta`, raw provider payload, and unknown enum fail closed.
+- Contract mismatch, missing freshness metadata, raw provider payload, and unknown enum fail closed.
 - Packet closes with simulators; live gaps are explicit Gate P4 items.
 
 ## Handoff artifact
 
-Publish recovery service package, evidence command pack, matrix report, simulator lock, live replacement guide, and Graph deployment checklist.
+Publish recovery service package, evidence command pack, matrix report, simulator lock, live replacement guide, and Graph decision and deployment checklist.
 
 ## No-wait continuation
 
@@ -56,4 +56,4 @@ C04 is `DONE` on simulator proof. Do not start production frontend until P4. Whi
 
 ## Non-goals
 
-No production frontend, direct settlement, Graph-based authorization, or sponsor qualification from offline data.
+No production frontend, direct settlement, index-based authorization, or sponsor qualification from offline data.

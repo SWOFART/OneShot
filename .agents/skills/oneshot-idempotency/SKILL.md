@@ -20,7 +20,7 @@ Read `.agent/PROJECT_CONTEXT.md`, `.agent/SECURITY_INVARIANTS.md`, and
   where the provider supports it. This supplements, not replaces, OneShot state.
 - Treat any possibly submitted but unconfirmed payment as `UNKNOWN`. Reconcile
   from durable/provider/Arc evidence before retrying.
-- Never use Graph absence or indexing delay as permission to pay.
+- Never use external-index absence or delay as permission to pay.
 - Keep money in integer atomic units or `bigint`; validate asset, network,
   recipient, amount, and Privy policy before submission.
 - Preserve payment results when later supplier/API work fails.

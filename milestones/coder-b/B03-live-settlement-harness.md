@@ -62,4 +62,4 @@ Mark B03 `DONE` when offline criteria pass, even if live setup is pending. Start
 
 ## Non-goals
 
-No mainnet, automatic funding, unattended policy mutation, domain database write, or qualification claim from fixtures alone.
+No real mainnet transaction, automatic funding, unattended policy mutation, domain database write, or qualification claim from fixtures alone.
