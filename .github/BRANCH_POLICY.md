@@ -1,44 +1,36 @@
-# Branch and Quality Policy
+# Branch and review policy
 
-## Branch architecture
+## Protected branches
 
-- `main`: Production/release branch. Contains only stable, released code. Merges to `main` occur from `develop` through release PRs or tags.
-- `develop`: Integration branch. The default base branch for ongoing development, milestones, and features.
-- `milestone/<id>-<name>`, `feature/<name>`, `fix/<name>`: Short-lived branches targeting `develop`.
+- `develop` is the integration branch.
+- `main` is the release branch.
+- Do not push directly to either protected branch.
+- Do not merge a pull request as an agent. A human owner merges after the required reviews and checks pass.
 
-## Pull request workflow
+## Working branches
 
-1. All milestone and feature branches originate from `develop` and create pull requests targeting `develop`.
-2. Every pull request begins as a **Draft** PR.
-3. Every pull request requires passing:
-   - Local validation checks (Phase 3);
-   - Review Gate A (independent pre-PR implementation review);
-   - All required CI status checks;
-   - Review Gate B (independent post-PR draft review);
-   - Human review and approval.
-4. Agents must never merge pull requests. Final approval and merging is performed exclusively by the user.
+Create a focused branch from the latest target branch and keep commits scoped to one concern. Before opening or updating a pull request, follow `.agent/IMPLEMENTATION_LOOP.md` and confirm the exact candidate tree has passed the pre-push FreePi gate.
 
-## Agent review evidence
+## Required pull-request evidence
 
-Canonical agent and review rules live in `AGENTS.md`, `.agent/AGENTS.md`, and
-`.agent/MILESTONE_IMPLEMENTATION_LOOP.md`. Pull requests record their required
-evidence through `.github/PULL_REQUEST_TEMPLATE.md`.
+Every pull request must record:
 
-GitHub status checks and branch protection enforce merge readiness. Local agent
-instructions alone are not enforcement.
+- the base and head commit SHAs;
+- the candidate tree SHA reviewed before push;
+- the independent reviewer tool and model;
+- the exact `VERDICT: PASS` result for Gate A;
+- the validation commands and results;
+- security and product-invariant impact;
+- any residual risks or follow-up work.
 
-## Required status checks
+After push, run the PR-head FreePi gate against the exact remote head. A pass for a different tree or commit is stale and does not satisfy the gate.
 
-The initial required check for `develop` and `main` is:
+## Required checks
 
-- `Agent policy`.
+The following checks must pass before human merge:
 
-Add lint, test, and build checks as executable project components appear.
+- `Agent policy / repository-policy`;
+- all applicable build, test, lint, type-check, and security checks;
+- independent FreePi Gate A and Gate B reviews as defined in `.agent/IMPLEMENTATION_LOOP.md`.
 
-## Protection rules
-
-The `develop` and `main` branches should be protected against:
-- Direct pushes (all changes must pass through pull requests);
-- Force pushes;
-- Branch deletions;
-- Merging with unresolved conversations or failing checks.
+If a required check cannot run, stop and document the blocker. Do not weaken, bypass, or silently substitute a gate.

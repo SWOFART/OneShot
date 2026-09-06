@@ -1,11 +1,5 @@
-# OneShot repository policy
+# OneShot repository policy adapter
 
-Load and follow these canonical repository policies before planning, editing,
-reviewing, committing, pushing, or opening a pull request:
+Load and follow `@../../AGENTS.md` before changing this repository.
 
-@../../AGENTS.md
-@../../.agent/AGENTS.md
-@../../.agent/MILESTONE_IMPLEMENTATION_LOOP.md
-
-This file is an Antigravity adapter only. Personal rules belong in local
-ignored files and must not override repository policy.
+The root policy routes the canonical, task-specific documents under `.agent/`. This file is only the Antigravity-compatible entry point and does not override or duplicate repository policy.

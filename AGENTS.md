@@ -1,18 +1,29 @@
-# Repository Agent Instructions
+# OneShot Agent Entry Point
 
-These instructions apply to the entire repository.
+Read `.agent/AGENTS.md` before any repository work.
 
-Before planning, editing, reviewing, or publishing any change, read
-`.agent/AGENTS.md` and `.agent/MILESTONE_IMPLEMENTATION_LOOP.md` completely and
-follow them as mandatory repository policy.
+Then load only the documents needed for the task:
 
-Agents supporting `AGENTS.md` load this root file. Detailed policies and
-milestone loops live under `.agent/` so repository rules remain maintainable
-without inflating the top-level prompt.
+- Architecture or domain work: `.agent/PROJECT_CONTEXT.md` and
+  `.agent/SECURITY_INVARIANTS.md`.
+- Privy, Arc, The Graph, demo, release, or submission work:
+  `.agent/SPONSOR_REQUIREMENTS.md`.
+- Intent, payment, retry, worker, queue, job, invoice, settlement, or
+  reconciliation work: the `oneshot-idempotency` repo skill and
+  `.agent/TEST_MATRIX.md`.
+- Failure handling or reliability work: the `oneshot-failure-injection` repo
+  skill and `.agent/TEST_MATRIX.md`.
+- Any implementation, review, commit, push, or pull request:
+  `.agent/IMPLEMENTATION_LOOP.md`.
+- Demo/release sponsor claims: the `sponsor-qualification` repo skill.
+- Handoff, milestone boundary, session end, or deliberate context reset:
+  `.agent/context/README.md` and the current context record.
 
-Tool-specific files may only point to these canonical policies. They must not
-duplicate or override them. Personal agent preferences belong in ignored local
-files, not shared branches.
+Canonical shared policy lives only in this file and `.agent/`. Tool-specific
+files such as `.claude/CLAUDE.md` and `.agents/rules/repository-policy.md` are
+thin adapters: they point here and must not duplicate or override policy.
 
-If either detailed policy file is missing or cannot be read, stop and report the
-problem. Do not guess at the review or publishing process.
+Repository skills live in `.agents/skills/`. Personal workflow skills may help,
+but they never replace OneShot policy or mandatory FreePi Gate A and Gate B.
+
+If a required document cannot be read, stop and report the missing policy.

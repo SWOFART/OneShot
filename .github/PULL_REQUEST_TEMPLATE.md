@@ -1,67 +1,65 @@
-## Milestone outcome
+## Summary
 
-<!-- What outcome does this PR deliver? -->
+<!-- What changed and why? Keep this concise. -->
 
-## Scope
+## Scope and acceptance criteria
 
-### In scope
+- [ ] The change is limited to the stated milestone or issue.
+- [ ] Acceptance criteria are listed and satisfied.
+- [ ] No unrelated cleanup is included.
 
--
+## Product and security invariants
 
-### Out of scope
+- [ ] Tenant isolation remains fail-closed.
+- [ ] Sponsor authorization, auditability, and daily caps remain enforced where applicable.
+- [ ] Recipients cannot modify sponsor controls or access sponsor-only data.
+- [ ] No secret, token, production identifier, or personal data is committed or pasted into review prompts.
+- [ ] Any non-applicable invariant is explained below.
 
--
+Invariant notes:
 
-## Acceptance criteria
+<!-- Explain affected invariants, or why they are not applicable. -->
 
-- [ ]
+## Validation
 
-## Risk review
+Commands and results:
 
-- Security & secrets:
-- Data safety & privacy:
-- Architecture & performance:
-- Rollback or safe disablement:
+```text
+<!-- command: PASS/FAIL and concise evidence -->
+```
 
-## Validation evidence
+## Independent review evidence
 
-| Command or check | Result |
-| --- | --- |
-| `<lint / check command>` | |
-| `<test command>` | |
-| `<build command>` | |
+### Gate A — exact candidate tree before push
 
-## Review Gate A - implementation
-
-- Reviewed base SHA:
-- Reviewed candidate tree SHA:
-- Reviewer tool:
+- Base commit SHA:
+- Candidate tree SHA:
+- Candidate commit SHA (if already committed but unpushed):
+- Reviewer tool: `free-pi-cli`
 - Reviewer model:
-- Verdict:
-- Blocking findings resolved:
-- Evidence / review summary:
+- Verdict: `VERDICT: PASS` / `VERDICT: FAIL`
+- Findings or residual risks:
 
-## Required CI
+- [ ] The reviewed tree equals the committed tree.
 
-- [ ] `Agent policy`
-- [ ] All project checks applicable to this change
-- [ ] No required check is missing, pending, skipped, or failing
+### Gate B — exact remote PR head
 
-## Review Gate B - draft PR
-
-- Reviewed PR head SHA:
-- Reviewed PR head tree SHA:
-- Matching Gate A candidate tree SHA:
-- Reviewer tool:
+- Pull request URL/number:
+- Remote head commit SHA:
+- Remote head tree SHA:
+- Reviewer tool: `free-pi-cli`
 - Reviewer model:
-- Verdict:
-- Blocking findings resolved:
-- Evidence / review summary:
+- Verdict: `VERDICT: PASS` / `VERDICT: FAIL`
+- Findings or residual risks:
 
-## User review
+- [ ] Gate B reviewed the current remote head and matches Gate A's approved tree, or a fresh Gate A was run for the changed tree.
+- [ ] `Agent policy / repository-policy` and all applicable CI checks pass.
 
-- [ ] Review Gate A passed for the current change.
-- [ ] Required CI checks are green for the current head.
-- [ ] Review Gate B passed for the current head.
-- [ ] The PR is marked ready for user review.
-- [ ] The user explicitly approved merge. Agents must leave this unchecked.
+## Risk and rollback
+
+- Residual risks:
+- Rollback or recovery plan:
+
+## Human merge
+
+- [ ] A human owner has reviewed the evidence and will perform the merge.
