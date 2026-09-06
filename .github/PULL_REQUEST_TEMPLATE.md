@@ -33,22 +33,27 @@
 
 ## Review Gate A - implementation
 
-- Reviewed head / commit:
-- Reviewer / model:
+- Reviewed base SHA:
+- Reviewed candidate tree SHA:
+- Reviewer tool:
+- Reviewer model:
 - Verdict:
 - Blocking findings resolved:
 - Evidence / review summary:
 
 ## Required CI
 
-- [ ] Lint and static analysis
-- [ ] Automated tests
-- [ ] Build validation
+- [ ] `Agent policy`
+- [ ] All project checks applicable to this change
+- [ ] No required check is missing, pending, skipped, or failing
 
 ## Review Gate B - draft PR
 
 - Reviewed PR head SHA:
-- Reviewer / model:
+- Reviewed PR head tree SHA:
+- Matching Gate A candidate tree SHA:
+- Reviewer tool:
+- Reviewer model:
 - Verdict:
 - Blocking findings resolved:
 - Evidence / review summary:

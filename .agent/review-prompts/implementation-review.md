@@ -8,8 +8,9 @@ Do not attempt to fix a finding yourself. Report findings and return the require
 
 - Read the repository `AGENTS.md` and `.agent/AGENTS.md`.
 - Target base branch: `develop` (or designated milestone base).
-- Review the complete workspace diff against the base, including committed,
-  staged, unstaged, and untracked files.
+- Review the complete staged candidate tree against the recorded base SHA.
+- Verify `git status` contains no intended unstaged or untracked change omitted
+  from the candidate.
 - Read the milestone acceptance criteria, requirements, and relevant docs.
 
 ## Required analysis
@@ -33,8 +34,11 @@ Use this exact structure:
 
 ```text
 VERDICT: PASS | FAIL
-REVIEWED_TARGET: <branch or commit SHA>
-REVIEWED_BASE: develop (<base SHA>)
+REVIEWER_TOOL: <tool or agent system>
+REVIEWER_MODEL: <exact model name, or not exposed by platform>
+REVIEWED_TARGET: <branch>
+REVIEWED_BASE: develop (<exact base SHA>)
+REVIEWED_TREE: <exact candidate tree SHA>
 
 BLOCKING_FINDINGS:
 - <severity> <file:line or subsystem> - <problem, impact, and required fix>
