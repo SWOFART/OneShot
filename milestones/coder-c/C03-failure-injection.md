@@ -7,7 +7,10 @@ Next: C04 immediately after closure
 
 ## Outcome
 
-A deterministic chaos harness proves that crashes, lost responses, duplicate/out-of-order evidence, Graph degradation, and provider/RPC contradictions cannot turn uncertainty into settlement permission.
+A deterministic chaos harness proves that crashes, lost responses,
+duplicate/out-of-order evidence, Graph/Subgraph MCP degradation, hostile tool
+content, invalid LLM output, and provider/RPC contradictions cannot turn
+uncertainty into settlement permission.
 
 ## Small tasks
 
@@ -17,10 +20,12 @@ A deterministic chaos harness proves that crashes, lost responses, duplicate/out
 - Model process kill, timeout, disconnect, response loss, delayed evidence, and restart between durable transitions.
 - Make each scenario deterministic and seed-recorded.
 
-### C03.2 — Graph degradation suite
+### C03.2 — Graph and Subgraph MCP degradation suite
 
 - Delay/empty results, trail chain head, set provider health errors, omit freshness metadata, fail query, return duplicates/out-of-order events, and switch deployment identity.
-- Assert health labels and no permission change.
+- Add MCP timeout, wrong tool/deployment, schema drift, truncated/oversized or
+  malformed result, duplicated delivery, and injected instruction text.
+- Assert health/provenance labels and no permission change.
 
 ### C03.3 — Provider/RPC contradiction suite
 
@@ -32,8 +37,11 @@ A deterministic chaos harness proves that crashes, lost responses, duplicate/out
 - Persist synthetic evidence feed, restart the harness, replay/reorder it, and compare decisions.
 - Prove semantic idempotency and stable audit chronology.
 
-### C03.5 — UNKNOWN aging and escalation
+### C03.5 — Agent failure, UNKNOWN aging, and escalation
 
+- Inject model timeout, malformed JSON, unsupported action, fabricated evidence
+  reference, and nondeterministic prose; assert fail-closed `WAIT`/hold and zero
+  settlement calls.
 - Add configurable age buckets, alerts, operator context, and escalation outcomes.
 - Ensure runbook language never instructs “just retry” or treats lease expiry as permission.
 
@@ -41,7 +49,8 @@ A deterministic chaos harness proves that crashes, lost responses, duplicate/out
 
 - Every `.agent/TEST_MATRIX.md` case involving ambiguity/evidence has a deterministic scenario.
 - Crash/lost response after possible submission remains `UNKNOWN` until authoritative resolution.
-- Empty, delayed, unhealthy, contradictory, or unavailable sources never unlock payment.
+- Empty, delayed, unhealthy, contradictory, malformed, injected, or unavailable
+  sources and invalid agent output never unlock payment.
 - Repeated/reordered evidence causes zero settlement calls and stable commands.
 - Harness runs with no network or credentials.
 

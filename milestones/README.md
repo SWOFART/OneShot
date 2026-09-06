@@ -14,7 +14,7 @@ This directory turns `plan.md` into small, independently closable work packets f
 
 - [`coder-a/`](coder-a/README.md): domain, storage, API, worker, composition, intent/status UI, operations.
 - [`coder-b/`](coder-b/README.md): Privy, Arc, request/receipt safety, provider ambiguity, settlement UI, sponsor evidence.
-- [`coder-c/`](coder-c/README.md): The Graph candidate discovery behind a provider-neutral port, reconciliation, failure injection, recovery UI, qualification.
+- [`coder-c/`](coder-c/README.md): The Graph candidate discovery through Subgraph MCP, LLM Recovery Agent, deterministic reconciliation, failure injection, recovery UI, qualification.
 
 Each lane has six ordered packets. A packet depends only on the frozen contract pack and the preceding packet in the same directory. A real package from another coder is never required for packet closure; use the checked simulator until project Gate P4.
 
@@ -89,4 +89,4 @@ For a required contract change:
 4. Let each owner migrate independently.
 5. Remove the old form only in a later, separately reviewed packet.
 
-Never reinterpret `UNKNOWN`, monetary precision, settlement ownership, or external evidence authority through a compatibility shortcut.
+Never reinterpret `UNKNOWN`, monetary precision, settlement ownership, or Graph/MCP/LLM authority through a compatibility shortcut.

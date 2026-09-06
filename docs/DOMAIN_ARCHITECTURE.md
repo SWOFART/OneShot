@@ -17,11 +17,13 @@ flowchart LR
     Worker --> Privy
     Privy --> Arc[Arc USDC settlement]
     Arc --> SupplierWallet[Supplier wallet]
-    Arc --> Graph[The Graph candidate index]
+    Arc --> Graph[Live OneShot Arc Subgraph]
     Ledger --> Recovery[Recovery service and audit view]
     Recovery -->|provider lookup| Privy
     Recovery -->|receipt and log lookup| Arc
-    Recovery -->|candidate query and freshness| Graph
+    Graph --> MCP[Subgraph MCP]
+    MCP -->|validated candidates and freshness| RecoveryAgent[LLM Recovery Agent]
+    RecoveryAgent -->|four-action recommendation| Recovery
     Recovery --> Agent
     Recovery --> Operator
 ```
@@ -124,8 +126,10 @@ none may reinterpret the state machine.
 | Graphile Worker | Deliver execution and reconciliation jobs | Authority to pay because a job was redelivered |
 | Privy adapter | Wallet authorization, policy checks, provider request identity | Durable Business Intent authority |
 | Arc adapter | Transaction construction, submission, receipt and Transfer verification | Deciding whether another attempt is allowed |
-| The Graph candidate adapter | Indexed transfer discovery, deployment identity, freshness, and health after passing the C01 value gate | Proof that an absent payment never happened |
-| Reconciliation engine | Combine bound evidence and emit versioned safe commands | Settlement submission |
+| The Graph Subgraph | Indexed transfer discovery, deployment identity, freshness, and health after passing C01 | Proof that an absent payment never happened |
+| Subgraph MCP adapter | Pin deployment and validate MCP tool/query results before model use | Model behavior, settlement authority, or secret exposure |
+| LLM Recovery Agent | Recommend `WAIT`, `RECONCILE`, `ESCALATE`, or `RETURN_EXISTING_RESULT` from labeled evidence | Settlement submission or authoritative transition |
+| Deterministic recovery safety core | Recheck Arc/durable proof and map allowed recommendations to safe commands | Trusting Graph/MCP/model as financial authority |
 | Operator console | Explain state, evidence, policy and safe recovery actions | Force-pay or bypass controls |
 | Telemetry/runbooks | Reveal failures, lag, `UNKNOWN` age and safe-disable state | Secrets or mutation of financial truth |
 
@@ -168,8 +172,10 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Privy
     participant Arc
-    participant Graph as The Graph
-    participant Reconciler
+    participant Graph as OneShot Arc Subgraph
+    participant MCP as Subgraph MCP
+    participant Agent as LLM Recovery Agent
+    participant Reconciler as Deterministic safety core
     participant Domain
 
     Worker->>DB: Persist SUBMITTING and request identity
@@ -183,13 +189,16 @@ sequenceDiagram
     alt transaction hash recovered
         Reconciler->>Arc: Verify recovered receipt and Transfer
     else transaction hash missing
-        Reconciler->>Graph: Query memo ID or transfer tuple plus freshness
-        Graph-->>Reconciler: Zero, one, or multiple candidates
+        Agent->>MCP: Inspect/query pinned deployment
+        MCP->>Graph: Query memo ID or transfer tuple plus _meta
+        Graph-->>MCP: Zero, one, or multiple live candidates
+        MCP-->>Agent: Validated structured tool result
+        Agent-->>Reconciler: Four-action recommendation and evidence references
         loop each candidate
             Reconciler->>Arc: Verify receipt, Memo when used, and Transfer
         end
     end
-    Note over Reconciler,Graph: Graph discovers candidates, Arc proves, and Graph never authorizes a retry
+    Note over Agent,Reconciler: Graph/MCP/LLM discover candidates; Arc proves; deterministic core decides
     alt exactly one bindable final match
         Reconciler->>Domain: Emit MARK_COMMITTED with expected version
         Domain->>DB: Compare and set UNKNOWN to COMMITTED
@@ -212,25 +221,32 @@ flowchart LR
     Domain --> Settle[SettlementPort]
     Reconciliation --> Evidence[EvidencePort]
     Reconciliation --> Index[IndexViewPort]
-    Reconciliation --> Command
+    Reconciliation --> Advisor[RecoveryAdvisorPort]
+    Reconciliation --> SafetyCore[Deterministic safety core]
+    SafetyCore --> Command
     Command --> Domain
 
     Auth --> Privy[Privy adapter]
     Settle --> ArcWrite[Arc write adapter]
     Evidence --> PrivyRead[Privy lookup]
     Evidence --> ArcRead[Arc receipt and log lookup]
-    Index --> HistoryAdapter[The Graph adapter]
+    Index --> MCPAdapter[Subgraph MCP adapter]
+    Advisor --> RecoveryAgent[LLM Recovery Agent]
 
     Privy --> External1[Privy service]
     ArcWrite --> External2[Arc RPC]
     PrivyRead --> External1
     ArcRead --> External2
-    HistoryAdapter --> External3[The Graph live provider]
+    RecoveryAgent --> MCPAdapter
+    MCPAdapter --> MCP[Subgraph MCP]
+    MCP --> External3[Live OneShot Arc Subgraph]
 ```
 
 The domain consumes stable result families. Adapters translate external SDK,
-RPC, and Graph-query behavior into those results. External response shapes never
-leak into the state machine.
+RPC, MCP, Graph-query, and model behavior into those results. The safety core
+accepts only the frozen four-action recommendation contract and independently
+validates any result-returning command. External response shapes never leak
+into the state machine.
 
 ## A/B/C ownership and convergence
 
@@ -255,8 +271,8 @@ flowchart TB
     end
 
     subgraph C[Coder C - evidence and recovery]
-      C1[Graph discovery and evidence strategy]
-      C2[Reconciliation engine]
+      C1[Subgraph MCP discovery strategy]
+      C2[LLM agent and safety core]
       C3[Failure injection]
       C4[Recovery service]
       C1 --> C2 --> C3 --> C4
