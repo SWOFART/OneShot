@@ -53,52 +53,15 @@ The primary product configuration is **Privy + Arc + The Graph**:
 - Arc verifies the candidate receipt and exact USDC `Transfer`.
 - OneShot and PostgreSQL alone decide the durable state transition.
 
-This is a provisional implementation choice with a hard C01 evidence gate. The
-Graph is load-bearing for automatic hashless discovery, but never becomes
-settlement authority. If C01 cannot demonstrate live candidate discovery beyond
-direct lookup, remove the Graph claim and ship the Privy + Arc fallback.
-
-| Configuration | Product meaning | Decision |
-| --- | --- | --- |
-| Privy + Arc + The Graph | Authorized payment, hashless candidate discovery, authoritative chain verification | Primary build; target Best AI Tooling or AI Use Case with The Graph |
-| Privy + Arc | Safe settlement and known-identity recovery without automatic indexed discovery | Fallback if C01 fails |
-| Privy + Hedera + x402/Blocky402 | One paid API call produces at most one Hedera settlement | Coherent alternative rail; select before P0 instead of dual-chain MVP |
-| Hedera configuration + Bazantic | Publishes the finished OneShot API as an agent-usable recipe/gateway | Optional third sponsor only after the core paid-request flow works |
-| Privy + Uniswap | Changes the vertical to one trading intent producing one swap | Separate trading pivot, not an additive sponsor |
-| Privy + Arc + confidential workflow | Protects private policy or routing inputs | Optional only if confidentiality becomes a core user requirement |
+This is the final implementation direction. The Graph is load-bearing for
+automatic hashless discovery, but never becomes settlement authority. C01 must
+prove its live data, freshness, and candidate-selection behavior before the
+sponsor claim is made.
 
 The Graph submission targets the AI Tooling or AI Use Case track. One custom
 Subgraph does not satisfy the Composable/Standardized track. The recovery agent
 uses live Graph data to choose and explain candidates; deterministic Arc checks
 and the OneShot state machine retain all financial authority.
-
-### Settlement-rail and data migration options
-
-The Business Intent, PostgreSQL authority, atomic ownership, queue, `UNKNOWN`
-state, reconciliation policy, and operator experience remain stable. A rail or
-index change occurs behind frozen ports and never changes payment cardinality.
-
-| Option | What changes | What stays | Sponsor/product fit | Selection rule |
-| --- | --- | --- | --- | --- |
-| Arc with The Graph | Deploy a live transfer index and recovery-agent query behind `IndexViewPort` | PostgreSQL and exact Arc evidence remain authoritative | Strong Privy + Arc + Graph story | Primary when C01 proves hashless discovery and live sponsor eligibility |
-| Arc with direct Privy/RPC evidence | Remove Graph deployment and automatic indexed search | Entire safety invariant and known-hash/provider-ID recovery | Strong Privy + Arc fallback | Use when Graph adds no demonstrated recovery value |
-| Arc with managed RPC history | Replace the Graph adapter | Direct evidence remains authoritative | Operational alternative; no Graph sponsor claim | Use when it materially outperforms direct RPC and sponsor value is irrelevant |
-| Arc with OneShot Router contract | Submit through a small contract that binds an intent ID and emits a canonical event | Business Intent and Privy policy stay central | Stronger Arc-native audit and unique lookup | Select only if the team accepts the added contract surface |
-| Hedera with Privy and x402/Blocky402 | Replace Arc request, receipt, token, network, and evidence adapters; add a live x402 service and consumer | Domain ledger, PostgreSQL locks, queue, ambiguity rules, and UI model stay | Direct match for Hedera AI & Agentic Payments plus Privy B2B financial product | Serious alternative; choose before implementation freeze, not as a second MVP rail |
-| Privy with Uniswap | Replace payment obligation semantics with quote, slippage, deadline, and swap outcome | Some idempotency infrastructure can be reused | Uniswap trading product | Separate product branch |
-
-```mermaid
-flowchart TB
-    P0{Choose one settlement product before P0}
-    P0 --> ArcPath[Primary Arc USDC product]
-    P0 --> HederaPath[Alternative Hedera x402 product]
-    ArcPath --> Graph[The Graph candidate discovery]
-    Graph --> ArcProof[Direct Arc receipt and Transfer proof]
-    HederaPath --> Blocky[Blocky402 facilitator]
-    Blocky --> HederaEvidence[Hedera transaction or Mirror Node evidence]
-    ArcProof --> Core[Shared OneShot domain and PostgreSQL authority]
-    HederaEvidence --> Core
-```
 
 ```mermaid
 flowchart LR
@@ -124,18 +87,6 @@ B01 must prove Privy policy can restrict the Memo destination, forwarded USDC
 target, and required business parameters. If it cannot, preserve the stricter
 policy and use tuple/window candidate search for the demo or a narrow typed
 settlement contract; never weaken authorization to obtain a cleaner lookup.
-
-For the Hedera option, `x402` and Blocky402 are part of the required payment
-flow, not a decorative third sponsor. Privy remains the wallet authorization
-boundary only after B01 proves the chosen Privy wallet and policy path against
-Hedera's EVM interface. Bazantic is the closest optional third sponsor after
-the core flow works; it must not replace Blocky402 settlement or turn the
-project into an MCP-only submission.
-
-If Hedera is selected, A01-A06 remain intact. Before P0, replace the Arc-specific
-B01-B06 contracts and rail labels in C01-C06 with Hedera x402, Blocky402, and
-transaction/Mirror Node evidence variants. Preserve packet IDs, port meanings,
-gates, and the cardinality invariant.
 
 ## Product surfaces
 
@@ -765,7 +716,7 @@ If time is constrained, cut in this order:
 2. Rolling/multiple policy support; retain one explicit policy.
 3. Nonessential dashboard panels and telemetry dimensions; retain safety alerts.
 4. Visual animation, theming, and secondary responsive polish; retain accessible core flows.
-5. The Graph integration if it fails C01 live hashless-discovery or sponsor-fit proof; retain invariant, authorization, settlement, `UNKNOWN`, and direct Arc recovery.
+5. Arc Memo correlation if Privy cannot constrain the forwarded call; retain The Graph tuple/window discovery and strict authorization.
 
 Never cut:
 

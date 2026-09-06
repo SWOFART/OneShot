@@ -25,22 +25,6 @@ release, or submission claims.
   disabled until Circle publishes official production access/identities and a
   human explicitly authorizes real-value activation.
 
-## Alternative target: Hedera AI & Agentic Payments
-
-Select this instead of Arc before P0; do not build two settlement rails for the
-same MVP.
-
-- Host a live x402-gated service on Hedera testnet or mainnet and settle it
-  through Blocky402.
-- Demonstrate an agent or platform completing one real paid request end to end.
-- Keep Privy core by proving a real wallet plus policy, signer, key quorum, or
-  intent that constrains the financial action. EVM compatibility alone is not
-  evidence; the Privy/Hedera path needs a B01 spike.
-- Use Hedera transaction or Mirror Node history as recovery evidence, never as
-  the durable duplicate lock.
-- Add Bazantic only after the core path works and only when its recipe/gateway
-  creates a separate, demonstrated agent capability.
-
 ## Selected target: The Graph AI Tooling or AI Use Case
 
 The Graph is load-bearing for automatic recovery when a successful submission

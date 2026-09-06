@@ -2,7 +2,8 @@
 
 Date: 2026-09-06
 Scope: primary-source facts needed to make the first product implementation plan decision-complete.
-Target: Privy-authorized exactly-once settlement on Arc Testnet by default, with provider-neutral recovery and Hedera x402 as an explicit alternative rail.
+Target: Privy-authorized exactly-once settlement on Arc Testnet with The Graph
+as the hashless recovery index.
 
 ## Decisions
 
@@ -31,16 +32,6 @@ Target: Privy-authorized exactly-once settlement on Arc Testnet by default, with
 - Privy can enforce chain, destination contract, decoded function, and decoded top-level calldata parameters. Before choosing Memo for settlement, B01 must prove the policy can constrain the forwarded USDC target and required business fields; otherwise use the tuple-search fallback or a narrow typed settlement contract without weakening authorization ([Privy policy fields](https://docs.privy.io/controls/policies/overview)).
 - Target the Graph AI Tooling or AI Use Case track: live Graph data must drive meaningful recovery-agent selection, explanation, or automation. The composable/standardized track requires two Graph products or meaningful use of a standardized schema; one custom Subgraph query is insufficient ([ETHOnline 2026 prize requirements](https://ethglobal.com/events/ethonline2026/prizes)).
 
-### Hedera x402: coherent alternative settlement rail
-
-- The Hedera AI & Agentic Payments track requires a live x402-gated service on Hedera testnet or mainnet, settlement through the Blocky402 facilitator, and an agent/platform completing at least one real paid request end to end ([ETHOnline 2026 Hedera requirements](https://ethglobal.com/events/ethonline2026/prizes/hedera)).
-- This maps directly to OneShot's first vertical: the agent pays for one API job while the durable Business Intent prevents a duplicate financial outcome after repeated HTTP calls, restarts, or lost settlement responses.
-- A Hedera choice replaces the Arc-specific network, token/request, receipt, explorer, and evidence adapters. It does not replace PostgreSQL authority, atomic ownership, the one-attempt submission job, `UNKNOWN`, or reconciliation.
-- Hedera Mirror Nodes expose validated transaction history through REST APIs and can serve as a read/recovery source. They remain external observation, not the OneShot duplicate lock ([Mirror Node model](https://docs.hedera.com/learn/core-concepts/mirror-nodes)).
-- Hedera exposes an Ethereum JSON-RPC interface, so reusing EVM transaction tooling is plausible, but it is not proof of Privy product support ([Hedera Hardhat and ethers.js guide](https://docs.hedera.com/hedera/tutorials/smart-contracts/hscs-workshop/hardhat)).
-- Privy is not assumed compatible merely because Hedera exposes an EVM interface. B01 must prove wallet creation, signing, chain configuration, policy enforcement, submission, and lookup on the chosen Hedera path before Privy/Hedera qualification is claimed.
-- `x402` plus Blocky402 is the required third technical component. Bazantic is the closest optional third sponsor because it can expose a finished API through a recipe or gateway, but it is added only after the Hedera paid-request path works and it must not replace Blocky402 settlement.
-
 ### Durable state and work delivery
 
 - PostgreSQL is the authoritative store. Use primary/unique constraints on `business_intent_id` and one settlement row per intent; use `INSERT ... ON CONFLICT` plus an immutable payload fingerprint to distinguish a replay from a same-ID conflict ([constraints](https://www.postgresql.org/docs/current/ddl-constraints.html), [`INSERT`](https://www.postgresql.org/docs/current/sql-insert.html)).
@@ -54,9 +45,13 @@ Target: Privy-authorized exactly-once settlement on Arc Testnet by default, with
 2. Assert `eth_chainId == 5042002` and bytecode exists at the configured USDC address during testnet startup checks.
 3. Prove the chosen Privy policy denies wrong chain, wrong contract, wrong recipient, wrong method, non-zero native value, and above-cap amount with zero settlement.
 4. Prove live The Graph hashless discovery, freshness, multiple-candidate handling, safe degradation, and AI-track value; otherwise remove the Graph claim and use direct recovery.
-5. If Hedera is selected at P0, prove the full Privy + x402/Blocky402 paid-request path and Mirror Node/transaction evidence before replacing Arc packets.
-6. Keep Privy webhooks outside the critical path until plan availability and signature verification are demonstrated.
+5. Keep Privy webhooks outside the critical path until plan availability and signature verification are demonstrated.
 
 ## Planning consequence
 
-The work can be split into three independent backend tracks after one contract freeze: (A) domain/storage/API, (B) the selected Privy/settlement-rail adapter, and (C) provider-neutral reconciliation/evidence. Each track must ship its own contract simulator and tests so progress does not depend on another track's implementation. Frontend begins only after the integrated backend contract and recovery semantics are stable.
+The work can be split into three independent backend tracks after one contract
+freeze: (A) domain/storage/API, (B) the Privy/Arc adapter, and (C) The Graph
+reconciliation/evidence. Each track must ship its own contract simulator and
+tests so progress does not depend on another track's implementation. Frontend
+begins only after the integrated backend contract and recovery semantics are
+stable.
