@@ -1,7 +1,6 @@
 # B05 — Frontend Authorization and Settlement Details
 
 Owner: Coder B
-Forecast: 2 working days
 Branch: `milestone/b05-frontend-settlement-details`
 Depends on: B04 and project Gate P4
 Next: B06 immediately after closure

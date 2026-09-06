@@ -1,7 +1,6 @@
 # B02 — Canonical Request, Policy, and Receipt Verification
 
 Owner: Coder B
-Forecast: 3 working days
 Branch: `milestone/b02-request-policy-receipt`
 Depends on: B01 only
 Next: B03 immediately after closure

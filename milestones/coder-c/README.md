@@ -4,6 +4,12 @@ Mission: index Arc transfer observations, classify Graph health/freshness, recon
 
 Stay inside C-owned paths. The reconciliation package emits frozen commands; it never writes A’s tables directly and never calls SettlementPort.
 
+## Technology focus
+
+The Graph Subgraph stack, `graph-cli`, AssemblyScript mappings, GraphQL,
+Matchstick, `viem` read paths, Vitest, deterministic failure injection, and
+React/Vite recovery components.
+
 ## Sequence
 
 1. [C01 — Subgraph and index health](C01-subgraph-index-health.md)

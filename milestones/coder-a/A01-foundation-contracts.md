@@ -1,7 +1,6 @@
 # A01 — Foundation and Contract Runtime
 
 Owner: Coder A
-Forecast: 3 working days
 Branch: `milestone/a01-foundation-contracts`
 Depends on: frozen `milestones/CONTRACTS.md` only
 Next: A02 immediately after closure

@@ -1,13 +1,92 @@
 # OneShot Product Delivery Plan
 
-Status: implementation-ready planning baseline
+Status: production MVP roadmap
 Team: exactly three coders
-Planning horizon: 20 working days, recalibrated after Backend Wave 1
 Implementation base: the human-approved commit containing this plan
 Research basis: `.agent/research/20260906-integration-decisions.md`
 Detailed work packets: [`milestones/README.md`](milestones/README.md)
+Domain architecture: [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md)
 
-## 1. Mission
+## Global product vision
+
+OneShot is a payment control plane for autonomous business agents. It lets a
+company approve one business obligation, allow an agent to execute it, and
+retain one durable financial outcome even when requests, processes, workers,
+or agent instances repeat.
+
+The primary product promise is:
+
+`One job. Many retries. One settlement.`
+
+The first production vertical is a B2B agent purchasing a paid API operation
+or digital result in USDC. Invoice payment, procurement, subscriptions, and
+other agent-commerce obligations are later verticals built on the same
+Business Intent contract.
+
+## Primary product flow
+
+1. A company configures a Privy-controlled wallet, recipient policy, and
+   spending limit.
+2. An agent creates one Business Intent for a paid API job with a stable
+   identity, recipient, amount, asset, network, and purpose.
+3. OneShot validates and durably records the obligation before any external
+   effect.
+4. A worker obtains atomic submission ownership and asks Privy to authorize the
+   exact Arc USDC transfer.
+5. Arc settles the payment. OneShot verifies the receipt and expected ERC-20
+   Transfer before recording `COMMITTED`.
+6. A timeout, crash, or lost response becomes durable `UNKNOWN`. Reconciliation
+   looks up the original Privy and Arc activity; The Graph adds indexed history,
+   freshness, and recovery context.
+7. Repeated HTTP requests, queue deliveries, processes, or agents return the
+   same Business Intent and cannot create a second committed settlement.
+
+## Product surfaces
+
+| Surface | User | Purpose |
+| --- | --- | --- |
+| Agent API and generated client | Autonomous agent or backend | Create/reuse a Business Intent and read its authoritative state |
+| Operator console | Company operator | Inspect attempts, policy decisions, settlement evidence, and recovery state |
+| Execution worker | OneShot service | Acquire submission ownership and execute the approved settlement |
+| Reconciliation service | Agent and operator | Resolve ambiguous outcomes without blindly paying again |
+| Audit and recovery timeline | Company and supplier | Explain what happened, which evidence is authoritative, and what action is safe |
+
+```mermaid
+flowchart LR
+    Company[Company operator] -->|wallet policy and limits| Privy[Privy]
+    Agent[Autonomous agent] -->|stable business intent| API[OneShot API]
+    Agent -.->|requests paid work| SupplierAPI[Paid API or digital supplier]
+    API --> Core[OneShot domain]
+    Core --> DB[(PostgreSQL authority)]
+    DB --> Worker[Execution worker]
+    Worker -->|authorized transfer request| Privy
+    Privy -->|ERC-20 USDC transaction| Arc[Arc]
+    Arc -->|one settlement| SupplierWallet[Supplier wallet]
+    Arc --> Graph[The Graph index]
+    DB --> Recovery[Recovery service and view]
+    Recovery -->|provider lookup| Privy
+    Recovery -->|receipt and log lookup| Arc
+    Recovery -->|indexed history and freshness| Graph
+    Recovery --> Agent
+    Recovery --> Company
+```
+
+OneShot controls payment cardinality. It does not guarantee the quality or
+delivery of the supplier's API result; that remains a separate commercial
+contract.
+
+## Production roadmap model
+
+- The roadmap targets a production-quality testnet MVP, not a disposable demo.
+- Work is ordered by domain dependencies and evidence gates.
+- A, B, and C progress independently inside frozen contracts and converge only
+  through reviewed package entry points, fixtures, and simulators.
+- A phase advances when its exit evidence passes; a packet advances when its
+  local acceptance contract passes.
+- Frontend production work begins after backend convergence freezes the public
+  API and recovery semantics.
+
+## 1. Mission and v1 release
 
 Deliver a testnet application that accepts one approved Business Intent, safely survives retries, crashes, duplicate delivery, parallel workers, and ambiguous provider responses, and produces at most one committed ERC-20 USDC settlement on Arc Testnet through a Privy-controlled corporate wallet. The Graph supplies live indexed recovery and history evidence without becoming settlement authority.
 
@@ -15,7 +94,7 @@ The release claim is:
 
 `1 Business Intent / N Attempts / <= 1 committed Settlement`
 
-The delivery plan is backend-first. Frontend implementation is deliberately placed in Wave 5 and may start only after the backend contract-freeze gate has passed.
+The delivery plan is backend-first. Frontend implementation is deliberately placed in Phase R5 and may start only after the backend contract-freeze gate has passed.
 
 ## 2. Planning objectives
 
@@ -57,41 +136,82 @@ This plan optimizes for five properties:
 - General workflow automation, arbitrary supplier/ERP integrations, native mobile clients, production compliance certification, or multi-region HA.
 - UI polish that is not necessary to demonstrate the invariant and sponsor requirements.
 
+### Post-MVP production path
+
+The current implementation commitment ends with a production-quality testnet
+MVP. A real-funds release requires separate evidence and human approval:
+
+1. **Pilot readiness:** tenant authentication and authorization, retention and
+   deletion policy, backup/restore proof, load limits, incident response,
+   dependency and contract security review, and production Privy/Arc support.
+2. **Limited production pilot:** allowlisted organizations, conservative
+   spending caps, safe-disable drills, operator escalation, SLO measurement,
+   and staged rollout with no automatic mainnet migration.
+3. **Product expansion:** invoice and procurement connectors, subscriptions,
+   supplier APIs, additional settlement networks/assets, and higher-availability
+   deployment only after the core invariant remains proven in the pilot.
+
+These stages extend the roadmap without expanding the P0-P6 build commitment.
+
 ## 5. Fixed technical baseline
 
-| Area | Decision |
+| Area | Technology and decision |
 | --- | --- |
-| Runtime | Node.js LTS and strict TypeScript; A01 pins the workspace runtime, while B01 proves SDK compatibility independently and reports any mismatch at P2 |
-| Workspace | `pnpm` workspace with package-local lint, type, test, and build commands |
-| API | HTTP JSON, OpenAPI source of truth, generated-schema drift check |
-| State | PostgreSQL with constraints, compare-and-set transitions, and transactional enqueueing |
-| Queue | Graphile Worker; at-least-once delivery is assumed |
-| Money | Integer strings at boundaries, `bigint` internally, no JavaScript monetary floats |
+| Runtime | Current active Node.js LTS, pinned by A01, with strict TypeScript |
+| Workspace | `pnpm` monorepo with package-local lint, type, test, and build commands |
+| API and contracts | Fastify HTTP JSON API, JSON Schema, OpenAPI source of truth, and generated-client/schema drift checks |
+| Authoritative state | PostgreSQL, explicit SQL migrations, `pg`, uniqueness constraints, compare-and-set transitions, and transactional outbox records |
+| Work delivery | Graphile Worker over the same PostgreSQL database; at-least-once delivery is assumed |
+| EVM encoding and RPC | `viem` for typed addresses, calldata, chain access, receipt reads, and log verification |
+| Authorization | Privy Node SDK, execution wallet, scoped wallet policy, persisted idempotency key, and reference identity |
 | Settlement | Arc Testnet `eip155:5042002`, ERC-20 USDC `0x3600000000000000000000000000000000000000`, six decimals |
-| Authorization | Privy execution wallet with explicit fail-closed policy and persisted request identity |
-| Submission jobs | One queue attempt; task persists `COMMITTED`, `FAILED_SAFE`, or `UNKNOWN` before returning |
-| Recovery | OneShot and verified Arc evidence authoritative; The Graph is freshness-labeled observation only |
-| Frontend | Begins after Gate P4; consumes frozen OpenAPI and mock server |
+| Indexing | The Graph custom Subgraph, `graph-cli`, AssemblyScript mappings, GraphQL client, `_meta` health data, and Matchstick mapping tests |
+| Money | Canonical integer strings at JSON boundaries and `bigint` internally; no JavaScript monetary floats |
+| Frontend | React and Vite, generated OpenAPI client, exact integer amount formatting, and no direct settlement capability |
+| Testing | Vitest for unit/contract tests, Testcontainers for PostgreSQL integration, Playwright for browser flows, Matchstick for Subgraph mappings, and deterministic failure simulators |
+| Local and CI | Docker Compose for reproducible local services and GitHub Actions for install, lint, type, test, build, migration, contract, and policy checks |
+| Submission jobs | One queue attempt; the task persists `COMMITTED`, `FAILED_SAFE`, or `UNKNOWN` before returning |
+| Recovery authority | OneShot state and verified Arc evidence are authoritative; Privy helps locate activity; The Graph is freshness-labeled observation and history |
 
-The exact v1 contracts, state table, fixture catalog, redaction rules, and change protocol are frozen in [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md).
+Exact dependency versions are pinned only after A01/B01 compatibility spikes.
+The exact v1 contracts, state table, fixture catalog, redaction rules, and change
+protocol are frozen in [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md).
 
 ## 6. Architecture
 
-```text
-Caller / late frontend
-        |
-        v
-HTTP API ----------> PostgreSQL authoritative ledger <--------- Worker
-                          |          |                              |
-                          |          +-- transactional jobs/outbox -+
-                          |
-                          +--> AuthorizationPort --> Privy policy/wallet
-                          +--> SettlementPort ----> Arc ERC-20 USDC
-                          +--> EvidencePort ------> Privy status + Arc RPC
-                          +--> IndexViewPort -----> The Graph observation
+```mermaid
+flowchart TB
+    Clients[Agent API client and operator console] --> API[apps/api - Fastify]
+    API --> Domain[packages/domain]
+    Domain --> Contracts[packages/contracts]
+    Domain --> Storage[packages/storage-postgres]
+    Storage --> DB[(PostgreSQL)]
+    Storage --> Outbox[Transactional outbox]
+    Outbox --> Worker[Settlement worker]
+    Outbox --> RecoveryWorker[Reconciliation worker]
+    Worker --> Domain
+    RecoveryWorker --> Reconciliation[packages/reconciliation]
+    Reconciliation --> Command[Versioned reconciliation command]
+    Command --> Domain
+
+    Domain --> AuthPort[AuthorizationPort]
+    Domain --> SettlementPort[SettlementPort]
+    Reconciliation --> EvidencePort[EvidencePort]
+    Reconciliation --> IndexPort[IndexViewPort]
+
+    AuthPort --> PrivyAdapter[packages/privy-adapter]
+    SettlementPort --> ArcAdapter[packages/arc-adapter]
+    EvidencePort --> PrivyAdapter
+    EvidencePort --> ArcAdapter
+    IndexPort --> GraphClient[packages/graph-client]
+
+    PrivyAdapter --> Privy[Privy wallet and policy]
+    ArcAdapter --> Arc[Arc USDC and RPC]
+    GraphClient --> Subgraph[The Graph Subgraph]
+    Subgraph --> Arc
 ```
 
-OneShot decides whether settlement may be attempted. Privy constrains authorized wallet actions. Arc provides final settlement evidence. The Graph explains indexed history and freshness but grants no settlement right.
+OneShot decides whether settlement may be attempted. Privy constrains authorized wallet actions. Arc provides final settlement evidence. The Graph explains indexed history and freshness but grants no settlement right. Detailed entity, state, sequence, and ownership diagrams live in [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md).
 
 ## 7. Team topology and exclusive ownership
 
@@ -184,59 +304,78 @@ Consumers validate against the pack, not against a producer’s active branch.
 - Questions default to a written assumption plus a fail-closed implementation. Only decisions that could weaken settlement cardinality, money representation, authorization, or `UNKNOWN` handling require synchronous escalation.
 - Daily status is informational and never an approval gate.
 
-## 9. Delivery waves
+## 9. Delivery phases and dependency gates
 
-| Wave | Days | A | B | C | Project gate |
-| --- | ---: | --- | --- | --- | --- |
-| W0 | 0 | Read frozen pack; branch | Read frozen pack; branch | Read frozen pack; branch | P0 plan/contract approval |
-| W1 | 1–4 | A01 | B01 | C01 | Independent toolchains runnable |
-| W2 | 4–7 | A02 | B02 | C02 | Contract packs v1 emitted |
-| W3 | 7–10 | A03 | B03 | C03 | Safety behavior proven independently |
-| W4 | 10–14 | A04 | B04 | C04 | P4 backend convergence and live proof |
-| W5 | 15–18 | A05 | B05 | C05 | P5 frontend acceptance |
-| W6 | 18–20 | A06 | B06 | C06 | P6 release candidate |
+The three lanes run in parallel. Phase order expresses dependency and product
+readiness only. A lane may begin its next packet as soon as its own acceptance
+contract passes.
 
-Dates are forecasts, not permission to cut safety. Each coder may move to the next packet as soon as their current packet closes.
+| Phase | Entry condition | Coder A | Coder B | Coder C | Exit evidence |
+| --- | --- | --- | --- | --- | --- |
+| R0 — product and contract freeze | Product vertical selected | Confirm domain/API contract | Confirm provider/chain contract | Confirm recovery/index contract | P0 approved scope and immutable v1 pack |
+| R1 — independent foundations | P0 | A01 | B01 | C01 | P1 runnable toolchains and recorded compatibility findings |
+| R2 — durable core and adapters | Own R1 packet | A02 | B02 | C02 | P2 compatible contract packs and simulators |
+| R3 — safety under failure | Own R2 packet | A03 | B03 | C03 | P3 concurrency, ambiguity, and failure proofs |
+| R4 — backend convergence | A03/B03/C03 artifacts available | A04 and composition owner | B04 and live settlement evidence | C04 and live index/recovery evidence | P4 integrated backend, one real settlement, lost-response recovery |
+| R5 — product interface | P4 | A05 application shell | B05 policy/settlement slice | C05 recovery/history slice | P5 composed operator experience |
+| R6 — hardening and release | P5 | A06 operations bundle | B06 Privy/Arc evidence | C06 Graph/recovery evidence | P6 repeatable release candidate |
+
+Provider access, SDK incompatibility, or failed integration evidence opens an
+owner-specific compatibility task. It never weakens the safety invariant or
+silently changes a contract.
 
 ## 10. Work-packet inventory
 
-| ID | Owner | Estimate | Own-track prerequisite | Independently verifiable output |
-| --- | --- | ---: | --- | --- |
-| [A01](milestones/coder-a/A01-foundation-contracts.md) | A | 3 d | Frozen contract pack | Workspace, contracts package, OpenAPI, domain simulator |
-| [A02](milestones/coder-a/A02-durable-intents.md) | A | 3 d | A01 | PostgreSQL intent/replay/conflict API |
-| [A03](milestones/coder-a/A03-atomic-worker.md) | A | 3 d | A02 | Atomic worker and at-most-once fake-port proof |
-| [A04](milestones/coder-a/A04-restart-operations-composition.md) | A | 4 d | A03 | Restart-safe orchestration and simulator composition |
-| [A05](milestones/coder-a/A05-frontend-intent-status.md) | A | 2 d | A04 + project Gate P4 | Intent/status frontend slice against mock server |
-| [A06](milestones/coder-a/A06-release-operations.md) | A | 2 d | A05 | Operational demo and release bundle |
-| [B01](milestones/coder-b/B01-sdk-network-compatibility.md) | B | 3 d | Frozen contract pack | SDK/network compatibility and readiness package |
-| [B02](milestones/coder-b/B02-request-policy-receipt.md) | B | 3 d | B01 | Canonical request, policy, and receipt verifier |
-| [B03](milestones/coder-b/B03-live-settlement-harness.md) | B | 3 d | B02 | Offline-complete plus live-ready settlement harness |
-| [B04](milestones/coder-b/B04-ambiguity-integration.md) | B | 4 d | B03 | Conservative outcomes and production adapter pack |
-| [B05](milestones/coder-b/B05-frontend-settlement-details.md) | B | 2 d | B04 + project Gate P4 | Authorization/settlement UI slice against fixtures |
-| [B06](milestones/coder-b/B06-sponsor-evidence.md) | B | 2 d | B05 | Privy/Arc sanitized evidence bundle |
-| [C01](milestones/coder-c/C01-subgraph-index-health.md) | C | 3 d | Frozen contract pack | Subgraph mappings and Graph health client |
-| [C02](milestones/coder-c/C02-reconciliation-engine.md) | C | 3 d | C01 | Deterministic reconciliation and evidence contract |
-| [C03](milestones/coder-c/C03-failure-injection.md) | C | 3 d | C02 | Cross-source chaos and restart harness |
-| [C04](milestones/coder-c/C04-recovery-matrix-integration.md) | C | 4 d | C03 | Recovery matrix and simulator integration pack |
-| [C05](milestones/coder-c/C05-frontend-recovery.md) | C | 2 d | C04 + project Gate P4 | Recovery timeline UI slice against fixtures |
-| [C06](milestones/coder-c/C06-qualification-demo.md) | C | 2 d | C05 | Graph/recovery qualification bundle |
+| ID | Owner | Own-track prerequisite | Independently verifiable output |
+| --- | --- | --- | --- |
+| [A01](milestones/coder-a/A01-foundation-contracts.md) | A | Frozen contract pack | Workspace, contracts package, OpenAPI, domain simulator |
+| [A02](milestones/coder-a/A02-durable-intents.md) | A | A01 | PostgreSQL intent/replay/conflict API |
+| [A03](milestones/coder-a/A03-atomic-worker.md) | A | A02 | Atomic worker and at-most-once fake-port proof |
+| [A04](milestones/coder-a/A04-restart-operations-composition.md) | A | A03 | Restart-safe orchestration and simulator composition |
+| [A05](milestones/coder-a/A05-frontend-intent-status.md) | A | A04 + project Gate P4 | Intent/status frontend slice against mock server |
+| [A06](milestones/coder-a/A06-release-operations.md) | A | A05 | Operational demo and release bundle |
+| [B01](milestones/coder-b/B01-sdk-network-compatibility.md) | B | Frozen contract pack | SDK/network compatibility and readiness package |
+| [B02](milestones/coder-b/B02-request-policy-receipt.md) | B | B01 | Canonical request, policy, and receipt verifier |
+| [B03](milestones/coder-b/B03-live-settlement-harness.md) | B | B02 | Offline-complete plus live-ready settlement harness |
+| [B04](milestones/coder-b/B04-ambiguity-integration.md) | B | B03 | Conservative outcomes and production adapter pack |
+| [B05](milestones/coder-b/B05-frontend-settlement-details.md) | B | B04 + project Gate P4 | Authorization/settlement UI slice against fixtures |
+| [B06](milestones/coder-b/B06-sponsor-evidence.md) | B | B05 | Privy/Arc sanitized evidence bundle |
+| [C01](milestones/coder-c/C01-subgraph-index-health.md) | C | Frozen contract pack | Subgraph mappings and Graph health client |
+| [C02](milestones/coder-c/C02-reconciliation-engine.md) | C | C01 | Deterministic reconciliation and evidence contract |
+| [C03](milestones/coder-c/C03-failure-injection.md) | C | C02 | Cross-source chaos and restart harness |
+| [C04](milestones/coder-c/C04-recovery-matrix-integration.md) | C | C03 | Recovery matrix and simulator integration pack |
+| [C05](milestones/coder-c/C05-frontend-recovery.md) | C | C04 + project Gate P4 | Recovery timeline UI slice against fixtures |
+| [C06](milestones/coder-c/C06-qualification-demo.md) | C | C05 | Graph/recovery qualification bundle |
 
 Each packet contains smaller, one-commit-sized tasks, exact acceptance criteria, tests, output artifacts, and a no-wait continuation instruction.
 
 ## 11. Dependency graph
 
-```text
-Frozen v1 contract pack
-   |--------------------|--------------------|
-   v                    v                    v
- A01 -> A02 -> A03 -> A04                 A05 -> A06
- B01 -> B02 -> B03 -> B04 -- P4 backend -> B05 -> B06
- C01 -> C02 -> C03 -> C04    gate          C05 -> C06
-                              |
-                     real adapters replace simulators
+```mermaid
+flowchart LR
+    Contract[Frozen v1 contract pack]
+
+    Contract --> A01 --> A02 --> A03 --> A04
+    Contract --> B01 --> B02 --> B03 --> B04
+    Contract --> C01 --> C02 --> C03 --> C04
+
+    A04 --> P4{P4 backend convergence}
+    B04 --> P4
+    C04 --> P4
+
+    P4 --> A05 --> A06
+    P4 --> B05 --> B06
+    P4 --> C05 --> C06
+
+    A06 --> P6{P6 release candidate}
+    B06 --> P6
+    C06 --> P6
 ```
 
-The lane arrows are same-owner dependencies. Gate P4 is the only intentional convergence point before frontend. No backend work packet waits for P4 to close; A04/B04/C04 close against their own contract simulators. P4 only decides whether frontend may begin.
+The lane arrows are same-owner dependencies. Gate P4 is the intentional
+backend convergence point. A04/B04/C04 close against contract simulators; P4
+replaces them with exact reviewed package entry points and live testnet
+evidence before frontend work begins.
 
 ## 12. Project gates
 
@@ -252,7 +391,7 @@ Project gates coordinate the product but are not coder work-packet closure condi
 
 - A01, B01, and C01 each pass package-local checks without third-party credentials.
 - Every lane can continue using only committed fixtures and simulators.
-- Forecast is recalibrated from actual SDK/tooling friction.
+- SDK/tooling compatibility findings are recorded before contract-pack convergence.
 
 ### P2 — contract-pack compatibility
 
@@ -363,7 +502,7 @@ Coder B produces a repeatable setup guide or wizard, but a human performs Privy 
 | Queue redelivery | Domain CAS/constraints plus single-attempt submission task | A |
 | Shared-file conflicts | Exclusive path ownership and A-only root composition | A |
 | Credentials unavailable | Offline contract packs and simulators remain sufficient for packet closure | B |
-| Schedule pressure | Cut webhooks, rolling policy support, visual polish, and optional telemetry before safety | All |
+| Scope pressure | Cut webhooks, rolling policy support, visual polish, and optional telemetry before safety | All |
 
 ## 19. Definition of done for every packet
 
@@ -484,7 +623,7 @@ P4 failures never produce ad hoc edits by multiple coders on the composition bra
 - Consumers pin a digest/version rather than a moving branch.
 - New optional fields have deterministic default handling that fails closed.
 - New enum variants are rejected until explicitly supported.
-- Removal/deprecation never occurs in the same wave as introduction.
+- Removal/deprecation never occurs in the same delivery phase as introduction.
 
 ## 24. Decision and escalation policy
 
@@ -503,9 +642,9 @@ Continue asynchronously with a documented conservative assumption for ordinary i
 
 An escalation record contains the exact decision, safest default, affected contract/version, options, security impact, and owner. While it is unresolved, unaffected packets continue and the affected boundary fails closed.
 
-## 25. Schedule control and scope-cut order
+## 25. Scope control and cut order
 
-The 20-day horizon is a forecast. Re-estimate at P1 and after any provider compatibility failure. Never change acceptance evidence silently to preserve dates.
+Never change acceptance evidence to accelerate delivery. When integration or provider assumptions fail, reduce optional scope or open an owner-specific compatibility task.
 
 If time is constrained, cut in this order:
 
@@ -576,4 +715,4 @@ Before Gate P6 can pass, confirm:
 4. Each coder closes and advances through their own lane without waiting for global milestone closure.
 5. Run project gates asynchronously when all required artifacts happen to be available; failures create focused owner tickets and do not halt unaffected work.
 6. Do not start A05, B05, or C05 until P4 passes.
-7. Re-estimate after P1 using measured friction, preserving all safety criteria.
+7. Record P1 integration friction and adjust optional scope while preserving all safety criteria.

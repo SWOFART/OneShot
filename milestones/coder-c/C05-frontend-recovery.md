@@ -1,7 +1,6 @@
 # C05 — Frontend Recovery Timeline and Indexed History
 
 Owner: Coder C
-Forecast: 2 working days
 Branch: `milestone/c05-frontend-recovery`
 Depends on: C04 and project Gate P4
 Next: C06 immediately after closure

@@ -14,6 +14,19 @@ The core cardinality is:
 This document defines ownership and vocabulary. It is not a product
 implementation plan.
 
+## Primary production vertical
+
+The first user is a company that lets an autonomous agent purchase a paid API
+operation or digital result in USDC. The company approves one business
+obligation; retries, restarts, queue redelivery, parallel workers, and multiple
+agent instances must all converge on the same Business Intent and at most one
+committed settlement.
+
+The initial product exposes an agent API, execution worker, reconciliation
+service, operator console, and audit/recovery timeline. Invoice payment,
+procurement, subscriptions, and other agent-commerce workflows are later
+verticals over the same durable intent contract.
+
 ## System ownership
 
 - OneShot is authoritative for business-intent execution state, attempt state,

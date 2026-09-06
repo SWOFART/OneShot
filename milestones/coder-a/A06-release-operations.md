@@ -1,7 +1,6 @@
 # A06 — Operational Demo and Release Bundle
 
 Owner: Coder A
-Forecast: 2 working days
 Branch: `milestone/a06-release-operations`
 Depends on: A05 only
 Project convergence: Gate P6

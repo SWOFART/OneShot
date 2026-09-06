@@ -35,14 +35,14 @@ Use these states in the PR or project tracker:
 - Never depend on another coder’s active branch.
 - Never import another coder’s private implementation path.
 - Consume only frozen schemas, fixtures, simulators, or reviewed package exports.
-- Preserve backward compatibility within a delivery wave.
+- Preserve backward compatibility within a delivery phase.
 - Convert breaking proposals into additive versioned contracts.
 - A project integration failure creates a focused ticket for the owning lane; it does not reopen unrelated completed packets.
 - Status meetings and review availability do not gate coding. Record assumptions and continue fail-closed.
 
 ## Small-task sizing
 
-Every numbered task inside a packet should fit one coherent commit, normally two to six focused hours. If a task cannot be reviewed independently, split it by observable behavior, not by internal layer.
+Every numbered task inside a packet should produce one coherent, independently reviewable commit. If it cannot be reviewed independently, split it by observable behavior, not by internal layer.
 
 Good split: schema + migration, replay behavior, conflict behavior, concurrency proof.
 Bad split: “all database code,” “all tests,” or “finish integration.”
