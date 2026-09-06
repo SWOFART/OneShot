@@ -2,33 +2,39 @@
 
 ## Branch architecture
 
-- `main`: Production/release branch. Contains only stable, released code. Merges to `main` occur from `develop` through release PRs or tags.
-- `develop`: Integration branch. The default base branch for ongoing development, milestones, and features.
-- `milestone/<id>-<name>`, `feature/<name>`, `fix/<name>`: Short-lived branches targeting `develop`.
+- `main`: stable release branch. Promote reviewed releases from `develop`.
+- `develop`: integration branch and base for ongoing work.
+- `feature/*`, `fix/*`, `milestone/*`: short-lived branches created from current
+  `develop` and targeting `develop`.
+
+No direct pushes, force pushes, history rewrites, or branch deletion on `main`
+or `develop`. Agents never merge any PR. A human performs final review and
+explicitly authorizes merge.
 
 ## Pull request workflow
 
-1. All milestone and feature branches originate from `develop` and create pull requests targeting `develop`.
-2. Every pull request begins as a **Draft** PR.
-3. Every pull request requires passing:
-   - Local validation checks (Phase 3);
-   - Review Gate A (independent pre-PR implementation review);
-   - All required CI status checks;
-   - Review Gate B (independent post-PR draft review);
-   - Human review and approval.
-4. Agents must never merge pull requests. Final approval and merging is performed exclusively by the user.
+1. Implement on a short-lived branch from `develop`.
+2. Pass applicable local lint, type, test, build, and failure-injection checks.
+3. Inspect the complete change against `develop` and confirm no secrets or
+   unrelated files.
+4. Run fresh independent FreePi Gate A through `npx free-pi-cli`. Require exact
+   `VERDICT: PASS` before first push or draft PR creation.
+5. Push without force and open a draft PR targeting `develop`.
+6. Wait for every required CI check to be green on the exact PR head SHA.
+7. Run a second fresh independent FreePi Gate B through `npx free-pi-cli`, bound
+   to the exact PR head SHA, full PR diff, and check state.
+8. After explicit Gate B `VERDICT: PASS`, mark ready for human review. Stop
+   before merge.
+
+Gate A and Gate B must use separate new FreePi processes and contexts. Any
+relevant content change after Gate A invalidates Gate A. Any commit or content
+change after Gate B invalidates Gate B. Ambiguous, incomplete, stale, failed, or
+unavailable review output fails closed.
 
 ## Required status checks
 
-As CI workflows are established in `.github/workflows/`, branch protection rules for `develop` and `main` must enforce:
-- Linting and static analysis;
-- Automated test suites;
-- Build / compilation checks.
+As workflows are added, branch protection for `develop` and `main` must require
+applicable lint/static analysis, automated tests, and build/compilation checks.
+Pending, skipped, missing, or failing required checks are not green.
 
-## Protection rules
-
-The `develop` and `main` branches should be protected against:
-- Direct pushes (all changes must pass through pull requests);
-- Force pushes;
-- Branch deletions;
-- Merging with unresolved conversations or failing checks.
+See `.agent/IMPLEMENTATION_LOOP.md` for the complete workflow and privacy rules.

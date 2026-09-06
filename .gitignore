@@ -6,9 +6,24 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+.envrc
+.direnv/
 *.local
 *.key
 *.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.seed
+*.mnemonic
+*.token
+.npmrc
+!.npmrc.example
+secrets/
+credentials/
+.free-pi/
+.pi/
 
 # Editor and IDE
 .vscode/
@@ -27,6 +42,8 @@ dist/
 build/
 coverage/
 node_modules/
+.venv/
+venv/
 __pycache__/
 .pytest_cache/
 .ruff_cache/

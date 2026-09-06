@@ -1,6 +1,6 @@
-## Milestone outcome
+## Outcome
 
-<!-- What outcome does this PR deliver? -->
+<!-- What focused outcome does this PR deliver? -->
 
 ## Scope
 
@@ -16,47 +16,65 @@
 
 - [ ]
 
+## OneShot invariant impact
+
+- Business Intent / Attempt / Settlement impact:
+- `business_intent_id` stability:
+- `UNKNOWN` reconciliation behavior:
+- Concurrency and duplicate-settlement protection:
+- Money representation:
+
+## Sponsor impact
+
+- Privy:
+- Arc:
+- The Graph:
+- Qualification claims made (if any):
+
 ## Risk review
 
-- Security & secrets:
-- Data safety & privacy:
-- Architecture & performance:
-- Rollback or safe disablement:
+- Security and secrets:
+- Data safety and privacy:
+- External effects and rollback/safe disablement:
+- Architecture and performance:
 
 ## Validation evidence
 
 | Command or check | Result |
 | --- | --- |
-| `<lint / check command>` | |
-| `<test command>` | |
-| `<build command>` | |
+| `<lint/type/test/build command>` | |
+| `<focused/failure-injection command>` | |
+| `git diff --check develop...HEAD` | |
 
-## Review Gate A - implementation
+## FreePi Gate A: pre-push
 
-- Reviewed head / commit:
-- Reviewer / model:
-- Verdict:
+- Fresh `npx free-pi-cli` process/session:
+- Reviewed base SHA:
+- Reviewed target/content identity:
+- Verdict (must be exact `VERDICT: PASS`):
 - Blocking findings resolved:
-- Evidence / review summary:
+- Evidence/summary:
 
 ## Required CI
 
-- [ ] Lint and static analysis
-- [ ] Automated tests
-- [ ] Build validation
+- Exact PR head SHA:
+- [ ] All required checks are green for this SHA.
+- Check names/results:
 
-## Review Gate B - draft PR
+## FreePi Gate B: exact draft PR
 
-- Reviewed PR head SHA:
-- Reviewer / model:
-- Verdict:
+- Separate fresh `npx free-pi-cli` process/session:
+- PR URL/number:
+- Reviewed head SHA:
+- Verdict (must be exact `VERDICT: PASS`):
 - Blocking findings resolved:
-- Evidence / review summary:
+- Evidence/summary:
 
-## User review
+## Human review
 
-- [ ] Review Gate A passed for the current change.
-- [ ] Required CI checks are green for the current head.
-- [ ] Review Gate B passed for the current head.
-- [ ] The PR is marked ready for user review.
-- [ ] The user explicitly approved merge. Agents must leave this unchecked.
+- [ ] Gate A is valid for current content.
+- [ ] Required CI is green for current head.
+- [ ] Gate B is valid for current head.
+- [ ] Draft is ready for human review.
+- [ ] Human explicitly authorized merge. Agents must leave this unchecked and
+      must never merge.
