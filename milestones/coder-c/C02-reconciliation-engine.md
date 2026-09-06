@@ -7,7 +7,7 @@ Next: C03 immediately after closure
 
 ## Outcome
 
-A pure decision engine combines authoritative local/Arc evidence, provider lookup, and non-authoritative Graph observations to emit safe reconciliation commands and a provenance-labeled recovery view. It can never submit payment.
+A pure decision engine combines authoritative local/Arc evidence, provider lookup, and non-authoritative Graph candidate observations to emit safe reconciliation commands and a provenance-labeled recovery view. It can never submit payment.
 
 ## Small tasks
 
@@ -19,7 +19,7 @@ A pure decision engine combines authoritative local/Arc evidence, provider looku
 ### C02.2 — Precedence table
 
 - Make durable committed record and exact verified Arc receipt authoritative.
-- Use Privy status to locate provider activity and The Graph only to corroborate/explain.
+- Use Privy status and direct Arc evidence to resolve the original activity; use The Graph only to locate, corroborate, or explain.
 - Encode contradictory, stale, missing, and unavailable combinations explicitly.
 
 ### C02.3 — Reconciliation commands
@@ -43,7 +43,7 @@ A pure decision engine combines authoritative local/Arc evidence, provider looku
 
 - Verified matching success resolves `UNKNOWN -> COMMITTED`.
 - Matching final revert/no-effect proof may resolve `UNKNOWN -> FAILED_SAFE`.
-- Pending, not found, unavailable, empty/lagging/unhealthy Graph, mismatch, or contradiction remains `UNKNOWN`.
+- Pending, not found, unavailable, empty/lagging/unhealthy Graph candidates, mismatch, or contradiction remains `UNKNOWN`.
 - Every decision explains authority and provenance without leaking raw sensitive data.
 - Package imports no A/B implementation and contains no SettlementPort call.
 
@@ -57,4 +57,4 @@ Start C03 using the local state and provider simulators from the frozen pack.
 
 ## Non-goals
 
-No direct database mutation, queue ownership, settlement submission, live Graph requirement, or frontend.
+No direct database mutation, queue ownership, settlement submission, live external-index requirement, or frontend.

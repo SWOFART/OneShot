@@ -7,7 +7,7 @@ Project convergence: Gate P6
 
 ## Outcome
 
-The authoritative-state and operations portion of the demo is repeatable from a clean testnet environment and produces sanitized evidence for release review.
+The authoritative-state and operations portion of the demo is repeatable from a clean testnet environment, includes a disabled mainnet-ready deployment profile, and produces sanitized release evidence.
 
 ## Small tasks
 
@@ -32,7 +32,12 @@ The authoritative-state and operations portion of the demo is repeatable from a 
 - Finalize architecture, API/worker operation, migrations, debugging, recovery escalation, and known limitations.
 - Link exact B/C evidence slots without copying secrets or raw provider responses.
 
-### A06.5 — Candidate verification
+### A06.5 — Mainnet-readiness package
+
+- Validate the disabled Arc Mainnet profile schema, deployment manifest, safe-disable, rollback, and environment separation without sending a transaction.
+- Document the human gate for pinning official chain/token values and activating a limited real-value pilot.
+
+### A06.6 — Candidate verification
 
 - Run root quality, migration, matrix, browser, secret, and intended-file checks against the exact candidate.
 - Prepare concise release evidence for mandatory independent review and human merge.
@@ -43,10 +48,11 @@ The authoritative-state and operations portion of the demo is repeatable from a 
 - Every scripted money/retry case includes durable state and settlement count.
 - Safe disable halts new submissions and retains recovery visibility.
 - Evidence contains no credentials, private wallet material, or sensitive provider payloads.
+- Mainnet readiness fails closed while official values or human approval are absent, and requires no domain redesign once supplied.
 
 ## Handoff artifact
 
-Publish the operations runbook, invariant scenario runner, sanitized result table, architecture/API links, and release checklist.
+Publish the operations runbook, invariant scenario runner, sanitized result table, architecture/API links, mainnet-readiness manifest, rollback procedure, and release checklist.
 
 ## No-wait continuation
 
@@ -54,4 +60,4 @@ A06 closes independently. Gate P6 composes exact reviewed A06/B06/C06 artifacts;
 
 ## Non-goals
 
-No mainnet readiness claim, production compliance certification, or agent-performed merge.
+No real mainnet transaction, production compliance certification, or agent-performed merge.

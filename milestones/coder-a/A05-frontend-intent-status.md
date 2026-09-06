@@ -59,4 +59,4 @@ Start A06. Final assembly of B05/C05 is project Gate P5, not A05 closure.
 
 ## Non-goals
 
-No settlement details, Graph timeline, visual polish campaign, or force-pay action.
+No settlement details, optional history timeline, visual polish campaign, or force-pay action.

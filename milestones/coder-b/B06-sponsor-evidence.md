@@ -7,7 +7,7 @@ Project convergence: Gate P6
 
 ## Outcome
 
-A sanitized, repeatable evidence bundle demonstrates Privy as the real authorization boundary and Arc Testnet as the real USDC settlement rail, with limitations stated honestly.
+A sanitized, repeatable evidence bundle demonstrates Privy as the real authorization boundary and Arc Testnet as the working USDC settlement rail and proves the disabled Arc Mainnet profile is deployment-ready without claiming a real mainnet transaction.
 
 ## Small tasks
 
@@ -26,12 +26,17 @@ A sanitized, repeatable evidence bundle demonstrates Privy as the real authoriza
 - Intentionally lose the local success response after possible submission.
 - Show B adapter reports ambiguity and evidence lookup locates the original transaction without submitting another.
 
-### B06.4 — Sanitization audit
+### B06.4 — Mainnet-readiness evidence
+
+- Validate the production profile, official-value placeholders, deployment/preflight commands, safe-disable, and rollback without broadcasting to mainnet.
+- Record the human approval and official-value gates that prevent accidental activation.
+
+### B06.5 — Sanitization audit
 
 - Review screenshots, logs, fixtures, commands, and docs for keys, tokens, signatures, private wallet data, raw authorization responses, and environment contents.
 - Retain only public/sanitized testnet identifiers.
 
-### B06.5 — Qualification input
+### B06.6 — Qualification input
 
 - Provide code, test, live-demo, network, transaction, policy, and limitation references for `sponsor-qualification`.
 - Use `NOT VERIFIED` when live proof is missing; never promote fixtures into qualification.
@@ -42,10 +47,11 @@ A sanitized, repeatable evidence bundle demonstrates Privy as the real authoriza
 - Arc evidence proves a real final ERC-20 transfer, not only a label or explorer screenshot.
 - Repeated demo/reset does not create an unintended second settlement.
 - Bundle passes secret/redaction and reproducibility checks.
+- Mainnet profile remains disabled when official values or human approval are absent.
 
 ## Handoff artifact
 
-Publish sanitized Privy/Arc evidence index, exact demo commands, transaction/policy references, denial table, and limitation statement.
+Publish sanitized Privy/Arc evidence index, exact demo commands, transaction/policy references, denial table, mainnet-readiness evidence, and limitation statement.
 
 ## No-wait continuation
 
@@ -53,4 +59,4 @@ B06 closes independently. Gate P6 consumes its exact reviewed bundle alongside A
 
 ## Non-goals
 
-No mainnet claim, wallet-key export, external-account mutation by an agent, or final sponsor verdict for The Graph.
+No claim of a completed mainnet transaction, wallet-key export, external-account mutation by an agent, or final sponsor verdict for The Graph.

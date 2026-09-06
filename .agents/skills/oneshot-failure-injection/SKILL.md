@@ -17,7 +17,7 @@ submitted, and definitely confirmed.
 - Deliver the same request repeatedly and from 10 parallel workers; prove at
   most one committed settlement.
 - Restart services between durable transitions and external responses.
-- Delay or empty The Graph results; prove no duplicate settlement.
+- Delay, empty, corrupt, or multiply-match The Graph candidate results and prove `UNKNOWN` plus no duplicate settlement.
 - Deny Privy policy and exceed spending amount; prove zero settlement.
 - Fail a supplier/API action after payment; prove settlement result remains.
 - Assert external settlement count, durable intent/attempt/settlement state, and

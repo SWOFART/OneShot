@@ -11,7 +11,7 @@ Change rule: expand-migrate-contract only
 - OneShot durable state grants submission ownership.
 - Privy authorizes and constrains the wallet action but is not the durable duplicate lock.
 - Arc receipt plus expected ERC-20 Transfer evidence establishes committed settlement.
-- The Graph is non-authoritative recovery/history evidence.
+- Direct Privy/Arc evidence resolves known transaction identities. The Graph is the selected v1 hashless candidate-discovery layer after C01; all indexed evidence remains non-authoritative.
 - Any possibly submitted but unconfirmed outcome is `UNKNOWN`; reconciliation precedes another submission.
 
 ## 2. Canonical identifiers and money
@@ -24,11 +24,12 @@ Change rule: expand-migrate-contract only
 | `payload_fingerprint` | deterministic hash of normalized immutable payload | safe hash |
 | `amount_atomic` | canonical unsigned base-10 integer string, no sign/decimal/exponent/whitespace | safe business datum; do not over-log |
 | `asset` | exactly `USDC` | public |
-| `network` | exactly `eip155:5042002` | public |
-| `token_contract` | exactly `0x3600000000000000000000000000000000000000` | public |
+| `network` | exactly the enabled Arc deployment profile; v1 live proof uses `eip155:5042002`; mainnet remains disabled until official values are pinned and human-approved | public |
+| `token_contract` | exactly the enabled profile USDC interface; v1 testnet uses `0x3600000000000000000000000000000000000000`; no implicit mainnet default | public |
 | `recipient` | normalized EVM address; allowlist/policy checked | display only where required |
 | `privy_idempotency_key` | stable derivative of intent identity; same key requires same body | never log raw if classified sensitive |
 | `privy_reference_id` | stable lookup identity derived from intent | sanitized evidence only |
+| `memo_id` | optional `bytes32` hash of the Business Intent used only when the Arc Memo path passes B01 policy validation | public correlation hash |
 
 `purpose` is a bounded, non-secret display/audit string. It participates in the immutable payload fingerprint and is redacted from routine logs by default.
 
@@ -98,7 +99,7 @@ Results:
 
 ### IndexViewPort.lookup
 
-Returns observations plus indexed block, block timestamp, deployment ID, chain-head comparison, lag, `hasIndexingErrors`, retrieval time, and health classification: `FRESH`, `LAGGING`, `UNHEALTHY`, `UNAVAILABLE`, or `UNKNOWN_FRESHNESS`.
+The v1 implementation queries The Graph for candidate transfers and returns observations plus observed block/time, provider/deployment identity, chain-head comparison, lag, provider health details, retrieval time, and health classification: `FRESH`, `LAGGING`, `UNHEALTHY`, `UNAVAILABLE`, or `UNKNOWN_FRESHNESS`.
 
 No IndexViewPort result grants settlement permission.
 
@@ -127,6 +128,7 @@ All transitions are compare-and-set with monotonic versioning. No database trans
 - Transactional outbox/job record.
 - Persisted request body fingerprint, Privy request identities, wallet/policy identity, chain/token/recipient/amount, provider transaction ID/hash/nonce when learned.
 - Receipt block/hash/status and verified Transfer log transaction hash plus log index.
+- When enabled, Arc Memo ID, call-data hash, event log identity, and proof that the Memo and Transfer share the verified transaction.
 - Append-only evidence observations with source, retrieval time, block/freshness, sanitized payload or digest, and authority label.
 
 ## 8. Fixture catalog
@@ -146,16 +148,18 @@ The canonical fixture root is `packages/contracts/fixtures/v1/`. Every fixture h
 | `settlement/lost-response.json` | `POSSIBLY_SUBMITTED` -> durable `UNKNOWN` |
 | `settlement/mismatched-transfer.json` | not confirmed, hold safely |
 | `evidence/not-found.json` | no permission change |
-| `graph/empty.json` | labeled observation through indexed block, no permission change |
-| `graph/lagging.json` | `LAGGING`, no permission change |
-| `graph/indexing-error.json` | `UNHEALTHY`, no permission change |
-| `graph/unavailable.json` | `UNAVAILABLE`, local authority still returned |
+| `index/candidate-one.json` | one bindable candidate still requires Arc verification |
+| `index/candidate-multiple.json` | remain `UNKNOWN`; no candidate selection by guess |
+| `index/empty.json` | labeled observation through observed block, no permission change |
+| `index/lagging.json` | `LAGGING`, no permission change |
+| `index/provider-error.json` | `UNHEALTHY`, no permission change |
+| `index/unavailable.json` | `UNAVAILABLE`, local authority still returned |
 
 ## 9. Simulator behavior
 
 - Domain simulator exposes the HTTP seam and deterministic clock/IDs with an external-submission counter.
 - Settlement simulator consumes canonical requests and emits each SettlementPort/EvidencePort result family without network access.
-- Recovery simulator consumes local state plus provider/Arc/Graph fixtures and emits deterministic commands and labeled recovery view.
+- Recovery simulator consumes local state plus Privy/Arc and Graph candidate fixtures and emits deterministic commands and a labeled recovery view.
 - Simulators reject unknown fixture versions and schema drift.
 - Simulators never silently default an unknown enum to a successful or retryable result.
 
@@ -165,7 +169,7 @@ The canonical fixture root is `packages/contracts/fixtures/v1/`. Every fixture h
 2. Worker task plus durable state and external-submission counter.
 3. Adapter ports plus official-response fixtures.
 4. Reconciliation command plus durable transition and evidence record.
-5. Subgraph mapping/GraphQL query plus entity and `_meta` classification.
+5. Graph candidate query plus deployment-specific freshness and ambiguity classification after C01.
 6. Browser UI through frozen OpenAPI/mock server after Gate P4.
 
 ## 11. Compatibility and ownership

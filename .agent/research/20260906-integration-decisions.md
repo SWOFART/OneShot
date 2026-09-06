@@ -2,7 +2,8 @@
 
 Date: 2026-09-06
 Scope: primary-source facts needed to make the first product implementation plan decision-complete.
-Target: Privy-authorized USDC settlement on Arc Testnet with The Graph as a non-authoritative recovery view.
+Target: Privy-authorized exactly-once settlement on Arc Testnet with The Graph
+as the hashless recovery index.
 
 ## Decisions
 
@@ -21,13 +22,15 @@ Target: Privy-authorized USDC settlement on Arc Testnet with The Graph as a non-
 - Arc transactions are pending until included, then immediately and deterministically final; there is no accumulating-confirmation state. A receipt with `status: 1` is final success only after validating the expected USDC `Transfer` log. A receipt with `status: 0` is final execution failure and zero settlement ([transaction lifecycle](https://docs.arc.io/integrate/wallets/transaction-lifecycle), [deterministic finality](https://docs.arc.io/arc/concepts/deterministic-finality)).
 - Deterministic finality does not eliminate submission ambiguity. A lost Privy/RPC response or process crash after a possible broadcast still becomes `UNKNOWN`; a new-nonce payment is forbidden until reconciliation proves a safe terminal result.
 
-### The Graph: live recovery evidence, never settlement authority
+### The Graph: selected for hashless discovery, never settlement authority
 
-- The Graph lists Arc Testnet as `arc-testnet`, protocol Ethereum, CAIP-2 `eip155:5042002` ([Arc Testnet support](https://thegraph.com/docs/en/supported-networks/arc-testnet/)).
-- Build a custom Subgraph over the unified USDC `Transfer` event. Identify each event by transaction hash plus log index and retain block number, block timestamp, sender, recipient, and amount as Graph `BigInt` ([Arc event indexing](https://docs.arc.io/integrate/infrastructure/indexing-events), [Subgraph quick start](https://thegraph.com/docs/en/subgraphs/quick-start/)).
-- Every query must request `_meta` block data, deployment ID, and `hasIndexingErrors`. Operational health must also compare indexed `latestBlock` with `chainHeadBlock`; `synced` only means the deployment caught up at least once ([GraphQL API](https://thegraph.com/docs/en/subgraphs/querying/graphql-api/), [indexing health](https://thegraph.com/docs/en/subgraphs/developing/deploying-publishing/multiple-networks/)).
-- Missing, empty, lagging, or unhealthy indexed results mean only that no matching event was observed through a known indexed block. They never prove non-payment or authorize another submission. Direct Arc receipts plus durable OneShot state remain authoritative.
-- Use a deployment-pinned query endpoint for schema-stable demo evidence. Do not claim sponsor qualification until a deployed endpoint returns live Arc data and lag/error behavior is demonstrated ([Subgraph ID versus deployment ID](https://thegraph.com/docs/en/subgraphs/querying/subgraph-id-vs-deployment-id/)).
+- Direct Privy lookup plus exact Arc receipt/log verification resolves known transaction identities. PostgreSQL remains authoritative for ownership, intent state, and the `UNKNOWN` hold.
+- The Graph is the selected v1 path for discovering candidate transfers when a successful submission lost its hash. C01 must prove this live and show a capability that disappears when Graph is removed.
+- Every query carries deployment and freshness/error evidence. Missing, empty, lagging, unhealthy, multiple, or contradictory candidates preserve `UNKNOWN`; Arc verifies every candidate before any commit.
+- Arc RPC can scan logs without a hash, so The Graph is a product choice for structured automatic discovery rather than the only technically possible scanner ([Arc event indexing](https://docs.arc.io/integrate/infrastructure/indexing-events), [Graph querying](https://thegraph.com/docs/en/subgraphs/querying/introduction/)).
+- Arc's Memo contract can attach a caller-supplied `memoId` and `callDataHash` to a forwarded USDC call specifically for correlation and reconciliation. C01/B01 must test `memoId = hash(business_intent_id)` as the preferred unique lookup key ([Arc Memo indexing](https://docs.arc.io/integrate/infrastructure/indexing-events)).
+- Privy can enforce chain, destination contract, decoded function, and decoded top-level calldata parameters. Before choosing Memo for settlement, B01 must prove the policy can constrain the forwarded USDC target and required business fields; otherwise use the tuple-search fallback or a narrow typed settlement contract without weakening authorization ([Privy policy fields](https://docs.privy.io/controls/policies/overview)).
+- Target the Graph AI Tooling or AI Use Case track: live Graph data must drive meaningful recovery-agent selection, explanation, or automation. The composable/standardized track requires two Graph products or meaningful use of a standardized schema; one custom Subgraph query is insufficient ([ETHOnline 2026 prize requirements](https://ethglobal.com/events/ethonline2026/prizes)).
 
 ### Durable state and work delivery
 
@@ -41,9 +44,14 @@ Target: Privy-authorized USDC settlement on Arc Testnet with The Graph as a non-
 1. Pin exact SDK and runtime versions only after a compatibility spike validates Privy request signing, Arc chain support, and policy condition syntax.
 2. Assert `eth_chainId == 5042002` and bytecode exists at the configured USDC address during testnet startup checks.
 3. Prove the chosen Privy policy denies wrong chain, wrong contract, wrong recipient, wrong method, non-zero native value, and above-cap amount with zero settlement.
-4. Prove The Graph deployment health and lag thresholds against live Arc Testnet before sponsor qualification.
+4. Prove live The Graph hashless discovery, freshness, multiple-candidate handling, safe degradation, and AI-track value; otherwise remove the Graph claim and use direct recovery.
 5. Keep Privy webhooks outside the critical path until plan availability and signature verification are demonstrated.
 
 ## Planning consequence
 
-The work can be split into three independent backend tracks after one contract freeze: (A) domain/storage/API, (B) Privy/Arc settlement, and (C) indexing/reconciliation. Each track must ship its own contract simulator and tests so progress does not depend on another track's implementation. Frontend begins only after the integrated backend contract and recovery semantics are stable.
+The work can be split into three independent backend tracks after one contract
+freeze: (A) domain/storage/API, (B) the Privy/Arc adapter, and (C) The Graph
+reconciliation/evidence. Each track must ship its own contract simulator and
+tests so progress does not depend on another track's implementation. Frontend
+begins only after the integrated backend contract and recovery semantics are
+stable.

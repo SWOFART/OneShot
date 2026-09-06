@@ -34,13 +34,14 @@ verticals over the same durable intent contract.
 - Privy is the corporate wallet and scoped authorization boundary. OneShot must
   use its policies and spending permissions on the normal execution path.
 - Arc is the real USDC settlement rail used by the demo.
-- The Graph supplies live indexed recovery/history context and agent decision
-  support after ambiguous outcomes. It can corroborate or locate activity, but
-  cannot authorize a duplicate payment.
+- Direct Privy lookup and Arc RPC receipt/log evidence resolve known transaction
+  identities after ambiguous outcomes.
+- The Graph is the selected v1 candidate-discovery layer when the transaction
+  hash is missing. C01 must prove live hashless discovery and AI-track value;
+  Graph results remain non-authoritative and can never authorize another payment.
 
 When an external submission may have happened but the result is uncertain,
-OneShot records `UNKNOWN` and reconciles. Missing Graph data never converts
-`UNKNOWN` into permission to submit again.
+OneShot records `UNKNOWN` and reconciles. Missing external-index data never converts `UNKNOWN` into permission to submit again.
 
 ## Glossary
 
@@ -64,14 +65,14 @@ have zero or one committed Settlement, never more than one.
 ### Reconciliation
 
 The process that resolves an ambiguous external effect using durable local
-state, provider identifiers and receipts, Arc state, and indexed evidence.
+state, provider identifiers and receipts, Graph-discovered candidates, and Arc proof.
 Reconciliation precedes any decision to retry payment when settlement state is
 `UNKNOWN`.
 
 ### Recovery View
 
-A derived, non-authoritative view assembled from durable OneShot records and
-live indexed history, including The Graph. It helps operators and agents explain
+A derived, non-authoritative view assembled from durable OneShot records, live
+Graph candidate discovery, and Arc verification. It helps operators and agents explain
 and recover work but does not grant permission to create a Settlement.
 
 ## Decision test

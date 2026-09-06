@@ -9,7 +9,7 @@ These rules fail closed. A feature, demo, or deadline does not override them.
 - Use durable, atomic, concurrency-safe transitions for settlement ownership.
 - A timeout, crash, disconnect, lost response, or provider error after possible
   submission creates `UNKNOWN`; reconcile before any payment retry.
-- Never infer non-payment from an empty or delayed Graph result.
+- Never infer non-payment from an empty or delayed external-index result.
 - Preserve a successful payment result even if a later supplier or API step
   fails.
 - Do not offer a normal code path that bypasses OneShot state controls or Privy
