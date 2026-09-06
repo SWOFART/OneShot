@@ -42,7 +42,7 @@ contributes to the complete product.
 - All local Markdown links in `plan.md`, `milestones/`, and `docs/` resolve.
 - Exactly 18 packet files remain.
 - Packet headers contain no planning-size metadata.
-- Mermaid fence pairs and required diagram types are checked structurally.
+- Mermaid CLI 11.17.0 rendered all 10 diagrams successfully.
 - `git diff --check` passes.
 - Gate A and Gate B were intentionally not run because the user explicitly
   requested skipping the two-review procedure for the planning phase.

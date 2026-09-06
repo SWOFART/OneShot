@@ -18,8 +18,10 @@ flowchart LR
     Privy --> Arc[Arc USDC settlement]
     Arc --> SupplierWallet[Supplier wallet]
     Arc --> Index[The Graph index]
-    Ledger --> Recovery[Recovery and audit view]
-    Index --> Recovery
+    Ledger --> Recovery[Recovery service and audit view]
+    Recovery -->|provider lookup| Privy
+    Recovery -->|receipt and log lookup| Arc
+    Recovery -->|indexed history and freshness| Index
     Recovery --> Agent
     Recovery --> Operator
 ```
@@ -101,6 +103,7 @@ stateDiagram-v2
     UNKNOWN --> COMMITTED: original payment verified
     UNKNOWN --> FAILED_SAFE: authoritative final no-effect proof
     UNKNOWN --> UNKNOWN: pending, absent, stale, unhealthy, or contradictory evidence
+    FAILED_SAFE --> AUTHORIZING: policy opens a new attempt
     REJECTED --> [*]
     COMMITTED --> [*]
 ```
@@ -142,11 +145,15 @@ sequenceDiagram
     API->>DB: Insert intent and outbox job atomically
     DB-->>API: New intent or identical replay
     API-->>Agent: Authoritative intent state
-    Worker->>DB: Acquire AUTHORIZING/READY/SUBMITTING ownership
-    Worker->>Privy: Authorize exact wallet action
-    Privy->>Arc: Submit ERC-20 USDC transfer
+    Worker->>DB: Claim AUTHORIZING attempt
+    Worker->>Privy: Evaluate exact wallet policy
+    Privy-->>Worker: AUTHORIZED
+    Worker->>DB: Persist AUTHORIZING to READY
+    Worker->>DB: Atomically persist SUBMITTING and request identity
+    Worker->>Privy: Submit the authorized transfer
+    Privy->>Arc: Broadcast ERC-20 USDC transaction
     Arc-->>Worker: Final receipt and logs
-    Worker->>Worker: Verify chain, token, recipient, amount, Transfer
+    Worker->>Worker: Verify chain, token, recipient, amount, and Transfer
     Worker->>DB: Persist COMMITTED and settlement identity
     Arc-->>Graph: Transfer event indexed independently
     Agent->>API: GET intent status
@@ -174,8 +181,10 @@ sequenceDiagram
     Reconciler->>Arc: Lookup exact transaction receipt and Transfer
     Reconciler->>Graph: Query indexed observation plus freshness
     Note over Reconciler,Graph: Graph may locate or corroborate activity but cannot authorize a retry
-    Reconciler->>DB: MARK_COMMITTED when exact Arc success is verified
-    DB-->>Worker: Redelivery observes terminal state; no second submission
+    Reconciler->>Domain: Emit MARK_COMMITTED with expected version
+    Domain->>DB: Compare and set UNKNOWN to COMMITTED
+    Worker->>DB: Check the same intent after redelivery
+    DB-->>Worker: Terminal state means no second submission
 ```
 
 ## Port and adapter boundary
@@ -183,15 +192,20 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     Domain[Domain state machine]
+    Reconciliation[Reconciliation engine]
+    Command[Versioned reconciliation command]
+
     Domain --> Auth[AuthorizationPort]
     Domain --> Settle[SettlementPort]
-    Domain --> Evidence[EvidencePort]
-    Domain --> Index[IndexViewPort]
+    Reconciliation --> Evidence[EvidencePort]
+    Reconciliation --> Index[IndexViewPort]
+    Reconciliation --> Command
+    Command --> Domain
 
     Auth --> Privy[Privy adapter]
     Settle --> ArcWrite[Arc write adapter]
     Evidence --> PrivyRead[Privy lookup]
-    Evidence --> ArcRead[Arc receipt/log lookup]
+    Evidence --> ArcRead[Arc receipt and log lookup]
     Index --> GraphClient[Graph client]
 
     Privy --> External1[Privy service]

@@ -63,8 +63,10 @@ flowchart LR
     Privy -->|ERC-20 USDC transaction| Arc[Arc]
     Arc -->|one settlement| SupplierWallet[Supplier wallet]
     Arc --> Graph[The Graph index]
-    Graph --> Recovery[Recovery view]
-    DB --> Recovery
+    DB --> Recovery[Recovery service and view]
+    Recovery -->|provider lookup| Privy
+    Recovery -->|receipt and log lookup| Arc
+    Recovery -->|indexed history and freshness| Graph
     Recovery --> Agent
     Recovery --> Company
 ```
@@ -185,22 +187,26 @@ flowchart TB
     Domain --> Storage[packages/storage-postgres]
     Storage --> DB[(PostgreSQL)]
     Storage --> Outbox[Transactional outbox]
-    Outbox --> Worker[apps/worker - Graphile Worker]
+    Outbox --> Worker[Settlement worker]
+    Outbox --> RecoveryWorker[Reconciliation worker]
     Worker --> Domain
+    RecoveryWorker --> Reconciliation[packages/reconciliation]
+    Reconciliation --> Command[Versioned reconciliation command]
+    Command --> Domain
 
     Domain --> AuthPort[AuthorizationPort]
     Domain --> SettlementPort[SettlementPort]
-    Domain --> EvidencePort[EvidencePort]
-    Domain --> IndexPort[IndexViewPort]
+    Reconciliation --> EvidencePort[EvidencePort]
+    Reconciliation --> IndexPort[IndexViewPort]
 
     AuthPort --> PrivyAdapter[packages/privy-adapter]
     SettlementPort --> ArcAdapter[packages/arc-adapter]
+    EvidencePort --> PrivyAdapter
     EvidencePort --> ArcAdapter
+    IndexPort --> GraphClient[packages/graph-client]
+
     PrivyAdapter --> Privy[Privy wallet and policy]
     ArcAdapter --> Arc[Arc USDC and RPC]
-
-    IndexPort --> Reconciliation[packages/reconciliation]
-    Reconciliation --> GraphClient[packages/graph-client]
     GraphClient --> Subgraph[The Graph Subgraph]
     Subgraph --> Arc
 ```
