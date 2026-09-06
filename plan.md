@@ -71,6 +71,31 @@ is sufficient for the selected AI track. The recovery agent uses live Graph data
 obtained through Subgraph MCP to choose and explain candidates; deterministic
 Arc checks and the OneShot state machine retain all financial authority.
 
+### Sponsor claim mapping
+
+Three partner slots. A partner with several tracks counts as one slot and the
+project is eligible for all of that partner's tracks. The submission text must
+name each claimed track explicitly.
+
+| Slot | Claimed track | Basis in this plan |
+| --- | --- | --- |
+| The Graph | AI Tooling or AI Use Case (From Scratch) | Live OneShot/Arc Subgraph read through Subgraph MCP; the LLM recovery agent performs candidate selection and explanation |
+| Privy | Best B2B financial product | Corporate execution wallet, scoped policy, and a real accounts-payable workflow |
+| Privy | Best financial flow | The committed USDC transfer is a completed financial flow through a Privy wallet action |
+| Arc | Launch on Arc Testnet & Push to Mainnet | Primary Arc claim: working testnet product plus the disabled Mainnet profile, deployment manifest, readiness probe, and rollback runbooks |
+| Arc | Best DeFi / Onchain Finance Application | Secondary Arc claim: conditional, multi-step USDC settlement on Arc with programmable authorization |
+
+Not claimed, and the reason:
+
+- **Composable or Standardized Graph Products.** One custom Subgraph does not
+  compose two Graph products and does not build on a standardized schema. The
+  track text states this does not qualify.
+- **Best Agentic Economy Application with Circle Agent Stack.** Wallet
+  authorization and payment execution run through Privy, not the Circle Agent
+  Stack, and the calling agent executes an approved obligation rather than
+  making autonomous spending decisions. Claiming this track would misrepresent
+  the build.
+
 ```mermaid
 flowchart LR
     Unknown[UNKNOWN after lost response] --> Provider{Privy returns original hash}
@@ -163,7 +188,7 @@ This plan optimizes for five properties:
 3. Low merge contention: each coder owns disjoint directories and shared files have a single editor.
 4. Verifiable handoffs: ports, OpenAPI, schemas, fixtures, and simulators are versioned artifacts.
 5. Late frontend: UI work consumes a stable backend contract instead of driving it.
-6. Network promotion: testnet proves behavior; mainnet readiness proves the same boundaries can be configured safely when Arc publishes official production values.
+6. Network promotion: testnet proves behavior; mainnet readiness proves the same boundaries can be configured safely on Arc public mainnet, which opens 16 September 2026 on chain `5042`.
 
 ## 3. Product success criteria
 
@@ -174,8 +199,10 @@ This plan optimizes for five properties:
 - Ten sequential retries, ten parallel workers, restart recovery, queue redelivery, and two agent instances never produce more than one committed settlement.
 - Privy/direct Arc lookup resolves known transaction identities. The LLM Recovery Agent queries The Graph through Subgraph MCP for automatic hashless candidate discovery; absence, delay, malformed/injected output, multiple matches, contradiction, or invalid model output never authorizes payment.
 - Money remains a canonical integer string at JSON boundaries and `bigint` internally, using six-decimal ERC-20 USDC atomic units.
+- The public repository contains the architecture diagram, setup and operator documentation, and no secrets in history.
+- The submission text names each claimed partner track explicitly and states the Arc mainnet-readiness position.
 - The demo proves working Privy and Arc integrations with sanitized testnet evidence and no exposed secrets.
-- A mainnet-readiness check proves network, token, explorer, policy, deployment, rollback, and safe-disable configuration fail closed while official Arc Mainnet values remain disabled until published and human-approved.
+- A mainnet-readiness check proves network, token, explorer, policy, deployment, rollback, and safe-disable configuration fail closed while the Arc Mainnet profile stays disabled pending explicit human authorization. Arc public mainnet opens 16 September 2026, after the submission deadline.
 - The Graph sponsor claim is retained only when a sanitized live Subgraph MCP trace proves hashless discovery and meaningful recovery-agent automation beyond direct known-hash lookup, followed by deterministic OneShot/Arc validation.
 
 ## 4. Scope
@@ -190,7 +217,7 @@ This plan optimizes for five properties:
 - LLM Recovery Agent with structured four-action output and a deterministic, fail-closed OneShot safety core.
 - Contract simulators, failure injection, concurrency and restart testing, structured logs, metrics, and operator runbooks.
 - Minimal operator/user frontend after backend acceptance.
-- Arc Mainnet configuration seam, deployment manifest, readiness probe, safe-disable and rollback runbooks, with real-value execution disabled until official values and explicit human authorization exist.
+- Arc Mainnet configuration seam, deployment manifest, readiness probe, safe-disable and rollback runbooks, and the reviewer-facing `MAINNET_READINESS.md`, with real-value execution disabled until values are pinned, verified, and explicitly human-authorized.
 
 ### Excluded
 
@@ -217,7 +244,7 @@ P0-P6 delivers testnet functionality and mainnet readiness. Actual production ac
 flowchart LR
     Local[Local and simulator proof] --> Testnet[Working Arc Testnet product]
     Testnet --> Ready[Disabled Arc Mainnet profile and deployment evidence]
-    Ready --> Values{Official Arc Mainnet values available}
+    Ready --> Values{Arc public mainnet live, values pinned and verified}
     Values -->|no| Hold[Remain testnet-only]
     Values -->|yes| Human{Human security and launch approval}
     Human -->|no| Hold
@@ -239,7 +266,7 @@ activate real-value execution.
 | Work delivery | Graphile Worker over the same PostgreSQL database; at-least-once delivery is assumed |
 | EVM encoding and RPC | `viem` for typed addresses, calldata, chain access, receipt reads, and log verification |
 | Authorization | Privy Node SDK, execution wallet, scoped wallet policy, persisted idempotency key, and reference identity |
-| Settlement profiles | Arc Testnet `eip155:5042002` and its official USDC interface are enabled for live proof; the Arc Mainnet profile is structurally complete but disabled until official chain/token values are published, pinned, verified, and human-approved |
+| Settlement profiles | Arc Testnet `eip155:5042002` and its official USDC interface are enabled for live proof; the Arc Mainnet profile (chain `5042`, public launch 16 September 2026) is structurally complete but disabled until its values are pinned, verified, and human-approved |
 | Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; a deployment-pinned Subgraph MCP adapter is the selected v1 path to the live OneShot/Arc Subgraph. The LLM Recovery Agent emits only four advisory actions. C01 must prove the lost-hash flow, freshness, degradation behavior, and AI-track fit; direct RPC remains the safe fallback |
 | Money | Canonical integer strings at JSON boundaries and `bigint` internally; no JavaScript monetary floats |
 | Frontend | React and Vite, generated OpenAPI client, exact integer amount formatting, and no direct settlement capability |
@@ -251,6 +278,98 @@ activate real-value execution.
 Exact dependency versions are pinned only after A01/B01 compatibility spikes.
 The exact v1 contracts, state table, fixture catalog, redaction rules, and change
 protocol are frozen in [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md).
+
+## 5b. Arc qualification and evidence
+
+Both claimed Arc tracks share one requirement set. This section maps each
+requirement to an owner and a concrete artifact so nothing is discovered late.
+
+| Arc requirement | Satisfied by | Owner | Artifact |
+| --- | --- | --- | --- |
+| Working backend | API, worker, PostgreSQL authority, Privy and Arc adapters | A/B | Gate P4 composition |
+| Working frontend | A05, B05, C05 slices on React and Vite against the frozen OpenAPI | A/B/C | Gate P5 |
+| Architecture diagram | Diagrams exported from this plan into the public repository README | A | `README.md` |
+| Video demonstration and presentation | Scripted demo covering the invariant and Circle tool usage | B | Submission video, 2-4 minutes |
+| Detailed documentation | README, setup guide, operator and recovery runbooks | A/B | Public repository |
+| Public repository link | Public GitHub repository, secret-scanned history | A | Repository URL |
+| Explicit bounty naming | Submission text names both claimed Arc tracks | B | Submission form |
+| Mainnet deployment-readiness by 30 September | Disabled Mainnet profile, deployment manifest, readiness probe, rollback runbook | A/B | `MAINNET_READINESS.md` in the public repository |
+
+### Minimum Arc-qualifying frontend
+
+Arc requires a working frontend on every track, so the interface is a
+qualification requirement and not optional polish. The minimum qualifying set
+is:
+
+1. Create or reuse a Business Intent.
+2. Read authoritative intent status.
+3. View a committed settlement with its Arc explorer link.
+4. View an `UNKNOWN` intent with its recovery timeline and evidence provenance.
+
+Anything beyond these four is cuttable. These four are not.
+
+### Early contract freeze for frontend start
+
+A05, B05, and C05 build against the frozen mock server and need no live
+services. The real frontend blocker is therefore the OpenAPI freeze inside Gate
+P4, not the live settlement proof. Freeze and publish the OpenAPI and
+recovery-view semantics as soon as A04 stabilises them, ahead of live testnet
+evidence, so frontend work can start while B is still obtaining live proof.
+
+Gate P4 remains the composition and live-proof gate. This rule changes only when
+the contract is published, never what P4 must prove.
+
+### Circle developer-tool surface
+
+The project uses Arc and USDC directly. It does not use App Kits, Circle
+Wallets, Circle Contracts, CCTP, Gateway, StableFX, Paymaster, or Nanopayments,
+because wallet control and authorization run through Privy by design.
+
+The DeFi track lists App Kits only "where relevant", so this is permitted. It
+is nevertheless a deliberate decision and must be defended in one sentence in
+the submission: OneShot's contribution is settlement cardinality on Arc, and
+adding a second wallet or payment product would duplicate the authorization
+boundary that Privy already provides.
+
+Adding a Circle product solely to widen the logo surface is rejected.
+
+### Network constants
+
+Arc Testnet chain and token identities are pinned only after B01 verifies them
+against official Arc documentation. Chain `eip155:5042002` and the USDC
+interface address recorded in section 5 are treated as unverified inputs until
+that check passes and is recorded in the B01 handoff.
+
+### Mainnet-readiness statement
+
+Arc public mainnet launches on 16 September 2026, chain ID `5042`, the day the
+hackathon ends. The submission deadline is 13 September, so no team can be
+deployed at submission time. The 30 September date is a post-launch window in
+which reviewers verify the claim, not a deadline met inside the event.
+
+The Mainnet track accepts either state: deployed, or deployment-ready. This
+build targets deployment-ready and treats actual deployment as an optional
+upgrade the team may take after 16 September.
+
+Because verification happens after the event, readiness evidence must live in
+the public repository rather than only in the submission form.
+`MAINNET_READINESS.md` is the single reviewer-facing artifact and contains:
+
+- the pinned Arc mainnet chain, RPC, explorer, and USDC identities, or an
+  explicit note that a value awaits publication at launch;
+- the deployment manifest and the exact commands that perform deployment;
+- readiness-probe output showing every check passing against the disabled
+  profile;
+- the rollback and safe-disable procedure;
+- the current status line: `DEPLOYMENT-READY` or `DEPLOYED` with its evidence.
+
+Real-value execution stays disabled until a human authorizes activation. If the
+team deploys after 16 September, only the status line and its evidence change;
+no domain or contract work is required.
+
+The submission text states the readiness position plainly and points to this
+file.
+
 
 ## 6. Architecture
 
@@ -604,6 +723,11 @@ Coder B produces a repeatable setup guide or wizard, while Coder C documents Gra
 | Shared-file conflicts | Exclusive path ownership and A-only root composition | A |
 | Credentials unavailable | Offline contract packs and simulators remain sufficient for packet closure | B |
 | Scope pressure | Cut webhooks, rolling policy support, visual polish, and optional telemetry before safety | All |
+| P4 slips and the frontend never ships | Publish the OpenAPI freeze early so frontend slices start against the mock; cut to the four minimum screens rather than dropping the interface | A |
+| Arc network constants wrong or changed | B01 verifies chain, RPC, explorer, and USDC identities against official Arc docs before pinning; readiness probe re-checks them | B |
+| Arc mainnet launches 16 September, after submission | Ship deployment-readiness evidence in `MAINNET_READINESS.md`; optional post-launch deployment changes only the status line | A/B |
+| Readiness evidence not reachable after the event | Keep the reviewer-facing artifact in the public repository, not only in the submission form | A |
+| Thin Circle tool surface questioned | Record the deliberate decision in section 5b and defend it in the submission rather than adding unused Circle products | B |
 
 ## 19. Definition of done for every packet
 
@@ -755,6 +879,10 @@ If time is constrained, cut in this order:
 4. Visual animation, theming, and secondary responsive polish; retain accessible core flows.
 5. Arc Memo correlation if Privy cannot constrain the forwarded call; retain The Graph tuple/window discovery and strict authorization.
 
+Sponsor-required scope is not on this list. A working frontend is an Arc
+qualification requirement on every claimed Arc track. Cut inside the interface
+down to the four minimum screens in section 5b, never the interface itself.
+
 Never cut:
 
 - durable constraints and atomic submission ownership;
@@ -804,6 +932,9 @@ Before Gate P6 can pass, confirm:
 - UI has no direct/bypass/force-pay action and labels authority/freshness correctly.
 - Demo/reset instructions require no unsafe database surgery or external-history rewrite.
 - Evidence, repository, logs, screenshots, fixtures, source maps, and reviews contain no secrets.
+- Claimed partner tracks match the sponsor claim mapping in section 5. Composable/Standardized and Circle Agent Stack remain unclaimed.
+- Every Arc requirement row in section 5b has a delivered artifact, including the README architecture diagram and the explicit track naming in the submission.
+- Public README and submission text contain no statement that undermines a claimed dependency; justifications cite measured numbers.
 - Privy and Arc claims use the qualification standard. The Graph claim requires live hashless discovery plus meaningful recovery-agent automation; otherwise it is `NOT VERIFIED` and removed from the submission.
 - Mandatory FreePi gates and required CI apply to the exact candidate tree/head.
 - A human performs the final review and merge.
