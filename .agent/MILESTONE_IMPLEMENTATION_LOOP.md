@@ -44,12 +44,15 @@ objective, testable acceptance criteria.
    ```bash
    git checkout develop
    git pull origin develop
-   git checkout -b milestone/<id>-<name>
+   git checkout -b feature/<name>
    ```
+   Use `fix/<name>` or `milestone/<id>-<name>` when appropriate.
 2. Make the smallest coherent change satisfying the milestone.
 3. Add or update tests and documentation alongside code.
 4. Inspect the full workspace diff (`git status`, `git diff`, untracked files)
    for scope drift, generated files, secrets, and unrelated edits.
+5. Stage only the complete intended candidate. Leave no intended change
+   unstaged or untracked before Gate A.
 
 The implementation may remain uncommitted through Gate A. Do not push a branch
 or create a PR yet.
@@ -71,10 +74,26 @@ Exit gate: All applicable local checks pass for the current workspace content.
 
 ## Phase 4 - Review Gate A: workspace implementation review
 
-Run an independent review session using `.agent/review-prompts/implementation-review.md`.
+Refresh the base, then copy the two printed SHAs into the review evidence:
+
+```bash
+git fetch origin develop
+git rev-parse origin/develop
+git write-tree
+git diff --cached <recorded-base-sha>
+```
+
+`<recorded-base-sha>` is the immutable output from `git rev-parse
+origin/develop`, not the mutable remote-tracking ref itself.
+
+Run a fresh, read-only independent review session using
+`.agent/review-prompts/implementation-review.md`. Any capable review tool may be
+used. Record its tool and platform-reported model name.
+If the platform does not expose a model identifier, record
+`not exposed by platform`.
 
 The reviewer evaluates:
-- Complete workspace diff against `develop`;
+- Complete staged candidate tree against the recorded `develop` SHA;
 - Acceptance criteria coverage;
 - Edge cases, error handling, regressions;
 - Security, secrets, and licensing;
@@ -89,26 +108,28 @@ Gate decision:
 On `FAIL`, resolve every blocking finding, rerun local validation, and repeat Gate A
 in a fresh session.
 
-Exit gate: Gate A returns an explicit `VERDICT: PASS`.
+Exit gate: Gate A returns an explicit `VERDICT: PASS` containing reviewer tool,
+model, base SHA, and candidate tree SHA.
 
 ## Phase 5 - Commit and create draft pull request
 
 Only after Gate A passes:
 
-1. Stage only the reviewed milestone files and inspect the staged diff.
-2. Commit the reviewed change.
-3. Push the branch to origin:
+1. Confirm `git write-tree` still equals the reviewed candidate tree SHA.
+2. Commit the reviewed staged change without modifying its content.
+3. Confirm `git rev-parse "HEAD^{tree}"` equals the reviewed candidate tree SHA.
+4. Push the branch to origin:
    ```bash
-   git push -u origin milestone/<id>-<name>
+   git push -u origin HEAD
    ```
-4. Create a **draft** pull request against `develop`.
-5. Fill out `.github/PULL_REQUEST_TEMPLATE.md` with:
+5. Create a **draft** pull request against `develop`.
+6. Fill out `.github/PULL_REQUEST_TEMPLATE.md` with:
    - Milestone outcome & scope;
    - Acceptance criteria checklist;
    - Risk assessment;
    - Validation evidence;
    - Review Gate A verdict and reviewer evidence.
-6. Keep the pull request in draft state.
+7. Keep the pull request in draft state.
 
 Exit gate: The draft PR is created against `develop` with complete Gate A evidence.
 
@@ -129,11 +150,16 @@ Exit gate: All required status checks are green for the exact PR head commit.
 Gate B runs in an independent reviewer session after CI passes, evaluating the draft PR
 using `.agent/review-prompts/draft-pr-review.md`.
 
+Gate B may use any capable review tool, including a different tool from Gate A.
+It must run in a fresh read-only session and record its tool and
+platform-reported model, or `not exposed by platform`.
+
 The reviewer independently inspects:
 - PR title, description, and diff against `develop`;
 - Commits and file changes;
 - Required CI status and check logs;
 - Gate A evidence and resolution of earlier findings;
+- Equality of the PR head tree and Gate A candidate tree;
 - Merge readiness and residual risks.
 
 On `FAIL`, return to Phase 2. Any content change requires rerunning Phases 3 through 7.

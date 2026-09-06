@@ -18,12 +18,22 @@
    - Human review and approval.
 4. Agents must never merge pull requests. Final approval and merging is performed exclusively by the user.
 
+## Agent review evidence
+
+Canonical agent and review rules live in `AGENTS.md`, `.agent/AGENTS.md`, and
+`.agent/MILESTONE_IMPLEMENTATION_LOOP.md`. Pull requests record their required
+evidence through `.github/PULL_REQUEST_TEMPLATE.md`.
+
+GitHub status checks and branch protection enforce merge readiness. Local agent
+instructions alone are not enforcement.
+
 ## Required status checks
 
-As CI workflows are established in `.github/workflows/`, branch protection rules for `develop` and `main` must enforce:
-- Linting and static analysis;
-- Automated test suites;
-- Build / compilation checks.
+The initial required check for `develop` and `main` is:
+
+- `Agent policy`.
+
+Add lint, test, and build checks as executable project components appear.
 
 ## Protection rules
 

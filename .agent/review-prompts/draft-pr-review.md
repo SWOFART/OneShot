@@ -13,7 +13,9 @@ This must be a fresh review. Do not rely on memory or a resumed Gate A session.
 - Verify draft pull request number, base branch (`develop`), head branch, and head SHA.
 - Read the PR description, full GitHub PR diff, commits, required status checks,
   and Review Gate A evidence.
-- Confirm all evidence refers to the exact current PR head SHA.
+- Confirm CI and Gate B evidence refer to the exact current PR head SHA.
+- Gate A evidence is bound to its base SHA and candidate tree SHA. Verify the
+  current PR head tree equals the Gate A candidate tree before accepting it.
 
 ## Required analysis
 
@@ -24,7 +26,7 @@ Independently evaluate:
 - Whether CI covers changed behavior and all required checks are green;
 - Whether documentation, config, and migration paths are complete;
 - Whether the PR description provides sufficient detail for human review;
-- Whether any commit made after Gate A invalidates its conclusions;
+- Whether the current PR head tree and base still match Gate A evidence;
 - Whether the PR is safe to mark ready for human review (not whether it should be merged).
 
 ## Verdict standard
@@ -36,9 +38,13 @@ Use this exact structure:
 
 ```text
 VERDICT: PASS | FAIL
+REVIEWER_TOOL: <tool or agent system>
+REVIEWER_MODEL: <exact model name, or not exposed by platform>
 PR: <number and URL>
 REVIEWED_HEAD: <full SHA>
-REVIEWED_BASE: develop
+REVIEWED_HEAD_TREE: <full `HEAD^{tree}` SHA>
+REVIEWED_BASE: develop (<exact base SHA>)
+GATE_A_TREE: <candidate tree SHA; must equal REVIEWED_HEAD_TREE>
 
 BLOCKING_FINDINGS:
 - <severity> <file:line or subsystem> - <problem, impact, and required fix>

@@ -13,6 +13,23 @@ infrastructure, data, and model agent working in this repository.
 If instructions conflict, stop and surface the conflict. Do not silently choose
 the most convenient interpretation.
 
+## Tool neutrality
+
+- Shared policy must remain independent of agent vendor, model, operating
+  system, and editor.
+- Codex, Claude, Antigravity, Cursor, or another capable agent may implement or
+  review a change.
+- Tool-specific repository files must be thin adapters pointing to the
+  canonical `AGENTS.md` and `.agent/` documents. Do not copy policy into them.
+- Personal prompts, permissions, model choices, and machine-specific commands
+  belong in ignored local files.
+- A gate reviewer must use a fresh read-only session, must not be the
+  implementation agent, and must identify its tool and platform-reported model
+  in the verdict. Record `not exposed by platform` when no model identifier is
+  available.
+- Different tools may perform Gate A and Gate B. Both must use the canonical
+  prompts and required verdict format.
+
 ## Before making changes
 
 - Read the task, acceptance criteria, relevant code, and related documentation.
@@ -84,15 +101,17 @@ blocker for the user.
 Follow `.agent/MILESTONE_IMPLEMENTATION_LOOP.md` exactly.
 
 - Review Gate A is a fresh, independent review of the complete workspace change
-  before the draft pull request is created. It evaluates the diff against the target
-  base branch (`develop`), covering acceptance criteria, correctness, edge cases,
-  security, and test coverage.
+  before the draft pull request is created. It evaluates the staged candidate
+  tree against the exact target base SHA, covering acceptance criteria,
+  correctness, edge cases, security, and test coverage.
 - Review Gate B is a second fresh, independent review after the draft PR exists
   and required CI is green. Gate B is bound to the exact PR head commit SHA and verifies
   PR readiness, diff integrity, and check results.
 - The implementation agent must not act as its own independent reviewer. Reviewers
   must be invoked in an independent session using `.agent/review-prompts/implementation-review.md`
   for Gate A and `.agent/review-prompts/draft-pr-review.md` for Gate B.
+- No specific review vendor or model is mandatory unless a milestone explicitly
+  requires one. Missing reviewer tool or reviewed Git identity is a failure.
 - Do not reuse or resume the Gate A session for Gate B.
 - Any content change after Gate A invalidates Gate A.
 - Any commit after Gate B invalidates Gate B.

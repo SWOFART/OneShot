@@ -1,0 +1,48 @@
+name: Agent policy
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Agent policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate shared policy
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          for path in \
+            AGENTS.md \
+            .agent/AGENTS.md \
+            .agent/MILESTONE_IMPLEMENTATION_LOOP.md \
+            .agent/review-prompts/implementation-review.md \
+            .agent/review-prompts/draft-pr-review.md \
+            .agents/rules/repository-policy.md \
+            .github/PULL_REQUEST_TEMPLATE.md
+          do
+            test -f "$path"
+          done
+
+          grep -Fq '@../../AGENTS.md' .agents/rules/repository-policy.md
+          grep -Fq '@../../.agent/AGENTS.md' .agents/rules/repository-policy.md
+          grep -Fq '@../../.agent/MILESTONE_IMPLEMENTATION_LOOP.md' \
+            .agents/rules/repository-policy.md
+          test ! -e .antigravity/review.md
+          git diff --check "$BASE_SHA" HEAD
