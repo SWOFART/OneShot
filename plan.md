@@ -2,10 +2,10 @@
 
 Status: production MVP roadmap
 Team: exactly three coders
-Indicative delivery range: six to eight weeks with three active coders
 Implementation base: the human-approved commit containing this plan
 Research basis: `.agent/research/20260906-integration-decisions.md`
 Detailed work packets: [`milestones/README.md`](milestones/README.md)
+Domain architecture: [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md)
 
 ## Global product vision
 
@@ -51,17 +51,36 @@ Business Intent contract.
 | Reconciliation service | Agent and operator | Resolve ambiguous outcomes without blindly paying again |
 | Audit and recovery timeline | Company and supplier | Explain what happened, which evidence is authoritative, and what action is safe |
 
+```mermaid
+flowchart LR
+    Company[Company operator] -->|wallet policy and limits| Privy[Privy]
+    Agent[Autonomous agent] -->|stable business intent| API[OneShot API]
+    Agent -.->|requests paid work| SupplierAPI[Paid API or digital supplier]
+    API --> Core[OneShot domain]
+    Core --> DB[(PostgreSQL authority)]
+    DB --> Worker[Execution worker]
+    Worker -->|authorized transfer request| Privy
+    Privy -->|ERC-20 USDC transaction| Arc[Arc]
+    Arc -->|one settlement| SupplierWallet[Supplier wallet]
+    Arc --> Graph[The Graph index]
+    Graph --> Recovery[Recovery view]
+    DB --> Recovery
+    Recovery --> Agent
+    Recovery --> Company
+```
+
+OneShot controls payment cardinality. It does not guarantee the quality or
+delivery of the supplier's API result; that remains a separate commercial
+contract.
+
 ## Production roadmap model
 
 - The roadmap targets a production-quality testnet MVP, not a disposable demo.
-- The overall six-to-eight-week range is approximate and is recalibrated after
-  the independent foundation phase and the first live Privy/Arc compatibility
-  proof.
-- Work packets use `S`, `M`, and `L` effort bands instead of fixed
-  per-packet date promises: `S` is less than one focused week, `M` is roughly one focused week,
-  and `L` is roughly one to two focused weeks.
-- A, B, and C progress independently inside frozen contracts. Product phases
-  advance when evidence gates pass, not when a date arrives.
+- Work is ordered by domain dependencies and evidence gates.
+- A, B, and C progress independently inside frozen contracts and converge only
+  through reviewed package entry points, fixtures, and simulators.
+- A phase advances when its exit evidence passes; a packet advances when its
+  local acceptance contract passes.
 - Frontend production work begins after backend convergence freezes the public
   API and recovery semantics.
 
@@ -158,21 +177,35 @@ protocol are frozen in [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md).
 
 ## 6. Architecture
 
-```text
-Autonomous agent / operator console
-        |
-        v
-Fastify API -------> PostgreSQL authoritative ledger <--- Graphile Worker
-                          |          |                              |
-                          |          +-- transactional jobs/outbox -+
-                          |
-                          +--> AuthorizationPort --> Privy policy/wallet
-                          +--> SettlementPort ----> Arc ERC-20 USDC
-                          +--> EvidencePort ------> Privy status + Arc RPC
-                          +--> IndexViewPort -----> The Graph observation
+```mermaid
+flowchart TB
+    Clients[Agent API client and operator console] --> API[apps/api - Fastify]
+    API --> Domain[packages/domain]
+    Domain --> Contracts[packages/contracts]
+    Domain --> Storage[packages/storage-postgres]
+    Storage --> DB[(PostgreSQL)]
+    Storage --> Outbox[Transactional outbox]
+    Outbox --> Worker[apps/worker - Graphile Worker]
+    Worker --> Domain
+
+    Domain --> AuthPort[AuthorizationPort]
+    Domain --> SettlementPort[SettlementPort]
+    Domain --> EvidencePort[EvidencePort]
+    Domain --> IndexPort[IndexViewPort]
+
+    AuthPort --> PrivyAdapter[packages/privy-adapter]
+    SettlementPort --> ArcAdapter[packages/arc-adapter]
+    EvidencePort --> ArcAdapter
+    PrivyAdapter --> Privy[Privy wallet and policy]
+    ArcAdapter --> Arc[Arc USDC and RPC]
+
+    IndexPort --> Reconciliation[packages/reconciliation]
+    Reconciliation --> GraphClient[packages/graph-client]
+    GraphClient --> Subgraph[The Graph Subgraph]
+    Subgraph --> Arc
 ```
 
-OneShot decides whether settlement may be attempted. Privy constrains authorized wallet actions. Arc provides final settlement evidence. The Graph explains indexed history and freshness but grants no settlement right.
+OneShot decides whether settlement may be attempted. Privy constrains authorized wallet actions. Arc provides final settlement evidence. The Graph explains indexed history and freshness but grants no settlement right. Detailed entity, state, sequence, and ownership diagrams live in [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md).
 
 ## 7. Team topology and exclusive ownership
 
@@ -265,66 +298,78 @@ Consumers validate against the pack, not against a producer’s active branch.
 - Questions default to a written assumption plus a fail-closed implementation. Only decisions that could weaken settlement cardinality, money representation, authorization, or `UNKNOWN` handling require synchronous escalation.
 - Daily status is informational and never an approval gate.
 
-## 9. Delivery phases and indicative schedule
+## 9. Delivery phases and dependency gates
 
-The three lanes run in parallel. The calendar ranges below describe likely
-elapsed time with three active coders; they are planning estimates rather than
-deadlines or permission to weaken acceptance evidence.
+The three lanes run in parallel. Phase order expresses dependency and product
+readiness only. A lane may begin its next packet as soon as its own acceptance
+contract passes.
 
-| Phase | Approximate duration | Coder A | Coder B | Coder C | Exit evidence |
+| Phase | Entry condition | Coder A | Coder B | Coder C | Exit evidence |
 | --- | --- | --- | --- | --- | --- |
-| R0 — product and contract freeze | Less than one week | Confirm domain/API contract | Confirm provider/chain contract | Confirm recovery/index contract | P0 approved scope and immutable v1 pack |
-| R1 — independent foundations | About one week | A01 | B01 | C01 | P1 independent toolchains and compatibility findings |
-| R2 — durable core and adapters | About one week | A02 | B02 | C02 | P2 compatible contract packs and simulators |
-| R3 — safety under failure | About one week | A03 | B03 | C03 | P3 concurrency, ambiguity, and failure proofs |
-| R4 — backend convergence | One to two weeks | A04 and composition owner | B04 and live settlement evidence | C04 and live index/recovery evidence | P4 integrated backend, one real settlement, lost-response recovery |
-| R5 — product interface | About one week | A05 application shell | B05 policy/settlement slice | C05 recovery/history slice | P5 composed operator experience |
-| R6 — hardening and release | About one week | A06 operations bundle | B06 Privy/Arc evidence | C06 Graph/recovery evidence | P6 repeatable release candidate |
+| R0 — product and contract freeze | Product vertical selected | Confirm domain/API contract | Confirm provider/chain contract | Confirm recovery/index contract | P0 approved scope and immutable v1 pack |
+| R1 — independent foundations | P0 | A01 | B01 | C01 | P1 runnable toolchains and recorded compatibility findings |
+| R2 — durable core and adapters | Own R1 packet | A02 | B02 | C02 | P2 compatible contract packs and simulators |
+| R3 — safety under failure | Own R2 packet | A03 | B03 | C03 | P3 concurrency, ambiguity, and failure proofs |
+| R4 — backend convergence | A03/B03/C03 artifacts available | A04 and composition owner | B04 and live settlement evidence | C04 and live index/recovery evidence | P4 integrated backend, one real settlement, lost-response recovery |
+| R5 — product interface | P4 | A05 application shell | B05 policy/settlement slice | C05 recovery/history slice | P5 composed operator experience |
+| R6 — hardening and release | P5 | A06 operations bundle | B06 Privy/Arc evidence | C06 Graph/recovery evidence | P6 repeatable release candidate |
 
-The expected production-MVP range is six to eight weeks because early phases
-overlap across the three lanes. Provider access, SDK incompatibility, or failed
-P4 evidence may extend the range. A completed packet immediately unlocks the
-next same-owner packet; teams do not wait for ceremonial phase boundaries.
+Provider access, SDK incompatibility, or failed integration evidence opens an
+owner-specific compatibility task. It never weakens the safety invariant or
+silently changes a contract.
 
 ## 10. Work-packet inventory
 
-| ID | Owner | Effort | Own-track prerequisite | Independently verifiable output |
-| --- | --- | ---: | --- | --- |
-| [A01](milestones/coder-a/A01-foundation-contracts.md) | A | M | Frozen contract pack | Workspace, contracts package, OpenAPI, domain simulator |
-| [A02](milestones/coder-a/A02-durable-intents.md) | A | M | A01 | PostgreSQL intent/replay/conflict API |
-| [A03](milestones/coder-a/A03-atomic-worker.md) | A | M | A02 | Atomic worker and at-most-once fake-port proof |
-| [A04](milestones/coder-a/A04-restart-operations-composition.md) | A | L | A03 | Restart-safe orchestration and simulator composition |
-| [A05](milestones/coder-a/A05-frontend-intent-status.md) | A | S | A04 + project Gate P4 | Intent/status frontend slice against mock server |
-| [A06](milestones/coder-a/A06-release-operations.md) | A | S | A05 | Operational demo and release bundle |
-| [B01](milestones/coder-b/B01-sdk-network-compatibility.md) | B | M | Frozen contract pack | SDK/network compatibility and readiness package |
-| [B02](milestones/coder-b/B02-request-policy-receipt.md) | B | M | B01 | Canonical request, policy, and receipt verifier |
-| [B03](milestones/coder-b/B03-live-settlement-harness.md) | B | M | B02 | Offline-complete plus live-ready settlement harness |
-| [B04](milestones/coder-b/B04-ambiguity-integration.md) | B | L | B03 | Conservative outcomes and production adapter pack |
-| [B05](milestones/coder-b/B05-frontend-settlement-details.md) | B | S | B04 + project Gate P4 | Authorization/settlement UI slice against fixtures |
-| [B06](milestones/coder-b/B06-sponsor-evidence.md) | B | S | B05 | Privy/Arc sanitized evidence bundle |
-| [C01](milestones/coder-c/C01-subgraph-index-health.md) | C | M | Frozen contract pack | Subgraph mappings and Graph health client |
-| [C02](milestones/coder-c/C02-reconciliation-engine.md) | C | M | C01 | Deterministic reconciliation and evidence contract |
-| [C03](milestones/coder-c/C03-failure-injection.md) | C | M | C02 | Cross-source chaos and restart harness |
-| [C04](milestones/coder-c/C04-recovery-matrix-integration.md) | C | L | C03 | Recovery matrix and simulator integration pack |
-| [C05](milestones/coder-c/C05-frontend-recovery.md) | C | S | C04 + project Gate P4 | Recovery timeline UI slice against fixtures |
-| [C06](milestones/coder-c/C06-qualification-demo.md) | C | S | C05 | Graph/recovery qualification bundle |
+| ID | Owner | Own-track prerequisite | Independently verifiable output |
+| --- | --- | --- | --- |
+| [A01](milestones/coder-a/A01-foundation-contracts.md) | A | Frozen contract pack | Workspace, contracts package, OpenAPI, domain simulator |
+| [A02](milestones/coder-a/A02-durable-intents.md) | A | A01 | PostgreSQL intent/replay/conflict API |
+| [A03](milestones/coder-a/A03-atomic-worker.md) | A | A02 | Atomic worker and at-most-once fake-port proof |
+| [A04](milestones/coder-a/A04-restart-operations-composition.md) | A | A03 | Restart-safe orchestration and simulator composition |
+| [A05](milestones/coder-a/A05-frontend-intent-status.md) | A | A04 + project Gate P4 | Intent/status frontend slice against mock server |
+| [A06](milestones/coder-a/A06-release-operations.md) | A | A05 | Operational demo and release bundle |
+| [B01](milestones/coder-b/B01-sdk-network-compatibility.md) | B | Frozen contract pack | SDK/network compatibility and readiness package |
+| [B02](milestones/coder-b/B02-request-policy-receipt.md) | B | B01 | Canonical request, policy, and receipt verifier |
+| [B03](milestones/coder-b/B03-live-settlement-harness.md) | B | B02 | Offline-complete plus live-ready settlement harness |
+| [B04](milestones/coder-b/B04-ambiguity-integration.md) | B | B03 | Conservative outcomes and production adapter pack |
+| [B05](milestones/coder-b/B05-frontend-settlement-details.md) | B | B04 + project Gate P4 | Authorization/settlement UI slice against fixtures |
+| [B06](milestones/coder-b/B06-sponsor-evidence.md) | B | B05 | Privy/Arc sanitized evidence bundle |
+| [C01](milestones/coder-c/C01-subgraph-index-health.md) | C | Frozen contract pack | Subgraph mappings and Graph health client |
+| [C02](milestones/coder-c/C02-reconciliation-engine.md) | C | C01 | Deterministic reconciliation and evidence contract |
+| [C03](milestones/coder-c/C03-failure-injection.md) | C | C02 | Cross-source chaos and restart harness |
+| [C04](milestones/coder-c/C04-recovery-matrix-integration.md) | C | C03 | Recovery matrix and simulator integration pack |
+| [C05](milestones/coder-c/C05-frontend-recovery.md) | C | C04 + project Gate P4 | Recovery timeline UI slice against fixtures |
+| [C06](milestones/coder-c/C06-qualification-demo.md) | C | C05 | Graph/recovery qualification bundle |
 
 Each packet contains smaller, one-commit-sized tasks, exact acceptance criteria, tests, output artifacts, and a no-wait continuation instruction.
 
 ## 11. Dependency graph
 
-```text
-Frozen v1 contract pack
-   |--------------------|--------------------|
-   v                    v                    v
- A01 -> A02 -> A03 -> A04                 A05 -> A06
- B01 -> B02 -> B03 -> B04 -- P4 backend -> B05 -> B06
- C01 -> C02 -> C03 -> C04    gate          C05 -> C06
-                              |
-                     real adapters replace simulators
+```mermaid
+flowchart LR
+    Contract[Frozen v1 contract pack]
+
+    Contract --> A01 --> A02 --> A03 --> A04
+    Contract --> B01 --> B02 --> B03 --> B04
+    Contract --> C01 --> C02 --> C03 --> C04
+
+    A04 --> P4{P4 backend convergence}
+    B04 --> P4
+    C04 --> P4
+
+    P4 --> A05 --> A06
+    P4 --> B05 --> B06
+    P4 --> C05 --> C06
+
+    A06 --> P6{P6 release candidate}
+    B06 --> P6
+    C06 --> P6
 ```
 
-The lane arrows are same-owner dependencies. Gate P4 is the only intentional convergence point before frontend. No backend work packet waits for P4 to close; A04/B04/C04 close against their own contract simulators. P4 only decides whether frontend may begin.
+The lane arrows are same-owner dependencies. Gate P4 is the intentional
+backend convergence point. A04/B04/C04 close against contract simulators; P4
+replaces them with exact reviewed package entry points and live testnet
+evidence before frontend work begins.
 
 ## 12. Project gates
 
@@ -340,7 +385,7 @@ Project gates coordinate the product but are not coder work-packet closure condi
 
 - A01, B01, and C01 each pass package-local checks without third-party credentials.
 - Every lane can continue using only committed fixtures and simulators.
-- Forecast is recalibrated from actual SDK/tooling friction.
+- SDK/tooling compatibility findings are recorded before contract-pack convergence.
 
 ### P2 — contract-pack compatibility
 
@@ -451,7 +496,7 @@ Coder B produces a repeatable setup guide or wizard, but a human performs Privy 
 | Queue redelivery | Domain CAS/constraints plus single-attempt submission task | A |
 | Shared-file conflicts | Exclusive path ownership and A-only root composition | A |
 | Credentials unavailable | Offline contract packs and simulators remain sufficient for packet closure | B |
-| Schedule pressure | Cut webhooks, rolling policy support, visual polish, and optional telemetry before safety | All |
+| Scope pressure | Cut webhooks, rolling policy support, visual polish, and optional telemetry before safety | All |
 
 ## 19. Definition of done for every packet
 
@@ -591,9 +636,9 @@ Continue asynchronously with a documented conservative assumption for ordinary i
 
 An escalation record contains the exact decision, safest default, affected contract/version, options, security impact, and owner. While it is unresolved, unaffected packets continue and the affected boundary fails closed.
 
-## 25. Schedule control and scope-cut order
+## 25. Scope control and cut order
 
-The six-to-eight-week production-MVP range is a forecast. Re-estimate at P1 and after any provider compatibility failure. Never change acceptance evidence silently to preserve dates.
+Never change acceptance evidence to accelerate delivery. When integration or provider assumptions fail, reduce optional scope or open an owner-specific compatibility task.
 
 If time is constrained, cut in this order:
 
@@ -664,4 +709,4 @@ Before Gate P6 can pass, confirm:
 4. Each coder closes and advances through their own lane without waiting for global milestone closure.
 5. Run project gates asynchronously when all required artifacts happen to be available; failures create focused owner tickets and do not halt unaffected work.
 6. Do not start A05, B05, or C05 until P4 passes.
-7. Re-estimate after P1 using measured friction, preserving all safety criteria.
+7. Record P1 integration friction and adjust optional scope while preserving all safety criteria.

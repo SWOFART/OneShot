@@ -1,7 +1,6 @@
 # B06 — Privy and Arc Sponsor Evidence
 
 Owner: Coder B
-Effort: S — less than one focused week
 Branch: `milestone/b06-sponsor-evidence`
 Depends on: B05 only
 Project convergence: Gate P6

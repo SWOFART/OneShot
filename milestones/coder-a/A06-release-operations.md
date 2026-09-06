@@ -1,7 +1,6 @@
 # A06 — Operational Demo and Release Bundle
 
 Owner: Coder A
-Effort: S — less than one focused week
 Branch: `milestone/a06-release-operations`
 Depends on: A05 only
 Project convergence: Gate P6

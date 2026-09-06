@@ -1,7 +1,6 @@
 # A01 — Foundation and Contract Runtime
 
 Owner: Coder A
-Effort: M — roughly one focused week
 Branch: `milestone/a01-foundation-contracts`
 Depends on: frozen `milestones/CONTRACTS.md` only
 Next: A02 immediately after closure

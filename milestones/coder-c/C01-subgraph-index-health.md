@@ -1,7 +1,6 @@
 # C01 — Subgraph Mapping and Index Health
 
 Owner: Coder C
-Effort: M — roughly one focused week
 Branch: `milestone/c01-subgraph-index-health`
 Depends on: frozen `milestones/CONTRACTS.md` only
 Next: C02 immediately after closure

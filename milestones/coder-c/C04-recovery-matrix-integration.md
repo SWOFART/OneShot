@@ -1,7 +1,6 @@
 # C04 — Recovery Matrix and Simulator Integration
 
 Owner: Coder C
-Effort: L — roughly one to two focused weeks
 Branch: `milestone/c04-recovery-matrix-integration`
 Depends on: C03 only
 Next: hold C05 until project Gate P4

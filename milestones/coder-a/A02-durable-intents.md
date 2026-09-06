@@ -1,7 +1,6 @@
 # A02 — Durable Intent Ledger and API
 
 Owner: Coder A
-Effort: M — roughly one focused week
 Branch: `milestone/a02-durable-intents`
 Depends on: A01 only
 Next: A03 immediately after closure

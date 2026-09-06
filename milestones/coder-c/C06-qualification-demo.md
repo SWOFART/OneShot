@@ -1,7 +1,6 @@
 # C06 — The Graph, Recovery, and Qualification Bundle
 
 Owner: Coder C
-Effort: S — less than one focused week
 Branch: `milestone/c06-qualification-demo`
 Depends on: C05 only
 Project convergence: Gate P6

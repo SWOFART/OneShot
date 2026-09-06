@@ -1,7 +1,6 @@
 # A03 — Atomic At-Most-Once Worker
 
 Owner: Coder A
-Effort: M — roughly one focused week
 Branch: `milestone/a03-atomic-worker`
 Depends on: A02 only
 Next: A04 immediately after closure

@@ -1,7 +1,6 @@
 # B03 — Offline-Complete and Live-Ready Settlement Harness
 
 Owner: Coder B
-Effort: M — roughly one focused week
 Branch: `milestone/b03-live-settlement-harness`
 Depends on: B02 only
 Next: B04 immediately after offline closure

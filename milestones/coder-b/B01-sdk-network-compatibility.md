@@ -1,7 +1,6 @@
 # B01 — SDK and Arc Network Compatibility
 
 Owner: Coder B
-Effort: M — roughly one focused week
 Branch: `milestone/b01-sdk-network-compatibility`
 Depends on: frozen `milestones/CONTRACTS.md` only
 Next: B02 immediately after closure
