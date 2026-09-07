@@ -198,7 +198,7 @@ sequenceDiagram
             Reconciler->>Arc: Verify receipt, Memo when used, and Transfer
         end
     end
-    Note over Agent,Reconciler: Graph/MCP/LLM discover candidates; Arc proves; deterministic core decides
+    Note over Agent,Reconciler: Graph/MCP/LLM discover candidates, Arc proves, deterministic core decides
     alt exactly one bindable final match
         Reconciler->>Domain: Emit MARK_COMMITTED with expected version
         Domain->>DB: Compare and set UNKNOWN to COMMITTED

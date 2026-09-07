@@ -100,11 +100,13 @@ Results:
 
 ### IndexViewPort.lookup
 
-The v1 implementation obtains candidate transfers from a deployment-pinned
-Subgraph MCP tool call and returns observations plus observed block/time,
-provider/deployment/tool identity, chain-head comparison, lag, provider health
+The v1 implementation defines `IndexViewPort` as provider-neutral: direct GraphQL
+querying of the live OneShot/Arc Subgraph is the minimal baseline path, and a
+deployment-pinned Subgraph MCP tool call is supported as an optional adapter.
+Both return candidate transfer observations plus observed block/time,
+provider/deployment identity, chain-head comparison, lag, provider health
 details, retrieval time, and health classification: `FRESH`, `LAGGING`,
-`UNHEALTHY`, `UNAVAILABLE`, or `UNKNOWN_FRESHNESS`. The adapter validates tool
+`UNHEALTHY`, `UNAVAILABLE`, or `UNKNOWN_FRESHNESS`. The adapter validates query/tool
 arguments, target deployment, result schema, `_meta`, size bounds, and untrusted
 text. Credentials never enter prompts, tool results, fixtures, logs, or evidence.
 

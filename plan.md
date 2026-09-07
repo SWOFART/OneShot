@@ -53,10 +53,11 @@ The primary product configuration is **Privy + Arc + The Graph**:
 
 - Privy authorizes and constrains the corporate wallet action.
 - The Graph discovers candidate transfers when a successful submission lost its
-  transaction hash or provider response. The production path reaches the live
-  OneShot/Arc Subgraph through Subgraph MCP, not a direct application GraphQL client.
-- The LLM Recovery Agent uses MCP results for meaningful candidate selection and
-  explanation, then emits one of four advisory recovery actions.
+  transaction hash or provider response. `IndexViewPort` remains provider-neutral:
+  direct GraphQL against the live OneShot/Arc Subgraph is the minimal path, with
+  a Subgraph MCP adapter available as an optional agent integration.
+- The LLM Recovery Agent uses live Graph candidate results for meaningful candidate
+  selection and explanation, then emits one of four advisory recovery actions.
 - Arc verifies the candidate receipt and exact USDC `Transfer`.
 - OneShot and PostgreSQL alone decide the durable state transition.
 
@@ -68,8 +69,8 @@ sponsor claim is made.
 The Graph submission targets the AI Tooling or AI Use Case track. One custom
 Subgraph does not satisfy the Composable/Standardized track. One live Subgraph
 is sufficient for the selected AI track. The recovery agent uses live Graph data
-obtained through Subgraph MCP to choose and explain candidates; deterministic
-Arc checks and the OneShot state machine retain all financial authority.
+(obtained directly or via optional Subgraph MCP) to choose and explain candidates;
+deterministic Arc checks and the OneShot state machine retain all financial authority.
 
 ### Sponsor claim mapping
 
@@ -188,7 +189,7 @@ This plan optimizes for five properties:
 3. Low merge contention: each coder owns disjoint directories and shared files have a single editor.
 4. Verifiable handoffs: ports, OpenAPI, schemas, fixtures, and simulators are versioned artifacts.
 5. Late frontend: UI work consumes a stable backend contract instead of driving it.
-6. Network promotion: testnet proves behavior; mainnet readiness proves the same boundaries can be configured safely on Arc public mainnet, which opens 16 September 2026 on chain `5042`.
+6. Network promotion: Arc Testnet proves behavior; Mainnet remains disabled until official network parameters are published, pinned, verified, and human-approved.
 
 ## 3. Product success criteria
 
@@ -202,8 +203,8 @@ This plan optimizes for five properties:
 - The public repository contains the architecture diagram, setup and operator documentation, and no secrets in history.
 - The submission text names each claimed partner track explicitly and states the Arc mainnet-readiness position.
 - The demo proves working Privy and Arc integrations with sanitized testnet evidence and no exposed secrets.
-- A mainnet-readiness check proves network, token, explorer, policy, deployment, rollback, and safe-disable configuration fail closed while the Arc Mainnet profile stays disabled pending explicit human authorization. Arc public mainnet opens 16 September 2026, after the submission deadline.
-- The Graph sponsor claim is retained only when a sanitized live Subgraph MCP trace proves hashless discovery and meaningful recovery-agent automation beyond direct known-hash lookup, followed by deterministic OneShot/Arc validation.
+- A mainnet-readiness check proves network, token, explorer, policy, deployment, rollback, and safe-disable configuration fail closed while Arc Mainnet is unavailable or its official parameters have not been pinned and explicitly human-approved.
+- The Graph sponsor claim is retained only when a sanitized live Graph trace (via direct GraphQL or optional Subgraph MCP adapter) proves hashless discovery and meaningful recovery-agent automation beyond direct known-hash lookup, followed by deterministic OneShot/Arc validation.
 
 ## 4. Scope
 
@@ -266,8 +267,8 @@ activate real-value execution.
 | Work delivery | Graphile Worker over the same PostgreSQL database; at-least-once delivery is assumed |
 | EVM encoding and RPC | `viem` for typed addresses, calldata, chain access, receipt reads, and log verification |
 | Authorization | Privy Node SDK, execution wallet, scoped wallet policy, persisted idempotency key, and reference identity |
-| Settlement profiles | Arc Testnet `eip155:5042002` and its official USDC interface are enabled for live proof; the Arc Mainnet profile (chain `5042`, public launch 16 September 2026) is structurally complete but disabled until its values are pinned, verified, and human-approved |
-| Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; a deployment-pinned Subgraph MCP adapter is the selected v1 path to the live OneShot/Arc Subgraph. The LLM Recovery Agent emits only four advisory actions. C01 must prove the lost-hash flow, freshness, degradation behavior, and AI-track fit; direct RPC remains the safe fallback |
+| Settlement profiles | Arc Testnet `eip155:5042002` and its official USDC interface are the only enabled live profile; the Arc Mainnet profile contains no guessed network values and remains disabled until official parameters are published, pinned, verified, and human-approved |
+| Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; direct GraphQL is the minimal implementation path to the live OneShot/Arc Subgraph, with a deployment-pinned Subgraph MCP adapter as an optional integration path. The LLM Recovery Agent emits only four advisory actions. C01 must prove the lost-hash flow, freshness, degradation behavior, and AI-track fit; direct RPC remains the safe fallback |
 | Money | Canonical integer strings at JSON boundaries and `bigint` internally; no JavaScript monetary floats |
 | Frontend | React and Vite, generated OpenAPI client, exact integer amount formatting, and no direct settlement capability |
 | Testing | Vitest for unit/contract tests, Testcontainers for PostgreSQL integration, Playwright for browser flows, deterministic failure simulators, and Graph adapter/degradation tests |
@@ -342,14 +343,14 @@ that check passes and is recorded in the B01 handoff.
 
 ### Mainnet-readiness statement
 
-Arc public mainnet launches on 16 September 2026, chain ID `5042`, the day the
-hackathon ends. The submission deadline is 13 September, so no team can be
-deployed at submission time. The 30 September date is a post-launch window in
-which reviewers verify the claim, not a deadline met inside the event.
+Arc public mainnet is not available at planning time. Only Arc Testnet has
+published network parameters and can be deployed and exercised by the team.
+OneShot therefore claims a working Testnet integration and Mainnet readiness,
+not a Mainnet deployment.
 
-The Mainnet track accepts either state: deployed, or deployment-ready. This
-build targets deployment-ready and treats actual deployment as an optional
-upgrade the team may take after 16 September.
+The Mainnet profile contains no guessed chain ID, RPC, explorer, token, or
+contract values. It remains disabled until Arc publishes official parameters,
+B01 pins and verifies them, and a human explicitly authorizes activation.
 
 Because verification happens after the event, readiness evidence must live in
 the public repository rather than only in the submission form.

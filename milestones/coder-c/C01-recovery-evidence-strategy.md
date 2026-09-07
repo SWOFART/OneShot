@@ -49,14 +49,14 @@ removes the Graph claim and selects the direct-recovery fallback.
 - Add provider-specific mapping tests only after the decision record selects an
   implementation.
 
-### C01.5 — Live MCP and AI-value spike
+### C01.5 — Live Graph and AI-value spike
 
-- Query the intended live deployment through Subgraph MCP, not a direct
-  application GraphQL client, and capture a sanitized tool trace.
+- Query the intended live deployment through direct GraphQL (minimal path) or
+  Subgraph MCP (optional adapter), and capture a sanitized retrieval trace.
 - Feed the live candidate/freshness result to an LLM Recovery Agent and prove it
   materially affects candidate selection or explanation.
-- Record `SELECT_SUBGRAPH_MCP` or `FALLBACK_DIRECT_RECOVERY`; the fallback keeps
-  safety but makes The Graph qualification `NOT VERIFIED`.
+- Record `SELECT_SUBGRAPH_MCP` or `FALLBACK_DIRECT_RECOVERY`; direct GraphQL
+  remains the minimal baseline path.
 
 ## Acceptance evidence
 

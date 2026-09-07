@@ -86,7 +86,8 @@ deterministic safety core. Repository: https://github.com/SWOFART/OneShot/.
   executable, and a pinned `free-pi-cli@0.2.19` install was denied by the local
   sandbox. The user was informed of the fail-closed rule in
   `.agent/IMPLEMENTATION_LOOP.md` and explicitly waived both gates for this
-  documentation-only change.
+  planning and contract specification change (which adds RecoveryAdvisorPort,
+  specifies recovery fixtures, and updates CONTRACTS.md without altering runtime code).
 - Gate B: NOT RUN. Waived by the same explicit user decision.
 
 Equivalent local evidence was captured instead: the full `agent-policy` workflow

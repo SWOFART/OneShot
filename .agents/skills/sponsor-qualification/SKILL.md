@@ -14,16 +14,18 @@ code, tests, and demo instructions. Review working evidence, not plans.
   path through scoped policy or spending permission. Login-only is insufficient.
 - Arc: prove a real USDC settlement on Arc Testnet and, for the Launch track,
   fail-closed mainnet-readiness artifacts without inventing unavailable values.
-- The Graph: prove a pinned live OneShot/Arc Subgraph is queried through
-  Subgraph MCP and that the LLM Recovery Agent materially uses the result for
-  hashless candidate selection/explanation beyond direct known-hash lookup.
-- Bind a sanitized MCP trace to deployment/query/result, `_meta` health,
+- The Graph: prove a pinned live OneShot/Arc Subgraph is queried (via direct
+  GraphQL as minimal path or optional Subgraph MCP adapter) and that the LLM
+  Recovery Agent materially uses the live data for hashless candidate
+  selection/explanation beyond direct known-hash lookup.
+- Bind a sanitized retrieval trace to deployment/query/result, `_meta` health,
   evidence references, one of `WAIT`, `RECONCILE`, `ESCALATE`, or
-  `RETURN_EXISTING_RESULT`, and the deterministic-core disposition. Direct
-  GraphQL, mocks, dependencies, variables, and prompt text alone are insufficient.
+  `RETURN_EXISTING_RESULT`, and the deterministic-core disposition. Mocks,
+  static fixtures, unused dependencies, variables, and prompt text alone
+  without live Graph data and demonstrable AI impact are insufficient.
 - Arc verifies candidates and OneShot decides. Empty, stale, malformed/injected,
-  multiple, or contradictory MCP results and invalid model output cannot unlock
-  another settlement. MCP/model code exposes no settlement or retry capability.
+  multiple, or contradictory index/MCP results and invalid model output cannot unlock
+  another settlement. Indexer/MCP/model code exposes no settlement or retry capability.
 - Do not require multiple Subgraphs for the selected AI track or award the
   separate Composable/Standardized claim without its own proof.
 - Verify the demo preserves `1 intent / N attempts / <=1 settlement` and never
