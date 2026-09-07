@@ -18,9 +18,16 @@ At Gate P4, checked simulators are replaced with real reviewed package versions,
 | Domain Models | `@oneshot/domain@0.1.0` | Lane A | Pinned |
 | PostgreSQL Storage | `@oneshot/storage-postgres@0.1.0` | Lane A | Pinned (Schema Digest: `5d5888894ff0f4f44049579f1c8ffca2a24e0b61c3af65aabdbcd78f06020d65`) |
 | Settlement Worker | `@oneshot/worker@0.1.0` | Lane A | Composed |
-| Arc Settlement Adapter | `@oneshot/adapter-arc` | Lane B | Simulated via `SimulatorSettlementPort` |
-| Privy Authorization Adapter | `@oneshot/adapter-privy` | Lane B | Simulated via `SimulatorAuthorizationPort` |
+| Arc Settlement Adapter | `@oneshot/privy-adapter` (`ArcSettlementAdapter`) | Lane B | Simulated via `SimulatorSettlementPort` |
+| Privy Authorization Adapter | `@oneshot/privy-adapter` (`PrivyAuthorizationAdapter`) | Lane B | Simulated via `SimulatorAuthorizationPort` |
 | Subgraph MCP Recovery | `@oneshot/reconciliation` | Lane C | Simulated via `c01-simulator-v1` scenarios |
+
+Both lane-B adapters ship from `@oneshot/privy-adapter` rather than from
+separate packages: settlement is a Privy wallet action carrying an Arc
+transfer, so splitting them would put half of one call path in each package.
+`@oneshot/arc-adapter` holds the Arc profiles, money, receipt verification, and
+readiness probing they build on. See
+`docs/settlement/GATE_P4_LANE_B_READINESS.md` for the injection recipe.
 
 ## Replacement Instructions for Gate P4
 
@@ -45,10 +52,12 @@ At Gate P4, checked simulators are replaced with real reviewed package versions,
 
 ## Verification Commands
 
-Before P4, the Arc, Privy, and settlement testkit packages keep their reviewed npm
-toolchains and are checked by the dedicated `settlement-packages` CI job. P4 may
-consolidate them into the root pnpm workspace only after their package contracts and
-tool versions are reconciled.
+The Arc, Privy, and settlement testkit packages are full members of the root
+pnpm workspace and are covered by the root `lint`, `typecheck`, `build`, and
+`vitest` runs. The separate `settlement-packages` CI job and their package-local
+npm toolchains were removed when they were consolidated, ahead of P4 rather than
+during it, because their npm lockfiles broke `pnpm install --frozen-lockfile` on
+`develop`.
 
 Run the full verification matrix to validate integrated convergence:
 
