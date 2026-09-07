@@ -238,6 +238,7 @@ deployment artifacts. Real-value activation remains a separate human-controlled 
    deployment only after the core invariant remains proven in the pilot.
 
 P0-P6 delivers testnet functionality and mainnet readiness. Actual production activation and real-value pilot execution remain outside automatic agent authority.
+
 ### Deployment path
 
 ```mermaid
@@ -369,7 +370,6 @@ no domain or contract work is required.
 
 The submission text states the readiness position plainly and points to this
 file.
-
 
 ## 6. Architecture
 

@@ -74,6 +74,7 @@ contributes to the complete product.
   Arc remains authoritative and a failed gate removes the Graph claim.
 - Gate A and Gate B are skipped for this follow-up planning change by explicit
   user instruction. Required repository CI and human review still apply.
+
 ## 2026-09-06 Graph and Arc Memo decision
 
 - Primary submission direction: Privy authorizes, The Graph discovers, Arc
