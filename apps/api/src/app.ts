@@ -1,0 +1,193 @@
+import { randomUUID } from 'node:crypto';
+import {
+  asCorrelationId,
+  ContractValidationError,
+  type ErrorCode,
+  type ErrorResponse,
+} from '@oneshot/contracts';
+import type { IntentLedger } from '@oneshot/storage-postgres';
+import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
+import type { ServiceAuthenticator } from './auth.js';
+import { allowAllRateLimiter, type RateLimiter } from './rate-limit.js';
+
+export interface ApiDependencies {
+  readonly ledger: Pick<
+    IntentLedger,
+    'createOrReplay' | 'enqueueReconciliation' | 'getIntent' | 'getRecoveryView' | 'ping'
+  >;
+  readonly authenticator: ServiceAuthenticator;
+  readonly rateLimiter?: RateLimiter;
+  readonly nextCorrelationId?: () => string;
+  readonly bodyLimitBytes?: number;
+}
+
+const createIntentBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['business_intent_id', 'recipient', 'amount_atomic', 'asset', 'network', 'purpose'],
+  properties: {
+    business_intent_id: { type: 'string', minLength: 1, maxLength: 128 },
+    recipient: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
+    amount_atomic: { type: 'string', pattern: '^(0|[1-9][0-9]*)$', maxLength: 78 },
+    asset: { type: 'string', const: 'USDC' },
+    network: { type: 'string', const: 'eip155:5042002' },
+    purpose: { type: 'string', minLength: 1, maxLength: 256 },
+  },
+} as const;
+
+function sendError(
+  reply: FastifyReply,
+  status: number,
+  code: ErrorCode,
+  message: string,
+  correlationId: string,
+): void {
+  const body: ErrorResponse = { code, message, correlation_id: correlationId };
+  void reply.code(status).send(body);
+}
+
+export function buildApi(dependencies: ApiDependencies) {
+  const app = Fastify({ bodyLimit: dependencies.bodyLimitBytes ?? 16 * 1024, logger: false });
+  const correlations = new WeakMap<FastifyRequest, string>();
+  const nextCorrelationId = dependencies.nextCorrelationId ?? randomUUID;
+  const rateLimiter = dependencies.rateLimiter ?? allowAllRateLimiter;
+
+  const correlationFor = (request: FastifyRequest): string => {
+    const existing = correlations.get(request);
+    if (existing) return existing;
+    const inbound = request.headers['x-correlation-id'];
+    const value = asCorrelationId(typeof inbound === 'string' ? inbound : nextCorrelationId());
+    correlations.set(request, value);
+    return value;
+  };
+
+  app.addHook('onRequest', async (request, reply) => {
+    let correlationId: string;
+    try {
+      correlationId = correlationFor(request);
+    } catch {
+      correlationId = asCorrelationId(nextCorrelationId());
+      correlations.set(request, correlationId);
+      sendError(reply, 400, 'INVALID_REQUEST', 'Invalid correlation identifier', correlationId);
+      return reply;
+    }
+    void reply.header('x-correlation-id', correlationId);
+    if (!request.url.startsWith('/v1/')) return;
+    const decision = await dependencies.authenticator.authenticate(request.headers.authorization);
+    if (decision !== 'AUTHORIZED') {
+      sendError(
+        reply,
+        decision === 'FORBIDDEN' ? 403 : 401,
+        decision === 'FORBIDDEN' ? 'FORBIDDEN' : 'UNAUTHORIZED',
+        'Service authentication failed',
+        correlationId,
+      );
+      return reply;
+    }
+    if (
+      request.method === 'POST' &&
+      !(await rateLimiter.allow({ correlationId, route: request.url }))
+    ) {
+      sendError(reply, 429, 'RATE_LIMITED', 'Request rate limit exceeded', correlationId);
+      return reply;
+    }
+  });
+
+  app.post('/v1/intents', { schema: { body: createIntentBodySchema } }, async (request, reply) => {
+    const result = await dependencies.ledger.createOrReplay(request.body, correlationFor(request));
+    if (result.kind === 'INTENT_PAYLOAD_CONFLICT') {
+      sendError(
+        reply,
+        409,
+        'INTENT_PAYLOAD_CONFLICT',
+        'Business Intent already exists with a different immutable payload',
+        correlationFor(request),
+      );
+      return;
+    }
+    return reply.code(result.kind === 'ACCEPTED' ? 202 : 200).send(result.intent);
+  });
+
+  app.get<{ Params: { id: string } }>('/v1/intents/:id', async (request, reply) => {
+    const intent = await dependencies.ledger.getIntent(request.params.id);
+    if (!intent) {
+      sendError(
+        reply,
+        404,
+        'INTENT_NOT_FOUND',
+        'Business Intent was not found',
+        correlationFor(request),
+      );
+      return;
+    }
+    return intent;
+  });
+
+  app.post<{ Params: { id: string } }>('/v1/intents/:id/reconcile', async (request, reply) => {
+    const result = await dependencies.ledger.enqueueReconciliation(request.params.id);
+    if (!result) {
+      sendError(
+        reply,
+        404,
+        'INTENT_NOT_FOUND',
+        'Business Intent was not found',
+        correlationFor(request),
+      );
+      return;
+    }
+    if (!result.queued) {
+      sendError(
+        reply,
+        409,
+        'RECONCILIATION_NOT_ALLOWED',
+        'Intent state does not permit reconciliation',
+        correlationFor(request),
+      );
+      return;
+    }
+    return reply.code(202).send(result);
+  });
+
+  app.get<{ Params: { id: string } }>('/v1/intents/:id/recovery-view', async (request, reply) => {
+    const view = await dependencies.ledger.getRecoveryView(request.params.id);
+    if (!view) {
+      sendError(
+        reply,
+        404,
+        'INTENT_NOT_FOUND',
+        'Business Intent was not found',
+        correlationFor(request),
+      );
+      return;
+    }
+    return view;
+  });
+
+  app.get('/health/live', async () => ({ status: 'ok' as const }));
+
+  app.get('/health/ready', async (request, reply) => {
+    try {
+      await dependencies.ledger.ping();
+      return { status: 'ok' as const };
+    } catch {
+      sendError(reply, 503, 'NOT_READY', 'Database is unavailable', correlationFor(request));
+      return;
+    }
+  });
+
+  app.setErrorHandler((error, request, reply) => {
+    const correlationId = correlationFor(request);
+    const fastifyError = error as { readonly code?: string; readonly validation?: unknown };
+    if (
+      error instanceof ContractValidationError ||
+      fastifyError.validation ||
+      fastifyError.code === 'FST_ERR_CTP_BODY_TOO_LARGE'
+    ) {
+      sendError(reply, 400, 'INVALID_REQUEST', 'Request failed validation', correlationId);
+      return;
+    }
+    sendError(reply, 500, 'INTERNAL_ERROR', 'Internal service error', correlationId);
+  });
+
+  return app;
+}

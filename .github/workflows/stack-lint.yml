@@ -106,3 +106,9 @@ jobs:
       - name: Run tests
         if: steps.workspace.outputs.enabled == 'true'
         run: pnpm test
+
+      - name: Run PostgreSQL integration tests
+        if: steps.workspace.outputs.enabled == 'true'
+        env:
+          TEST_POSTGRES: '1'
+        run: pnpm test:integration
