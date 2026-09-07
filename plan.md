@@ -53,11 +53,10 @@ The primary product configuration is **Privy + Arc + The Graph**:
 
 - Privy authorizes and constrains the corporate wallet action.
 - The Graph discovers candidate transfers when a successful submission lost its
-  transaction hash or provider response. `IndexViewPort` remains provider-neutral:
-  direct GraphQL against the live OneShot/Arc Subgraph is the minimal path, with
-  a Subgraph MCP adapter available as an optional agent integration.
-- The LLM Recovery Agent uses live Graph candidate results for meaningful candidate
-  selection and explanation, then emits one of four advisory recovery actions.
+  transaction hash or provider response. The production path reaches the live
+  OneShot/Arc Subgraph through Subgraph MCP, not a direct application GraphQL client.
+- The LLM Recovery Agent uses MCP results for meaningful candidate selection and
+  explanation, then emits one of four advisory recovery actions.
 - Arc verifies the candidate receipt and exact USDC `Transfer`.
 - OneShot and PostgreSQL alone decide the durable state transition.
 
@@ -69,8 +68,8 @@ sponsor claim is made.
 The Graph submission targets the AI Tooling or AI Use Case track. One custom
 Subgraph does not satisfy the Composable/Standardized track. One live Subgraph
 is sufficient for the selected AI track. The recovery agent uses live Graph data
-(obtained directly or via optional Subgraph MCP) to choose and explain candidates;
-deterministic Arc checks and the OneShot state machine retain all financial authority.
+obtained through Subgraph MCP to choose and explain candidates; deterministic
+Arc checks and the OneShot state machine retain all financial authority.
 
 ### Sponsor claim mapping
 
@@ -204,7 +203,7 @@ This plan optimizes for five properties:
 - The submission text names each claimed partner track explicitly and states the Arc mainnet-readiness position.
 - The demo proves working Privy and Arc integrations with sanitized testnet evidence and no exposed secrets.
 - A mainnet-readiness check proves network, token, explorer, policy, deployment, rollback, and safe-disable configuration fail closed while Arc Mainnet is unavailable or its official parameters have not been pinned and explicitly human-approved.
-- The Graph sponsor claim is retained only when a sanitized live Graph trace (via direct GraphQL or optional Subgraph MCP adapter) proves hashless discovery and meaningful recovery-agent automation beyond direct known-hash lookup, followed by deterministic OneShot/Arc validation.
+- The Graph sponsor claim is retained only when a sanitized live Subgraph MCP trace proves hashless discovery and meaningful recovery-agent automation beyond direct known-hash lookup, followed by deterministic OneShot/Arc validation.
 
 ## 4. Scope
 
@@ -268,7 +267,7 @@ activate real-value execution.
 | EVM encoding and RPC | `viem` for typed addresses, calldata, chain access, receipt reads, and log verification |
 | Authorization | Privy Node SDK, execution wallet, scoped wallet policy, persisted idempotency key, and reference identity |
 | Settlement profiles | Arc Testnet `eip155:5042002` and its official USDC interface are the only enabled live profile; the Arc Mainnet profile contains no guessed network values and remains disabled until official parameters are published, pinned, verified, and human-approved |
-| Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; direct GraphQL is the minimal implementation path to the live OneShot/Arc Subgraph, with a deployment-pinned Subgraph MCP adapter as an optional integration path. The LLM Recovery Agent emits only four advisory actions. C01 must prove the lost-hash flow, freshness, degradation behavior, and AI-track fit; direct RPC remains the safe fallback |
+| Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; a deployment-pinned Subgraph MCP adapter is the selected v1 path to the live OneShot/Arc Subgraph. The LLM Recovery Agent emits only four advisory actions. C01 must prove the lost-hash flow, freshness, degradation behavior, and AI-track fit; direct RPC remains the safe fallback |
 | Money | Canonical integer strings at JSON boundaries and `bigint` internally; no JavaScript monetary floats |
 | Frontend | React and Vite, generated OpenAPI client, exact integer amount formatting, and no direct settlement capability |
 | Testing | Vitest for unit/contract tests, Testcontainers for PostgreSQL integration, Playwright for browser flows, deterministic failure simulators, and Graph adapter/degradation tests |

@@ -46,8 +46,7 @@ Attempt, acquire submission ownership, or call `SettlementPort`.
 
 The Graph remains `NOT VERIFIED` until a sanitized demo trace proves all of:
 
-1. the intended live OneShot/Arc deployment was queried (via direct GraphQL as
-   minimal baseline path or Subgraph MCP as optional adapter);
+1. the intended live OneShot/Arc deployment was queried through Subgraph MCP;
 2. the returned live indexed evidence and `_meta` health reached the LLM;
 3. the LLM selected one of the four frozen recommendations using referenced evidence;
 4. the deterministic core independently accepted, constrained, or rejected it;
