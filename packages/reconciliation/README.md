@@ -12,6 +12,11 @@ variable.
 This package cannot submit or retry a settlement. It imports no domain,
 storage, Privy, or Arc implementation and exposes no `SettlementPort`.
 
+C04 adds a recovery service around the frozen source ports and deterministic
+safety core. It emits versioned, append-only observation and decision commands
+through `RecoveryCommandStorePort`; an A-owned consumer remains responsible for
+durable writes and state-version checks.
+
 ## Boundary
 
 The parser accepts the public MCP `CallToolResult` shape used by
@@ -50,6 +55,9 @@ The package participates in the root pnpm workspace and TypeScript project.
 - `src/simulator.ts`: credential-free deterministic Subgraph MCP scenarios.
 - `src/agent-simulator.ts`: C02 credential-free deterministic RecoveryAdvisorPort simulator.
 - `src/safety-core.ts`: C02 deterministic recovery safety core.
+- `src/service.ts`: C04 recovery job handler and evidence-command persistence seam.
+- `src/service-simulator.ts`: C04 A/B/MCP/model simulator composition and atomic dedupe store.
+- `src/recovery-matrix.ts`: C04 complete sanitized pre-live matrix runner and Markdown renderer.
 - `docs/recovery-action-matrix.md`: C02 four-action advisory and safety core disposition matrix.
 - `schemas/chaos-timeline-v1.schema.json`: C03 chaos timeline scenario schema.
 - `src/chaos/`: C03 cross-source failure injection harness, timeline DSL, and scenario runner.
@@ -57,3 +65,8 @@ The package participates in the root pnpm workspace and TypeScript project.
 - `docs/ESCALATION_RUNBOOK.md`: C03 operator escalation runbook (strict no-blind-retry policy).
 - `docs/removal-value-matrix.md`: Graph removal/value comparison.
 - `docs/live-value-gate.md`: sanitized live MCP/agent spike protocol and current decision.
+- `schemas/recovery-command-pack-v1.schema.json`: append-only C04 command pack contract.
+- `docs/C04_RECOVERY_MATRIX_REPORT.md`: generated service and chaos matrix report.
+- `docs/C04_SIMULATOR_LOCK.md`: exact simulator identities and unlock conditions.
+- `docs/GATE_P4_RECOVERY_REPLACEMENT.md`: public-port replacement map and known live gaps.
+- `docs/SUBGRAPH_MCP_CHECKLIST.md`: deployment, freshness, data-boundary, and disable checks.

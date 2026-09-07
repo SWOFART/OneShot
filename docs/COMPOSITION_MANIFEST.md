@@ -36,7 +36,7 @@ All ports conform to frozen definitions in `@oneshot/contracts`:
 
 - **Settlement**: `ArcSettlementAdapter` (`@oneshot/privy-adapter`, owned by Coder B)
 - **Authorization**: `PrivyAuthorizationAdapter` (`@oneshot/privy-adapter`, owned by Coder B)
-- **Reconciliation**: Subgraph MCP Recovery Engine (`@oneshot/reconciliation-subgraph`, owned by Coder C)
+- **Reconciliation**: `RecoveryService` with a Subgraph MCP adapter (`@oneshot/reconciliation`, owned by Coder C)
 
 ## Environment Configuration
 
