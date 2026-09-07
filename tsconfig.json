@@ -2,7 +2,10 @@
   "files": [],
   "references": [
     { "path": "./packages/contracts" },
+    { "path": "./packages/domain" },
     { "path": "./packages/reconciliation" },
-    { "path": "./packages/testkit-domain" }
+    { "path": "./packages/storage-postgres" },
+    { "path": "./packages/testkit-domain" },
+    { "path": "./apps/api" }
   ]
 }

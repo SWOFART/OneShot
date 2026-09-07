@@ -1,8 +1,12 @@
 packages:
+  - apps/*
   - packages/*
 
 saveExact: true
 strictPeerDependencies: true
 autoInstallPeers: true
-onlyBuiltDependencies:
-  - esbuild
+allowBuilds:
+  cpu-features: true
+  esbuild: true
+  protobufjs: true
+  ssh2: true

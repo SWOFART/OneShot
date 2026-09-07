@@ -17,12 +17,14 @@
     "generate": "pnpm --filter @oneshot/contracts generate",
     "lint": "eslint .",
     "test": "pnpm build && vitest run",
+    "test:integration": "pnpm --filter @oneshot/storage-postgres test:integration && pnpm --filter @oneshot/api test:integration",
     "typecheck": "tsc -b --pretty false",
     "validate:fixtures": "pnpm --filter @oneshot/contracts validate:fixtures"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "24.13.3",
+    "@types/pg": "8.23.1",
     "eslint": "10.10.0",
     "globals": "17.4.0",
     "prettier": "3.9.6",
