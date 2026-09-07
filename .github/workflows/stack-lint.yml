@@ -39,6 +39,7 @@ jobs:
             if grep -q '^```mermaid' "$file"; then
               digest="$(printf '%s' "$file" | sha256sum | cut -d ' ' -f 1)"
               npx --yes @mermaid-js/mermaid-cli@11.17.0 \
+                --puppeteerConfigFile .github/puppeteer-ci.json \
                 --input "$file" \
                 --output "$output_dir/$digest.md"
             fi
