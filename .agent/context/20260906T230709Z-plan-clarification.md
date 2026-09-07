@@ -16,7 +16,7 @@ OneShot safety boundary.
 Create `plan-clarification` from the new repository's `develop`; update the plan,
 The Graph milestones, and sponsor-qualification skill around the flow Subgraph
 -> Subgraph MCP -> LLM Recovery Agent -> four allowed recommendations ->
-deterministic safety core. Repository: https://github.com/SWOFART/OneShot/.
+deterministic safety core. Repository: <https://github.com/SWOFART/OneShot/>.
 
 ## Assumptions
 

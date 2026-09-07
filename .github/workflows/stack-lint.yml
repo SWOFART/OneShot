@@ -1,0 +1,95 @@
+name: Stack lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stack-lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  documentation:
+    name: Markdown and Mermaid
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Lint Markdown
+        run: npx --yes markdownlint-cli2@0.18.1 "**/*.md" "#node_modules"
+
+      - name: Render Mermaid diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          output_dir="${RUNNER_TEMP}/mermaid"
+          mkdir -p "$output_dir"
+
+          while IFS= read -r -d '' file; do
+            if grep -q '^```mermaid' "$file"; then
+              digest="$(printf '%s' "$file" | sha256sum | cut -d ' ' -f 1)"
+              npx --yes @mermaid-js/mermaid-cli@11.17.0 \
+                --input "$file" \
+                --output "$output_dir/$digest.md"
+            fi
+          done < <(find . -type f -name '*.md' -not -path './node_modules/*' -print0)
+
+  typescript:
+    name: ESLint and TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect pnpm workspace
+        id: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f package.json && -f pnpm-lock.yaml ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          elif [[ -f package.json || -f pnpm-lock.yaml ]]; then
+            echo "package.json and pnpm-lock.yaml must be committed together" >&2
+            exit 1
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "No TypeScript workspace yet; documentation lint remains active."
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.workspace.outputs.enabled == 'true'
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        if: steps.workspace.outputs.enabled == 'true'
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install locked dependencies
+        if: steps.workspace.outputs.enabled == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Require lint scripts
+        if: steps.workspace.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          node -e "const p=require('./package.json'); for (const s of ['lint','typecheck']) if (!p.scripts?.[s]) { console.error('Missing package.json script: '+s); process.exitCode=1 }"
+
+      - name: Run ESLint
+        if: steps.workspace.outputs.enabled == 'true'
+        run: pnpm lint
+
+      - name: Run TypeScript compiler
+        if: steps.workspace.outputs.enabled == 'true'
+        run: pnpm typecheck
