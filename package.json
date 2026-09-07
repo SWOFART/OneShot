@@ -12,6 +12,8 @@
     "build": "tsc -b",
     "check:generated": "pnpm --filter @oneshot/contracts check:generated",
     "clean": "tsc -b --clean",
+    "deploy": "wrangler deploy",
+    "dev:frontend": "wrangler dev",
     "format": "prettier --write \"**/*.{ts,mts,mjs,json,jsonc,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,mts,mjs,json,jsonc,yml,yaml}\"",
     "generate": "pnpm --filter @oneshot/contracts generate",
@@ -31,6 +33,7 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.69.0",
     "vite": "8.0.0",
-    "vitest": "5.0.0"
+    "vitest": "5.0.0",
+    "wrangler": "4.127.0"
   }
 }
