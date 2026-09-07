@@ -7,6 +7,17 @@ import type {
   KnownIdentityRecoveryEvidence,
 } from './types.js';
 
+function sameBinding(left: EvidenceBinding, right: EvidenceBinding): boolean {
+  return (
+    left.businessIntentId === right.businessIntentId &&
+    left.requestFingerprint === right.requestFingerprint &&
+    left.network === right.network &&
+    left.tokenContract.toLowerCase() === right.tokenContract.toLowerCase() &&
+    left.recipient.toLowerCase() === right.recipient.toLowerCase() &&
+    left.amountAtomic === right.amountAtomic
+  );
+}
+
 export function isAuthoritativeArcProof(
   binding: EvidenceBinding,
   arcEvidence: KnownIdentityRecoveryEvidence['arc'],
@@ -50,6 +61,9 @@ export function buildBoundEvidenceRecords(
 ): ExtractedEvidenceBundle {
   const records: BoundEvidenceRecord[] = [];
   const contradictions: ContradictionCode[] = [];
+  const exactBinding = sameBinding(binding, evidence.binding);
+
+  if (!exactBinding) contradictions.push('UNBOUND_EVIDENCE');
 
   // 1. Local OneShot durable state
   records.push({
@@ -96,7 +110,12 @@ export function buildBoundEvidenceRecords(
       arcContradiction = true;
     }
 
-    if (!arcContradiction) {
+    if (arc.submissionReference !== evidence.local.submissionReference) {
+      contradictions.push('UNBOUND_EVIDENCE');
+      arcContradiction = true;
+    }
+
+    if (exactBinding && !arcContradiction) {
       if (isAuthoritativeArcProof(binding, arc)) {
         hasAuthoritativeSuccess = true;
       } else if (isAuthoritativeArcRevert(binding, arc)) {

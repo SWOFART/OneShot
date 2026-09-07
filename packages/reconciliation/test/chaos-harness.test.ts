@@ -54,6 +54,12 @@ describe('C03 — Cross-Source Failure Injection Matrix', () => {
         'mcp-wrong-tool-deployment',
         'mcp-oversized-result',
         'mcp-hostile-injection',
+        'mcp-delayed-result',
+        'mcp-missing-freshness',
+        'mcp-query-failure',
+        'mcp-duplicate-events',
+        'mcp-out-of-order-events',
+        'mcp-malformed-result',
       ];
 
       for (const id of degradedIds) {
@@ -117,6 +123,9 @@ describe('C03 — Cross-Source Failure Injection Matrix', () => {
         'agent-unsupported-action',
         'agent-fabricated-evidence-id',
         'agent-unverified-return-existing-result',
+        'agent-malformed-output',
+        'agent-timeout',
+        'agent-nondeterministic-prose',
       ];
 
       for (const id of failureIds) {

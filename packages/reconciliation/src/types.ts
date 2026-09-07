@@ -35,7 +35,8 @@ export type ContradictionCode =
   | 'NETWORK_MISMATCH'
   | 'RECIPIENT_MISMATCH'
   | 'SENDER_MISMATCH'
-  | 'TOKEN_MISMATCH';
+  | 'TOKEN_MISMATCH'
+  | 'UNBOUND_EVIDENCE';
 
 export interface EvidenceBinding {
   businessIntentId: string;
@@ -52,6 +53,7 @@ export interface KnownIdentityRecoveryEvidence {
   local: {
     authority: 'AUTHORITATIVE_ONESHOT';
     stateVersion: string;
+    submissionReference: string;
     settlementState: 'SUBMITTING' | 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE';
     persistedAt: string;
     digest: string;
@@ -69,6 +71,7 @@ export interface KnownIdentityRecoveryEvidence {
     authority: 'AUTHORITATIVE_CHAIN_EVIDENCE';
     network: string;
     transactionHash: string;
+    submissionReference: string;
     receiptStatus: 'SUCCESS' | 'REVERT' | 'PENDING' | 'NOT_FOUND' | 'UNAVAILABLE';
     finality: 'FINAL' | 'PENDING' | 'UNKNOWN';
     blockNumber: string | null;

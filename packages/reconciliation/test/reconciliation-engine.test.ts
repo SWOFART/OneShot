@@ -59,6 +59,35 @@ describe('C02.1 — Evidence model & binding validation', () => {
     expect(extracted.contradictions).toContain('RECIPIENT_MISMATCH');
   });
 
+  it('holds when evidence belongs to another business intent', () => {
+    const evidence = createKnownIdentityFixture();
+    const binding = { ...evidence.binding, businessIntentId: 'intent-other' };
+    const recommendation = new RecoveryAgentSimulator({
+      scenario: 'return-existing-result',
+    }).recommend(
+      buildRecoveryAgentInput({
+        binding,
+        durableState: {
+          state: 'UNKNOWN',
+          stateVersion: '1',
+          attemptCount: 1,
+          persistedAt: '2026-09-07T12:00:00.000Z',
+        },
+        evidence,
+      }),
+    );
+    const { command, view } = evaluateReconciliation({
+      binding,
+      durable: { state: 'UNKNOWN', stateVersion: '1' },
+      evidence,
+      recommendationOutcome: recommendation,
+    });
+
+    expect(command.commandType).toBe('ESCALATE_UNKNOWN');
+    expect(command.targetState).toBe('UNKNOWN');
+    expect(view.contradictionCodes).toContain('UNBOUND_EVIDENCE');
+  });
+
   it('detects authoritative Arc revert', () => {
     const evidence = createKnownIdentityFixture();
     const binding = evidence.binding;
@@ -198,6 +227,23 @@ describe('C02.3 — RecoveryAdvisorPort contract & agent simulator', () => {
     expect(outcome.accepted).toBe(false);
     expect(outcome.recommendation.action).toBe('WAIT');
     expect(outcome.issues.some((i) => i.code === 'INVALID_IDENTITY')).toBe(true);
+  });
+
+  it('rejects model tool calls and other undeclared output fields', () => {
+    const evidence = createKnownIdentityFixture();
+    const outcome = validateAndNormalizeRecommendation(
+      {
+        action: 'WAIT',
+        decisionId: 'dec-extra',
+        reason: 'Hold safely',
+        referencedEvidenceIds: [],
+        tool_calls: [{ name: 'submit_settlement' }],
+      },
+      evidence.binding,
+      [],
+    );
+    expect(outcome.accepted).toBe(false);
+    expect(outcome.recommendation.action).toBe('WAIT');
   });
 
   it('operates deterministic RecoveryAgentSimulator scenarios', () => {

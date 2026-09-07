@@ -85,24 +85,39 @@ export function runChaosScenario(scenario: ChaosScenario): ChaosExecutionReport 
 
   // Build synthetic Subgraph MCP view
   let indexView: IndexView | null = null;
-  if (scenario.mcpDegradations.some((d) => d.type === 'EMPTY_RESULT')) {
+  const hasDegradation = (type: string): boolean =>
+    scenario.mcpDegradations.some((degradation) => degradation.type === type);
+  if (hasDegradation('EMPTY_RESULT')) {
     const s = createScenario('empty');
     indexView = normalizeSubgraphMcpTrace(s.request, s.policy, s.trace).view;
-  } else if (scenario.mcpDegradations.some((d) => d.type === 'LAGGING_HEAD')) {
+  } else if (hasDegradation('LAGGING_HEAD') || hasDegradation('DELAYED_RESULT')) {
     const s = createScenario('lagging');
     indexView = normalizeSubgraphMcpTrace(s.request, s.policy, s.trace).view;
-  } else if (scenario.mcpDegradations.some((d) => d.type === 'PROVIDER_HEALTH_ERROR')) {
+  } else if (hasDegradation('PROVIDER_HEALTH_ERROR')) {
     const s = createScenario('unhealthy');
     indexView = normalizeSubgraphMcpTrace(s.request, s.policy, s.trace).view;
-  } else if (
-    scenario.mcpDegradations.some((d) => d.type === 'WRONG_TOOL' || d.type === 'WRONG_DEPLOYMENT')
-  ) {
+  } else if (hasDegradation('WRONG_TOOL')) {
     const s = createScenario('wrong-tool');
     indexView = normalizeSubgraphMcpTrace(s.request, s.policy, s.trace).view;
-  } else if (scenario.mcpDegradations.some((d) => d.type === 'OVERSIZED_RESULT')) {
+  } else if (hasDegradation('WRONG_DEPLOYMENT')) {
+    const s = createScenario('wrong-deployment');
+    indexView = normalizeSubgraphMcpTrace(s.request, s.policy, s.trace).view;
+  } else if (hasDegradation('DUPLICATE_EVENTS')) {
+    const s = createScenario('duplicate');
+    indexView = normalizeSubgraphMcpTrace(s.request, s.policy, s.trace).view;
+  } else if (hasDegradation('OUT_OF_ORDER_EVENTS')) {
+    const s = createScenario('out-of-order');
+    indexView = normalizeSubgraphMcpTrace(s.request, s.policy, s.trace).view;
+  } else if (hasDegradation('OMIT_FRESHNESS_METADATA')) {
+    const s = createScenario('unknown-freshness');
+    indexView = normalizeSubgraphMcpTrace(s.request, s.policy, s.trace).view;
+  } else if (hasDegradation('QUERY_FAILURE')) {
+    const s = createScenario('unavailable');
+    indexView = normalizeSubgraphMcpTrace(s.request, s.policy, s.trace).view;
+  } else if (hasDegradation('OVERSIZED_RESULT') || hasDegradation('MALFORMED_RESULT')) {
     const s = createScenario('malformed');
     indexView = normalizeSubgraphMcpTrace(s.request, s.policy, s.trace).view;
-  } else if (scenario.mcpDegradations.some((d) => d.type === 'PROMPT_INJECTION_TEXT')) {
+  } else if (hasDegradation('PROMPT_INJECTION_TEXT')) {
     const s = createScenario('injected');
     indexView = normalizeSubgraphMcpTrace(s.request, s.policy, s.trace).view;
   }
@@ -138,11 +153,13 @@ export function runChaosScenario(scenario: ChaosScenario): ChaosExecutionReport 
   });
 
   // Verify Critical Invariants
+  const externalSubmissionCount = command.settlementPermission === 'NEVER' ? 0 : 1;
   const passed =
     command.targetState === scenario.expectedTargetState &&
     command.commandType === scenario.expectedCommandType &&
     command.settlementPermission === 'NEVER' &&
-    view.settlementPermission === 'NEVER';
+    view.settlementPermission === 'NEVER' &&
+    externalSubmissionCount === scenario.expectedExternalSubmissions;
 
   return {
     scenarioId: scenario.id,
@@ -151,7 +168,7 @@ export function runChaosScenario(scenario: ChaosScenario): ChaosExecutionReport 
     passed,
     command,
     view,
-    externalSubmissionCount: 0,
+    externalSubmissionCount,
     diagnostics: view.diagnostics,
   };
 }

@@ -139,6 +139,29 @@ export const CHAOS_SCENARIO_CATALOG: readonly ChaosScenario[] = [
     expectedSettlementPermission: 'NEVER',
     expectedExternalSubmissions: 0,
   },
+  ...(
+    [
+      ['mcp-delayed-result', 'DELAYED_RESULT'],
+      ['mcp-missing-freshness', 'OMIT_FRESHNESS_METADATA'],
+      ['mcp-query-failure', 'QUERY_FAILURE'],
+      ['mcp-duplicate-events', 'DUPLICATE_EVENTS'],
+      ['mcp-out-of-order-events', 'OUT_OF_ORDER_EVENTS'],
+      ['mcp-malformed-result', 'MALFORMED_RESULT'],
+    ] as const
+  ).map(([id, type], index) => ({
+    id,
+    name: `MCP degradation: ${type}`,
+    seed: 2100 + index,
+    injectionPoint: 'POSSIBLY_SUBMITTED' as const,
+    failureEvents: [],
+    mcpDegradations: [{ type, description: `Injected ${type}` }],
+    agentScenario: 'wait' as const,
+    expectedTargetState: 'UNKNOWN' as const,
+    expectedCommandType:
+      type === 'OUT_OF_ORDER_EVENTS' ? ('ESCALATE_UNKNOWN' as const) : ('HOLD_UNKNOWN' as const),
+    expectedSettlementPermission: 'NEVER' as const,
+    expectedExternalSubmissions: 0 as const,
+  })),
 
   // C03.3 Provider Contradictions
   {
@@ -233,6 +256,21 @@ export const CHAOS_SCENARIO_CATALOG: readonly ChaosScenario[] = [
     expectedSettlementPermission: 'NEVER',
     expectedExternalSubmissions: 0,
   },
+  ...(['malformed-output', 'timeout', 'nondeterministic-prose'] as const).map(
+    (agentScenario, index) => ({
+      id: `agent-${agentScenario}`,
+      name: `Agent failure: ${agentScenario}`,
+      seed: 4100 + index,
+      injectionPoint: 'POSSIBLY_SUBMITTED' as const,
+      failureEvents: [],
+      mcpDegradations: [],
+      agentScenario,
+      expectedTargetState: 'UNKNOWN' as const,
+      expectedCommandType: 'HOLD_UNKNOWN' as const,
+      expectedSettlementPermission: 'NEVER' as const,
+      expectedExternalSubmissions: 0 as const,
+    }),
+  ),
 
   // Authoritative Success Baseline
   {

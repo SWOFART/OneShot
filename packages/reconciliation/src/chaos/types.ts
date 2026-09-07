@@ -64,6 +64,8 @@ export interface ChaosScenario {
     | 'malformed-output'
     | 'prompt-injection'
     | 'fabricated-binding'
+    | 'timeout'
+    | 'nondeterministic-prose'
     | 'auto'
     | undefined;
   readonly expectedTargetState: 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE';

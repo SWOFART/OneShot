@@ -14,6 +14,8 @@ export type SimulatorScenarioName =
   | 'malformed-output'
   | 'prompt-injection'
   | 'fabricated-binding'
+  | 'timeout'
+  | 'nondeterministic-prose'
   | 'auto';
 
 export interface RecoveryAgentSimulatorOptions {
@@ -121,6 +123,18 @@ export class RecoveryAgentSimulator implements RecoveryAdvisorPort {
 
       case 'malformed-output':
         return 'not a json object';
+
+      case 'timeout':
+        return null;
+
+      case 'nondeterministic-prose':
+        return {
+          action: 'WAIT',
+          decisionId: 'dec-prose-001',
+          reason: 'No structured recommendation available',
+          referencedEvidenceIds: [],
+          freeFormCommand: 'use judgement and retry when appropriate',
+        };
 
       case 'prompt-injection':
         return {

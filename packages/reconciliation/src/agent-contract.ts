@@ -122,6 +122,17 @@ export function validateAndNormalizeRecommendation(
   }
 
   const record = raw as Record<string, unknown>;
+  const allowedKeys = new Set([
+    'action',
+    'decisionId',
+    'reason',
+    'referencedEvidenceIds',
+    'modelIdentity',
+    'timestamp',
+  ]);
+  for (const key of Object.keys(record)) {
+    if (!allowedKeys.has(key)) issues.push({ code: 'INVALID_RESULT', path: `$.${key}` });
+  }
 
   // Check action
   const actionRaw = record.action;
@@ -190,6 +201,10 @@ export function validateAndNormalizeRecommendation(
         };
       }
     }
+  }
+
+  if (record.timestamp !== undefined && typeof record.timestamp !== 'string') {
+    issues.push({ code: 'INVALID_RESULT', path: '$.timestamp' });
   }
 
   if (issues.length > 0) {

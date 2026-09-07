@@ -11,11 +11,11 @@
 
 ## 2. Intent Age Buckets & Severity Levels
 
-| Age | Bucket | Severity | Required Operator Action |
-| --- | --- | --- | --- |
-| `< 5 minutes` | `FRESH` | Low | Monitor outbox runner. No manual intervention required; Subgraph MCP and Arc polling cycle automatically. |
-| `5 - 60 minutes` | `STALE` | Warning | Check Subgraph MCP health and RPC latency. Trigger read-only reconciliation via `POST /v1/intents/{id}/reconcile`. |
-| `> 60 minutes` | `CRITICAL` | Alert / Critical | On-call investigation required. Inspect blockchain explorer for the corporate wallet address and intent transfer tuple. |
+| Age              | Bucket     | Severity         | Required Operator Action                                                                                                |
+| ---------------- | ---------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `< 5 minutes`    | `FRESH`    | Low              | Monitor outbox runner. No manual intervention required; Subgraph MCP and Arc polling cycle automatically.               |
+| `5 - 60 minutes` | `STALE`    | Warning          | Check Subgraph MCP health and RPC latency. Trigger read-only reconciliation via `POST /v1/intents/{id}/reconcile`.      |
+| `> 60 minutes`   | `CRITICAL` | Alert / Critical | On-call investigation required. Inspect blockchain explorer for the corporate wallet address and intent transfer tuple. |
 
 ---
 

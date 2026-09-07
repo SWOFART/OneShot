@@ -672,12 +672,14 @@ export function validateKnownIdentityEvidence(value: unknown): BoundaryIssue[] {
     !hasExactKeys(value.local, [
       'authority',
       'stateVersion',
+      'submissionReference',
       'settlementState',
       'persistedAt',
       'digest',
     ]) ||
     value.local.authority !== 'AUTHORITATIVE_ONESHOT' ||
     !isUint(value.local.stateVersion) ||
+    !isBoundedString(value.local.submissionReference, 128, SAFE_ID) ||
     !['SUBMITTING', 'UNKNOWN', 'COMMITTED', 'FAILED_SAFE'].includes(
       String(value.local.settlementState),
     ) ||
@@ -722,6 +724,7 @@ export function validateKnownIdentityEvidence(value: unknown): BoundaryIssue[] {
         'authority',
         'network',
         'transactionHash',
+        'submissionReference',
         'receiptStatus',
         'finality',
         'blockNumber',
@@ -734,6 +737,7 @@ export function validateKnownIdentityEvidence(value: unknown): BoundaryIssue[] {
       value.arc.authority !== 'AUTHORITATIVE_CHAIN_EVIDENCE' ||
       value.arc.network !== value.binding.network ||
       !isBoundedString(value.arc.transactionHash, 66, HEX_32) ||
+      !isBoundedString(value.arc.submissionReference, 128, SAFE_ID) ||
       !['SUCCESS', 'REVERT', 'PENDING', 'NOT_FOUND', 'UNAVAILABLE'].includes(
         String(value.arc.receiptStatus),
       ) ||
@@ -772,6 +776,9 @@ export function validateKnownIdentityEvidence(value: unknown): BoundaryIssue[] {
       ) {
         return [issue('INVALID_IDENTITY', '$.arc.transfer')];
       }
+    }
+    if (value.arc.submissionReference !== value.local.submissionReference) {
+      return [issue('INVALID_IDENTITY', '$.arc.submissionReference')];
     }
     if (
       value.arc.receiptStatus === 'SUCCESS' &&
