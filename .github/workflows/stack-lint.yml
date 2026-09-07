@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: '.nvmrc'
 
       - name: Lint Markdown
         run: npx --yes markdownlint-cli2@0.18.1 "**/*.md" "#node_modules"
@@ -74,7 +74,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.workspace.outputs.enabled == 'true'
         with:
-          node-version: "22"
+          node-version-file: '.nvmrc'
           cache: pnpm
 
       - name: Install locked dependencies
@@ -94,3 +94,15 @@ jobs:
       - name: Run TypeScript compiler
         if: steps.workspace.outputs.enabled == 'true'
         run: pnpm typecheck
+
+      - name: Check generated contracts
+        if: steps.workspace.outputs.enabled == 'true'
+        run: pnpm check:generated
+
+      - name: Validate contract fixtures
+        if: steps.workspace.outputs.enabled == 'true'
+        run: pnpm validate:fixtures
+
+      - name: Run tests
+        if: steps.workspace.outputs.enabled == 'true'
+        run: pnpm test
