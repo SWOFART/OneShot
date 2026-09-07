@@ -44,6 +44,16 @@ The package participates in the root pnpm workspace and TypeScript project.
 - `schemas/index-view-v1.schema.json`: downstream sanitized view contract.
 - `schemas/subgraph-mcp-result-v1.schema.json`: accepted GraphQL result body.
 - `schemas/recovery-evidence-v1.schema.json`: known-identity local/Privy/Arc baseline.
-- `src/simulator.ts`: credential-free deterministic scenarios.
+- `schemas/recovery-advisor-v1.schema.json`: C02 RecoveryAdvisorPort recommendation schema.
+- `schemas/reconciliation-command-v1.schema.json`: C02 deterministic safety core command schema.
+- `schemas/recovery-view-v1.schema.json`: C02 detailed recovery view schema.
+- `src/simulator.ts`: credential-free deterministic Subgraph MCP scenarios.
+- `src/agent-simulator.ts`: C02 credential-free deterministic RecoveryAdvisorPort simulator.
+- `src/safety-core.ts`: C02 deterministic recovery safety core.
+- `docs/recovery-action-matrix.md`: C02 four-action advisory and safety core disposition matrix.
+- `schemas/chaos-timeline-v1.schema.json`: C03 chaos timeline scenario schema.
+- `src/chaos/`: C03 cross-source failure injection harness, timeline DSL, and scenario runner.
+- `docs/CHAOS_MATRIX_REPORT.md`: C03 chaos scenario catalog and execution report.
+- `docs/ESCALATION_RUNBOOK.md`: C03 operator escalation runbook (strict no-blind-retry policy).
 - `docs/removal-value-matrix.md`: Graph removal/value comparison.
 - `docs/live-value-gate.md`: sanitized live MCP/agent spike protocol and current decision.
