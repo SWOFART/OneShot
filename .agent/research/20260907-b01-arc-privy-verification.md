@@ -7,9 +7,9 @@ and decide B01.3 (whether Privy policy can constrain a nested Arc Memo call).
 
 ## Sources
 
-- Arc, "Connect to Arc", https://docs.arc.io/arc/references/connect-to-arc — accessed 2026-09-07.
-- Arc, "Contract addresses", https://docs.arc.io/arc/references/contract-addresses — accessed 2026-09-07.
-- Privy, "Policies & controls overview", https://docs.privy.io/controls/policies/overview — accessed 2026-09-07.
+- Arc, "Connect to Arc", <https://docs.arc.io/arc/references/connect-to-arc> — accessed 2026-09-07.
+- Arc, "Contract addresses", <https://docs.arc.io/arc/references/contract-addresses> — accessed 2026-09-07.
+- Privy, "Policies & controls overview", <https://docs.privy.io/controls/policies/overview> — accessed 2026-09-07.
 
 ## 1. Arc Testnet values (B01.2)
 
