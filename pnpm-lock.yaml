@@ -112,6 +112,9 @@ importers:
       '@oneshot/arc-adapter':
         specifier: workspace:*
         version: link:../arc-adapter
+      '@oneshot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       viem:
         specifier: 2.56.3
         version: 2.56.3(typescript@6.0.3)

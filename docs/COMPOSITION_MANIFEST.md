@@ -34,8 +34,8 @@ All ports conform to frozen definitions in `@oneshot/contracts`:
 
 ### 2. `production` Profile (Targeted for Gate P4 Convergence)
 
-- **Settlement**: Arc Settlement Adapter (`@oneshot/adapter-arc`, owned by Coder B)
-- **Authorization**: Privy Authorization Adapter (`@oneshot/adapter-privy`, owned by Coder B)
+- **Settlement**: `ArcSettlementAdapter` (`@oneshot/privy-adapter`, owned by Coder B)
+- **Authorization**: `PrivyAuthorizationAdapter` (`@oneshot/privy-adapter`, owned by Coder B)
 - **Reconciliation**: Subgraph MCP Recovery Engine (`@oneshot/reconciliation-subgraph`, owned by Coder C)
 
 ## Environment Configuration
