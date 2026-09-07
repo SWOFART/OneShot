@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneshot.invalid/schemas/subgraph-mcp-result-v1.schema.json",
+  "title": "Subgraph MCP GraphQL result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["data"],
+  "properties": {
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["settlementCandidates", "_meta"],
+      "properties": {
+        "settlementCandidates": {
+          "type": "array",
+          "maxItems": 25,
+          "items": { "$ref": "#/$defs/candidate" }
+        },
+        "_meta": { "$ref": "#/$defs/meta" }
+      }
+    }
+  },
+  "$defs": {
+    "uint": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "maxLength": 78
+    },
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+    "hash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "transactionHash",
+        "logIndex",
+        "blockNumber",
+        "blockHash",
+        "blockTimestamp",
+        "network",
+        "tokenContract",
+        "sender",
+        "recipient",
+        "amountAtomic",
+        "memoId"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9:._-]{0,127}$"
+        },
+        "transactionHash": { "$ref": "#/$defs/hash" },
+        "logIndex": { "$ref": "#/$defs/uint" },
+        "blockNumber": { "$ref": "#/$defs/uint" },
+        "blockHash": { "$ref": "#/$defs/hash" },
+        "blockTimestamp": { "$ref": "#/$defs/uint" },
+        "network": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,31}:[A-Za-z0-9][A-Za-z0-9-]{0,63}$"
+        },
+        "tokenContract": { "$ref": "#/$defs/address" },
+        "sender": { "$ref": "#/$defs/address" },
+        "recipient": { "$ref": "#/$defs/address" },
+        "amountAtomic": { "$ref": "#/$defs/uint" },
+        "memoId": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/hash" }] }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deployment", "hasIndexingErrors", "block"],
+      "properties": {
+        "deployment": {
+          "type": "string",
+          "pattern": "^(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{20,})$",
+          "maxLength": 128
+        },
+        "hasIndexingErrors": { "type": "boolean" },
+        "block": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["number", "hash", "timestamp"],
+          "properties": {
+            "number": { "type": "integer", "minimum": 0 },
+            "hash": { "$ref": "#/$defs/hash" },
+            "timestamp": {
+              "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/uint" }]
+            }
+          }
+        }
+      }
+    }
+  }
+}

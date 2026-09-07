@@ -45,6 +45,8 @@ importers:
         specifier: 3.0.1
         version: 3.0.1(ajv@8.20.0)
 
+  packages/reconciliation: {}
+
   packages/testkit-domain:
     dependencies:
       '@oneshot/contracts':

@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneshot.invalid/schemas/recovery-evidence-v1.schema.json",
+  "title": "OneShot known-identity recovery evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "binding", "local", "privy", "arc"],
+  "properties": {
+    "schemaVersion": { "const": "recovery-evidence-v1" },
+    "binding": { "$ref": "index-view-v1.schema.json#/$defs/binding" },
+    "local": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "stateVersion", "settlementState", "persistedAt", "digest"],
+      "properties": {
+        "authority": { "const": "AUTHORITATIVE_ONESHOT" },
+        "stateVersion": { "$ref": "#/$defs/uint" },
+        "settlementState": {
+          "enum": ["SUBMITTING", "UNKNOWN", "COMMITTED", "FAILED_SAFE"]
+        },
+        "persistedAt": { "$ref": "#/$defs/instant" },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "privy": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "authority",
+            "referenceId",
+            "requestFingerprint",
+            "requestStatus",
+            "transactionHash",
+            "retrievedAt",
+            "digest"
+          ],
+          "properties": {
+            "authority": { "const": "PROVIDER_OBSERVATION" },
+            "referenceId": { "type": "string", "maxLength": 128 },
+            "requestFingerprint": { "$ref": "#/$defs/digest" },
+            "requestStatus": {
+              "enum": ["PENDING", "SUCCEEDED", "FAILED", "NOT_FOUND", "UNAVAILABLE"]
+            },
+            "transactionHash": {
+              "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/hash" }]
+            },
+            "retrievedAt": { "$ref": "#/$defs/instant" },
+            "digest": { "$ref": "#/$defs/digest" }
+          }
+        }
+      ]
+    },
+    "arc": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "authority",
+            "network",
+            "transactionHash",
+            "receiptStatus",
+            "finality",
+            "blockNumber",
+            "blockHash",
+            "blockTimestamp",
+            "transfer",
+            "retrievedAt",
+            "digest"
+          ],
+          "properties": {
+            "authority": { "const": "AUTHORITATIVE_CHAIN_EVIDENCE" },
+            "network": { "type": "string", "maxLength": 96 },
+            "transactionHash": { "$ref": "#/$defs/hash" },
+            "receiptStatus": {
+              "enum": ["SUCCESS", "REVERT", "PENDING", "NOT_FOUND", "UNAVAILABLE"]
+            },
+            "finality": { "enum": ["FINAL", "PENDING", "UNKNOWN"] },
+            "blockNumber": {
+              "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/uint" }]
+            },
+            "blockHash": {
+              "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/hash" }]
+            },
+            "blockTimestamp": {
+              "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/uint" }]
+            },
+            "transfer": {
+              "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/transfer" }]
+            },
+            "retrievedAt": { "$ref": "#/$defs/instant" },
+            "digest": { "$ref": "#/$defs/digest" }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "uint": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "maxLength": 78
+    },
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+    "hash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "instant": { "type": "string", "format": "date-time", "maxLength": 35 },
+    "transfer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tokenContract", "sender", "recipient", "amountAtomic", "logIndex"],
+      "properties": {
+        "tokenContract": { "$ref": "#/$defs/address" },
+        "sender": { "$ref": "#/$defs/address" },
+        "recipient": { "$ref": "#/$defs/address" },
+        "amountAtomic": { "$ref": "#/$defs/uint" },
+        "logIndex": { "$ref": "#/$defs/uint" }
+      }
+    }
+  }
+}

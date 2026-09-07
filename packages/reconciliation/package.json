@@ -1,0 +1,30 @@
+{
+  "name": "@oneshot/reconciliation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider-neutral, zero-submit recovery evidence contracts for OneShot.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "schemas",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "lint": "eslint src test",
+    "test": "vitest run",
+    "typecheck": "tsc -b --pretty false",
+    "verify": "pnpm run format && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build"
+  }
+}
