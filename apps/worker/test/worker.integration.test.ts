@@ -272,19 +272,23 @@ describePostgres('Atomic at-most-once worker (A03)', () => {
       },
     };
 
-    // First drain processes authorize_intent -> creates submit_settlement outbox job
-    const processedFirst = await drainOutboxJobs(workerOptions);
+    // First drain with maxJobs=1 processes authorize_intent -> creates submit_settlement outbox job
+    const processedFirst = await drainOutboxJobs(workerOptions, 1);
     expect(processedFirst).toBe(1);
 
     const readyIntent = await ledger.getIntent(sampleRequest.business_intent_id);
     expect(readyIntent?.state).toBe('READY');
 
-    // Second drain processes submit_settlement -> commits settlement
-    const processedSecond = await drainOutboxJobs(workerOptions);
+    // Second drain with maxJobs=1 processes submit_settlement -> commits settlement
+    const processedSecond = await drainOutboxJobs(workerOptions, 1);
     expect(processedSecond).toBe(1);
 
     const committedIntent = await ledger.getIntent(sampleRequest.business_intent_id);
     expect(committedIntent?.state).toBe('COMMITTED');
     expect(portCalls).toBe(1);
+
+    // Third drain confirms all outbox jobs are drained
+    const processedThird = await drainOutboxJobs(workerOptions, 1);
+    expect(processedThird).toBe(0);
   });
 });

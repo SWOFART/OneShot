@@ -546,32 +546,30 @@ export class IntentLedger {
 
     const attemptLimit = boundedLimit(limits.attempts);
     const evidenceLimit = boundedLimit(limits.evidence);
-    const [attemptResult, settlementResult, evidenceResult] = await Promise.all([
-      client.query<AttemptRow>(
-        `SELECT attempt_id, stage, created_at, sanitized_error
-        FROM (
-          SELECT attempt_id, stage, created_at, sanitized_error, attempt_sequence
-          FROM attempts WHERE business_intent_id = $1
-          ORDER BY attempt_sequence DESC LIMIT $2
-        ) bounded ORDER BY attempt_sequence ASC`,
-        [id, attemptLimit],
-      ),
-      client.query<SettlementRow>(
-        `SELECT provider_reference_id, transaction_hash, block_number, transfer_log_index
-        FROM settlements WHERE business_intent_id = $1`,
-        [id],
-      ),
-      client.query<EvidenceRow>(
-        `SELECT source, authority_class, retrieved_at, digest, block_number, freshness
-        FROM (
-          SELECT evidence_id, source, authority_class, retrieved_at, digest,
-            block_number, freshness
-          FROM evidence_observations WHERE business_intent_id = $1
-          ORDER BY evidence_id DESC LIMIT $2
-        ) bounded ORDER BY evidence_id ASC`,
-        [id, evidenceLimit],
-      ),
-    ]);
+    const attemptResult = await client.query<AttemptRow>(
+      `SELECT attempt_id, stage, created_at, sanitized_error
+      FROM (
+        SELECT attempt_id, stage, created_at, sanitized_error, attempt_sequence
+        FROM attempts WHERE business_intent_id = $1
+        ORDER BY attempt_sequence DESC LIMIT $2
+      ) bounded ORDER BY attempt_sequence ASC`,
+      [id, attemptLimit],
+    );
+    const settlementResult = await client.query<SettlementRow>(
+      `SELECT provider_reference_id, transaction_hash, block_number, transfer_log_index
+      FROM settlements WHERE business_intent_id = $1`,
+      [id],
+    );
+    const evidenceResult = await client.query<EvidenceRow>(
+      `SELECT source, authority_class, retrieved_at, digest, block_number, freshness
+      FROM (
+        SELECT evidence_id, source, authority_class, retrieved_at, digest,
+          block_number, freshness
+        FROM evidence_observations WHERE business_intent_id = $1
+        ORDER BY evidence_id DESC LIMIT $2
+      ) bounded ORDER BY evidence_id ASC`,
+      [id, evidenceLimit],
+    );
 
     const attempts: AttemptView[] = attemptResult.rows.map((row) => ({
       attempt_id: row.attempt_id,
