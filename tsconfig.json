@@ -1,12 +1,35 @@
 {
   "files": [],
   "references": [
-    { "path": "./packages/contracts" },
-    { "path": "./packages/domain" },
-    { "path": "./packages/reconciliation" },
-    { "path": "./packages/storage-postgres" },
-    { "path": "./packages/testkit-domain" },
-    { "path": "./apps/api" },
-    { "path": "./apps/worker" }
+    {
+      "path": "./packages/contracts"
+    },
+    {
+      "path": "./packages/domain"
+    },
+    {
+      "path": "./packages/reconciliation"
+    },
+    {
+      "path": "./packages/storage-postgres"
+    },
+    {
+      "path": "./packages/testkit-domain"
+    },
+    {
+      "path": "./apps/api"
+    },
+    {
+      "path": "./apps/worker"
+    },
+    {
+      "path": "./packages/arc-adapter"
+    },
+    {
+      "path": "./packages/privy-adapter"
+    },
+    {
+      "path": "./packages/testkit-settlement"
+    }
   ]
 }

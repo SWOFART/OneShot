@@ -113,3 +113,50 @@ describe('assertNoSecrets', () => {
     }).not.toThrow();
   });
 });
+
+describe('32-byte hex is context-sensitive', () => {
+  // Shape alone cannot distinguish a private key from a keccak hash. Redacting
+  // all 32-byte hex destroyed the evidence: transaction hashes, block hashes,
+  // topics, ABI words, and payload fingerprints are all this shape, and a
+  // fixture with them removed no longer proves the settlement it captured.
+  const HASH = '0x' + 'a'.repeat(64);
+
+  it.each([
+    'transactionHash',
+    'blockHash',
+    'payloadFingerprint',
+    'idempotencyKey',
+    'data',
+    'digest',
+  ])('preserves 32-byte hex in the hash-bearing field %s', (field) => {
+    const out = redact({ [field]: HASH }) as Record<string, unknown>;
+    expect(out[field]).toBe(HASH);
+  });
+
+  it('preserves every entry of a topics array', () => {
+    const out = redact({ topics: [HASH, HASH] }) as Record<string, unknown>;
+    expect(out.topics).toEqual([HASH, HASH]);
+  });
+
+  it('still redacts 32-byte hex under an unrecognized field', () => {
+    // The default stays deny: only named hash fields are exempt.
+    const out = redact({ note: HASH, mysteryValue: HASH }) as Record<string, unknown>;
+    expect(out.note).toBe(REDACTED);
+    expect(out.mysteryValue).toBe(REDACTED);
+  });
+
+  it('still redacts key material by field name regardless of shape', () => {
+    // Key material travels under forbidden names, which are redacted on the
+    // key, not the value shape. That is what the exemption relies on.
+    const out = redact({ privateKey: HASH, signingKey: HASH, seed: HASH }) as Record<
+      string,
+      unknown
+    >;
+    expect(Object.values(out)).toEqual([REDACTED, REDACTED, REDACTED]);
+  });
+
+  it('does not let a hash-bearing name shelter an actual credential', () => {
+    const out = redact({ data: 'Bearer abcdefghijklmnop' }) as Record<string, unknown>;
+    expect(out.data).toBe(REDACTED);
+  });
+});
