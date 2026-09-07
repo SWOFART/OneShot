@@ -24,7 +24,6 @@ describe('lane import boundary', () => {
   const FORBIDDEN = [
     '@oneshot/domain',
     '@oneshot/storage-postgres',
-    '@oneshot/contracts',
     '@oneshot/testkit-domain',
     '@oneshot/reconciliation',
     '@oneshot/recovery-agent',
@@ -38,9 +37,11 @@ describe('lane import boundary', () => {
     }
   });
 
-  it('imports no other lane package at all', () => {
+  it('imports no lane package beyond the shared contract seam', () => {
     // Catches a package name added after this test was written.
-    const allowed = new Set(['@oneshot/arc-adapter']);
+    // @oneshot/contracts is the sanctioned cross-lane seam per
+    // milestones/CONTRACTS.md; the others are owned implementations.
+    const allowed = new Set(['@oneshot/arc-adapter', '@oneshot/contracts']);
     for (const file of sourceFiles()) {
       const matches = readFileSync(file, 'utf8').matchAll(/@oneshot\/[a-z-]+/g);
       for (const [name] of matches) {

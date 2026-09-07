@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@oneshot/arc-adapter": "workspace:*",
-    "viem": "2.56.3"
+    "viem": "2.56.3",
+    "@oneshot/contracts": "workspace:*"
   }
 }
