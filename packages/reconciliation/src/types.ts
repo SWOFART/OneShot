@@ -237,3 +237,130 @@ export interface IndexLookupOutcome {
   view: IndexView;
   issues: BoundaryIssue[];
 }
+
+export const RECOVERY_ADVISOR_VERSION = 'recovery-advisor-v1' as const;
+export const RECONCILIATION_COMMAND_VERSION = 'reconciliation-command-v1' as const;
+export const RECOVERY_VIEW_VERSION = 'recovery-view-v1' as const;
+
+export type EvidenceAuthorityClass =
+  | 'AUTHORITATIVE_ONESHOT'
+  | 'AUTHORITATIVE_CHAIN_EVIDENCE'
+  | 'PROVIDER_OBSERVATION'
+  | 'NON_AUTHORITATIVE_CANDIDATE_DISCOVERY'
+  | 'ADVISORY_AGENT_OBSERVATION';
+
+export type EvidenceSource = 'ONESHOT' | 'PRIVY' | 'ARC' | 'THE_GRAPH' | 'LLM';
+
+export interface BoundEvidenceRecord {
+  id: string;
+  source: EvidenceSource;
+  authorityClass: EvidenceAuthorityClass;
+  binding: EvidenceBinding;
+  retrievedAt: string;
+  digest: string;
+  finality?: 'FINAL' | 'PENDING' | 'UNKNOWN' | undefined;
+  freshness?: IndexHealth | undefined;
+  blockNumber?: string | null | undefined;
+  blockHash?: string | null | undefined;
+  sanitizedReason?: string | undefined;
+  details?: Record<string, unknown> | undefined;
+}
+
+export const RECOVERY_ADVISOR_ACTIONS = [
+  'WAIT',
+  'RECONCILE',
+  'ESCALATE',
+  'RETURN_EXISTING_RESULT',
+] as const;
+export type RecoveryAdvisorAction = (typeof RECOVERY_ADVISOR_ACTIONS)[number];
+
+export interface ModelIdentity {
+  modelName: string;
+  modelVersion: string;
+  promptVersion: string;
+}
+
+export interface RecoveryRecommendation {
+  action: RecoveryAdvisorAction;
+  decisionId: string;
+  reason: string;
+  referencedEvidenceIds: readonly string[];
+  modelIdentity: ModelIdentity;
+  timestamp: string;
+}
+
+export interface RecoveryAgentInput {
+  binding: EvidenceBinding;
+  durableState: {
+    state: 'SUBMITTING' | 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE';
+    stateVersion: string;
+    attemptCount: number;
+    persistedAt: string;
+  };
+  authoritativeEvidence: readonly BoundEvidenceRecord[];
+  providerObservations: readonly BoundEvidenceRecord[];
+  candidateObservations: readonly IndexedCandidate[];
+  indexSummary: {
+    health: IndexHealth;
+    lagBlocks: string | null;
+    observedThroughBlock: string | null;
+    candidateCount: number;
+    contradiction: boolean;
+  };
+  untrustedDataNotice: string;
+  sanitized: true;
+}
+
+export interface RecoveryRecommendationOutcome {
+  accepted: boolean;
+  recommendation: RecoveryRecommendation;
+  issues: readonly BoundaryIssue[];
+}
+
+export interface RecoveryAdvisorPort {
+  recommend(
+    input: RecoveryAgentInput,
+  ): Promise<RecoveryRecommendationOutcome> | RecoveryRecommendationOutcome;
+}
+
+export const RECONCILIATION_COMMAND_TYPES = [
+  'HOLD_UNKNOWN',
+  'READ_ONLY_LOOKUP',
+  'ESCALATE_UNKNOWN',
+  'MARK_COMMITTED',
+  'MARK_FAILED_SAFE',
+] as const;
+export type ReconciliationCommandType = (typeof RECONCILIATION_COMMAND_TYPES)[number];
+
+export interface ReconciliationCommand {
+  schemaVersion: typeof RECONCILIATION_COMMAND_VERSION;
+  commandType: ReconciliationCommandType;
+  businessIntentId: string;
+  requestFingerprint: string;
+  targetState: 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE';
+  reason: string;
+  evidenceReferences: readonly string[];
+  disposition: string;
+  advisoryAction: RecoveryAdvisorAction;
+  authoritativeProofPresent: boolean;
+  issuedAt: string;
+  settlementPermission: 'NEVER';
+}
+
+export interface DetailedRecoveryView {
+  schemaVersion: typeof RECOVERY_VIEW_VERSION;
+  businessIntentId: string;
+  authoritativeState: 'SUBMITTING' | 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE';
+  coreDisposition: ReconciliationCommandType;
+  recommendedAction: RecoveryAdvisorAction;
+  authoritativeEvidence: readonly BoundEvidenceRecord[];
+  providerObservations: readonly BoundEvidenceRecord[];
+  indexedCandidates: readonly IndexedCandidate[];
+  indexHealth: IndexHealth;
+  contradiction: boolean;
+  contradictionCodes: readonly ContradictionCode[];
+  diagnostics: readonly string[];
+  settlementPermission: 'NEVER';
+  evaluatedAt: string;
+  summary: string;
+}

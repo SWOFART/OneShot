@@ -1,0 +1,22 @@
+{
+  "version": "recovery-advisor-v1",
+  "recommendation": {
+    "action": "RETRY_SETTLEMENT",
+    "decisionId": "dec-bad-001",
+    "reason": "Attempting to force resubmission",
+    "referencedEvidenceIds": [],
+    "modelIdentity": {
+      "modelName": "recovery-advisor-llm",
+      "modelVersion": "1.0.0",
+      "promptVersion": "recovery-v1"
+    },
+    "timestamp": "2026-09-07T12:00:00.000Z"
+  },
+  "expected": {
+    "disposition": "HOLD_SAFE",
+    "commandType": "HOLD_UNKNOWN",
+    "targetState": "UNKNOWN",
+    "accepted": false,
+    "external_submission_count": 0
+  }
+}
