@@ -52,7 +52,7 @@ export interface DatabaseEvidenceRow {
 export interface DatabaseOutboxRow {
   readonly business_intent_id: string;
   readonly job_key: string;
-  readonly task_identifier: 'authorize_intent' | 'reconcile_intent';
+  readonly task_identifier: 'authorize_intent' | 'reconcile_intent' | 'submit_settlement';
   readonly payload: Record<string, unknown>;
   readonly status: 'PENDING' | 'DELIVERED' | 'DISABLED';
   readonly available_at: string;

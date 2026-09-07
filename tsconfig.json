@@ -6,6 +6,7 @@
     { "path": "./packages/reconciliation" },
     { "path": "./packages/storage-postgres" },
     { "path": "./packages/testkit-domain" },
-    { "path": "./apps/api" }
+    { "path": "./apps/api" },
+    { "path": "./apps/worker" }
   ]
 }
