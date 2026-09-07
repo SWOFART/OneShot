@@ -78,17 +78,30 @@ They are both called USDC. Read balances carefully.
 ## 7. Verification (read-only, safe to automate)
 
 Set the variables from `packages/arc-adapter/.env.example` in your shell or
-secret store, then run the readiness probe. It performs no mutation and prints
-no credential:
+secret store, then run the readiness probe:
 
 ```bash
-cd packages/arc-adapter
-npm run check
+cd packages/arc-adapter && npm run probe
 ```
 
-A `MISMATCH` result means a value is wrong and a human must fix it. It must
-never be retried into working. An `UNAVAILABLE` result means the endpoint could
-not be reached and may resolve on its own.
+This contacts the endpoint you configured, asks it which chain it is actually
+on, and checks that the configured USDC address holds contract bytecode. It is
+read-only: it cannot sign, send, or mutate anything, and it prints no
+credential. Exit code 0 means ready, 1 means not ready.
+
+Read the result carefully, because the two failure modes need opposite
+responses:
+
+- **`MISMATCH`** — the endpoint answered and the answer was wrong. Your
+  configuration points somewhere it should not. A human must fix it. Do not
+  retry; it will not resolve on its own.
+- **`UNAVAILABLE`** — the endpoint could not be reached. Your configuration may
+  be perfectly correct. Retrying later is reasonable.
+
+Note that `npm run check` is a different thing: it runs lint, typecheck, and
+the unit tests against stubbed endpoints. It proves the probe's logic is
+correct and tells you nothing about whether *your* setup is correct. Only
+`npm run probe` does that.
 
 ## 8. Storing the values
 

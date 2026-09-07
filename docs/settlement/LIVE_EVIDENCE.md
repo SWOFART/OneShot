@@ -30,6 +30,10 @@ providers with a deterministic broadcast counter:
 - Every policy denial family produces **zero** external broadcasts.
 - Duplicate delivery, ten sequential retries, and ten parallel workers sharing
   durable state each produce **exactly one** broadcast.
+- Process restart is exercised against file-backed durable state: an attempt is
+  written to disk before the provider is called, and a restarted worker reading
+  that file is refused a second submission right, including after an outcome
+  that was never learned.
 - An ambiguous outcome does not grant a fresh submission right, so the
   dangerous retry after a possible payment cannot happen.
 - Every ambiguous or unrecognized provider response classifies as

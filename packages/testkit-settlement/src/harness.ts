@@ -20,48 +20,24 @@ import {
 import { buildCanonicalRequest, type SettlementIntent } from '@oneshot/privy-adapter';
 import { createProvider, type SettlementScenario, type SimulatedProvider } from './provider-simulator.js';
 
-/** What is written down before any external call. */
-export interface PersistedAttempt {
-  readonly businessIntentId: string;
-  readonly payloadFingerprint: string;
-  readonly idempotencyKey: string;
-  readonly referenceId: string;
-  /** Set once the external boundary has been crossed. */
-  submissionAttempted: boolean;
-}
+import {
+  FileAttemptStore,
+  MemoryAttemptStore,
+  type AttemptStore,
+  type PersistedAttempt,
+} from './attempt-store.js';
+
+export type { AttemptStore, PersistedAttempt };
+export { FileAttemptStore, MemoryAttemptStore };
 
 /**
- * Minimal durable store.
+ * Backwards-compatible alias.
  *
- * An in-memory stand-in for the real durable state Coder A owns. It exists so
- * the harness can prove the ordering and the at-most-once behaviour without
- * depending on A's storage package.
+ * The store moved to its own module once B03.2's "persist before submission"
+ * requirement made a file-backed implementation necessary; an in-memory map
+ * cannot demonstrate restart recovery.
  */
-export class AttemptLog {
-  private readonly entries = new Map<string, PersistedAttempt>();
-
-  /**
-   * Record an attempt, or return the existing one.
-   *
-   * Returning the existing entry is what makes a replay collapse: the second
-   * caller with the same intent gets the first attempt back rather than a
-   * fresh right to submit.
-   */
-  recordOrGet(attempt: PersistedAttempt): { entry: PersistedAttempt; isNew: boolean } {
-    const existing = this.entries.get(attempt.businessIntentId);
-    if (existing) return { entry: existing, isNew: false };
-    this.entries.set(attempt.businessIntentId, attempt);
-    return { entry: attempt, isNew: true };
-  }
-
-  get(businessIntentId: string): PersistedAttempt | undefined {
-    return this.entries.get(businessIntentId);
-  }
-
-  get size(): number {
-    return this.entries.size;
-  }
-}
+export const AttemptLog = MemoryAttemptStore;
 
 export interface HarnessResult {
   readonly classification: Classification;
@@ -75,14 +51,14 @@ export interface HarnessResult {
 
 export interface HarnessOptions {
   readonly provider?: SimulatedProvider;
-  readonly log?: AttemptLog;
+  readonly log?: AttemptStore;
 }
 
 export interface Harness {
   settle(intent: SettlementIntent, scenario: SettlementScenario): HarnessResult;
   /** External broadcasts performed. Asserted by the negative suite. */
   readonly broadcastCount: number;
-  readonly log: AttemptLog;
+  readonly log: AttemptStore;
 }
 
 /** Harness version published in the B03 handoff artifact. */
@@ -90,7 +66,7 @@ export const HARNESS_VERSION = 'settlement-harness-v1';
 
 export function createHarness(options: HarnessOptions = {}): Harness {
   const provider = options.provider ?? createProvider();
-  const log = options.log ?? new AttemptLog();
+  const log = options.log ?? new MemoryAttemptStore();
 
   return {
     settle(intent: SettlementIntent, scenario: SettlementScenario): HarnessResult {
@@ -126,8 +102,12 @@ export function createHarness(options: HarnessOptions = {}): Harness {
 
       // Mark before the call, not after. The window between this line and the
       // provider returning is exactly where a crash produces UNKNOWN, and the
-      // mark is what makes that recoverable.
+      // mark is what makes that recoverable. Written through immediately for a
+      // file-backed store: a buffered write would reopen that window.
       entry.submissionAttempted = true;
+      if (log instanceof FileAttemptStore) {
+        log.update(entry);
+      }
 
       const response: ProviderResponse = provider.submit(scenario);
       const classification = classifyOutcome(response);
