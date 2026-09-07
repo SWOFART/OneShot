@@ -3,7 +3,7 @@
 Status: working testnet MVP and mainnet-readiness roadmap
 Team: exactly three coders
 Implementation base: the human-approved commit containing this plan
-Research basis: `.agent/research/20260906-integration-decisions.md`
+Research basis: `.agent/research/20260906-integration-decisions.md` and `.agent/research/20260907-subgraph-mcp-clarification.md`
 Detailed work packets: [`milestones/README.md`](milestones/README.md)
 Domain architecture: [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md)
 
@@ -37,10 +37,14 @@ Business Intent contract.
    Transfer before recording `COMMITTED`.
 6. A timeout, crash, or lost response becomes durable `UNKNOWN`. Reconciliation
    first asks Privy for the original transaction identity. When the hash is
-   missing, The Graph searches live indexed transfers for candidates; Arc then
+   missing, an LLM Recovery Agent queries the live OneShot/Arc Subgraph through
+   Subgraph MCP and uses the indexed data to select/explain candidates. It emits
+   only `WAIT`, `RECONCILE`, `ESCALATE`, or `RETURN_EXISTING_RESULT`.
+7. The deterministic OneShot safety core validates the recommendation, and Arc
    verifies each candidate receipt and exact Transfer. No candidate, multiple
-   candidates, stale data, or contradiction leaves the intent `UNKNOWN`.
-7. Repeated HTTP requests, queue deliveries, processes, or agents return the
+   candidates, stale/malformed data, invalid model output, or contradiction
+   leaves the intent `UNKNOWN`; the LLM never receives settlement permission.
+8. Repeated HTTP requests, queue deliveries, processes, or agents return the
    same Business Intent and cannot create a second committed settlement.
 
 ## Sponsor and product configuration
@@ -49,7 +53,10 @@ The primary product configuration is **Privy + Arc + The Graph**:
 
 - Privy authorizes and constrains the corporate wallet action.
 - The Graph discovers candidate transfers when a successful submission lost its
-  transaction hash or provider response.
+  transaction hash or provider response. The production path reaches the live
+  OneShot/Arc Subgraph through Subgraph MCP, not a direct application GraphQL client.
+- The LLM Recovery Agent uses MCP results for meaningful candidate selection and
+  explanation, then emits one of four advisory recovery actions.
 - Arc verifies the candidate receipt and exact USDC `Transfer`.
 - OneShot and PostgreSQL alone decide the durable state transition.
 
@@ -59,23 +66,50 @@ prove its live data, freshness, and candidate-selection behavior before the
 sponsor claim is made.
 
 The Graph submission targets the AI Tooling or AI Use Case track. One custom
-Subgraph does not satisfy the Composable/Standardized track. The recovery agent
-uses live Graph data to choose and explain candidates; deterministic Arc checks
-and the OneShot state machine retain all financial authority.
+Subgraph does not satisfy the Composable/Standardized track. One live Subgraph
+is sufficient for the selected AI track. The recovery agent uses live Graph data
+obtained through Subgraph MCP to choose and explain candidates; deterministic
+Arc checks and the OneShot state machine retain all financial authority.
+
+### Sponsor claim mapping
+
+Three partner slots. A partner with several tracks counts as one slot and the
+project is eligible for all of that partner's tracks. The submission text must
+name each claimed track explicitly.
+
+| Slot | Claimed track | Basis in this plan |
+| --- | --- | --- |
+| The Graph | AI Tooling or AI Use Case (From Scratch) | Live OneShot/Arc Subgraph read through Subgraph MCP; the LLM recovery agent performs candidate selection and explanation |
+| Privy | Best B2B financial product | Corporate execution wallet, scoped policy, and a real accounts-payable workflow |
+| Privy | Best financial flow | The committed USDC transfer is a completed financial flow through a Privy wallet action |
+| Arc | Launch on Arc Testnet & Push to Mainnet | Primary Arc claim: working testnet product plus the disabled Mainnet profile, deployment manifest, readiness probe, and rollback runbooks |
+| Arc | Best DeFi / Onchain Finance Application | Secondary Arc claim: conditional, multi-step USDC settlement on Arc with programmable authorization |
+
+Not claimed, and the reason:
+
+- **Composable or Standardized Graph Products.** One custom Subgraph does not
+  compose two Graph products and does not build on a standardized schema. The
+  track text states this does not qualify.
+- **Best Agentic Economy Application with Circle Agent Stack.** Wallet
+  authorization and payment execution run through Privy, not the Circle Agent
+  Stack, and the calling agent executes an approved obligation rather than
+  making autonomous spending decisions. Claiming this track would misrepresent
+  the build.
 
 ```mermaid
 flowchart LR
     Unknown[UNKNOWN after lost response] --> Provider{Privy returns original hash}
     Provider -->|yes| Verify[Verify on Arc]
-    Provider -->|no| Discover[The Graph searches wallet, recipient, amount, and block window]
-    Discover --> Candidates{Candidate set}
-    Candidates -->|one bindable candidate| Verify
-    Candidates -->|none, many, stale, or contradictory| Hold[Remain UNKNOWN and escalate]
+    Provider -->|no| Subgraph[Live OneShot Arc Subgraph]
+    Subgraph --> MCP[Subgraph MCP]
+    MCP --> RecoveryAgent[LLM Recovery Agent]
+    RecoveryAgent -->|RETURN_EXISTING_RESULT with candidate refs| Verify
+    RecoveryAgent -->|WAIT / RECONCILE / ESCALATE| Hold[Remain UNKNOWN or run read-only recovery]
     Verify -->|exact final Transfer| Commit[COMMITTED]
     Verify -->|not safely resolved| Hold
 ```
 
-The Graph discovers candidates, not truth. Arc RPC can also scan logs without a
+The Graph and the LLM discover candidates, not truth. Arc RPC can also scan logs without a
 hash, so Graph is not mathematically indispensable; it is the selected product
 dependency for fast, structured, automatic recovery. Empty, lagging, unhealthy,
 or multiple candidate results keep the intent `UNKNOWN`.
@@ -109,11 +143,13 @@ flowchart LR
     Worker -->|authorized transfer request| Privy
     Privy -->|ERC-20 USDC transaction| Arc[Arc]
     Arc -->|one settlement| SupplierWallet[Supplier wallet]
-    Arc --> History[The Graph candidate index]
+    Arc --> History[Live OneShot Arc Subgraph]
     DB --> Recovery[Recovery service and view]
     Recovery -->|provider lookup| Privy
     Recovery -->|receipt and log lookup| Arc
-    Recovery -->|candidate query and freshness| History
+    History --> MCP[Subgraph MCP]
+    MCP -->|validated live candidates and freshness| RecoveryAgent[LLM Recovery Agent]
+    RecoveryAgent -->|four-action recommendation| Recovery
     Recovery --> Agent
     Recovery --> Company
 ```
@@ -152,7 +188,7 @@ This plan optimizes for five properties:
 3. Low merge contention: each coder owns disjoint directories and shared files have a single editor.
 4. Verifiable handoffs: ports, OpenAPI, schemas, fixtures, and simulators are versioned artifacts.
 5. Late frontend: UI work consumes a stable backend contract instead of driving it.
-6. Network promotion: testnet proves behavior; mainnet readiness proves the same boundaries can be configured safely when Arc publishes official production values.
+6. Network promotion: Arc Testnet proves behavior; Mainnet remains disabled until official network parameters are published, pinned, verified, and human-approved.
 
 ## 3. Product success criteria
 
@@ -161,11 +197,13 @@ This plan optimizes for five properties:
 - A valid intent can produce one real ERC-20 USDC transfer on Arc Testnet and persist a verified receipt and Transfer identity.
 - A timeout, disconnect, lost response, or crash after possible submission produces durable `UNKNOWN`; a new payment is forbidden until authoritative reconciliation resolves it.
 - Ten sequential retries, ten parallel workers, restart recovery, queue redelivery, and two agent instances never produce more than one committed settlement.
-- Privy/direct Arc lookup resolves known transaction identities. The Graph enables automatic hashless candidate discovery; its absence, delay, multiple matches, or contradiction never authorizes payment.
+- Privy/direct Arc lookup resolves known transaction identities. The LLM Recovery Agent queries The Graph through Subgraph MCP for automatic hashless candidate discovery; absence, delay, malformed/injected output, multiple matches, contradiction, or invalid model output never authorizes payment.
 - Money remains a canonical integer string at JSON boundaries and `bigint` internally, using six-decimal ERC-20 USDC atomic units.
+- The public repository contains the architecture diagram, setup and operator documentation, and no secrets in history.
+- The submission text names each claimed partner track explicitly and states the Arc mainnet-readiness position.
 - The demo proves working Privy and Arc integrations with sanitized testnet evidence and no exposed secrets.
-- A mainnet-readiness check proves network, token, explorer, policy, deployment, rollback, and safe-disable configuration fail closed while official Arc Mainnet values remain disabled until published and human-approved.
-- The Graph sponsor claim is retained only when live evidence proves hashless discovery and meaningful recovery-agent automation beyond direct known-hash lookup.
+- A mainnet-readiness check proves network, token, explorer, policy, deployment, rollback, and safe-disable configuration fail closed while Arc Mainnet is unavailable or its official parameters have not been pinned and explicitly human-approved.
+- The Graph sponsor claim is retained only when a sanitized live Subgraph MCP trace proves hashless discovery and meaningful recovery-agent automation beyond direct known-hash lookup, followed by deterministic OneShot/Arc validation.
 
 ## 4. Scope
 
@@ -175,15 +213,16 @@ This plan optimizes for five properties:
 - Privy execution-wallet authorization and fail-closed wallet policy.
 - Arc Testnet ERC-20 USDC request construction, submission, receipt verification, and explorer evidence.
 - Durable reconciliation using OneShot state, Privy identifiers/status, and direct Arc RPC receipts/logs.
-- Provider-neutral candidate-index port, The Graph deployment/health contract, and freshness/multiple-candidate classification.
+- Provider-neutral candidate-index port, deployment-pinned Subgraph MCP adapter, The Graph deployment/health contract, and freshness/multiple-candidate classification.
+- LLM Recovery Agent with structured four-action output and a deterministic, fail-closed OneShot safety core.
 - Contract simulators, failure injection, concurrency and restart testing, structured logs, metrics, and operator runbooks.
 - Minimal operator/user frontend after backend acceptance.
-- Arc Mainnet configuration seam, deployment manifest, readiness probe, safe-disable and rollback runbooks, with real-value execution disabled until official values and explicit human authorization exist.
+- Arc Mainnet configuration seam, deployment manifest, readiness probe, safe-disable and rollback runbooks, and the reviewer-facing `MAINNET_READINESS.md`, with real-value execution disabled until values are pinned, verified, and explicitly human-authorized.
 
 ### Excluded
 
 - Actual mainnet value transfer before Arc publishes official production access/addresses and a human authorizes the operation; additional chains/assets, swaps, bridges, fiat rails, automatic transaction replacement, and unrestricted payment overrides.
-- Any external indexer as duplicate lock, durable intent store, or proof that another settlement is safe.
+- Any external indexer, Subgraph MCP, or LLM as duplicate lock, durable intent store, settlement authority, or proof that another settlement is safe.
 - General workflow automation, arbitrary supplier/ERP integrations, native mobile clients, production compliance certification, or multi-region HA.
 - UI polish that is not necessary to demonstrate the invariant and sponsor requirements.
 
@@ -205,7 +244,7 @@ P0-P6 delivers testnet functionality and mainnet readiness. Actual production ac
 flowchart LR
     Local[Local and simulator proof] --> Testnet[Working Arc Testnet product]
     Testnet --> Ready[Disabled Arc Mainnet profile and deployment evidence]
-    Ready --> Values{Official Arc Mainnet values available}
+    Ready --> Values{Arc public mainnet live, values pinned and verified}
     Values -->|no| Hold[Remain testnet-only]
     Values -->|yes| Human{Human security and launch approval}
     Human -->|no| Hold
@@ -227,18 +266,110 @@ activate real-value execution.
 | Work delivery | Graphile Worker over the same PostgreSQL database; at-least-once delivery is assumed |
 | EVM encoding and RPC | `viem` for typed addresses, calldata, chain access, receipt reads, and log verification |
 | Authorization | Privy Node SDK, execution wallet, scoped wallet policy, persisted idempotency key, and reference identity |
-| Settlement profiles | Arc Testnet `eip155:5042002` and its official USDC interface are enabled for live proof; the Arc Mainnet profile is structurally complete but disabled until official chain/token values are published, pinned, verified, and human-approved |
-| Hashless discovery | `IndexViewPort` is provider-neutral; The Graph is the selected v1 adapter for live candidate discovery. C01 must prove the lost-hash flow, freshness, degradation behavior, and AI-track fit; direct RPC remains the safe fallback |
+| Settlement profiles | Arc Testnet `eip155:5042002` and its official USDC interface are the only enabled live profile; the Arc Mainnet profile contains no guessed network values and remains disabled until official parameters are published, pinned, verified, and human-approved |
+| Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; a deployment-pinned Subgraph MCP adapter is the selected v1 path to the live OneShot/Arc Subgraph. The LLM Recovery Agent emits only four advisory actions. C01 must prove the lost-hash flow, freshness, degradation behavior, and AI-track fit; direct RPC remains the safe fallback |
 | Money | Canonical integer strings at JSON boundaries and `bigint` internally; no JavaScript monetary floats |
 | Frontend | React and Vite, generated OpenAPI client, exact integer amount formatting, and no direct settlement capability |
 | Testing | Vitest for unit/contract tests, Testcontainers for PostgreSQL integration, Playwright for browser flows, deterministic failure simulators, and Graph adapter/degradation tests |
 | Local and CI | Docker Compose for reproducible local services and GitHub Actions for install, lint, type, test, build, migration, contract, and policy checks |
 | Submission jobs | One queue attempt; the task persists `COMMITTED`, `FAILED_SAFE`, or `UNKNOWN` before returning |
-| Recovery authority | PostgreSQL state and verified Arc evidence are authoritative; Privy may locate the original request; The Graph supplies freshness-labeled candidates and never grants settlement permission |
+| Recovery authority | PostgreSQL state and verified Arc evidence are authoritative; Privy may locate the original request; Subgraph MCP supplies freshness-labeled Graph candidates to the LLM; the deterministic core constrains every recommendation and neither MCP nor the model grants settlement permission |
 
 Exact dependency versions are pinned only after A01/B01 compatibility spikes.
 The exact v1 contracts, state table, fixture catalog, redaction rules, and change
 protocol are frozen in [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md).
+
+## 5b. Arc qualification and evidence
+
+Both claimed Arc tracks share one requirement set. This section maps each
+requirement to an owner and a concrete artifact so nothing is discovered late.
+
+| Arc requirement | Satisfied by | Owner | Artifact |
+| --- | --- | --- | --- |
+| Working backend | API, worker, PostgreSQL authority, Privy and Arc adapters | A/B | Gate P4 composition |
+| Working frontend | A05, B05, C05 slices on React and Vite against the frozen OpenAPI | A/B/C | Gate P5 |
+| Architecture diagram | Diagrams exported from this plan into the public repository README | A | `README.md` |
+| Video demonstration and presentation | Scripted demo covering the invariant and Circle tool usage | B | Submission video, 2-4 minutes |
+| Detailed documentation | README, setup guide, operator and recovery runbooks | A/B | Public repository |
+| Public repository link | Public GitHub repository, secret-scanned history | A | Repository URL |
+| Explicit bounty naming | Submission text names both claimed Arc tracks | B | Submission form |
+| Mainnet deployment-readiness by 30 September | Disabled Mainnet profile, deployment manifest, readiness probe, rollback runbook | A/B | `MAINNET_READINESS.md` in the public repository |
+
+### Minimum Arc-qualifying frontend
+
+Arc requires a working frontend on every track, so the interface is a
+qualification requirement and not optional polish. The minimum qualifying set
+is:
+
+1. Create or reuse a Business Intent.
+2. Read authoritative intent status.
+3. View a committed settlement with its Arc explorer link.
+4. View an `UNKNOWN` intent with its recovery timeline and evidence provenance.
+
+Anything beyond these four is cuttable. These four are not.
+
+### Early contract freeze for frontend start
+
+A05, B05, and C05 build against the frozen mock server and need no live
+services. The real frontend blocker is therefore the OpenAPI freeze inside Gate
+P4, not the live settlement proof. Freeze and publish the OpenAPI and
+recovery-view semantics as soon as A04 stabilises them, ahead of live testnet
+evidence, so frontend work can start while B is still obtaining live proof.
+
+Gate P4 remains the composition and live-proof gate. This rule changes only when
+the contract is published, never what P4 must prove.
+
+### Circle developer-tool surface
+
+The project uses Arc and USDC directly. It does not use App Kits, Circle
+Wallets, Circle Contracts, CCTP, Gateway, StableFX, Paymaster, or Nanopayments,
+because wallet control and authorization run through Privy by design.
+
+The DeFi track lists App Kits only "where relevant", so this is permitted. It
+is nevertheless a deliberate decision and must be defended in one sentence in
+the submission: OneShot's contribution is settlement cardinality on Arc, and
+adding a second wallet or payment product would duplicate the authorization
+boundary that Privy already provides.
+
+Adding a Circle product solely to widen the logo surface is rejected.
+
+### Network constants
+
+Arc Testnet chain and token identities are pinned only after B01 verifies them
+against official Arc documentation. Chain `eip155:5042002` and the USDC
+interface address recorded in section 5 are treated as unverified inputs until
+that check passes and is recorded in the B01 handoff.
+
+### Mainnet-readiness statement
+
+Arc public mainnet is not available at planning time. Only Arc Testnet has
+published network parameters and can be deployed and exercised by the team.
+OneShot therefore claims a working Testnet integration and Mainnet readiness,
+not a Mainnet deployment.
+
+The Mainnet profile contains no guessed chain ID, RPC, explorer, token, or
+contract values. It remains disabled until Arc publishes official parameters,
+B01 pins and verifies them, and a human explicitly authorizes activation.
+
+Because verification happens after the event, readiness evidence must live in
+the public repository rather than only in the submission form.
+`MAINNET_READINESS.md` is the single reviewer-facing artifact and contains:
+
+- the pinned Arc mainnet chain, RPC, explorer, and USDC identities, or an
+  explicit note that a value awaits publication at launch;
+- the deployment manifest and the exact commands that perform deployment;
+- readiness-probe output showing every check passing against the disabled
+  profile;
+- the rollback and safe-disable procedure;
+- the current status line: `DEPLOYMENT-READY` or `DEPLOYED` with its evidence.
+
+Real-value execution stays disabled until a human authorizes activation. If the
+team deploys after 16 September, only the status line and its evidence change;
+no domain or contract work is required.
+
+The submission text states the readiness position plainly and points to this
+file.
+
 
 ## 6. Architecture
 
@@ -254,27 +385,50 @@ flowchart TB
     Outbox --> RecoveryWorker[Reconciliation worker]
     Worker --> Domain
     RecoveryWorker --> Reconciliation[packages/reconciliation]
-    Reconciliation --> Command[Versioned reconciliation command]
+    Reconciliation --> SafetyCore[Deterministic recovery safety core]
+    SafetyCore --> Command[Versioned reconciliation command]
     Command --> Domain
 
     Domain --> AuthPort[AuthorizationPort]
     Domain --> SettlementPort[SettlementPort]
     Reconciliation --> EvidencePort[EvidencePort]
     Reconciliation --> IndexPort[IndexViewPort]
+    Reconciliation --> AdvisorPort[RecoveryAdvisorPort]
 
     AuthPort --> PrivyAdapter[packages/privy-adapter]
     SettlementPort --> ArcAdapter[packages/arc-adapter]
     EvidencePort --> PrivyAdapter
     EvidencePort --> ArcAdapter
-    IndexPort -.-> HistoryAdapter[packages/history-adapter]
+    IndexPort -.-> MCPAdapter[packages/subgraph-mcp-adapter]
+    AdvisorPort --> RecoveryAgent[packages/recovery-agent]
 
     PrivyAdapter --> Privy[Privy wallet and policy]
     ArcAdapter --> Arc[Arc USDC and RPC]
-    HistoryAdapter --> GraphIndex[The Graph candidate index]
+    RecoveryAgent --> MCPAdapter
+    MCPAdapter --> MCP[Subgraph MCP]
+    MCP --> GraphIndex[Live OneShot Arc Subgraph]
     GraphIndex -.-> Arc
 ```
 
-OneShot decides whether settlement may be attempted. Privy constrains authorized wallet actions. Arc provides final settlement evidence. Direct Privy/Arc lookup resolves known transaction identities. The Graph is the selected automatic discovery path when that identity is lost; it proposes candidates but grants no settlement right. Detailed entity, state, sequence, and ownership diagrams live in [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md).
+The selected recovery path is explicit:
+
+```text
+The Graph Subgraph
+        ↓
+Subgraph MCP
+        ↓
+LLM Recovery Agent
+        ↓
+WAIT / RECONCILE / ESCALATE / RETURN_EXISTING_RESULT
+        ↓
+deterministic OneShot safety core
+```
+
+`WAIT` preserves uncertainty. `RECONCILE` requests another read-only evidence
+cycle. `ESCALATE` requests operator attention. `RETURN_EXISTING_RESULT` supplies
+candidate references that the core must independently verify using current
+OneShot/Arc evidence. None is a submit or retry command. Detailed entity, state,
+sequence, and ownership diagrams live in [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md).
 
 ## 7. Team topology and exclusive ownership
 
@@ -311,7 +465,8 @@ Coder B never changes domain tables or state meanings directly.
 Owns:
 
 - `packages/reconciliation`
-- optional `packages/history-adapter` after the C01 decision
+- `packages/recovery-agent`
+- `packages/subgraph-mcp-adapter` after the C01 live-value decision
 - `packages/testkit-failures`
 - `subgraph/` after The Graph passes the C01 live discovery and qualification gate
 - recovery-view schemas and queries
@@ -403,8 +558,8 @@ silently changes a contract.
 | [B04](milestones/coder-b/B04-ambiguity-integration.md) | B | B03 | Conservative outcomes and production adapter pack |
 | [B05](milestones/coder-b/B05-frontend-settlement-details.md) | B | B04 + project Gate P4 | Authorization/settlement UI slice against fixtures |
 | [B06](milestones/coder-b/B06-sponsor-evidence.md) | B | B05 | Privy/Arc sanitized evidence bundle |
-| [C01](milestones/coder-c/C01-recovery-evidence-strategy.md) | C | Frozen contract pack | Recovery evidence contract and indexer value decision |
-| [C02](milestones/coder-c/C02-reconciliation-engine.md) | C | C01 | Deterministic reconciliation and evidence contract |
+| [C01](milestones/coder-c/C01-recovery-evidence-strategy.md) | C | Frozen contract pack | Recovery evidence contract and live Subgraph MCP value decision |
+| [C02](milestones/coder-c/C02-reconciliation-engine.md) | C | C01 | LLM recommendations plus deterministic reconciliation contract |
 | [C03](milestones/coder-c/C03-failure-injection.md) | C | C02 | Cross-source chaos and restart harness |
 | [C04](milestones/coder-c/C04-recovery-matrix-integration.md) | C | C03 | Recovery matrix and simulator integration pack |
 | [C05](milestones/coder-c/C05-frontend-recovery.md) | C | C04 + project Gate P4 | Recovery timeline UI slice against fixtures |
@@ -478,7 +633,7 @@ This is the frontend unlock gate.
 - One real allowed Arc Testnet payment commits exactly once through Privy.
 - Wrong-scope and above-cap cases produce zero settlement.
 - A lost-response scenario reaches `UNKNOWN` and reconciles to the original transaction without a duplicate.
-- The lost-hash scenario uses live The Graph data to discover candidates, direct Arc evidence to verify the bound transaction, and no second submission; stale, empty, multiple, or contradictory candidates remain `UNKNOWN`.
+- The lost-hash scenario queries live The Graph data through Subgraph MCP, shows the LLM selecting/explaining candidates, uses direct Arc evidence to verify the bound transaction, and makes no second submission; stale, empty, malformed, injected, multiple, contradictory, or invalid-model results remain `UNKNOWN`.
 - OpenAPI and recovery-view semantics are frozen for frontend.
 
 ### P5 — frontend acceptance
@@ -508,7 +663,7 @@ This is the frontend unlock gate.
 | Crash before submission | A | Worker kill point | P4 zero external settlement |
 | Crash after possible submission | B | Adapter fault fixture | P4 durable `UNKNOWN` |
 | Lost payment response | B | Proxy/fixture | P4 original transaction reconciled |
-| Graph delay/absence/multiple candidates | C | Provider-neutral Graph simulator | P4 remain `UNKNOWN`; no submission grant |
+| Graph/MCP delay, absence, malformed data, multiple candidates, or invalid LLM output | C | Provider-neutral MCP/agent simulator | P4 remain `UNKNOWN`; no submission grant |
 | Privy denial/above cap | B | Policy fixture/live-ready harness | P4 zero settlement |
 | Service restart | A | Process orchestration | P4 evidence durability |
 | Downstream failure after payment | A | Supplier fake | P4 original receipt retained |
@@ -522,7 +677,7 @@ After P4, the three frontend packets remain independent:
 
 - A05 owns application shell, create/replay/conflict, and authoritative status.
 - B05 owns policy, authorization, transaction, and explorer details.
-- C05 owns recovery timeline, evidence provenance, Graph freshness/candidate state, and escalation.
+- C05 owns recovery timeline, evidence provenance, Subgraph MCP/agent trace, Graph freshness/candidate state, and escalation.
 
 Each slice is built against the frozen mock server. Final composition is a project gate, not a packet closure requirement.
 
@@ -537,7 +692,7 @@ Each slice is built against the frozen mock server. Final composition is a proje
 
 ## 16. Human-only external configuration
 
-Coder B produces a repeatable setup guide or wizard, but a human performs Privy application/wallet/key-quorum/policy creation, Arc Testnet funding, any selected index-provider credential entry, Mainnet profile activation, and CI-secret configuration.
+Coder B produces a repeatable setup guide or wizard, while Coder C documents Graph deployment and Subgraph MCP/model configuration. A human performs Privy application/wallet/key-quorum/policy creation, Arc Testnet funding, every gateway/model credential entry, Mainnet profile activation, and CI-secret configuration.
 
 - Secret input is hidden and written only to ignored runtime files or approved secret stores.
 - Public network, contract, deployment, and policy identifiers are separated from secrets.
@@ -547,7 +702,7 @@ Coder B produces a repeatable setup guide or wizard, but a human performs Privy 
 
 ## 17. Observability and operations
 
-- Correlation fields: Business Intent ID, Attempt ID, settlement version, Privy reference/transaction ID, Arc transaction hash, active network profile, and Graph deployment/observed block.
+- Correlation fields: Business Intent ID, Attempt ID, settlement version, Privy reference/transaction ID, Arc transaction hash, active network profile, Graph deployment/observed block, MCP request/tool identity, and recovery-agent decision identity.
 - Never log signatures, credentials, private keys, raw authorization bodies, or private wallet material.
 - Metrics: intent states, oldest/count `UNKNOWN`, transition conflicts, queue lag, reconciliation outcomes, policy denials, provider/RPC errors, Graph lag/health/candidate count, duplicate and conflict counts.
 - Safe disable stops new submission ownership while preserving status, evidence ingestion, and reconciliation reads.
@@ -562,11 +717,17 @@ Coder B produces a repeatable setup guide or wizard, but a human performs Privy 
 | ERC-20/native precision confusion | Six-decimal ERC-20 is the only settlement amount; native balance is gas only | B/C |
 | Lost response after broadcast | Persist identity first, enter `UNKNOWN`, reconcile, forbid another payment | All |
 | Pending/evicted Arc transaction | Hold `UNKNOWN`; no automatic replacement in v1 | B/C |
-| Graph lag/error/empty/multiple result | Surface freshness and candidate ambiguity; never infer non-payment | C |
+| Graph/MCP lag, error, empty/malformed/multiple result | Surface provenance, freshness, and candidate ambiguity; never infer non-payment | C |
+| Prompt injection or unsupported LLM action | Treat tool content as untrusted data; validate the four-action structured output and fail closed | C |
 | Queue redelivery | Domain CAS/constraints plus single-attempt submission task | A |
 | Shared-file conflicts | Exclusive path ownership and A-only root composition | A |
 | Credentials unavailable | Offline contract packs and simulators remain sufficient for packet closure | B |
 | Scope pressure | Cut webhooks, rolling policy support, visual polish, and optional telemetry before safety | All |
+| P4 slips and the frontend never ships | Publish the OpenAPI freeze early so frontend slices start against the mock; cut to the four minimum screens rather than dropping the interface | A |
+| Arc network constants wrong or changed | B01 verifies chain, RPC, explorer, and USDC identities against official Arc docs before pinning; readiness probe re-checks them | B |
+| Arc mainnet launches 16 September, after submission | Ship deployment-readiness evidence in `MAINNET_READINESS.md`; optional post-launch deployment changes only the status line | A/B |
+| Readiness evidence not reachable after the event | Keep the reviewer-facing artifact in the public repository, not only in the submission form | A |
+| Thin Circle tool surface questioned | Record the deliberate decision in section 5b and defend it in the submission rather than adding unused Circle products | B |
 
 ## 19. Definition of done for every packet
 
@@ -596,12 +757,12 @@ Coder B produces a repeatable setup guide or wizard, but a human performs Privy 
 | B04 | Conservative handling of provider ambiguity | Fault taxonomy and lookup contract suite |
 | B05 | Safe authorization/transaction UI | Fixture-driven component and redaction tests |
 | B06 | Verifiable Privy/Arc sponsor evidence | Policy denial and real transfer evidence bundle |
-| C01 | Minimal recovery evidence strategy with an explicit indexer decision | Removal/value matrix and provider-neutral contract tests |
-| C02 | Deterministic zero-submit reconciliation | Complete evidence/decision matrix |
+| C01 | Minimal recovery evidence strategy with an explicit Subgraph MCP decision | Removal/value matrix, live MCP spike, and provider-neutral contract tests |
+| C02 | Meaningful AI recovery within deterministic zero-submit reconciliation | Four-action recommendation matrix and safety-core tests |
 | C03 | Safety under loss, lag, contradiction, and restart | Seeded failure-injection suite |
 | C04 | Recovery service ready for real adapter replacement | Simulator composition and matrix report |
 | C05 | Accurate recovery/evidence UI | Degraded-evidence component tests |
-| C06 | Verifiable recovery and conditional-index evidence | Live recovery, degraded demo, qualification report |
+| C06 | Verifiable Subgraph MCP/AI recovery evidence | Live MCP/agent/core trace, degraded demo, qualification report |
 
 Every success criterion in Section 3 has at least two independent proof surfaces: a producer packet and a later project-gate verification. Packet closure establishes the producer proof; it never claims final integrated behavior by itself.
 
@@ -622,7 +783,7 @@ Purpose: default mode for every coder packet.
 Purpose: compose reviewed packages with PostgreSQL and local services before external effects.
 
 - Uses real PostgreSQL and Graphile Worker.
-- Replaces Privy, Arc, and The Graph network access with simulators.
+- Replaces Privy, Arc, The Graph/Subgraph MCP, and LLM network access with deterministic simulators.
 - Runs migrations, API/worker orchestration, concurrency, restart, failure, and recovery suites.
 - Remains the fallback when external providers are unavailable.
 
@@ -630,7 +791,7 @@ Purpose: compose reviewed packages with PostgreSQL and local services before ext
 
 Purpose: Gate P4 and P6 live proof.
 
-- Requires human-approved Privy/Arc and any selected index-provider configuration in ignored/approved secret stores.
+- Requires human-approved Privy/Arc, Graph/Subgraph MCP, and LLM configuration in ignored/approved secret stores.
 - Checks Arc chain/token/policy/deployment identities before running.
 - Limits settlement to an approved recipient and cap.
 - Produces sanitized public identifiers and result tables only.
@@ -641,7 +802,7 @@ Purpose: Gate P4 and P6 live proof.
 Purpose: independently close A05/B05/C05.
 
 - Uses the P4-frozen OpenAPI and sanitized response fixtures.
-- Simulates every authoritative, provider, Arc, and Graph state.
+- Simulates every authoritative, provider, Arc, Graph/MCP, and recovery-agent state.
 - Contains no provider credentials or direct settlement capability.
 - Must behave identically to production UI for state labeling and disabled actions.
 
@@ -652,15 +813,15 @@ P4 is deliberately procedural so convergence does not turn into open-ended share
 1. Record exact reviewed A04, B04, and C04 package versions and tree SHAs.
 2. Coder A creates the single composition branch from the approved integration base.
 3. Replace the settlement simulator with B04’s public package entry point; run contract compatibility before any live call.
-4. Replace the recovery/evidence simulators with C04 public entry points; run command/evidence compatibility.
+4. Replace the recovery/evidence, Subgraph MCP, and LLM simulators with C04 public entry points; run tool/evidence/recommendation/command compatibility.
 5. Run offline root checks first. A contract mismatch stops composition and opens one owner-specific compatibility ticket.
 6. Run empty and upgrade migrations, API/worker boot, readiness, and safe-disable checks.
 7. Run the complete local failure matrix with real packages but simulated external services.
-8. A human enables testnet evidence mode and confirms network, token, wallet, policy, recipient, cap, funding, and the Graph deployment.
-9. Execute one allowed intent, discard the returned transaction hash at the fault boundary, discover it through live The Graph data, and bind durable identity, Privy identity, Arc receipt/Transfer, and Graph freshness.
+8. A human enables testnet evidence mode and confirms network, token, wallet, policy, recipient, cap, funding, Graph deployment, MCP target, and LLM configuration.
+9. Execute one allowed intent, discard the returned transaction hash at the fault boundary, query live The Graph data through Subgraph MCP, show the LLM candidate recommendation, and bind durable identity, Privy identity, Arc receipt/Transfer, Graph freshness, and deterministic-core disposition.
 10. Execute wrong-scope and above-cap denials; confirm zero settlements.
 11. Inject a lost local response after possible broadcast; confirm durable `UNKNOWN`, zero replacement transaction, and reconciliation to original evidence.
-12. Simulate empty, lagging, unhealthy, unavailable, multiple, and contradictory Graph candidates; confirm `UNKNOWN` and no permission change.
+12. Simulate empty, lagging, unhealthy, unavailable, malformed/injected, multiple, and contradictory MCP candidates plus invalid LLM output; confirm `UNKNOWN` and no permission change.
 13. Publish a sanitized Gate P4 manifest and freeze OpenAPI/recovery-view semantics.
 
 P4 failures never produce ad hoc edits by multiple coders on the composition branch. The owning coder fixes their package in a focused branch, republishes a reviewed version, and A updates only the version slot.
@@ -671,7 +832,7 @@ P4 failures never produce ad hoc edits by multiple coders on the composition bra
 
 - A owns root package manager files, shared compiler/lint/test configuration, OpenAPI, migrations, API, worker, contracts, and domain/storage packages.
 - B owns only provider/chain adapter packages, provider fixtures, and human provider setup docs.
-- C owns only reconciliation/failure packages, recovery docs, and the Graph adapter/Subgraph after C01.
+- C owns only reconciliation/recovery-agent/Subgraph-MCP/failure packages, recovery docs, and the Subgraph after C01.
 - Frontend composition reserves one shell/route registry editor; B/C expose components through documented entry points instead of editing the registry concurrently.
 
 ### Commit controls
@@ -700,7 +861,7 @@ Continue asynchronously with a documented conservative assumption for ordinary i
 - when `UNKNOWN` may transition to `FAILED_SAFE`;
 - Privy policy scope or bypass availability;
 - Arc network/token identity;
-- the non-authoritative role of any external indexer;
+- the non-authoritative role of any external indexer, Subgraph MCP, or LLM, or the four-action allowlist;
 - use of non-testnet funds or irreversible external configuration;
 - public API breaking compatibility after P4.
 
@@ -718,6 +879,10 @@ If time is constrained, cut in this order:
 4. Visual animation, theming, and secondary responsive polish; retain accessible core flows.
 5. Arc Memo correlation if Privy cannot constrain the forwarded call; retain The Graph tuple/window discovery and strict authorization.
 
+Sponsor-required scope is not on this list. A working frontend is an Arc
+qualification requirement on every claimed Arc track. Cut inside the interface
+down to the four minimum screens in section 5b, never the interface itself.
+
 Never cut:
 
 - durable constraints and atomic submission ownership;
@@ -725,7 +890,7 @@ Never cut:
 - denial/zero-settlement proof;
 - concurrency, restart, and lost-response tests;
 - exact Arc receipt/Transfer verification;
-- Graph freshness/candidate labeling and non-authority;
+- Graph freshness/candidate labeling, live Subgraph MCP use, meaningful LLM reasoning, and deterministic non-authority;
 - secret/redaction checks;
 - independent review and human merge controls.
 
@@ -767,6 +932,9 @@ Before Gate P6 can pass, confirm:
 - UI has no direct/bypass/force-pay action and labels authority/freshness correctly.
 - Demo/reset instructions require no unsafe database surgery or external-history rewrite.
 - Evidence, repository, logs, screenshots, fixtures, source maps, and reviews contain no secrets.
+- Claimed partner tracks match the sponsor claim mapping in section 5. Composable/Standardized and Circle Agent Stack remain unclaimed.
+- Every Arc requirement row in section 5b has a delivered artifact, including the README architecture diagram and the explicit track naming in the submission.
+- Public README and submission text contain no statement that undermines a claimed dependency; justifications cite measured numbers.
 - Privy and Arc claims use the qualification standard. The Graph claim requires live hashless discovery plus meaningful recovery-agent automation; otherwise it is `NOT VERIFIED` and removed from the submission.
 - Mandatory FreePi gates and required CI apply to the exact candidate tree/head.
 - A human performs the final review and merge.

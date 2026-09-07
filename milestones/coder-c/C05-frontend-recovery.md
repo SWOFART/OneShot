@@ -11,7 +11,10 @@ Do not write production UI before P4 freezes recovery-view semantics. Build agai
 
 ## Outcome
 
-An independently composable recovery slice shows authoritative state, attempts, reconciliation, provider/Arc evidence, and Graph observations with clear provenance and no retry shortcut.
+An independently composable recovery slice shows authoritative state, attempts,
+reconciliation, provider/Arc evidence, Subgraph MCP observations, the advisory
+LLM recommendation, and deterministic core disposition with clear provenance
+and no retry shortcut.
 
 ## Small tasks
 
@@ -25,9 +28,12 @@ An independently composable recovery slice shows authoritative state, attempts, 
 - Label local, Privy, Arc, and The Graph source plus authority class.
 - Show verified transaction binding and contradiction warnings without raw sensitive payloads.
 
-### C05.3 — Graph freshness and candidate state
+### C05.3 — Subgraph MCP, agent, and candidate state
 
-- When enabled, display provider/deployment identity, observed-through block/time, chain-head lag, health errors, and unavailable state; hide the section cleanly when the C01 fallback disables Graph.
+- When enabled, display Subgraph MCP as the retrieval path, tool/provider/deployment
+  identity, observed-through block/time, chain-head lag, health errors, and
+  unavailable state; hide it cleanly when C01 selects the fallback.
+- Display the LLM recommendation separately from deterministic core disposition and authoritative result.
 - Empty result reads “not observed through block N,” never “not paid.”
 
 ### C05.4 — UNKNOWN experience
@@ -37,7 +43,9 @@ An independently composable recovery slice shows authoritative state, attempts, 
 
 ### C05.5 — Component tests
 
-- Cover fresh, empty, lagging, unhealthy, unavailable, contradictory, pending, committed, failed-safe, and aged-UNKNOWN fixtures.
+- Cover all four recommendations, invalid output, fresh, empty, lagging,
+  unhealthy, unavailable, contradictory, pending, committed, failed-safe, and
+  aged-UNKNOWN fixtures.
 - Test malicious evidence strings, accessibility, keyboard, responsive layout, lint, type, and build.
 
 ## Acceptance evidence

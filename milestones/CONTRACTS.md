@@ -11,7 +11,8 @@ Change rule: expand-migrate-contract only
 - OneShot durable state grants submission ownership.
 - Privy authorizes and constrains the wallet action but is not the durable duplicate lock.
 - Arc receipt plus expected ERC-20 Transfer evidence establishes committed settlement.
-- Direct Privy/Arc evidence resolves known transaction identities. The Graph is the selected v1 hashless candidate-discovery layer after C01; all indexed evidence remains non-authoritative.
+- Direct Privy/Arc evidence resolves known transaction identities. The selected v1 hashless path queries the live OneShot/Arc Subgraph through Subgraph MCP and lets an LLM Recovery Agent recommend a bounded action after C01; all indexed/model evidence remains non-authoritative.
+- Subgraph MCP and the LLM expose no signing, settlement, retry, Attempt-creation, or submission-ownership capability.
 - Any possibly submitted but unconfirmed outcome is `UNKNOWN`; reconciliation precedes another submission.
 
 ## 2. Canonical identifiers and money
@@ -99,9 +100,41 @@ Results:
 
 ### IndexViewPort.lookup
 
-The v1 implementation queries The Graph for candidate transfers and returns observations plus observed block/time, provider/deployment identity, chain-head comparison, lag, provider health details, retrieval time, and health classification: `FRESH`, `LAGGING`, `UNHEALTHY`, `UNAVAILABLE`, or `UNKNOWN_FRESHNESS`.
+The v1 implementation obtains candidate transfers from a deployment-pinned
+Subgraph MCP tool call and returns observations plus observed block/time,
+provider/deployment/tool identity, chain-head comparison, lag, provider health
+details, retrieval time, and health classification: `FRESH`, `LAGGING`,
+`UNHEALTHY`, `UNAVAILABLE`, or `UNKNOWN_FRESHNESS`. The adapter validates tool
+arguments, target deployment, result schema, `_meta`, size bounds, and untrusted
+text. Credentials never enter prompts, tool results, fixtures, logs, or evidence.
 
 No IndexViewPort result grants settlement permission.
+
+### RecoveryAdvisorPort.recommend
+
+Input is a bounded, sanitized recovery view containing durable-state summary,
+authority labels, exact identity bindings, Arc/Privy observations, and validated
+Subgraph MCP observations. The only accepted recommendations are:
+
+- `WAIT`: preserve `UNKNOWN` until fresher or authoritative evidence exists.
+- `RECONCILE`: request another read-only evidence cycle.
+- `ESCALATE`: request operator investigation with no financial effect.
+- `RETURN_EXISTING_RESULT`: return candidate/evidence references for a result the deterministic core must independently prove already exists.
+
+The response includes a bounded reason, referenced evidence IDs, model
+configuration identity, and decision ID. Unknown actions, free-form tool calls,
+missing/fabricated references, malformed output, prompt/tool injection, or model
+unavailability fail closed to `WAIT` plus a sanitized diagnostic.
+
+### Deterministic recovery safety core
+
+The safety core treats the recommendation as advisory and rechecks the current
+state version and authoritative OneShot/Arc evidence. `RECONCILE` can enqueue
+only a read-only lookup, `WAIT` maps to `HOLD_UNKNOWN`, `ESCALATE` maps to
+`ESCALATE_UNKNOWN`, and `RETURN_EXISTING_RESULT` can produce
+`MARK_COMMITTED`/an existing terminal response only when independently proven.
+No mapping calls `SettlementPort`, creates an Attempt, or grants submission
+ownership.
 
 ## 6. Durable state machine
 
@@ -154,12 +187,21 @@ The canonical fixture root is `packages/contracts/fixtures/v1/`. Every fixture h
 | `index/lagging.json` | `LAGGING`, no permission change |
 | `index/provider-error.json` | `UNHEALTHY`, no permission change |
 | `index/unavailable.json` | `UNAVAILABLE`, local authority still returned |
+| `mcp/malformed.json` | rejected before agent input; fail-closed `WAIT` |
+| `mcp/injected-content.json` | content remains untrusted evidence, never an instruction |
+| `agent/wait.json` | `WAIT` -> `HOLD_UNKNOWN`, zero external submissions |
+| `agent/reconcile.json` | `RECONCILE` -> read-only evidence cycle only |
+| `agent/escalate.json` | `ESCALATE` -> operator escalation only |
+| `agent/return-existing-result.json` | accepted only when authoritative evidence independently proves the result |
+| `agent/unsupported-action.json` | rejected; fail-closed `WAIT`, zero external submissions |
 
 ## 9. Simulator behavior
 
 - Domain simulator exposes the HTTP seam and deterministic clock/IDs with an external-submission counter.
 - Settlement simulator consumes canonical requests and emits each SettlementPort/EvidencePort result family without network access.
-- Recovery simulator consumes local state plus Privy/Arc and Graph candidate fixtures and emits deterministic commands and a labeled recovery view.
+- Subgraph MCP simulator consumes pinned-deployment query fixtures and emits validated Graph candidates without network or credentials.
+- Recovery-agent simulator consumes the labeled recovery view and emits every allowed/invalid recommendation deterministically.
+- Recovery simulator passes recommendations through the deterministic safety core and emits commands and a labeled recovery view.
 - Simulators reject unknown fixture versions and schema drift.
 - Simulators never silently default an unknown enum to a successful or retryable result.
 
@@ -169,14 +211,15 @@ The canonical fixture root is `packages/contracts/fixtures/v1/`. Every fixture h
 2. Worker task plus durable state and external-submission counter.
 3. Adapter ports plus official-response fixtures.
 4. Reconciliation command plus durable transition and evidence record.
-5. Graph candidate query plus deployment-specific freshness and ambiguity classification after C01.
-6. Browser UI through frozen OpenAPI/mock server after Gate P4.
+5. Subgraph MCP candidate query/tool result plus deployment-specific freshness and ambiguity classification after C01.
+6. RecoveryAdvisorPort recommendation plus deterministic safety-core command and external-submission counter.
+7. Browser UI through frozen OpenAPI/mock server after Gate P4.
 
 ## 11. Compatibility and ownership
 
 - A owns base schemas, OpenAPI, error codes, state vocabulary, and fixture validation tooling.
 - B owns provider-specific optional evidence fields and response-to-port classification fixtures.
-- C owns index/recovery observation fields and reconciliation-decision fixtures.
+- C owns index/MCP/recovery observation fields, recovery-agent recommendation fields, and reconciliation-decision fixtures.
 - Optional fields must not change existing result meaning.
 - Unknown enum values fail closed at boundaries.
 - A breaking change requires ADR, new fixture version, dual-form simulator support, independent consumer migration, and later removal.
@@ -186,5 +229,5 @@ The canonical fixture root is `packages/contracts/fixtures/v1/`. Every fixture h
 - Every field has type, normalization, authority, and redaction rules.
 - Every terminal result has a durable transition and external-submission expectation.
 - Every lane can run a simulator with no credentials.
-- No unresolved item can change settlement cardinality, monetary precision, Privy enforcement, Arc identity, or `UNKNOWN` semantics.
+- No unresolved item can change settlement cardinality, monetary precision, Privy enforcement, Arc identity, `UNKNOWN` semantics, or the non-authoritative MCP/LLM boundary.
 - Human approval records the exact Git tree containing this contract pack.

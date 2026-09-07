@@ -33,10 +33,22 @@ decides. C01 must prove this with live data before any qualification claim.
 
 - Target the AI Tooling or AI Use Case track. The recovery agent must use live
   Graph data for meaningful candidate selection, explanation, and automation.
+- The production/demo path must query the pinned live OneShot/Arc Subgraph
+  through Subgraph MCP. A direct application GraphQL client, mocked MCP result,
+  dependency, or configuration entry alone is insufficient.
+- The LLM Recovery Agent must use the live MCP result to select `WAIT`,
+  `RECONCILE`, `ESCALATE`, or `RETURN_EXISTING_RESULT`. A sanitized trace must
+  bind the tool call, deployment/query/result, `_meta` health, referenced
+  evidence, model recommendation, and deterministic-core disposition.
 - Do not target Composable/Standardized with one custom Subgraph; that track
   requires two Graph products or meaningful standardized-schema work.
+- One live Subgraph is sufficient for the selected AI track; do not add a second
+  Subgraph merely to satisfy a requirement that belongs to another track.
 - Empty, delayed, multiple, or contradictory candidates preserve `UNKNOWN` and
   cannot unlock another settlement.
+- Malformed/injected MCP content and invalid model output also preserve
+  `UNKNOWN`. Subgraph MCP and the LLM have no signing, settlement, retry,
+  Attempt-creation, or submission-ownership capability.
 - Include a public repository, clear README, and a two-to-four-minute demo.
 
 ## Claim standard

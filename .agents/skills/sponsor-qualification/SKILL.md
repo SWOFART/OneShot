@@ -14,10 +14,18 @@ code, tests, and demo instructions. Review working evidence, not plans.
   path through scoped policy or spending permission. Login-only is insufficient.
 - Arc: prove a real USDC settlement on Arc Testnet and, for the Launch track,
   fail-closed mainnet-readiness artifacts without inventing unavailable values.
-- The Graph: prove live indexed data drives hashless candidate discovery and
-  meaningful recovery-agent automation beyond direct known-hash lookup. Arc
-  verifies candidates; empty, stale, multiple, or contradictory results cannot
-  unlock another settlement.
+- The Graph: prove a pinned live OneShot/Arc Subgraph is queried through
+  Subgraph MCP and that the LLM Recovery Agent materially uses the result for
+  hashless candidate selection/explanation beyond direct known-hash lookup.
+- Bind a sanitized MCP trace to deployment/query/result, `_meta` health,
+  evidence references, one of `WAIT`, `RECONCILE`, `ESCALATE`, or
+  `RETURN_EXISTING_RESULT`, and the deterministic-core disposition. Direct
+  GraphQL, mocks, dependencies, variables, and prompt text alone are insufficient.
+- Arc verifies candidates and OneShot decides. Empty, stale, malformed/injected,
+  multiple, or contradictory MCP results and invalid model output cannot unlock
+  another settlement. MCP/model code exposes no settlement or retry capability.
+- Do not require multiple Subgraphs for the selected AI track or award the
+  separate Composable/Standardized claim without its own proof.
 - Verify the demo preserves `1 intent / N attempts / <=1 settlement` and never
   exposes secrets.
 
