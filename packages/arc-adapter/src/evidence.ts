@@ -48,8 +48,10 @@ export interface PersistedIdentity {
   readonly tokenContract: string;
   readonly recipient: string;
   readonly amountAtomic: bigint;
-  readonly nonce?: number | undefined;
 }
+
+// No `nonce` field: binding is done on the transaction hash, and a declared
+// nonce nobody reads would imply a "wrong nonce" defence that does not exist.
 
 /** A receipt lookup that may fail or find nothing. */
 export interface ReceiptSource {
