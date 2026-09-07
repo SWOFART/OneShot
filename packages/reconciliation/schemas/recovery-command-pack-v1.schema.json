@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneshot.local/schemas/recovery-command-pack-v1.schema.json",
+  "title": "OneShot Recovery Command Pack v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "packId",
+    "eventId",
+    "businessIntentId",
+    "sourceStateVersion",
+    "generatedAt",
+    "appendCommands",
+    "reconciliationCommand",
+    "recoveryView",
+    "externalSubmissionCount"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "recovery-command-pack-v1" },
+    "packId": { "type": "string", "minLength": 1 },
+    "eventId": { "type": "string", "minLength": 1 },
+    "businessIntentId": { "type": "string", "minLength": 1 },
+    "sourceStateVersion": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "appendCommands": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/appendCommand" }
+    },
+    "reconciliationCommand": { "$ref": "reconciliation-command-v1.schema.json" },
+    "recoveryView": { "$ref": "recovery-view-v1.schema.json" },
+    "externalSubmissionCount": { "const": 0 }
+  },
+  "$defs": {
+    "appendCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "commandId",
+        "operation",
+        "businessIntentId",
+        "expectedStateVersion",
+        "record"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "append-recovery-record-v1" },
+        "commandId": { "type": "string", "minLength": 1 },
+        "operation": { "const": "APPEND_RECOVERY_RECORD" },
+        "businessIntentId": { "type": "string", "minLength": 1 },
+        "expectedStateVersion": { "type": "string", "minLength": 1 },
+        "record": { "$ref": "#/$defs/record" }
+      }
+    },
+    "record": {
+      "oneOf": [{ "$ref": "#/$defs/observationRecord" }, { "$ref": "#/$defs/decisionRecord" }]
+    },
+    "recordBase": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "recordId",
+        "businessIntentId",
+        "authorityClass",
+        "retrievedAt",
+        "freshness",
+        "blockNumber",
+        "reason",
+        "evidenceReferences",
+        "digest",
+        "provenance"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "recovery-record-v1" },
+        "recordId": { "type": "string", "minLength": 1 },
+        "businessIntentId": { "type": "string", "minLength": 1 },
+        "authorityClass": {
+          "enum": [
+            "AUTHORITATIVE_ONESHOT",
+            "AUTHORITATIVE_CHAIN_EVIDENCE",
+            "PROVIDER_OBSERVATION",
+            "NON_AUTHORITATIVE_CANDIDATE_DISCOVERY",
+            "ADVISORY_AGENT_OBSERVATION"
+          ]
+        },
+        "retrievedAt": { "type": "string", "format": "date-time" },
+        "freshness": {
+          "type": ["string", "null"],
+          "enum": ["FRESH", "LAGGING", "UNHEALTHY", "UNAVAILABLE", "UNKNOWN_FRESHNESS", null]
+        },
+        "blockNumber": { "type": ["string", "null"] },
+        "reason": { "type": "string", "maxLength": 500 },
+        "evidenceReferences": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "digest": { "type": "string", "minLength": 64, "maxLength": 64 },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    },
+    "observationRecord": {
+      "allOf": [
+        { "$ref": "#/$defs/recordBase" },
+        {
+          "type": "object",
+          "required": ["recordType", "source"],
+          "properties": {
+            "recordType": { "const": "OBSERVATION" },
+            "source": { "enum": ["ONESHOT", "PRIVY", "ARC", "THE_GRAPH"] }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "decisionRecord": {
+      "allOf": [
+        { "$ref": "#/$defs/recordBase" },
+        {
+          "type": "object",
+          "required": ["recordType", "source", "advisoryAction", "coreDisposition"],
+          "properties": {
+            "recordType": { "const": "DECISION" },
+            "source": { "const": "LLM" },
+            "advisoryAction": {
+              "enum": ["WAIT", "RECONCILE", "ESCALATE", "RETURN_EXISTING_RESULT"]
+            },
+            "coreDisposition": {
+              "enum": [
+                "HOLD_UNKNOWN",
+                "READ_ONLY_LOOKUP",
+                "ESCALATE_UNKNOWN",
+                "MARK_COMMITTED",
+                "MARK_FAILED_SAFE"
+              ]
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "provenance": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "source", "sourceVersion"],
+          "properties": {
+            "kind": { "const": "SOURCE" },
+            "source": { "enum": ["ONESHOT", "PRIVY", "ARC"] },
+            "sourceVersion": { "const": "recovery-evidence-v1" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "serverName",
+            "serverVersion",
+            "deploymentId",
+            "manifestCid",
+            "toolName",
+            "queryName",
+            "queryDigest"
+          ],
+          "properties": {
+            "kind": { "const": "MCP" },
+            "serverName": { "type": "string" },
+            "serverVersion": { "type": "string" },
+            "deploymentId": { "type": "string" },
+            "manifestCid": { "type": "string" },
+            "toolName": { "const": "execute_query_by_deployment_id" },
+            "queryName": { "const": "OneShotRecoveryCandidatesV1" },
+            "queryDigest": { "type": "string", "minLength": 64, "maxLength": 64 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "modelIdentity"],
+          "properties": {
+            "kind": { "const": "MODEL" },
+            "modelIdentity": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["modelName", "modelVersion", "promptVersion"],
+              "properties": {
+                "modelName": { "type": "string" },
+                "modelVersion": { "type": "string" },
+                "promptVersion": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

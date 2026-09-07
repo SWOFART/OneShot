@@ -42,7 +42,9 @@ readiness probing they build on. See
    - Verify contract version `1.0.0`.
 
 3. **Replace Recovery Engine**:
-   - Wire `SubgraphMcpRecoveryEngine` into `reconcile_intent` task in `createTaskList`.
+   - Follow `packages/reconciliation/docs/GATE_P4_RECOVERY_REPLACEMENT.md`.
+   - Inject `RecoveryService` into the `reconcile_intent` task in `createTaskList`.
+   - Keep A-owned persistence behind `RecoveryCommandStorePort`; the recovery package does not write A tables.
 
 4. **Freeze the frontend boundary**:
    - Revalidate the A01 OpenAPI v1 artifact against the composed backend.
