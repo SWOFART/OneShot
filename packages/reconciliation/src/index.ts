@@ -14,4 +14,22 @@ export {
   listScenarioNames,
   SCENARIO_NAMES,
 } from './simulator.js';
+export {
+  buildBoundEvidenceRecords,
+  isAuthoritativeArcProof,
+  isAuthoritativeArcRevert,
+  type ExtractedEvidenceBundle,
+} from './evidence-model.js';
+export {
+  buildRecoveryAgentInput,
+  DEFAULT_MODEL_IDENTITY,
+  UNTRUSTED_DATA_NOTICE,
+  validateAndNormalizeRecommendation,
+} from './agent-contract.js';
+export { evaluateReconciliation, type EvaluateReconciliationParams } from './safety-core.js';
+export {
+  RecoveryAgentSimulator,
+  type RecoveryAgentSimulatorOptions,
+  type SimulatorScenarioName,
+} from './agent-simulator.js';
 export * from './types.js';

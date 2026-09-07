@@ -1,0 +1,26 @@
+{
+  "version": "recovery-advisor-v1",
+  "recommendation": {
+    "action": "RETURN_EXISTING_RESULT",
+    "decisionId": "dec-return-001",
+    "reason": "Matching transfer observation identified on-chain",
+    "referencedEvidenceIds": [
+      "arc:0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    ],
+    "modelIdentity": {
+      "modelName": "recovery-advisor-llm",
+      "modelVersion": "1.0.0",
+      "promptVersion": "recovery-v1"
+    },
+    "timestamp": "2026-09-07T12:00:00.000Z"
+  },
+  "expected": {
+    "disposition_with_arc_proof": "CONFIRMED_ON_CHAIN",
+    "command_with_arc_proof": "MARK_COMMITTED",
+    "target_state_with_arc_proof": "COMMITTED",
+    "disposition_without_arc_proof": "UNVERIFIED_ADVISORY_OVERRIDE",
+    "command_without_arc_proof": "HOLD_UNKNOWN",
+    "target_state_without_arc_proof": "UNKNOWN",
+    "external_submission_count": 0
+  }
+}
