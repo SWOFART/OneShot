@@ -40,13 +40,17 @@ All ports conform to frozen definitions in `@oneshot/contracts`:
 
 ## Environment Configuration
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `ONESHOT_PROFILE` | `simulator` | Active composition profile (`simulator` or `production`) |
-| `ONESHOT_NETWORK` | `eip155:5042002` | Expected CAIP-2 blockchain network identifier |
-| `ONESHOT_CONTRACT_VERSION` | `1.0.0` | Frozen contract interface version |
-| `ONESHOT_SUBMISSIONS_DISABLED` | `false` | Safe disable switch pausing new submission ownership |
-| `ONESHOT_SUBMISSION_LEASE_MS` | `30000` | Lease duration before orphaned `SUBMITTING` intents expire |
+| Variable                       | Default          | Purpose                                                    |
+| ------------------------------ | ---------------- | ---------------------------------------------------------- |
+| `ONESHOT_PROFILE`              | `simulator`      | Active composition profile (`simulator` or `production`)   |
+| `ONESHOT_NETWORK`              | `eip155:5042002` | Expected CAIP-2 blockchain network identifier              |
+| `ONESHOT_CONTRACT_VERSION`     | `1.0.0`          | Frozen contract interface version                          |
+| `ONESHOT_SUBMISSIONS_DISABLED` | `false`          | Safe disable switch pausing new submission ownership       |
+| `ONESHOT_SUBMISSION_LEASE_MS`  | `30000`          | Lease duration before orphaned `SUBMITTING` intents expire |
+
+The executable API runtime and its PostgreSQL/Cloud SQL configuration are documented
+in [`SERVER_RUNTIME.md`](SERVER_RUNTIME.md). Runtime hosting does not freeze the
+frontend contract or release the P4 frontend gate.
 
 ## Readiness Verification
 

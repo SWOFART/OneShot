@@ -15,6 +15,9 @@ Implement Coder A Milestone A04: restart safety, safe operations disable, struct
 - Readiness check (`/health/ready`) verifies database connectivity, chain identity, and contract version compatibility, failing closed without leaking sensitive data.
 - Telemetry module enforces explicit redaction of private keys, tokens, auth headers, and sensitive payloads.
 - Port composition defines frozen simulator profiles for Arc settlement and Privy authorization, creating clean dependency injection boundaries for Gate P4.
+- `@oneshot/api` now has an executable process boundary. It applies migrations before listening, accepts local `DATABASE_URL` or Cloud SQL Unix-socket configuration, and shuts down the HTTP server and PostgreSQL pool together.
+- The production hosting target is Cloud Run plus Cloud SQL for PostgreSQL. Cloud provisioning, IAM, and secrets stay outside source control.
+- The A01 OpenAPI artifact exists, but A05/B05/C05 remain blocked until P4 revalidates the composed contract and publishes a versioned mock server.
 
 ## Files touched/created
 
@@ -22,6 +25,9 @@ Implement Coder A Milestone A04: restart safety, safe operations disable, struct
 - `packages/domain/src/index.ts`
 - `packages/storage-postgres/src/ledger.ts`
 - `apps/api/src/app.ts`
+- `apps/api/src/config.ts`
+- `apps/api/src/runtime.ts`
+- `apps/api/src/server.ts`
 - `apps/worker/src/types.ts`
 - `apps/worker/src/worker.ts`
 - `apps/worker/src/composition.ts`
@@ -35,8 +41,9 @@ Implement Coder A Milestone A04: restart safety, safe operations disable, struct
 - `docs/DASHBOARDS_AND_ALERTS.md`
 - `docs/SAFE_DISABLE_RUNBOOK.md`
 - `docs/GATE_P4_CHECKLIST.md`
+- `docs/SERVER_RUNTIME.md`
 
 ## Review gates
 
-- Gate A: Pending
-- Gate B: Pending
+- Gate A: previous verdict invalidated by the supplementary server change; refresh pending
+- Gate B: previous verdict invalidated by the supplementary server change; refresh after CI

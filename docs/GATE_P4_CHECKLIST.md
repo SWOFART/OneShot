@@ -37,6 +37,12 @@ At Gate P4, checked simulators are replaced with real reviewed package versions,
 3. **Replace Recovery Engine**:
    - Wire `SubgraphMcpRecoveryEngine` into `reconcile_intent` task in `createTaskList`.
 
+4. **Freeze the frontend boundary**:
+   - Revalidate the A01 OpenAPI v1 artifact against the composed backend.
+   - Freeze recovery-view semantics and sanitized UI fixtures.
+   - Publish a versioned mock server that serves the frozen OpenAPI behavior.
+   - Keep A05, B05, and C05 blocked until this step and the integrated proofs pass.
+
 ## Verification Commands
 
 Run the full verification matrix to validate integrated convergence:

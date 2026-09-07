@@ -2,7 +2,7 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import { IntentLedger, migrate } from '@oneshot/storage-postgres';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buildApi, staticBearerAuthenticator } from '../src/index.js';
+import { buildApi, startApiRuntime, staticBearerAuthenticator } from '../src/index.js';
 
 const describePostgres = process.env.TEST_POSTGRES === '1' ? describe : describe.skip;
 const request = {
@@ -73,5 +73,22 @@ describePostgres('durable HTTP API', () => {
       version: 1,
     });
     await restartedApp.close();
+  });
+
+  it('starts the executable server and reports database readiness', async () => {
+    const runtime = await startApiRuntime({
+      host: '127.0.0.1',
+      port: 0,
+      serviceBearerToken: 'integration-token',
+      database: { connectionString: container.getConnectionUri() },
+      submissionsDisabled: false,
+    });
+    try {
+      const response = await fetch(`${runtime.address}/health/ready`);
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({ status: 'ok' });
+    } finally {
+      await runtime.close();
+    }
   });
 });
