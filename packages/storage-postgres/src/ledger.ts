@@ -10,6 +10,8 @@ import {
   type IntentState,
   type RecoveryView,
   type ReconcileResponse,
+  type AuthorizationResult,
+  type SettlementResult,
   type SettlementView,
 } from '@oneshot/contracts';
 import { fingerprintIntent } from '@oneshot/domain';
@@ -24,6 +26,45 @@ export type CreateIntentResult =
   | { readonly kind: 'ACCEPTED'; readonly intent: IntentResponse }
   | { readonly kind: 'REPLAY_IDENTICAL'; readonly intent: IntentResponse }
   | { readonly kind: 'INTENT_PAYLOAD_CONFLICT'; readonly intent: IntentResponse };
+
+export type ClaimSubmissionResult =
+  | {
+      readonly claimed: true;
+      readonly intent: IntentResponse;
+      readonly attemptId: string;
+      readonly correlationId: string;
+      readonly version: number;
+    }
+  | {
+      readonly claimed: false;
+      readonly reason: 'NOT_FOUND' | 'NOT_READY';
+      readonly currentState?: IntentState;
+      readonly version?: number;
+    };
+
+export type CompleteSubmissionResult =
+  | {
+      readonly completed: true;
+      readonly state: 'COMMITTED' | 'FAILED_SAFE' | 'UNKNOWN';
+      readonly version: number;
+    }
+  | {
+      readonly completed: false;
+      readonly reason: 'NOT_FOUND' | 'INVALID_STATE';
+      readonly currentState?: IntentState;
+    };
+
+export type CompleteAuthorizationResult =
+  | {
+      readonly completed: true;
+      readonly state: 'READY' | 'REJECTED' | 'AUTHORIZING';
+      readonly version: number;
+    }
+  | {
+      readonly completed: false;
+      readonly reason: 'NOT_FOUND' | 'INVALID_STATE';
+      readonly currentState?: IntentState;
+    };
 
 interface IntentRow {
   readonly business_intent_id: string;
@@ -246,6 +287,249 @@ export class IntentLedger {
     );
   }
 
+  async completeAuthorization(
+    idValue: unknown,
+    expectedVersion: number,
+    result: AuthorizationResult,
+  ): Promise<CompleteAuthorizationResult> {
+    const id = asBusinessIntentId(idValue);
+    const client = await this.#pool.connect();
+    try {
+      await client.query('BEGIN');
+      const intent = await client.query<{ state: IntentState; version: number }>(
+        'SELECT state, version FROM business_intents WHERE business_intent_id = $1 FOR UPDATE',
+        [id],
+      );
+      const row = intent.rows[0];
+      if (!row) {
+        await client.query('ROLLBACK');
+        return { completed: false, reason: 'NOT_FOUND' };
+      }
+      if (row.state !== 'AUTHORIZING') {
+        await client.query('ROLLBACK');
+        return { completed: false, reason: 'INVALID_STATE', currentState: row.state };
+      }
+      const now = this.#dependencies.now();
+      if (result.kind === 'AUTHORIZED') {
+        const newVersion = expectedVersion + 1;
+        await client.query(
+          'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND version = $5',
+          ['READY', newVersion, now, id, expectedVersion],
+        );
+        await client.query(
+          `INSERT INTO outbox_jobs (
+            business_intent_id, job_key, task_identifier, payload,
+            available_at, created_at
+          ) VALUES ($1, $2, 'submit_settlement', $3::jsonb, $4, $4)
+          ON CONFLICT (job_key) DO NOTHING`,
+          [id, `submit:${id}:${newVersion}`, JSON.stringify({ business_intent_id: id }), now],
+        );
+        await client.query('COMMIT');
+        return { completed: true, state: 'READY', version: newVersion };
+      }
+      if (result.kind === 'DENIED') {
+        const newVersion = expectedVersion + 1;
+        await client.query(
+          'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND version = $5',
+          ['REJECTED', newVersion, now, id, expectedVersion],
+        );
+        await client.query(
+          'UPDATE attempts SET stage = $1, sanitized_error = $2 WHERE business_intent_id = $3 AND attempt_sequence = 1',
+          ['REJECTED', result.reason, id],
+        );
+        await client.query('COMMIT');
+        return { completed: true, state: 'REJECTED', version: newVersion };
+      }
+      await client.query('COMMIT');
+      return { completed: true, state: 'AUTHORIZING', version: row.version };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async claimSubmission(
+    idValue: unknown,
+    correlationIdValue?: unknown,
+  ): Promise<ClaimSubmissionResult> {
+    const id = asBusinessIntentId(idValue);
+    const correlationId = correlationIdValue
+      ? asCorrelationId(correlationIdValue)
+      : asCorrelationId(`corr-${id}`);
+    const client = await this.#pool.connect();
+    try {
+      await client.query('BEGIN');
+      const intentResult = await client.query<{
+        state: IntentState;
+        version: number;
+        payload_fingerprint: string;
+      }>(
+        'SELECT state, version, payload_fingerprint FROM business_intents WHERE business_intent_id = $1 FOR UPDATE',
+        [id],
+      );
+      const row = intentResult.rows[0];
+      if (!row) {
+        await client.query('ROLLBACK');
+        return { claimed: false, reason: 'NOT_FOUND' };
+      }
+      if (row.state !== 'READY') {
+        await client.query('ROLLBACK');
+        return {
+          claimed: false,
+          reason: 'NOT_READY',
+          currentState: row.state,
+          version: row.version,
+        };
+      }
+      const newVersion = row.version + 1;
+      const now = this.#dependencies.now();
+      const attemptId = asAttemptId(this.#dependencies.nextAttemptId());
+      const countResult = await client.query<{ count: string }>(
+        'SELECT count(*)::text AS count FROM attempts WHERE business_intent_id = $1',
+        [id],
+      );
+      const attemptSequence = Number(countResult.rows[0]?.count ?? '0') + 1;
+
+      await client.query(
+        'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND version = $5',
+        ['SUBMITTING', newVersion, now, id, row.version],
+      );
+      await client.query(
+        `INSERT INTO attempts (
+          attempt_id, business_intent_id, attempt_sequence, stage,
+          correlation_id, request_body_fingerprint, token_contract,
+          method, native_value_atomic, created_at
+        ) VALUES (
+          $1, $2, $3, 'SUBMITTING', $4, $5,
+          '0x3600000000000000000000000000000000000000', 'transfer', '0', $6
+        )`,
+        [attemptId, id, attemptSequence, correlationId, row.payload_fingerprint, now],
+      );
+      const intent = await this.#readIntent(client, id);
+      await client.query('COMMIT');
+      return {
+        claimed: true,
+        intent: intent!,
+        attemptId,
+        correlationId,
+        version: newVersion,
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async completeSubmission(
+    idValue: unknown,
+    attemptIdValue: unknown,
+    result: SettlementResult,
+  ): Promise<CompleteSubmissionResult> {
+    const id = asBusinessIntentId(idValue);
+    const attemptId = asAttemptId(attemptIdValue);
+    const client = await this.#pool.connect();
+    try {
+      await client.query('BEGIN');
+      const intentResult = await client.query<{ state: IntentState; version: number }>(
+        'SELECT state, version FROM business_intents WHERE business_intent_id = $1 FOR UPDATE',
+        [id],
+      );
+      const row = intentResult.rows[0];
+      if (!row) {
+        await client.query('ROLLBACK');
+        return { completed: false, reason: 'NOT_FOUND' };
+      }
+      if (row.state !== 'SUBMITTING') {
+        await client.query('ROLLBACK');
+        return { completed: false, reason: 'INVALID_STATE', currentState: row.state };
+      }
+      const newVersion = row.version + 1;
+      const now = this.#dependencies.now();
+
+      if (result.kind === 'CONFIRMED') {
+        await client.query(
+          'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND state = $5',
+          ['COMMITTED', newVersion, now, id, 'SUBMITTING'],
+        );
+        await client.query(
+          `INSERT INTO settlements (
+            business_intent_id, provider_reference_id, transaction_hash,
+            block_number, transfer_log_index, committed_at
+          ) VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (business_intent_id) DO NOTHING`,
+          [
+            id,
+            result.provider_reference_id,
+            result.transaction_hash,
+            result.block_number,
+            result.transfer_log_index,
+            now,
+          ],
+        );
+        await client.query(
+          `INSERT INTO evidence_observations (
+            business_intent_id, source, authority_class, retrieved_at,
+            digest, block_number, freshness
+          ) VALUES ($1, 'ONESHOT', 'AUTHORITATIVE', $2, $3, $4, 'FRESH')`,
+          [id, now, result.transaction_hash, result.block_number],
+        );
+        await client.query('UPDATE attempts SET stage = $1 WHERE attempt_id = $2', [
+          'COMMITTED',
+          attemptId,
+        ]);
+        await client.query('COMMIT');
+        return { completed: true, state: 'COMMITTED', version: newVersion };
+      }
+
+      if (result.kind === 'DEFINITELY_NOT_SUBMITTED') {
+        await client.query(
+          'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND state = $5',
+          ['FAILED_SAFE', newVersion, now, id, 'SUBMITTING'],
+        );
+        await client.query(
+          'UPDATE attempts SET stage = $1, sanitized_error = $2 WHERE attempt_id = $3',
+          ['FAILED_SAFE', result.reason, attemptId],
+        );
+        await client.query('COMMIT');
+        return { completed: true, state: 'FAILED_SAFE', version: newVersion };
+      }
+
+      // POSSIBLY_SUBMITTED or any unexpected variant -> UNKNOWN
+      await client.query(
+        'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND state = $5',
+        ['UNKNOWN', newVersion, now, id, 'SUBMITTING'],
+      );
+      await client.query(
+        'UPDATE attempts SET stage = $1, sanitized_error = $2 WHERE attempt_id = $3',
+        [
+          'UNKNOWN',
+          (result as { reason?: string } | null | undefined)?.reason ??
+            'Settlement outcome uncertain',
+          attemptId,
+        ],
+      );
+      await client.query(
+        `INSERT INTO outbox_jobs (
+          business_intent_id, job_key, task_identifier, payload,
+          available_at, created_at
+        ) VALUES ($1, $2, 'reconcile_intent', $3::jsonb, $4, $4)
+        ON CONFLICT (job_key) DO NOTHING`,
+        [id, `reconcile:${id}:${newVersion}`, JSON.stringify({ business_intent_id: id }), now],
+      );
+      await client.query('COMMIT');
+      return { completed: true, state: 'UNKNOWN', version: newVersion };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async #readIntent(
     client: PoolClient,
     id: BusinessIntentId,
@@ -262,32 +546,30 @@ export class IntentLedger {
 
     const attemptLimit = boundedLimit(limits.attempts);
     const evidenceLimit = boundedLimit(limits.evidence);
-    const [attemptResult, settlementResult, evidenceResult] = await Promise.all([
-      client.query<AttemptRow>(
-        `SELECT attempt_id, stage, created_at, sanitized_error
-        FROM (
-          SELECT attempt_id, stage, created_at, sanitized_error, attempt_sequence
-          FROM attempts WHERE business_intent_id = $1
-          ORDER BY attempt_sequence DESC LIMIT $2
-        ) bounded ORDER BY attempt_sequence ASC`,
-        [id, attemptLimit],
-      ),
-      client.query<SettlementRow>(
-        `SELECT provider_reference_id, transaction_hash, block_number, transfer_log_index
-        FROM settlements WHERE business_intent_id = $1`,
-        [id],
-      ),
-      client.query<EvidenceRow>(
-        `SELECT source, authority_class, retrieved_at, digest, block_number, freshness
-        FROM (
-          SELECT evidence_id, source, authority_class, retrieved_at, digest,
-            block_number, freshness
-          FROM evidence_observations WHERE business_intent_id = $1
-          ORDER BY evidence_id DESC LIMIT $2
-        ) bounded ORDER BY evidence_id ASC`,
-        [id, evidenceLimit],
-      ),
-    ]);
+    const attemptResult = await client.query<AttemptRow>(
+      `SELECT attempt_id, stage, created_at, sanitized_error
+      FROM (
+        SELECT attempt_id, stage, created_at, sanitized_error, attempt_sequence
+        FROM attempts WHERE business_intent_id = $1
+        ORDER BY attempt_sequence DESC LIMIT $2
+      ) bounded ORDER BY attempt_sequence ASC`,
+      [id, attemptLimit],
+    );
+    const settlementResult = await client.query<SettlementRow>(
+      `SELECT provider_reference_id, transaction_hash, block_number, transfer_log_index
+      FROM settlements WHERE business_intent_id = $1`,
+      [id],
+    );
+    const evidenceResult = await client.query<EvidenceRow>(
+      `SELECT source, authority_class, retrieved_at, digest, block_number, freshness
+      FROM (
+        SELECT evidence_id, source, authority_class, retrieved_at, digest,
+          block_number, freshness
+        FROM evidence_observations WHERE business_intent_id = $1
+        ORDER BY evidence_id DESC LIMIT $2
+      ) bounded ORDER BY evidence_id ASC`,
+      [id, evidenceLimit],
+    );
 
     const attempts: AttemptView[] = attemptResult.rows.map((row) => ({
       attempt_id: row.attempt_id,

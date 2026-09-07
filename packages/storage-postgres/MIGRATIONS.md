@@ -12,11 +12,11 @@ silently edited or automatically reversed.
 
 ## Storage V1 Schema Digest
 
-The frozen `storage-v1` migration set (`001_core_ledger.sql`, `002_query_indexes.sql`)
+The frozen `storage-v1` migration set (`001_core_ledger.sql`, `002_query_indexes.sql`, `003_worker_jobs.sql`)
 has SHA-256 digest:
 
 ```text
-09b7fc0ce90a3db9dfd0437ae1abdac7260603154216b223116d0e123967d742
+5d5888894ff0f4f44049579f1c8ffca2a24e0b61c3af65aabdbcd78f06020d65
 ```
 
 ## Containerized Testing Command
