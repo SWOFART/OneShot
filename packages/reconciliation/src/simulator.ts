@@ -326,6 +326,7 @@ export function createKnownIdentityFixture(): KnownIdentityRecoveryEvidence {
     local: {
       authority: 'AUTHORITATIVE_ONESHOT',
       stateVersion: '7',
+      submissionReference: 'privy-intent-c01-0001',
       settlementState: 'UNKNOWN',
       persistedAt: '2026-09-07T13:00:00Z',
       digest: '21'.repeat(32),
@@ -343,6 +344,7 @@ export function createKnownIdentityFixture(): KnownIdentityRecoveryEvidence {
       authority: 'AUTHORITATIVE_CHAIN_EVIDENCE',
       network: 'eip155:5042002',
       transactionHash: TX_A,
+      submissionReference: 'privy-intent-c01-0001',
       receiptStatus: 'SUCCESS',
       finality: 'FINAL',
       blockNumber: '110',

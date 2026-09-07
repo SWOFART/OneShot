@@ -10,3 +10,4 @@ allowBuilds:
   esbuild: true
   protobufjs: true
   ssh2: false
+  workerd: true

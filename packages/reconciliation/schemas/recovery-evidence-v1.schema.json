@@ -11,10 +11,18 @@
     "local": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["authority", "stateVersion", "settlementState", "persistedAt", "digest"],
+      "required": [
+        "authority",
+        "stateVersion",
+        "submissionReference",
+        "settlementState",
+        "persistedAt",
+        "digest"
+      ],
       "properties": {
         "authority": { "const": "AUTHORITATIVE_ONESHOT" },
         "stateVersion": { "$ref": "#/$defs/uint" },
+        "submissionReference": { "type": "string", "maxLength": 128 },
         "settlementState": {
           "enum": ["SUBMITTING", "UNKNOWN", "COMMITTED", "FAILED_SAFE"]
         },
@@ -63,6 +71,7 @@
             "authority",
             "network",
             "transactionHash",
+            "submissionReference",
             "receiptStatus",
             "finality",
             "blockNumber",
@@ -76,6 +85,7 @@
             "authority": { "const": "AUTHORITATIVE_CHAIN_EVIDENCE" },
             "network": { "type": "string", "maxLength": 96 },
             "transactionHash": { "$ref": "#/$defs/hash" },
+            "submissionReference": { "type": "string", "maxLength": 128 },
             "receiptStatus": {
               "enum": ["SUCCESS", "REVERT", "PENDING", "NOT_FOUND", "UNAVAILABLE"]
             },
