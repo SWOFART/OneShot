@@ -1,0 +1,822 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OneShot API",
+    "version": "1.0.0",
+    "description": "At-most-once USDC settlement API. No endpoint grants a blind settlement retry."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "paths": {
+    "/v1/intents": {
+      "post": {
+        "operationId": "createIntent",
+        "summary": "Create or replay one Business Intent",
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIntentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Identical replay; existing intent returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntentResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "New intent accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INTENT_PAYLOAD_CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/intents/{id}": {
+      "get": {
+        "operationId": "getIntent",
+        "summary": "Read authoritative intent state",
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "description": "Stable Business Intent identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Intent state and sanitized evidence.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "INTENT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/intents/{id}/reconcile": {
+      "post": {
+        "operationId": "reconcileIntent",
+        "summary": "Queue read-only reconciliation; never submit settlement",
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "description": "Stable Business Intent identifier."
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Reconciliation lookup queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "INTENT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "RECONCILIATION_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/intents/{id}/recovery-view": {
+      "get": {
+        "operationId": "getRecoveryView",
+        "summary": "Read authority-labelled recovery evidence",
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "description": "Stable Business Intent identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recovery view.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "INTENT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "EVIDENCE_UNAVAILABLE; local state is retained.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "getLiveness",
+        "summary": "Process liveness",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Process can serve.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Process cannot serve.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "getReadiness",
+        "summary": "Database, configuration, and Arc identity readiness",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service is ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "serviceBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "opaque service token"
+      }
+    },
+    "schemas": {
+      "CreateIntentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "business_intent_id",
+          "recipient",
+          "amount_atomic",
+          "asset",
+          "network",
+          "purpose"
+        ],
+        "properties": {
+          "business_intent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$",
+            "examples": [
+              "018f-example-stable-id"
+            ]
+          },
+          "recipient": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "examples": [
+              "0x1111111111111111111111111111111111111111"
+            ]
+          },
+          "amount_atomic": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 78,
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "examples": [
+              "1250000"
+            ]
+          },
+          "asset": {
+            "type": "string",
+            "const": "USDC"
+          },
+          "network": {
+            "type": "string",
+            "const": "eip155:5042002"
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "examples": [
+              "Invoice INV-1001"
+            ]
+          }
+        }
+      },
+      "Attempt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attempt_id",
+          "stage",
+          "created_at"
+        ],
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "AUTHORIZING",
+              "READY",
+              "SUBMITTING",
+              "COMMITTED",
+              "FAILED_SAFE",
+              "UNKNOWN",
+              "REJECTED"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sanitized_error": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      },
+      "Settlement": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider_reference_id",
+          "transaction_hash",
+          "block_number",
+          "transfer_log_index"
+        ],
+        "properties": {
+          "provider_reference_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          },
+          "transaction_hash": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{64}$"
+          },
+          "block_number": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 78,
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "examples": [
+              "1250000"
+            ]
+          },
+          "transfer_log_index": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "EvidenceObservation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "authority_class",
+          "retrieved_at",
+          "digest"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "ONESHOT",
+              "PRIVY",
+              "ARC",
+              "THE_GRAPH",
+              "LLM"
+            ]
+          },
+          "authority_class": {
+            "type": "string",
+            "enum": [
+              "AUTHORITATIVE",
+              "OBSERVATION",
+              "ADVISORY"
+            ]
+          },
+          "retrieved_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "digest": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "block_number": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 78,
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "examples": [
+              "1250000"
+            ]
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "FRESH",
+              "LAGGING",
+              "UNHEALTHY",
+              "UNAVAILABLE",
+              "UNKNOWN_FRESHNESS"
+            ]
+          }
+        }
+      },
+      "IntentResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "business_intent_id",
+          "payload_fingerprint",
+          "recipient",
+          "amount_atomic",
+          "asset",
+          "network",
+          "purpose",
+          "state",
+          "version",
+          "attempts",
+          "evidence"
+        ],
+        "properties": {
+          "business_intent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          },
+          "payload_fingerprint": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "recipient": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "examples": [
+              "0x1111111111111111111111111111111111111111"
+            ]
+          },
+          "amount_atomic": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 78,
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "examples": [
+              "1250000"
+            ]
+          },
+          "asset": {
+            "type": "string",
+            "const": "USDC"
+          },
+          "network": {
+            "type": "string",
+            "const": "eip155:5042002"
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "AUTHORIZING",
+              "READY",
+              "SUBMITTING",
+              "COMMITTED",
+              "FAILED_SAFE",
+              "UNKNOWN",
+              "REJECTED"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "attempts": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/Attempt"
+            }
+          },
+          "settlement": {
+            "$ref": "#/components/schemas/Settlement"
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/EvidenceObservation"
+            }
+          }
+        }
+      },
+      "ReconcileResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "business_intent_id",
+          "queued",
+          "state"
+        ],
+        "properties": {
+          "business_intent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          },
+          "queued": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "AUTHORIZING",
+              "READY",
+              "SUBMITTING",
+              "COMMITTED",
+              "FAILED_SAFE",
+              "UNKNOWN",
+              "REJECTED"
+            ]
+          }
+        }
+      },
+      "RecoveryView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "business_intent_id",
+          "authoritative_state",
+          "recommended_action",
+          "evidence"
+        ],
+        "properties": {
+          "business_intent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          },
+          "authoritative_state": {
+            "type": "string",
+            "enum": [
+              "AUTHORIZING",
+              "READY",
+              "SUBMITTING",
+              "COMMITTED",
+              "FAILED_SAFE",
+              "UNKNOWN",
+              "REJECTED"
+            ]
+          },
+          "recommended_action": {
+            "type": "string",
+            "enum": [
+              "WAIT",
+              "RECONCILE",
+              "ESCALATE",
+              "RETURN_EXISTING_RESULT"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/EvidenceObservation"
+            }
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "not_ready"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "correlation_id"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "INVALID_REQUEST",
+              "UNAUTHORIZED",
+              "FORBIDDEN",
+              "INTENT_PAYLOAD_CONFLICT",
+              "INTENT_NOT_FOUND",
+              "RECONCILIATION_NOT_ALLOWED",
+              "RATE_LIMITED",
+              "EVIDENCE_UNAVAILABLE",
+              "NOT_READY",
+              "INTERNAL_ERROR"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "correlation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        }
+      }
+    }
+  }
+}

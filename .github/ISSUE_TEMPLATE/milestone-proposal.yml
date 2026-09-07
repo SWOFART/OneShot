@@ -1,6 +1,6 @@
 name: Milestone or feature proposal
 description: Propose a measurable product, engineering, or feature outcome.
-title: "[Proposal]: "
+title: '[Proposal]: '
 body:
   - type: textarea
     id: outcome

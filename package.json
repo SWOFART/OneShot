@@ -1,0 +1,34 @@
+{
+  "name": "oneshot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": "24.19.0",
+    "pnpm": "11.19.0"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "check:generated": "pnpm --filter @oneshot/contracts check:generated",
+    "clean": "tsc -b --clean",
+    "format": "prettier --write \"**/*.{ts,mts,mjs,json,jsonc,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,mts,mjs,json,jsonc,yml,yaml}\"",
+    "generate": "pnpm --filter @oneshot/contracts generate",
+    "lint": "eslint .",
+    "test": "pnpm build && vitest run",
+    "typecheck": "tsc -b --pretty false",
+    "validate:fixtures": "pnpm --filter @oneshot/contracts validate:fixtures"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.13.3",
+    "eslint": "10.10.0",
+    "globals": "17.4.0",
+    "prettier": "3.9.6",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.69.0",
+    "vite": "8.0.0",
+    "vitest": "5.0.0"
+  }
+}
