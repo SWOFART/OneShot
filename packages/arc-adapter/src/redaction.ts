@@ -52,7 +52,39 @@ const FORBIDDEN_VALUE_PATTERNS: readonly RegExp[] = [
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
   /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\./, // JWT
   /\bBearer\s+[A-Za-z0-9._-]{10,}/i,
-  /\b0x[a-fA-F0-9]{64}\b/, // 32-byte hex: private key or signing material
+];
+
+/**
+ * 32-byte hex, which is the shape of both a private key and a keccak hash.
+ *
+ * Shape alone cannot tell them apart, so this is applied only OUTSIDE the
+ * fields below. Applying it everywhere destroyed the evidence: transaction
+ * hashes, block hashes, event topics, ABI-encoded words, and payload
+ * fingerprints are all 32-byte hex, and redacting them left fixtures that no
+ * longer proved the settlement they were captured to prove.
+ */
+const THIRTY_TWO_BYTE_HEX = /\b0x[a-fA-F0-9]{64}\b/;
+
+/**
+ * Fields where 32-byte hex is the expected, publishable content.
+ *
+ * Key material never legitimately travels under these names; it travels under
+ * the FORBIDDEN_KEY_PATTERNS names, which are redacted regardless of shape.
+ */
+const HASH_BEARING_FIELDS: readonly string[] = [
+  'transactionhash',
+  'blockhash',
+  'parenthash',
+  'hash',
+  'topics',
+  'data',
+  'payloadfingerprint',
+  'idempotencykey',
+  'fingerprint',
+  'digest',
+  'replayof',
+  'memoid',
+  'root',
 ];
 
 /**
@@ -68,8 +100,14 @@ function keyIsForbidden(key: string): boolean {
   return FORBIDDEN_KEY_PATTERNS.some((pattern) => normalized.includes(normalizeKey(pattern)));
 }
 
-function valueLooksLikeSecret(value: string): boolean {
-  return FORBIDDEN_VALUE_PATTERNS.some((pattern) => pattern.test(value));
+function valueLooksLikeSecret(value: string, fieldName?: string): boolean {
+  if (FORBIDDEN_VALUE_PATTERNS.some((pattern) => pattern.test(value))) return true;
+
+  // Only treat bare 32-byte hex as secret when it is NOT in a field that
+  // legitimately carries a hash.
+  const field = fieldName === undefined ? undefined : normalizeKey(fieldName);
+  const hashBearing = field !== undefined && HASH_BEARING_FIELDS.includes(field);
+  return !hashBearing && THIRTY_TWO_BYTE_HEX.test(value);
 }
 
 /**
@@ -79,13 +117,13 @@ function valueLooksLikeSecret(value: string): boolean {
  * depth. Depth is bounded because a hostile or malformed provider response must
  * not be able to exhaust the stack inside the logging path.
  */
-export function redact(value: unknown, depth = 0): unknown {
+export function redact(value: unknown, depth = 0, fieldName?: string): unknown {
   if (depth > 12) return REDACTED;
 
   if (value === null || value === undefined) return value;
 
   if (typeof value === 'string') {
-    return valueLooksLikeSecret(value) ? REDACTED : value;
+    return valueLooksLikeSecret(value, fieldName) ? REDACTED : value;
   }
 
   if (typeof value === 'bigint') return value.toString(10);
@@ -93,13 +131,15 @@ export function redact(value: unknown, depth = 0): unknown {
   if (typeof value === 'number' || typeof value === 'boolean') return value;
 
   if (Array.isArray(value)) {
-    return value.map((entry) => redact(entry, depth + 1));
+    // Array entries inherit the parent field name, so `topics: [...]` stays
+    // hash-bearing for every element.
+    return value.map((entry) => redact(entry, depth + 1, fieldName));
   }
 
   if (typeof value === 'object') {
     const out: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-      out[key] = keyIsForbidden(key) ? REDACTED : redact(entry, depth + 1);
+      out[key] = keyIsForbidden(key) ? REDACTED : redact(entry, depth + 1, key);
     }
     return out;
   }
@@ -114,11 +154,11 @@ export function redact(value: unknown, depth = 0): unknown {
  * Used as a test guard on every committed fixture so a leak fails the suite
  * instead of reaching the repository.
  */
-export function assertNoSecrets(value: unknown, path = '$'): void {
+export function assertNoSecrets(value: unknown, path = '$', fieldName?: string): void {
   if (value === null || value === undefined) return;
 
   if (typeof value === 'string') {
-    if (valueLooksLikeSecret(value)) {
+    if (valueLooksLikeSecret(value, fieldName)) {
       throw new Error(`Secret-shaped value found at ${path}.`);
     }
     return;
@@ -126,7 +166,7 @@ export function assertNoSecrets(value: unknown, path = '$'): void {
 
   if (Array.isArray(value)) {
     value.forEach((entry, index) => {
-      assertNoSecrets(entry, `${path}[${index}]`);
+      assertNoSecrets(entry, `${path}[${index}]`, fieldName);
     });
     return;
   }
@@ -139,7 +179,7 @@ export function assertNoSecrets(value: unknown, path = '$'): void {
         }
         continue;
       }
-      assertNoSecrets(entry, `${path}.${key}`);
+      assertNoSecrets(entry, `${path}.${key}`, key);
     }
   }
 }
