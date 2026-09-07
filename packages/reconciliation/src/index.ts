@@ -32,4 +32,5 @@ export {
   type RecoveryAgentSimulatorOptions,
   type SimulatorScenarioName,
 } from './agent-simulator.js';
+export * from './chaos/index.js';
 export * from './types.js';
