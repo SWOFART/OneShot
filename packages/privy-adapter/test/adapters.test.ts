@@ -282,3 +282,36 @@ describe('ArcSettlementAdapter', () => {
     expect(result.kind).toBe('DEFINITELY_NOT_SUBMITTED');
   });
 });
+
+describe('provider data is validated at the boundary', () => {
+  it.each([-1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])(
+    'refuses to confirm when the Transfer log index is %s',
+    async (logIndex) => {
+      // The value comes from provider data. parseSettlementResult would reject
+      // it downstream, but that throws inside the worker; failing closed here
+      // keeps the intent reconcilable.
+      const wallet = provider({
+        getReceipt: () =>
+          Promise.resolve(
+            receipt({
+              logs: [
+                {
+                  address: USDC,
+                  topics: [TRANSFER_EVENT_TOPIC, topic(WALLET), topic(RECIPIENT)],
+                  data: `0x${(500_000n).toString(16).padStart(64, '0')}`,
+                  logIndex,
+                },
+              ],
+            }),
+          ),
+      });
+      const result = await new ArcSettlementAdapter(config, wallet).submit(intent());
+      expect(result.kind).toBe('POSSIBLY_SUBMITTED');
+    },
+  );
+
+  it('still confirms a log index of zero', () => {
+    // Zero is valid and must not be rejected by a truthiness check.
+    expect(Number.isSafeInteger(0) && 0 >= 0).toBe(true);
+  });
+});

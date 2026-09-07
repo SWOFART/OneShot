@@ -266,7 +266,21 @@ export class ArcSettlementAdapter {
     });
 
     switch (verdict.result) {
-      case 'CONFIRMED':
+      case 'CONFIRMED': {
+        // transferLogIndex originates in provider data, so it is validated
+        // here rather than trusted. parseSettlementResult would reject a bad
+        // value downstream, but that surfaces as a thrown contract error
+        // inside the worker; failing closed to POSSIBLY_SUBMITTED keeps the
+        // intent reconcilable instead.
+        if (
+          !Number.isSafeInteger(verdict.transferLogIndex) ||
+          verdict.transferLogIndex < 0
+        ) {
+          return {
+            kind: 'POSSIBLY_SUBMITTED',
+            reason: 'Receipt matched but its Transfer log index was not a valid non-negative integer',
+          };
+        }
         return {
           kind: 'CONFIRMED',
           provider_reference_id: asProviderReferenceId(sent.providerReferenceId),
@@ -274,6 +288,7 @@ export class ArcSettlementAdapter {
           block_number: asBlockNumber(receipt.blockNumber.toString(10)),
           transfer_log_index: verdict.transferLogIndex,
         };
+      }
 
       case 'FINAL_REVERT':
         // A revert moved no value, so a fresh attempt is safe.
