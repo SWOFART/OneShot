@@ -5,3 +5,6 @@ pnpm-lock.yaml
 packages/contracts/generated
 packages/contracts/openapi
 packages/contracts/src/generated
+packages/arc-adapter/
+packages/privy-adapter/
+packages/testkit-settlement/

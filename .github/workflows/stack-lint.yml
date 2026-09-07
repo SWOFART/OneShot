@@ -112,3 +112,30 @@ jobs:
         env:
           TEST_POSTGRES: '1'
         run: pnpm test:integration
+
+  settlement-packages:
+    name: Arc and Privy packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+          cache-dependency-path: |
+            packages/arc-adapter/package-lock.json
+            packages/privy-adapter/package-lock.json
+            packages/testkit-settlement/package-lock.json
+
+      - name: Check Arc adapter
+        working-directory: packages/arc-adapter
+        run: npm ci && npm run check
+
+      - name: Check Privy adapter
+        working-directory: packages/privy-adapter
+        run: npm ci && npm run check
+
+      - name: Check settlement testkit
+        working-directory: packages/testkit-settlement
+        run: npm ci && npm run check

@@ -1,12 +1,15 @@
 packages:
   - apps/*
   - packages/*
+  - '!packages/arc-adapter'
+  - '!packages/privy-adapter'
+  - '!packages/testkit-settlement'
 
 saveExact: true
 strictPeerDependencies: true
 autoInstallPeers: true
 allowBuilds:
-  cpu-features: true
+  cpu-features: false
   esbuild: true
   protobufjs: true
-  ssh2: true
+  ssh2: false

@@ -14,7 +14,7 @@ import {
   type SettlementResult,
   type SettlementView,
 } from '@oneshot/contracts';
-import { fingerprintIntent } from '@oneshot/domain';
+import { fingerprintIntent, type SystemMetrics } from '@oneshot/domain';
 import type { Pool, PoolClient } from 'pg';
 
 export interface LedgerDependencies {
@@ -609,5 +609,124 @@ export class IntentLedger {
       ...(settlement ? { settlement } : {}),
       evidence,
     };
+  }
+
+  async recoverOrphanedSubmissions(
+    staleBefore: Date,
+  ): Promise<readonly { readonly businessIntentId: string; readonly newVersion: number }[]> {
+    const client = await this.#pool.connect();
+    const now = this.#dependencies.now().toISOString();
+    try {
+      await client.query('BEGIN');
+      const orphans = await client.query<{ business_intent_id: string; version: number }>(
+        `SELECT business_intent_id, version
+        FROM business_intents
+        WHERE state = 'SUBMITTING' AND updated_at <= $1
+        FOR UPDATE SKIP LOCKED`,
+        [staleBefore.toISOString()],
+      );
+
+      const recovered: { businessIntentId: string; newVersion: number }[] = [];
+
+      for (const orphan of orphans.rows) {
+        const newVersion = orphan.version + 1;
+        await client.query(
+          `UPDATE business_intents
+          SET state = 'UNKNOWN', version = $1, updated_at = $2
+          WHERE business_intent_id = $3 AND state = 'SUBMITTING'`,
+          [newVersion, now, orphan.business_intent_id],
+        );
+
+        await client.query(
+          `UPDATE attempts
+          SET stage = 'UNKNOWN', sanitized_error = 'Lease expired during SUBMITTING, routed to reconciliation'
+          WHERE business_intent_id = $1 AND stage = 'SUBMITTING'`,
+          [orphan.business_intent_id],
+        );
+
+        await client.query(
+          `INSERT INTO outbox_jobs (
+            business_intent_id, job_key, task_identifier, payload,
+            available_at, created_at
+          ) VALUES ($1, $2, 'reconcile_intent', $3::jsonb, $4, $4)
+          ON CONFLICT (job_key) DO NOTHING`,
+          [
+            orphan.business_intent_id,
+            `reconcile:${orphan.business_intent_id}:${newVersion}`,
+            JSON.stringify({ business_intent_id: orphan.business_intent_id }),
+            now,
+          ],
+        );
+
+        recovered.push({ businessIntentId: orphan.business_intent_id, newVersion });
+      }
+
+      await client.query('COMMIT');
+      return recovered;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async getSystemMetrics(): Promise<SystemMetrics> {
+    const client = await this.#pool.connect();
+    try {
+      const stateCountsResult = await client.query<{ state: IntentState; count: string }>(
+        'SELECT state, count(*)::text AS count FROM business_intents GROUP BY state',
+      );
+      const stateCounts: Record<IntentState, number> = {
+        AUTHORIZING: 0,
+        READY: 0,
+        SUBMITTING: 0,
+        COMMITTED: 0,
+        FAILED_SAFE: 0,
+        UNKNOWN: 0,
+        REJECTED: 0,
+      };
+      for (const row of stateCountsResult.rows) {
+        if (row.state in stateCounts) {
+          stateCounts[row.state] = Number(row.count);
+        }
+      }
+
+      const unknownMetrics = await client.query<{ count: string; oldest_age_ms: string }>(
+        `SELECT
+          count(*)::text AS count,
+          COALESCE(EXTRACT(EPOCH FROM (now() - MIN(updated_at))) * 1000, 0)::bigint::text AS oldest_age_ms
+        FROM business_intents WHERE state = 'UNKNOWN'`,
+      );
+
+      const queueLagResult = await client.query<{ queue_lag_ms: string }>(
+        `SELECT
+          COALESCE(EXTRACT(EPOCH FROM (now() - MIN(available_at))) * 1000, 0)::bigint::text AS queue_lag_ms
+        FROM outbox_jobs WHERE status = 'PENDING' AND available_at <= now()`,
+      );
+
+      const duplicateResult = await client.query<{ duplicates: string }>(
+        `SELECT count(*)::text AS duplicates FROM attempts WHERE attempt_sequence > 1`,
+      );
+
+      const policyDenialsResult = await client.query<{ denials: string }>(
+        `SELECT count(*)::text AS denials FROM attempts WHERE stage = 'REJECTED' OR sanitized_error LIKE '%policy%' OR sanitized_error LIKE '%denied%'`,
+      );
+
+      return {
+        timestamp: new Date().toISOString(),
+        stateCounts,
+        unknownCount: Number(unknownMetrics.rows[0]?.count ?? '0'),
+        oldestUnknownAgeMs: Number(unknownMetrics.rows[0]?.oldest_age_ms ?? '0'),
+        casConflictsCount: 0,
+        queueLagMs: Number(queueLagResult.rows[0]?.queue_lag_ms ?? '0'),
+        duplicateCount: Number(duplicateResult.rows[0]?.duplicates ?? '0'),
+        policyDenialCount: Number(policyDenialsResult.rows[0]?.denials ?? '0'),
+        providerErrorCount: 0,
+        reconciliationOutcomeCounts: {},
+      };
+    } finally {
+      client.release();
+    }
   }
 }

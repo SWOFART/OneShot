@@ -19,10 +19,18 @@ export interface SettlementPort {
   submit(request: CreateIntentRequest, context: SettlementContext): Promise<SettlementResult>;
 }
 
+export interface WorkerConfig {
+  readonly submissionsDisabled?: boolean | undefined;
+  readonly submissionLeaseMs?: number | undefined;
+  readonly contractVersion?: string | undefined;
+  readonly network?: string | undefined;
+}
+
 export interface WorkerOptions {
   readonly pool: Pool;
   readonly ledger: IntentLedger;
-  readonly authorizationPort?: AuthorizationPort;
+  readonly authorizationPort?: AuthorizationPort | undefined;
   readonly settlementPort: SettlementPort;
-  readonly concurrency?: number;
+  readonly concurrency?: number | undefined;
+  readonly config?: WorkerConfig | undefined;
 }
