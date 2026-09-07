@@ -172,6 +172,27 @@ export function checkProfileConsistency(config: SettlementConfig): CheckResult {
   }
   // No runtime check on tokenSymbol: PinnedArcProfile types it as the literal
   // 'USDC', so a non-USDC profile cannot be constructed in the first place.
+
+  // Arc's native gas asset and its ERC-20 interface are both called USDC but
+  // use different precision (18 vs 6). If a profile ever declares them equal,
+  // one of the two is wrong, and settling with gas precision would misprice
+  // the payment by twelve orders of magnitude.
+  if (profile.nativeDecimals === profile.tokenDecimals) {
+    return {
+      name,
+      status: 'MISMATCH',
+      detail:
+        `Native gas decimals (${profile.nativeDecimals}) must differ from ERC-20 ` +
+        `settlement decimals (${profile.tokenDecimals}) on Arc.`,
+    };
+  }
+  if (profile.nativeDecimals !== 18) {
+    return {
+      name,
+      status: 'MISMATCH',
+      detail: `Arc native gas asset uses 18 decimals; profile declares ${profile.nativeDecimals}.`,
+    };
+  }
   return { name, status: 'PASS', detail: 'Profile constants are internally consistent.' };
 }
 

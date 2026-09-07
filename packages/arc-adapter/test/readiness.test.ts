@@ -180,3 +180,25 @@ describe('probeReadiness', () => {
     ]);
   });
 });
+
+describe('native gas versus settlement precision', () => {
+  it('reports MISMATCH when a profile equates gas and settlement precision', () => {
+    // Arc names both units USDC. Treating them as one is a twelve-order-of-
+    // magnitude mispricing, so the probe refuses a profile that conflates them.
+    const tampered = {
+      ...config,
+      profile: { ...config.profile, nativeDecimals: 6 },
+    };
+    const result = checkProfileConsistency(tampered);
+    expect(result.status).toBe('MISMATCH');
+    expect(result.detail).toMatch(/must differ/i);
+  });
+
+  it('reports MISMATCH when native gas decimals are not 18', () => {
+    const tampered = {
+      ...config,
+      profile: { ...config.profile, nativeDecimals: 9 },
+    };
+    expect(checkProfileConsistency(tampered).status).toBe('MISMATCH');
+  });
+});

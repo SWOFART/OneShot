@@ -24,6 +24,15 @@ describe('Arc testnet profile', () => {
   it('is not a mainnet profile', () => {
     expect(ARC_TESTNET.isMainnet).toBe(false);
   });
+
+  it('separates native gas precision from settlement precision', () => {
+    // Verified 2026-09-07 against docs.arc.io: Arc's native gas asset and its
+    // USDC ERC-20 interface are both named USDC but are 10^12 apart. Settlement
+    // uses the ERC-20 six decimals; gas accounting uses the native eighteen.
+    expect(ARC_TESTNET.tokenDecimals).toBe(6);
+    expect(ARC_TESTNET.nativeDecimals).toBe(18);
+    expect(ARC_TESTNET.nativeDecimals).not.toBe(ARC_TESTNET.tokenDecimals);
+  });
 });
 
 describe('Arc mainnet profile', () => {

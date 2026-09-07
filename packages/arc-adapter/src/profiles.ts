@@ -30,8 +30,22 @@ export interface PinnedArcProfile {
   /** USDC interface address on this deployment. */
   readonly tokenContract: `0x${string}`;
   readonly tokenSymbol: 'USDC';
-  /** ERC-20 decimals. Settlement amounts are integer atomic units of this. */
+  /**
+   * ERC-20 interface decimals. Settlement amounts are integer atomic units of
+   * THIS value, never of `nativeDecimals`.
+   */
   readonly tokenDecimals: number;
+  /**
+   * Decimals of the native gas asset.
+   *
+   * On Arc this is also called USDC but is a different unit: the native gas
+   * token uses 18 decimals while the ERC-20 interface uses 6. Same name, same
+   * chain, 10^12 apart. Mixing them would misprice a settlement by twelve
+   * orders of magnitude, so the two live in separate fields and the readiness
+   * probe asserts they are not equal.
+   */
+  readonly nativeDecimals: number;
+  readonly nativeSymbol: 'USDC';
 }
 
 /**
@@ -58,7 +72,9 @@ export function isPinned(profile: ArcProfile): profile is PinnedArcProfile {
  * Arc Testnet.
  *
  * Chain ID, CAIP-2, and the USDC interface address are fixed by
- * `milestones/CONTRACTS.md` section 2.
+ * `milestones/CONTRACTS.md` section 2 and were verified on 2026-09-07 against
+ * the official Arc documentation at docs.arc.io (`connect-to-arc` and
+ * `contract-addresses`).
  *
  * RPC and explorer URLs are deliberately absent. They are endpoints, not
  * protocol constants, they differ per operator, and inventing a plausible
@@ -76,6 +92,8 @@ export const ARC_TESTNET: PinnedArcProfile = {
   tokenContract: '0x3600000000000000000000000000000000000000',
   tokenSymbol: 'USDC',
   tokenDecimals: 6,
+  nativeDecimals: 18,
+  nativeSymbol: 'USDC',
 };
 
 /**
