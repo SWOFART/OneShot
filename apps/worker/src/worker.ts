@@ -1,4 +1,5 @@
 import type { AuthorizationResult, SettlementResult } from '@oneshot/contracts';
+import { formatStateTransitionLog } from '@oneshot/domain';
 import type { TaskList } from 'graphile-worker';
 import type { WorkerOptions } from './types.js';
 
@@ -20,10 +21,32 @@ export async function executeSubmitSettlement(
   businessIntentId: string,
   options: WorkerOptions,
 ): Promise<void> {
+  // A04.2 — Safe disable: audited configuration switch that stops new submission ownership
+  if (options.config?.submissionsDisabled || process.env.ONESHOT_SUBMISSIONS_DISABLED === 'true') {
+    formatStateTransitionLog({
+      correlationId: `audit-disable-${businessIntentId}`,
+      businessIntentId,
+      fromState: 'READY',
+      toState: 'READY',
+      reason: 'Submission ownership paused by safe disable configuration switch',
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
+
   // A03.2 — Submission ownership CAS: READY -> SUBMITTING
   // The database transaction ends before calling the port!
   const claim = await options.ledger.claimSubmission(businessIntentId);
   if (!claim.claimed) return;
+
+  formatStateTransitionLog({
+    correlationId: claim.correlationId,
+    businessIntentId,
+    fromState: 'READY',
+    toState: 'SUBMITTING',
+    attemptId: claim.attemptId,
+    timestamp: new Date().toISOString(),
+  });
 
   // A03.3 — Call settlement port outside database transaction
   let result: SettlementResult;
@@ -42,6 +65,51 @@ export async function executeSubmitSettlement(
 
   // Result persistence: COMMITTED, FAILED_SAFE, or UNKNOWN
   await options.ledger.completeSubmission(businessIntentId, claim.attemptId, result);
+
+  const targetState =
+    result.kind === 'CONFIRMED'
+      ? 'COMMITTED'
+      : result.kind === 'DEFINITELY_NOT_SUBMITTED'
+        ? 'FAILED_SAFE'
+        : 'UNKNOWN';
+
+  formatStateTransitionLog({
+    correlationId: claim.correlationId,
+    businessIntentId,
+    fromState: 'SUBMITTING',
+    toState: targetState,
+    attemptId: claim.attemptId,
+    reason: result.kind !== 'CONFIRMED' ? result.reason : undefined,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+export async function runStartupRecovery(
+  options: WorkerOptions,
+  leaseDurationMs = options.config?.submissionLeaseMs ?? 30000,
+): Promise<number> {
+  const staleBefore = new Date(Date.now() - leaseDurationMs);
+  const recovered = await options.ledger.recoverOrphanedSubmissions(staleBefore);
+  for (const orphan of recovered) {
+    formatStateTransitionLog({
+      correlationId: `recovery-${orphan.businessIntentId}`,
+      businessIntentId: orphan.businessIntentId,
+      fromState: 'SUBMITTING',
+      toState: 'UNKNOWN',
+      reason: 'Orphaned SUBMITTING detected on startup recovery or lease expiry',
+      timestamp: new Date().toISOString(),
+    });
+  }
+  return recovered.length;
+}
+
+export async function resumeSafeJobs(
+  options: WorkerOptions,
+  maxJobs = 100,
+): Promise<{ readonly recoveredOrphans: number; readonly drainedJobs: number }> {
+  const recoveredOrphans = await runStartupRecovery(options);
+  const drainedJobs = await drainOutboxJobs(options, maxJobs);
+  return { recoveredOrphans, drainedJobs };
 }
 
 export function createTaskList(options: WorkerOptions): TaskList {

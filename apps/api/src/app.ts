@@ -10,15 +10,29 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { ServiceAuthenticator } from './auth.js';
 import { allowAllRateLimiter, type RateLimiter } from './rate-limit.js';
 
+export interface ServiceConfig {
+  readonly submissionsDisabled?: boolean;
+  readonly chainId?: string;
+  readonly network?: string;
+  readonly contractVersion?: string;
+}
+
 export interface ApiDependencies {
   readonly ledger: Pick<
     IntentLedger,
-    'createOrReplay' | 'enqueueReconciliation' | 'getIntent' | 'getRecoveryView' | 'ping'
+    | 'createOrReplay'
+    | 'enqueueReconciliation'
+    | 'getIntent'
+    | 'getRecoveryView'
+    | 'getSystemMetrics'
+    | 'ping'
   >;
   readonly authenticator: ServiceAuthenticator;
   readonly rateLimiter?: RateLimiter;
   readonly nextCorrelationId?: () => string;
   readonly bodyLimitBytes?: number;
+  readonly config?: ServiceConfig;
+  readonly readinessCheck?: () => Promise<{ ready: boolean; reason?: string }>;
 }
 
 const createIntentBodySchema = {
@@ -166,11 +180,66 @@ export function buildApi(dependencies: ApiDependencies) {
   app.get('/health/live', async () => ({ status: 'ok' as const }));
 
   app.get('/health/ready', async (request, reply) => {
+    const correlationId = correlationFor(request);
     try {
       await dependencies.ledger.ping();
-      return { status: 'ok' as const };
+
+      if (dependencies.config) {
+        if (dependencies.config.network && dependencies.config.network !== 'eip155:5042002') {
+          sendError(
+            reply,
+            503,
+            'NOT_READY',
+            'Invalid network configuration identity',
+            correlationId,
+          );
+          return;
+        }
+        if (
+          dependencies.config.contractVersion &&
+          dependencies.config.contractVersion !== '1.0.0'
+        ) {
+          sendError(reply, 503, 'NOT_READY', 'Incompatible contract version', correlationId);
+          return;
+        }
+      }
+
+      if (dependencies.readinessCheck) {
+        const check = await dependencies.readinessCheck();
+        if (!check.ready) {
+          sendError(
+            reply,
+            503,
+            'NOT_READY',
+            check.reason ?? 'Service component not ready',
+            correlationId,
+          );
+          return;
+        }
+      }
+
+      return {
+        status: 'ok' as const,
+        ...(dependencies.config?.submissionsDisabled ? { submissions_disabled: true } : {}),
+      };
     } catch {
-      sendError(reply, 503, 'NOT_READY', 'Database is unavailable', correlationFor(request));
+      sendError(reply, 503, 'NOT_READY', 'Database is unavailable', correlationId);
+      return;
+    }
+  });
+
+  app.get('/v1/metrics', async (request, reply) => {
+    try {
+      const metrics = await dependencies.ledger.getSystemMetrics();
+      return metrics;
+    } catch {
+      sendError(
+        reply,
+        500,
+        'INTERNAL_ERROR',
+        'Failed to retrieve system metrics',
+        correlationFor(request),
+      );
       return;
     }
   });
