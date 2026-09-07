@@ -28,7 +28,8 @@
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
-    "viem": "2.56.3"
+    "viem": "2.56.3",
+    "@oneshot/arc-adapter": "file:../arc-adapter"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",

@@ -19,6 +19,12 @@ export default tseslint.config(
         'error',
         { allowNumber: true },
       ],
+      // A leading underscore marks a parameter kept for signature shape but
+      // deliberately unused, such as a port method that always refuses.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
   },
 );

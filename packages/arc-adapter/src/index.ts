@@ -7,3 +7,5 @@ export * from './receipt.js';
 export * from './outcome.js';
 export * from './viem-probe.js';
 export * from './probe-cli.js';
+export * from './failure-taxonomy.js';
+export * from './evidence.js';
