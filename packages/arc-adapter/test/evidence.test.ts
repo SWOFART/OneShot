@@ -83,12 +83,17 @@ describe('NOT_FOUND is never permission', () => {
     expect(observation.detail).toMatch(/not proof/i);
   });
 
-  it('never permits resubmission on any observation', async () => {
-    // Written down once so no call site re-derives it. Only a reconciliation
-    // policy may decide to attempt again, and that is not this adapter.
-    for (const value of [null, receipt(), receipt({ status: 0 })]) {
+  it('never permits resubmission, whatever was observed', () => {
+    // Takes no argument on purpose: there is no observation a caller could
+    // produce that unlocks another settlement. Only a reconciliation policy
+    // may decide to attempt again, and that is not this adapter.
+    expect(permitsResubmission()).toBe(false);
+  });
+
+  it('leaves every non-final observation unable to terminate the intent', async () => {
+    for (const value of [null, receipt({ logs: [] }), receipt({ from: OTHER })]) {
       const observation = await lookupEvidence(IDENTITY, source(value));
-      expect(permitsResubmission(observation)).toBe(false);
+      expect(isTerminalEvidence(observation)).toBe(false);
     }
   });
 

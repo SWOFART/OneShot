@@ -181,13 +181,14 @@ export function isTerminalEvidence(observation: EvidenceObservation): boolean {
 }
 
 /**
- * Whether an observation permits creating another settlement.
+ * Whether evidence from this port ever permits creating another settlement.
  *
- * Always false. The function exists so the answer is written down once, in a
- * place a future caller will find, rather than re-derived per call site.
- * Only a `FINAL_REVERT` may lead to a new attempt, and that decision belongs
- * to the reconciliation policy Coder C owns, not to this adapter.
+ * Always false, and it takes no observation on purpose: there is no input that
+ * could change the answer. The function exists so the rule is written down
+ * once, where a future caller will find it, rather than re-derived per call
+ * site. Only a `FINAL_REVERT` may lead to a new attempt, and that decision
+ * belongs to the reconciliation policy Coder C owns, not to this adapter.
  */
-export function permitsResubmission(_observation: EvidenceObservation): false {
+export function permitsResubmission(): false {
   return false;
 }

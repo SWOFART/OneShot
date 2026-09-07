@@ -1,6 +1,6 @@
 name: Bug report
 description: Create a report to help reproduce and fix a defect.
-title: "[Bug]: "
+title: '[Bug]: '
 body:
   - type: textarea
     id: description

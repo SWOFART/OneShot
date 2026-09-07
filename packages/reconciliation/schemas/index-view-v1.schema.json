@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneshot.invalid/schemas/index-view-v1.schema.json",
+  "title": "OneShot non-authoritative index view v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "source",
+    "binding",
+    "correlation",
+    "mcp",
+    "observedThrough",
+    "chainHead",
+    "lagBlocks",
+    "health",
+    "retrievedAt",
+    "candidates",
+    "candidateCount",
+    "contradiction",
+    "contradictionCodes",
+    "diagnostics",
+    "settlementPermission"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "index-view-v1" },
+    "source": {
+      "const": {
+        "provider": "THE_GRAPH",
+        "retrieval": "SUBGRAPH_MCP",
+        "authority": "NON_AUTHORITATIVE_CANDIDATE_DISCOVERY"
+      }
+    },
+    "binding": { "$ref": "#/$defs/binding" },
+    "correlation": { "$ref": "#/$defs/correlation" },
+    "mcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "callId",
+        "serverName",
+        "serverVersion",
+        "toolName",
+        "deploymentId",
+        "manifestCid",
+        "queryName",
+        "queryDigest"
+      ],
+      "properties": {
+        "callId": { "$ref": "#/$defs/id" },
+        "serverName": { "const": "subgraph-mcp" },
+        "serverVersion": { "type": "string", "maxLength": 32 },
+        "toolName": { "const": "execute_query_by_deployment_id" },
+        "deploymentId": { "$ref": "#/$defs/hash" },
+        "manifestCid": { "type": "string", "maxLength": 128 },
+        "queryName": { "const": "OneShotRecoveryCandidatesV1" },
+        "queryDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "observedThrough": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/blockObservation" }]
+    },
+    "chainHead": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["blockNumber", "observedAt"],
+          "properties": {
+            "blockNumber": { "$ref": "#/$defs/uint" },
+            "observedAt": { "$ref": "#/$defs/instant" }
+          }
+        }
+      ]
+    },
+    "lagBlocks": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/uint" }] },
+    "health": {
+      "enum": ["FRESH", "LAGGING", "UNHEALTHY", "UNAVAILABLE", "UNKNOWN_FRESHNESS"]
+    },
+    "retrievedAt": { "$ref": "#/$defs/instant" },
+    "candidates": {
+      "type": "array",
+      "maxItems": 25,
+      "items": { "$ref": "#/$defs/indexedCandidate" }
+    },
+    "candidateCount": { "type": "integer", "minimum": 0, "maximum": 25 },
+    "contradiction": { "type": "boolean" },
+    "contradictionCodes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/contradiction" }
+    },
+    "diagnostics": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/diagnostic" }
+    },
+    "settlementPermission": { "const": "NEVER" }
+  },
+  "$defs": {
+    "uint": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "maxLength": 78
+    },
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+    "hash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "instant": { "type": "string", "format": "date-time", "maxLength": 35 },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9:._-]{0,127}$"
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "businessIntentId",
+        "requestFingerprint",
+        "network",
+        "tokenContract",
+        "recipient",
+        "amountAtomic"
+      ],
+      "properties": {
+        "businessIntentId": { "$ref": "#/$defs/id" },
+        "requestFingerprint": { "$ref": "#/$defs/digest" },
+        "network": { "type": "string", "maxLength": 96 },
+        "tokenContract": { "$ref": "#/$defs/address" },
+        "recipient": { "$ref": "#/$defs/address" },
+        "amountAtomic": { "$ref": "#/$defs/uint" }
+      }
+    },
+    "correlation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strategy", "memoId", "sender", "fromBlock", "toBlock"],
+          "properties": {
+            "strategy": { "const": "MEMO_ID" },
+            "memoId": { "$ref": "#/$defs/hash" },
+            "sender": { "$ref": "#/$defs/address" },
+            "fromBlock": { "$ref": "#/$defs/uint" },
+            "toBlock": { "$ref": "#/$defs/uint" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strategy", "sender", "fromBlock", "toBlock"],
+          "properties": {
+            "strategy": { "const": "TRANSFER_TUPLE_WINDOW" },
+            "sender": { "$ref": "#/$defs/address" },
+            "fromBlock": { "$ref": "#/$defs/uint" },
+            "toBlock": { "$ref": "#/$defs/uint" }
+          }
+        }
+      ]
+    },
+    "blockObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blockNumber", "blockHash", "blockTimestamp"],
+      "properties": {
+        "blockNumber": { "$ref": "#/$defs/uint" },
+        "blockHash": { "$ref": "#/$defs/hash" },
+        "blockTimestamp": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/uint" }]
+        }
+      }
+    },
+    "candidateBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "transactionHash",
+        "logIndex",
+        "blockNumber",
+        "blockHash",
+        "blockTimestamp",
+        "network",
+        "tokenContract",
+        "sender",
+        "recipient",
+        "amountAtomic",
+        "memoId",
+        "evidenceId",
+        "bindingStatus",
+        "contradictionCodes"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "transactionHash": { "$ref": "#/$defs/hash" },
+        "logIndex": { "$ref": "#/$defs/uint" },
+        "blockNumber": { "$ref": "#/$defs/uint" },
+        "blockHash": { "$ref": "#/$defs/hash" },
+        "blockTimestamp": { "$ref": "#/$defs/uint" },
+        "network": { "type": "string", "maxLength": 96 },
+        "tokenContract": { "$ref": "#/$defs/address" },
+        "sender": { "$ref": "#/$defs/address" },
+        "recipient": { "$ref": "#/$defs/address" },
+        "amountAtomic": { "$ref": "#/$defs/uint" },
+        "memoId": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/hash" }] },
+        "evidenceId": { "type": "string", "maxLength": 160 },
+        "bindingStatus": { "enum": ["MATCH", "CONTRADICTORY"] },
+        "contradictionCodes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/contradiction" }
+        }
+      }
+    },
+    "indexedCandidate": { "$ref": "#/$defs/candidateBase" },
+    "contradiction": {
+      "enum": [
+        "AMOUNT_MISMATCH",
+        "BLOCK_OUTSIDE_WINDOW",
+        "MEMO_MISMATCH",
+        "MULTIPLE_DISTINCT_CANDIDATES",
+        "NETWORK_MISMATCH",
+        "RECIPIENT_MISMATCH",
+        "SENDER_MISMATCH",
+        "TOKEN_MISMATCH"
+      ]
+    },
+    "diagnostic": {
+      "enum": [
+        "BOUNDARY_REJECTED",
+        "CANDIDATE_LIMIT_EXCEEDED",
+        "DUPLICATE_CANDIDATE",
+        "INDEXING_ERRORS",
+        "MCP_ERROR",
+        "MCP_UNAVAILABLE",
+        "MULTIPLE_CANDIDATES",
+        "NO_CANDIDATES",
+        "OUT_OF_ORDER_INPUT",
+        "RESULT_TOO_LARGE",
+        "UNKNOWN_FRESHNESS",
+        "WRONG_DEPLOYMENT",
+        "WRONG_TOOL"
+      ]
+    }
+  }
+}

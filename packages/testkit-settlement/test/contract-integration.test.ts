@@ -14,9 +14,12 @@ import { FileAttemptStore } from '../src/attempt-store.js';
 import { createHarness } from '../src/harness.js';
 import { createProvider } from '../src/provider-simulator.js';
 import { rmSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach } from 'vitest';
 
-const STATE_DIR = 'tmp/contract-integration';
+// Anchored to this package so the suite writes runtime state in the same
+// place whether it runs package-locally or from the workspace root.
+const STATE_DIR = resolve(import.meta.dirname, '..', 'tmp/contract-integration');
 afterEach(() => {
   rmSync(STATE_DIR, { recursive: true, force: true });
 });
@@ -92,7 +95,7 @@ describe('adapter pack contract integration', () => {
     const observation = await lookupEvidence(IDENTITY, emptySource);
     expect(observation.result).toBe('NOT_FOUND');
     expect(isTerminalEvidence(observation)).toBe(false);
-    expect(permitsResubmission(observation)).toBe(false);
+    expect(permitsResubmission()).toBe(false);
 
     // A retry after all that still does not broadcast.
     harness.settle(INTENT, 'allowed-confirmed');

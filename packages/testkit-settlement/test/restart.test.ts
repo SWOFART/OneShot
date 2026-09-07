@@ -1,4 +1,5 @@
 import { rmSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { SettlementIntent } from '@oneshot/privy-adapter';
 import { createHarness } from '../src/harness.js';
@@ -6,7 +7,9 @@ import { FileAttemptStore } from '../src/attempt-store.js';
 import { createProvider } from '../src/provider-simulator.js';
 
 // Ignored runtime state, per B03.2. `tmp/` is gitignored.
-const STATE_DIR = 'tmp/attempt-state';
+// Anchored to this package so the suite writes runtime state in the same
+// place whether it runs package-locally or from the workspace root.
+const STATE_DIR = resolve(import.meta.dirname, '..', 'tmp/attempt-state');
 let counter = 0;
 
 function freshPath(): string {

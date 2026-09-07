@@ -2,40 +2,26 @@
   "name": "@oneshot/testkit-settlement",
   "version": "0.1.0",
   "private": true,
-  "description": "Offline settlement simulators and sanitized fixtures for OneShot Coder B.",
+  "description": "Offline settlement simulators, harness, and sanitized fixtures for the OneShot Coder B lane.",
   "license": "MIT",
   "type": "module",
-  "engines": {
-    "node": ">=22.12.0"
-  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "build": "tsc --project tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
     "lint": "eslint src test",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run build"
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc -b --pretty false"
   },
-  "dependencies": {},
-  "devDependencies": {
-    "@eslint/js": "9.39.1",
-    "@types/node": "22.18.11",
-    "eslint": "9.39.1",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.69.0",
-    "vitest": "5.0.0",
-    "@oneshot/arc-adapter": "file:../arc-adapter",
-    "@oneshot/privy-adapter": "file:../privy-adapter"
+  "dependencies": {
+    "@oneshot/arc-adapter": "workspace:*",
+    "@oneshot/privy-adapter": "workspace:*"
   }
 }

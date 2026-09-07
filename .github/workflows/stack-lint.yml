@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: '.nvmrc'
 
       - name: Lint Markdown
         run: npx --yes markdownlint-cli2@0.18.1 "**/*.md" "#node_modules"
@@ -74,7 +74,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.workspace.outputs.enabled == 'true'
         with:
-          node-version: "22"
+          node-version-file: '.nvmrc'
           cache: pnpm
 
       - name: Install locked dependencies
@@ -94,3 +94,48 @@ jobs:
       - name: Run TypeScript compiler
         if: steps.workspace.outputs.enabled == 'true'
         run: pnpm typecheck
+
+      - name: Check generated contracts
+        if: steps.workspace.outputs.enabled == 'true'
+        run: pnpm check:generated
+
+      - name: Validate contract fixtures
+        if: steps.workspace.outputs.enabled == 'true'
+        run: pnpm validate:fixtures
+
+      - name: Run tests
+        if: steps.workspace.outputs.enabled == 'true'
+        run: pnpm test
+
+      - name: Run PostgreSQL integration tests
+        if: steps.workspace.outputs.enabled == 'true'
+        env:
+          TEST_POSTGRES: '1'
+        run: pnpm test:integration
+
+  settlement-packages:
+    name: Arc and Privy packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+          cache-dependency-path: |
+            packages/arc-adapter/package-lock.json
+            packages/privy-adapter/package-lock.json
+            packages/testkit-settlement/package-lock.json
+
+      - name: Check Arc adapter
+        working-directory: packages/arc-adapter
+        run: npm ci && npm run check
+
+      - name: Check Privy adapter
+        working-directory: packages/privy-adapter
+        run: npm ci && npm run check
+
+      - name: Check settlement testkit
+        working-directory: packages/testkit-settlement
+        run: npm ci && npm run check

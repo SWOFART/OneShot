@@ -1,10 +1,15 @@
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { COMPATIBILITY_MANIFEST } from '../src/ports.js';
 
+// Anchored to this file, not the working directory: the suite runs both
+// package-locally and from the workspace root, and a relative 'src' resolves
+// differently in each.
+const SRC_ROOT = resolve(import.meta.dirname, '..', 'src');
+
 /** Every source file in this package. */
-function sourceFiles(dir = 'src'): string[] {
+function sourceFiles(dir = SRC_ROOT): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) return sourceFiles(path);
