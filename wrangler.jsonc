@@ -5,4 +5,10 @@
   "assets": {
     "directory": "./apps/placeholder-frontend",
   },
+  "routes": [
+    {
+      "pattern": "oneshot.kapustazh.dev",
+      "custom_domain": true,
+    },
+  ],
 }
