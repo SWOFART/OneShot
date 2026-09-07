@@ -45,6 +45,11 @@ At Gate P4, checked simulators are replaced with real reviewed package versions,
 
 ## Verification Commands
 
+Before P4, the Arc, Privy, and settlement testkit packages keep their reviewed npm
+toolchains and are checked by the dedicated `settlement-packages` CI job. P4 may
+consolidate them into the root pnpm workspace only after their package contracts and
+tool versions are reconciled.
+
 Run the full verification matrix to validate integrated convergence:
 
 ```bash

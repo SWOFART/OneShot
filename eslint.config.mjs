@@ -4,7 +4,14 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['**/coverage/**', '**/dist/**', '**/generated/**'],
+    ignores: [
+      '**/coverage/**',
+      '**/dist/**',
+      '**/generated/**',
+      'packages/arc-adapter/**',
+      'packages/privy-adapter/**',
+      'packages/testkit-settlement/**',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

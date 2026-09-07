@@ -1,6 +1,9 @@
 packages:
   - apps/*
   - packages/*
+  - '!packages/arc-adapter'
+  - '!packages/privy-adapter'
+  - '!packages/testkit-settlement'
 
 saveExact: true
 strictPeerDependencies: true
