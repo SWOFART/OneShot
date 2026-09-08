@@ -34,6 +34,9 @@ async function main() {
   try {
     process.stdout.write('Bootstrapping OneShot PostgreSQL database...\n');
     const result = await bootstrapDatabase(pool);
+    if (!result.success) {
+      throw new Error('Schema digest does not match the frozen storage contract');
+    }
     process.stdout.write(
       `Database bootstrap successful: schema digest ${result.schemaDigest}, applied versions: ${result.versionCount}.\n`,
     );

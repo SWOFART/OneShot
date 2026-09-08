@@ -88,7 +88,11 @@ Implement Coder A milestone A06 (Operational Demo and Release Bundle): repeatabl
   `6ce25ac3fe84fcfea32c4c68df2292e6410b5fdf`, then invalidated when `develop`
   advanced and produced a PR merge conflict. Fresh review required for the
   merged candidate tree.
-- Gate B: pending
+- Gate B: first post-push review returned `VERDICT: FAIL` for head
+  `935a441dd5e441e8ddd699f10fd60a03365db99f`: `scripts/bootstrap-db.mjs`
+  ignored `BootstrapResult.success` and could report schema-digest drift as a
+  successful bootstrap. The CLI now fails closed; fresh Gate A/CI/Gate B are
+  required.
 
 ## Handoff/next steps
 
