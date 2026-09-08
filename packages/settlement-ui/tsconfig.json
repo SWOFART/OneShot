@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "outDir": "dist",
+    "rootDir": ".",
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "test/**/*.ts", "vite.config.ts"],
+  "references": [{ "path": "../contracts" }]
+}
