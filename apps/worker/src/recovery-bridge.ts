@@ -8,6 +8,7 @@ import {
 import type { IntentLedger } from '@oneshot/storage-postgres';
 import {
   APPEND_RECOVERY_RECORD_VERSION,
+  isValidSubgraphLookupInput,
   LOCAL_RECOVERY_SNAPSHOT_VERSION,
   RECOVERY_EVIDENCE_VERSION,
   type EvidenceBinding,
@@ -56,8 +57,11 @@ function toContractAuthorityClass(authClass: string): 'AUTHORITATIVE' | 'OBSERVA
 }
 
 export interface IntentLedgerLocalRecoveryStatePortOptions {
-  readonly tokenContract?: string;
-  readonly correlationSender?: string;
+  readonly tokenContract: string;
+  readonly correlationSender: string;
+  readonly fromBlock: string;
+  readonly toBlock: string;
+  readonly mcpPolicy: SubgraphMcpPolicy;
 }
 
 /**
@@ -66,7 +70,7 @@ export interface IntentLedgerLocalRecoveryStatePortOptions {
 export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePort {
   constructor(
     private readonly ledger: IntentLedger,
-    private readonly options: IntentLedgerLocalRecoveryStatePortOptions = {},
+    private readonly options: IntentLedgerLocalRecoveryStatePortOptions,
   ) {}
 
   async read(businessIntentId: string): Promise<LocalRecoverySnapshot> {
@@ -75,16 +79,11 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
       throw new Error(`Intent not found: ${businessIntentId}`);
     }
 
-    const tokenContract =
-      this.options.tokenContract ??
-      (intent.attempts?.[0] as { token_contract?: string } | undefined)?.token_contract ??
-      '0x3333333333333333333333333333333333333333';
-
     const binding: EvidenceBinding = {
       businessIntentId: intent.business_intent_id,
       requestFingerprint: intent.payload_fingerprint,
       network: intent.network,
-      tokenContract,
+      tokenContract: this.options.tokenContract,
       recipient: intent.recipient,
       amountAtomic: intent.amount_atomic,
     };
@@ -96,21 +95,15 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
       binding,
       correlation: {
         strategy: 'TRANSFER_TUPLE_WINDOW',
-        sender: '0x2222222222222222222222222222222222222222',
-        fromBlock: '0',
-        toBlock: 'latest',
+        sender: this.options.correlationSender,
+        fromBlock: this.options.fromBlock,
+        toBlock: this.options.toBlock,
       },
     };
 
-    const mcpPolicy: SubgraphMcpPolicy = {
-      serverName: 'subgraph-mcp',
-      serverVersion: '1.0.0',
-      deploymentId: 'oneshot-arc-testnet',
-      manifestCid: 'QmOneShotArcTestnetManifest',
-      maxLagBlocks: '50',
-      maxCandidates: 5,
-      maxResultBytes: 65536,
-    };
+    if (!isValidSubgraphLookupInput(indexRequest, this.options.mcpPolicy)) {
+      throw new Error('Invalid Subgraph MCP recovery lookup input');
+    }
 
     return {
       schemaVersion: LOCAL_RECOVERY_SNAPSHOT_VERSION,
@@ -122,7 +115,7 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
         persistedAt: nowIso,
       },
       indexRequest,
-      mcpPolicy,
+      mcpPolicy: this.options.mcpPolicy,
       capturedAt: nowIso,
     };
   }

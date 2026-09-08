@@ -25,26 +25,32 @@ import {
   IntentLedgerLocalRecoveryStatePort,
   IntentLedgerRecoveryCommandStore,
   PrivyArcEvidenceBridge,
+  type IntentLedgerLocalRecoveryStatePortOptions,
   type PrivyArcEvidenceBridgeOptions,
 } from './recovery-bridge.js';
 
 export const CURRENT_CONTRACT_VERSION = '1.0.0';
 export const SUPPORTED_NETWORK = 'eip155:5042002';
 
+export interface ProductionRecoveryServiceOptions {
+  readonly localState: IntentLedgerLocalRecoveryStatePortOptions;
+  readonly bridge?: PrivyArcEvidenceBridgeOptions;
+  readonly subgraphMcp?: SubgraphMcpRecoveryPort;
+  readonly advisor?: RecoveryAdvisorPort;
+}
+
 export function createProductionRecoveryService(
   ledger: IntentLedger,
-  bridgeOptions?: PrivyArcEvidenceBridgeOptions,
-  subgraphMcpPort?: SubgraphMcpRecoveryPort,
-  advisor?: RecoveryAdvisorPort,
+  options: ProductionRecoveryServiceOptions,
 ): RecoveryService {
-  const localState = new IntentLedgerLocalRecoveryStatePort(ledger);
+  const localState = new IntentLedgerLocalRecoveryStatePort(ledger, options.localState);
   const commandStore = new IntentLedgerRecoveryCommandStore(ledger);
   const knownIdentityEvidence = new PrivyArcEvidenceBridge({
     localStatePort: localState,
-    ...bridgeOptions,
+    ...options.bridge,
   });
-  const subgraphMcp = subgraphMcpPort ?? new UnavailableSubgraphMcpRecoveryPort();
-  const recoveryAdvisor = advisor ?? new UnavailableRecoveryAdvisorPort();
+  const subgraphMcp = options.subgraphMcp ?? new UnavailableSubgraphMcpRecoveryPort();
+  const recoveryAdvisor = options.advisor ?? new UnavailableRecoveryAdvisorPort();
   return new RecoveryService({
     localState,
     knownIdentityEvidence,
@@ -109,7 +115,7 @@ export interface CompositionOptions {
     readonly contractVersion?: string;
   };
   readonly recoveryService?: RecoveryService;
-  readonly recoveryBridgeOptions?: PrivyArcEvidenceBridgeOptions;
+  readonly recovery?: ProductionRecoveryServiceOptions;
   readonly submissionsDisabled?: boolean;
   readonly expectedContractVersion?: string;
   readonly expectedNetwork?: string;
@@ -143,8 +149,8 @@ export function composeWorker(
   }
 
   let recoveryService = options.recoveryService;
-  if (!recoveryService && options.profile === 'production' && options.recoveryBridgeOptions) {
-    recoveryService = createProductionRecoveryService(ledger, options.recoveryBridgeOptions);
+  if (!recoveryService && options.profile === 'production' && options.recovery) {
+    recoveryService = createProductionRecoveryService(ledger, options.recovery);
   }
 
   const workerOptions: WorkerOptions = {

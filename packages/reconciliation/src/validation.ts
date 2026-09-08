@@ -151,6 +151,15 @@ function validPolicy(policy: SubgraphMcpPolicy): boolean {
   );
 }
 
+export function isValidSubgraphLookupInput(
+  request: IndexLookupRequest,
+  policy: SubgraphMcpPolicy,
+): boolean {
+  return (
+    validBinding(request.binding) && validCorrelation(request.correlation) && validPolicy(policy)
+  );
+}
+
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (isRecord(value)) {
@@ -394,11 +403,7 @@ export function normalizeSubgraphMcpTrace(
   policy: SubgraphMcpPolicy,
   trace: SubgraphMcpTrace,
 ): IndexLookupOutcome {
-  if (
-    !validBinding(request.binding) ||
-    !validCorrelation(request.correlation) ||
-    !validPolicy(policy)
-  ) {
+  if (!isValidSubgraphLookupInput(request, policy)) {
     return rejected(
       request,
       policy,
