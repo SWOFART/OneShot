@@ -443,7 +443,7 @@ export class IntentLedger {
         await client.query('ROLLBACK');
         return { completed: false, reason: 'NOT_FOUND' };
       }
-      if (row.state !== 'SUBMITTING') {
+      if (row.state !== 'SUBMITTING' && row.state !== 'UNKNOWN') {
         await client.query('ROLLBACK');
         return { completed: false, reason: 'INVALID_STATE', currentState: row.state };
       }
@@ -451,10 +451,14 @@ export class IntentLedger {
       const now = this.#dependencies.now();
 
       if (result.kind === 'CONFIRMED') {
-        await client.query(
-          'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND state = $5',
-          ['COMMITTED', newVersion, now, id, 'SUBMITTING'],
+        const updateRes = await client.query(
+          'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND (state = $5 OR state = $6)',
+          ['COMMITTED', newVersion, now, id, 'SUBMITTING', 'UNKNOWN'],
         );
+        if (updateRes.rowCount !== 1) {
+          await client.query('ROLLBACK');
+          return { completed: false, reason: 'INVALID_STATE', currentState: row.state };
+        }
         await client.query(
           `INSERT INTO settlements (
             business_intent_id, provider_reference_id, transaction_hash,
@@ -486,10 +490,14 @@ export class IntentLedger {
       }
 
       if (result.kind === 'DEFINITELY_NOT_SUBMITTED') {
-        await client.query(
-          'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND state = $5',
-          ['FAILED_SAFE', newVersion, now, id, 'SUBMITTING'],
+        const updateRes = await client.query(
+          'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND (state = $5 OR state = $6)',
+          ['FAILED_SAFE', newVersion, now, id, 'SUBMITTING', 'UNKNOWN'],
         );
+        if (updateRes.rowCount !== 1) {
+          await client.query('ROLLBACK');
+          return { completed: false, reason: 'INVALID_STATE', currentState: row.state };
+        }
         await client.query(
           'UPDATE attempts SET stage = $1, sanitized_error = $2 WHERE attempt_id = $3',
           ['FAILED_SAFE', result.reason, attemptId],
@@ -499,29 +507,33 @@ export class IntentLedger {
       }
 
       // POSSIBLY_SUBMITTED or any unexpected variant -> UNKNOWN
-      await client.query(
-        'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND state = $5',
-        ['UNKNOWN', newVersion, now, id, 'SUBMITTING'],
-      );
-      await client.query(
-        'UPDATE attempts SET stage = $1, sanitized_error = $2 WHERE attempt_id = $3',
-        [
-          'UNKNOWN',
-          (result as { reason?: string } | null | undefined)?.reason ??
-            'Settlement outcome uncertain',
-          attemptId,
-        ],
-      );
-      await client.query(
-        `INSERT INTO outbox_jobs (
-          business_intent_id, job_key, task_identifier, payload,
-          available_at, created_at
-        ) VALUES ($1, $2, 'reconcile_intent', $3::jsonb, $4, $4)
-        ON CONFLICT (job_key) DO NOTHING`,
-        [id, `reconcile:${id}:${newVersion}`, JSON.stringify({ business_intent_id: id }), now],
-      );
+      if (row.state === 'SUBMITTING') {
+        await client.query(
+          'UPDATE business_intents SET state = $1, version = $2, updated_at = $3 WHERE business_intent_id = $4 AND state = $5',
+          ['UNKNOWN', newVersion, now, id, 'SUBMITTING'],
+        );
+        await client.query(
+          'UPDATE attempts SET stage = $1, sanitized_error = $2 WHERE attempt_id = $3',
+          [
+            'UNKNOWN',
+            (result as { reason?: string } | null | undefined)?.reason ??
+              'Settlement outcome uncertain',
+            attemptId,
+          ],
+        );
+        await client.query(
+          `INSERT INTO outbox_jobs (
+            business_intent_id, job_key, task_identifier, payload,
+            available_at, created_at
+          ) VALUES ($1, $2, 'reconcile_intent', $3::jsonb, $4, $4)
+          ON CONFLICT (job_key) DO NOTHING`,
+          [id, `reconcile:${id}:${newVersion}`, JSON.stringify({ business_intent_id: id }), now],
+        );
+        await client.query('COMMIT');
+        return { completed: true, state: 'UNKNOWN', version: newVersion };
+      }
       await client.query('COMMIT');
-      return { completed: true, state: 'UNKNOWN', version: newVersion };
+      return { completed: true, state: 'UNKNOWN', version: row.version };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -728,5 +740,32 @@ export class IntentLedger {
     } finally {
       client.release();
     }
+  }
+
+  async recordRecoveryEvent(
+    businessIntentId: unknown,
+    eventId: string,
+    payload: unknown,
+  ): Promise<{ readonly inserted: boolean }> {
+    const id = asBusinessIntentId(businessIntentId);
+    const now = this.#dependencies.now();
+    const result = await this.#pool.query(
+      `INSERT INTO outbox_jobs (
+        business_intent_id, job_key, task_identifier, payload,
+        status, available_at, created_at
+      ) VALUES ($1, $2, 'reconcile_intent', $3::jsonb, 'DELIVERED', $4, $4)
+      ON CONFLICT (job_key) DO NOTHING
+      RETURNING outbox_job_id`,
+      [id, `recovery-event:${eventId}`, JSON.stringify(payload), now],
+    );
+    return { inserted: (result.rowCount ?? 0) === 1 };
+  }
+
+  async getRecoveryEventPayload(eventId: string): Promise<unknown | undefined> {
+    const result = await this.#pool.query<{ payload: unknown }>(
+      'SELECT payload FROM outbox_jobs WHERE job_key = $1',
+      [`recovery-event:${eventId}`],
+    );
+    return result.rows[0]?.payload;
   }
 }

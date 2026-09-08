@@ -1,5 +1,6 @@
 import type { AuthorizationResult, SettlementResult } from '@oneshot/contracts';
 import { formatStateTransitionLog } from '@oneshot/domain';
+import { RECOVERY_JOB_VERSION, type RecoveryJob } from '@oneshot/reconciliation';
 import type { TaskList } from 'graphile-worker';
 import type { WorkerOptions } from './types.js';
 
@@ -112,6 +113,36 @@ export async function resumeSafeJobs(
   return { recoveredOrphans, drainedJobs };
 }
 
+export async function executeReconcileIntent(
+  businessIntentId: string,
+  options: WorkerOptions,
+  eventId?: string,
+): Promise<void> {
+  const intent = await options.ledger.getIntent(businessIntentId);
+  if (!intent) return;
+  if (intent.state !== 'UNKNOWN' && intent.state !== 'SUBMITTING') return;
+
+  if (options.recoveryService) {
+    const job: RecoveryJob = {
+      schemaVersion: RECOVERY_JOB_VERSION,
+      eventId: eventId ?? `reconcile:${businessIntentId}:${intent.version}`,
+      businessIntentId,
+      requestedAt: new Date().toISOString(),
+    };
+    const result = await options.recoveryService.handle(job);
+    const updatedIntent = await options.ledger.getIntent(businessIntentId);
+    const toState = updatedIntent?.state ?? intent.state;
+    formatStateTransitionLog({
+      correlationId: `reconcile-${businessIntentId}`,
+      businessIntentId,
+      fromState: intent.state,
+      toState,
+      reason: `Reconciliation result: ${result.status}, disposition: ${result.pack?.reconciliationCommand.commandType ?? 'HELD'}`,
+      timestamp: new Date().toISOString(),
+    });
+  }
+}
+
 export function createTaskList(options: WorkerOptions): TaskList {
   return {
     authorize_intent: async (payload) => {
@@ -122,8 +153,14 @@ export function createTaskList(options: WorkerOptions): TaskList {
       const { business_intent_id } = payload as { business_intent_id: string };
       await executeSubmitSettlement(business_intent_id, options);
     },
-    reconcile_intent: async () => {
-      // Reconcile task handler placeholder for C01/A04
+    reconcile_intent: async (payload) => {
+      const { business_intent_id, event_id } = (payload ?? {}) as {
+        business_intent_id?: string;
+        event_id?: string;
+      };
+      if (business_intent_id) {
+        await executeReconcileIntent(business_intent_id, options, event_id);
+      }
     },
   };
 }
@@ -171,6 +208,8 @@ export async function drainOutboxJobs(options: WorkerOptions, maxJobs = 100): Pr
       await executeAuthorizeIntent(job.business_intent_id, options);
     } else if (job.task_identifier === 'submit_settlement') {
       await executeSubmitSettlement(job.business_intent_id, options);
+    } else if (job.task_identifier === 'reconcile_intent') {
+      await executeReconcileIntent(job.business_intent_id, options);
     }
     processed += 1;
   }

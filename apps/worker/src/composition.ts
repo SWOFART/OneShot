@@ -14,9 +14,47 @@ import type {
   SettlementPort,
   WorkerOptions,
 } from './types.js';
+import {
+  createScenario,
+  RecoveryAgentSimulator,
+  RecoveryService,
+  SimulatorSubgraphMcpRecoveryPort,
+  type RecoveryAdvisorPort,
+  type SubgraphMcpRecoveryPort,
+} from '@oneshot/reconciliation';
+import {
+  IntentLedgerLocalRecoveryStatePort,
+  IntentLedgerRecoveryCommandStore,
+  PrivyArcEvidenceBridge,
+  type PrivyArcEvidenceBridgeOptions,
+} from './recovery-bridge.js';
 
 export const CURRENT_CONTRACT_VERSION = '1.0.0';
 export const SUPPORTED_NETWORK = 'eip155:5042002';
+
+export function createProductionRecoveryService(
+  ledger: IntentLedger,
+  bridgeOptions?: PrivyArcEvidenceBridgeOptions,
+  subgraphMcpPort?: SubgraphMcpRecoveryPort,
+  advisor?: RecoveryAdvisorPort,
+): RecoveryService {
+  const localState = new IntentLedgerLocalRecoveryStatePort(ledger);
+  const commandStore = new IntentLedgerRecoveryCommandStore(ledger);
+  const knownIdentityEvidence = new PrivyArcEvidenceBridge({
+    localStatePort: localState,
+    ...bridgeOptions,
+  });
+  const subgraphMcp =
+    subgraphMcpPort ?? new SimulatorSubgraphMcpRecoveryPort(createScenario('empty'));
+  const recoveryAdvisor = advisor ?? new RecoveryAgentSimulator({ scenario: 'auto' });
+  return new RecoveryService({
+    localState,
+    knownIdentityEvidence,
+    subgraphMcp,
+    advisor: recoveryAdvisor,
+    commandStore,
+  });
+}
 
 export class SimulatorSettlementPort implements SettlementPort {
   readonly name = 'SimulatorSettlementPort';
@@ -72,6 +110,8 @@ export interface CompositionOptions {
   readonly authorizationPort?: AuthorizationPort & {
     readonly contractVersion?: string;
   };
+  readonly recoveryService?: RecoveryService;
+  readonly recoveryBridgeOptions?: PrivyArcEvidenceBridgeOptions;
   readonly submissionsDisabled?: boolean;
   readonly expectedContractVersion?: string;
   readonly expectedNetwork?: string;
@@ -104,11 +144,17 @@ export function composeWorker(
     authorizationPort = options.authorizationPort;
   }
 
+  let recoveryService = options.recoveryService;
+  if (!recoveryService && options.profile === 'production' && options.recoveryBridgeOptions) {
+    recoveryService = createProductionRecoveryService(ledger, options.recoveryBridgeOptions);
+  }
+
   const workerOptions: WorkerOptions = {
     pool,
     ledger,
     settlementPort,
     authorizationPort,
+    recoveryService,
     config: {
       submissionsDisabled: options.submissionsDisabled,
       contractVersion: expectedContractVersion,
