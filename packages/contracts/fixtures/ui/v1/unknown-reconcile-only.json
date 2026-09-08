@@ -1,0 +1,53 @@
+{
+  "scenario": "unknown-reconcile-only",
+  "description": "Network timeout after broadcast with state UNKNOWN; read-only reconciliation required",
+  "intent": {
+    "business_intent_id": "018f-ui-unknown-007",
+    "payload_fingerprint": "a000000000000000000000000000000000000000000000000000000000000007",
+    "recipient": "0x1111111111111111111111111111111111111111",
+    "amount_atomic": "1250000",
+    "asset": "USDC",
+    "network": "eip155:5042002",
+    "purpose": "Invoice INV-1007",
+    "state": "UNKNOWN",
+    "version": 2,
+    "policy": {
+      "policy_id": "privy-policy-arc-prod",
+      "status": "CONFIGURED",
+      "settlement_cap_atomic": "10000000",
+      "allowed_recipients": ["0x1111111111111111111111111111111111111111"]
+    },
+    "attempts": [
+      {
+        "attempt_id": "attempt-ui-007",
+        "stage": "SUBMITTING",
+        "created_at": "2026-09-08T12:30:00.000Z",
+        "sanitized_error": "Connection reset after broadcast; transaction receipt pending verification",
+        "authorization_status": "AUTHORIZED"
+      }
+    ],
+    "evidence": [
+      {
+        "source": "THE_GRAPH",
+        "authority_class": "OBSERVATION",
+        "retrieved_at": "2026-09-08T12:30:10.000Z",
+        "digest": "digest-subgraph-lagging-007",
+        "freshness": "LAGGING"
+      }
+    ]
+  },
+  "recovery_view": {
+    "business_intent_id": "018f-ui-unknown-007",
+    "authoritative_state": "UNKNOWN",
+    "recommended_action": "RECONCILE",
+    "evidence": [
+      {
+        "source": "THE_GRAPH",
+        "authority_class": "OBSERVATION",
+        "retrieved_at": "2026-09-08T12:30:10.000Z",
+        "digest": "digest-subgraph-lagging-007",
+        "freshness": "LAGGING"
+      }
+    ]
+  }
+}

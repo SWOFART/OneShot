@@ -1,0 +1,51 @@
+{
+  "scenario": "auth-denied-recipient",
+  "description": "Intent authorization denied because recipient is not in configured allowlist",
+  "intent": {
+    "business_intent_id": "018f-ui-denied-recip-003",
+    "payload_fingerprint": "a000000000000000000000000000000000000000000000000000000000000003",
+    "recipient": "0x1111111111111111111111111111111111111111",
+    "amount_atomic": "1250000",
+    "asset": "USDC",
+    "network": "eip155:5042002",
+    "purpose": "Invoice INV-1003",
+    "state": "REJECTED",
+    "version": 2,
+    "policy": {
+      "policy_id": "privy-policy-arc-prod",
+      "status": "CONFIGURED",
+      "settlement_cap_atomic": "10000000",
+      "allowed_recipients": ["0x2222222222222222222222222222222222222222"]
+    },
+    "attempts": [
+      {
+        "attempt_id": "attempt-ui-003",
+        "stage": "REJECTED",
+        "created_at": "2026-09-08T12:10:00.000Z",
+        "sanitized_error": "Recipient 0x1111111111111111111111111111111111111111 is not on allowlist",
+        "authorization_status": "DENIED"
+      }
+    ],
+    "evidence": [
+      {
+        "source": "PRIVY",
+        "authority_class": "AUTHORITATIVE",
+        "retrieved_at": "2026-09-08T12:10:01.000Z",
+        "digest": "digest-denied-recipient-003"
+      }
+    ]
+  },
+  "recovery_view": {
+    "business_intent_id": "018f-ui-denied-recip-003",
+    "authoritative_state": "REJECTED",
+    "recommended_action": "RETURN_EXISTING_RESULT",
+    "evidence": [
+      {
+        "source": "PRIVY",
+        "authority_class": "AUTHORITATIVE",
+        "retrieved_at": "2026-09-08T12:10:01.000Z",
+        "digest": "digest-denied-recipient-003"
+      }
+    ]
+  }
+}

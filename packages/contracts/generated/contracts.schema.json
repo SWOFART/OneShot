@@ -58,6 +58,49 @@
         }
       }
     },
+    "PolicySummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "CONFIGURED",
+            "EXCEEDED",
+            "NOT_CONFIGURED",
+            "UNKNOWN"
+          ]
+        },
+        "settlement_cap_atomic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "allowed_recipients": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "examples": [
+              "0x1111111111111111111111111111111111111111"
+            ]
+          }
+        }
+      }
+    },
     "Attempt": {
       "type": "object",
       "additionalProperties": false,
@@ -93,6 +136,16 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 256
+        },
+        "authorization_status": {
+          "type": "string",
+          "enum": [
+            "CHECKING",
+            "AUTHORIZED",
+            "DENIED",
+            "UNAVAILABLE",
+            "CONFIG_MISMATCH"
+          ]
         }
       }
     },
@@ -128,6 +181,18 @@
         "transfer_log_index": {
           "type": "integer",
           "minimum": 0
+        },
+        "token_contract": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "explorer_url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
         }
       }
     },
@@ -260,6 +325,9 @@
         "version": {
           "type": "integer",
           "minimum": 1
+        },
+        "policy": {
+          "$ref": "#/$defs/PolicySummary"
         },
         "attempts": {
           "type": "array",

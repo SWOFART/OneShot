@@ -48,11 +48,12 @@ readiness probing they build on. See
    - Provided `createProductionRecoveryService` in `apps/worker/src/composition.ts` for full production worker recovery composition.
    - Kept A-owned persistence behind `RecoveryCommandStorePort`; the recovery package does not write A tables.
 
-4. **Freeze the frontend boundary**:
-   - Revalidate the A01 OpenAPI v1 artifact against the composed backend.
-   - Freeze recovery-view semantics and sanitized UI fixtures.
-   - Publish a versioned mock server that serves the frozen OpenAPI behavior.
-   - Keep A05, B05, and C05 blocked until this step and the integrated proofs pass.
+4. **Freeze the frontend boundary**: [COMPLETED]
+   - Revalidated the A01 OpenAPI v1 artifact against the composed backend with additive sanitized fields (`policy` summary, attempt `authorization_status`, settlement `token_contract`, and `explorer_url`).
+   - Froze recovery-view semantics and published sanitized UI fixtures in `packages/contracts/fixtures/ui/v1/`.
+   - Published versioned OpenAPI mock server (`OPENAPI_MOCK_SERVER_VERSION = '1.0.0'`) in `@oneshot/contracts`.
+   - Published sanitized Gate P4 manifest in `docs/GATE_P4_MANIFEST.md`.
+   - Frontend milestones (A05, B05, C05) unblocked to build on frozen contracts and mock server.
 
 ## Verification Commands
 

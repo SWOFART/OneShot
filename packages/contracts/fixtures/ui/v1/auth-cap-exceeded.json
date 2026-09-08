@@ -1,0 +1,51 @@
+{
+  "scenario": "auth-cap-exceeded",
+  "description": "Intent authorization denied because amount exceeds configured settlement cap",
+  "intent": {
+    "business_intent_id": "018f-ui-cap-exceeded-004",
+    "payload_fingerprint": "a000000000000000000000000000000000000000000000000000000000000004",
+    "recipient": "0x1111111111111111111111111111111111111111",
+    "amount_atomic": "50000000",
+    "asset": "USDC",
+    "network": "eip155:5042002",
+    "purpose": "Invoice INV-1004",
+    "state": "REJECTED",
+    "version": 2,
+    "policy": {
+      "policy_id": "privy-policy-arc-prod",
+      "status": "EXCEEDED",
+      "settlement_cap_atomic": "10000000",
+      "allowed_recipients": ["0x1111111111111111111111111111111111111111"]
+    },
+    "attempts": [
+      {
+        "attempt_id": "attempt-ui-004",
+        "stage": "REJECTED",
+        "created_at": "2026-09-08T12:15:00.000Z",
+        "sanitized_error": "Amount 50000000 exceeds settlement cap 10000000",
+        "authorization_status": "DENIED"
+      }
+    ],
+    "evidence": [
+      {
+        "source": "PRIVY",
+        "authority_class": "AUTHORITATIVE",
+        "retrieved_at": "2026-09-08T12:15:01.000Z",
+        "digest": "digest-cap-exceeded-004"
+      }
+    ]
+  },
+  "recovery_view": {
+    "business_intent_id": "018f-ui-cap-exceeded-004",
+    "authoritative_state": "REJECTED",
+    "recommended_action": "RETURN_EXISTING_RESULT",
+    "evidence": [
+      {
+        "source": "PRIVY",
+        "authority_class": "AUTHORITATIVE",
+        "retrieved_at": "2026-09-08T12:15:01.000Z",
+        "digest": "digest-cap-exceeded-004"
+      }
+    ]
+  }
+}

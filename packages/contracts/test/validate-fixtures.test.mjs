@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { validateFixtureDirectory, validateFixtureObject } from '../scripts/validate-fixtures.mjs';
+import {
+  validateFixtureDirectory,
+  validateFixtureObject,
+  validateUiFixtureDirectory,
+  validateUiFixtureObject,
+} from '../scripts/validate-fixtures.mjs';
 
 const validFixture = {
   version: 'v1',
@@ -19,6 +24,7 @@ const validFixture = {
 describe('fixture validation', () => {
   it('validates every committed fixture', async () => {
     await expect(validateFixtureDirectory()).resolves.toHaveLength(9);
+    await expect(validateUiFixtureDirectory()).resolves.toHaveLength(7);
   });
 
   it.each([
@@ -29,5 +35,9 @@ describe('fixture validation', () => {
     ['sensitive field', { ...validFixture, api_key: 'not-a-real-key' }],
   ])('rejects %s fixtures', (_name, fixture) => {
     expect(() => validateFixtureObject(fixture)).toThrow();
+  });
+
+  it('rejects invalid UI fixtures', () => {
+    expect(() => validateUiFixtureObject({ scenario: 'test' })).toThrow();
   });
 });

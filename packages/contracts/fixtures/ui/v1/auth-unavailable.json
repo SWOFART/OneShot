@@ -1,0 +1,49 @@
+{
+  "scenario": "auth-unavailable",
+  "description": "Privy authorization unavailable resulting in safe failure without settlement",
+  "intent": {
+    "business_intent_id": "018f-ui-unavailable-005",
+    "payload_fingerprint": "a000000000000000000000000000000000000000000000000000000000000005",
+    "recipient": "0x1111111111111111111111111111111111111111",
+    "amount_atomic": "1250000",
+    "asset": "USDC",
+    "network": "eip155:5042002",
+    "purpose": "Invoice INV-1005",
+    "state": "FAILED_SAFE",
+    "version": 2,
+    "policy": {
+      "policy_id": "privy-policy-arc-prod",
+      "status": "UNKNOWN"
+    },
+    "attempts": [
+      {
+        "attempt_id": "attempt-ui-005",
+        "stage": "FAILED_SAFE",
+        "created_at": "2026-09-08T12:20:00.000Z",
+        "sanitized_error": "Privy authorization service unavailable; timed out after 10000ms",
+        "authorization_status": "UNAVAILABLE"
+      }
+    ],
+    "evidence": [
+      {
+        "source": "PRIVY",
+        "authority_class": "ADVISORY",
+        "retrieved_at": "2026-09-08T12:20:01.000Z",
+        "digest": "digest-unavailable-005"
+      }
+    ]
+  },
+  "recovery_view": {
+    "business_intent_id": "018f-ui-unavailable-005",
+    "authoritative_state": "FAILED_SAFE",
+    "recommended_action": "RETURN_EXISTING_RESULT",
+    "evidence": [
+      {
+        "source": "PRIVY",
+        "authority_class": "ADVISORY",
+        "retrieved_at": "2026-09-08T12:20:01.000Z",
+        "digest": "digest-unavailable-005"
+      }
+    ]
+  }
+}

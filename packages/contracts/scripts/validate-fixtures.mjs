@@ -76,9 +76,24 @@ const fixtureSchema = {
   },
 };
 
+const uiFixtureSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  additionalProperties: false,
+  required: ['scenario', 'description', 'intent', 'recovery_view'],
+  $defs: contractBundle.$defs,
+  properties: {
+    scenario: { type: 'string', minLength: 1 },
+    description: { type: 'string', minLength: 1 },
+    intent: contractBundle.$defs.IntentResponse,
+    recovery_view: contractBundle.$defs.RecoveryView,
+  },
+};
+
 const ajv = new Ajv2020({ allErrors: true, strict: true });
 addFormats(ajv);
 const validate = ajv.compile(fixtureSchema);
+const validateUi = ajv.compile(uiFixtureSchema);
 const forbiddenKey =
   /^(?:private[_-]?key|seed[_-]?phrase|mnemonic|api[_-]?key|access[_-]?token|wallet[_-]?credentials?)$/iu;
 
@@ -104,6 +119,15 @@ export function validateFixtureObject(value, source = '<memory>') {
   return value;
 }
 
+export function validateUiFixtureObject(value, source = '<memory>') {
+  rejectSensitiveKeys(value);
+  if (!validateUi(value)) {
+    const details = ajv.errorsText(validateUi.errors, { separator: '; ' });
+    throw new Error(`Invalid UI fixture ${source}: ${details}`);
+  }
+  return value;
+}
+
 async function jsonFiles(directory) {
   const result = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -124,7 +148,22 @@ export async function validateFixtureDirectory(directory = resolve(packageRoot, 
   return files;
 }
 
+export async function validateUiFixtureDirectory(
+  directory = resolve(packageRoot, 'fixtures', 'ui', 'v1'),
+) {
+  const files = await jsonFiles(directory);
+  if (files.length === 0) throw new Error(`No UI fixtures found under ${directory}`);
+  for (const file of files) {
+    const value = JSON.parse(await readFile(file, 'utf8'));
+    validateUiFixtureObject(value, file);
+  }
+  return files;
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const files = await validateFixtureDirectory();
-  console.log(`Validated ${files.length} contracts-v1 fixtures.`);
+  const backendFiles = await validateFixtureDirectory();
+  const uiFiles = await validateUiFixtureDirectory();
+  console.log(
+    `Validated ${backendFiles.length} contracts-v1 fixtures and ${uiFiles.length} ui-v1 fixtures.`,
+  );
 }
