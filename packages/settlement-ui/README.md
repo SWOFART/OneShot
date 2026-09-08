@@ -19,6 +19,8 @@ and exposes no settlement, retry, resend, or policy-override action.
 - `createInMemorySettlementClient`: deterministic client for component tests.
 - `validateExplorerUrl`, `assertNoSensitiveFields`, `formatAtomicUsdc`: the
   boundary rules the panels are built on.
+- `DEFAULT_EXPLORER_HOSTS`: the explorer hosts a link may point at unless the
+  caller supplies its own list.
 
 ## Composition note
 
@@ -36,6 +38,9 @@ const client = createSettlementClient({
 
 <SettlementDetailsRoute businessIntentId={intentId} client={client} />;
 ```
+
+A deployment whose explorer differs from `DEFAULT_EXPLORER_HOSTS` passes its own
+list through `allowedExplorerHosts`. An empty list disables explorer links.
 
 This package does not edit the application shell or its route registry, so Gate
 P5 composition stays a single-editor change in the shell.
@@ -61,8 +66,10 @@ P5 composition stays a single-editor change in the shell.
   is `COMMITTED`, the Arc identity is well formed, and an authoritative Arc
   observation exists. Anything less renders as unverified with details withheld.
 - **Validated outbound links.** An explorer URL becomes an `href` only if it is
-  https, carries no embedded credentials, and references the exact transaction
-  hash being displayed. Anything else is dropped with a stated reason.
+  https, carries no embedded credentials, sits on the host allowlist, and
+  references the exact transaction hash being displayed. Hash binding alone is
+  not enough, because a hostile host can quote the real hash back. Anything else
+  is dropped with a stated reason.
 - **Fail-closed redaction.** A response carrying a secret-shaped field name is
   refused before projection, and the route renders "Response withheld" instead
   of any part of it.
@@ -91,6 +98,11 @@ immutable:
 | `final-revert`                   | Lane B | Reverted transaction, no committed settlement |
 | `hostile-explorer-link`          | Lane B | Unsafe explorer URL and hostile strings       |
 | `committed-without-arc-evidence` | Lane B | Committed record without Arc proof            |
+
+The synthetic fixtures publish links through `testnet.arcscan.io`, which is not
+the documented Arc testnet explorer. `FIXTURE_EXPLORER_HOSTS` exists so the
+fixture viewer and component tests opt into that host explicitly instead of the
+package widening its default allowlist.
 
 Run the standalone fixture viewer:
 

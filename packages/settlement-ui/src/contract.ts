@@ -1,5 +1,6 @@
 import {
   OPENAPI_MOCK_SERVER_VERSION,
+  type AttemptView,
   type AuthorizationStatus,
   type EvidenceView,
   type IntentResponse,
@@ -125,16 +126,26 @@ export interface ExplorerLink {
 }
 
 /**
+ * Arc testnet explorer host this repository documents in
+ * `docs/settlement/PROVIDER_SETUP.md`. Deployments that publish links through a
+ * different explorer pass their own host list rather than widening this one.
+ */
+export const DEFAULT_EXPLORER_HOSTS: readonly string[] = ['testnet.arcscan.app'];
+
+/**
  * Validates an outbound explorer URL before it can become an anchor href.
  *
  * The OpenAPI field is a bounded string with no scheme constraint, so the rules
- * live here: https only, no embedded credentials, and the link must reference
- * the exact transaction hash being displayed. A link that cannot be proven to
- * point at this transaction is dropped rather than rendered.
+ * live here: https only, no embedded credentials, a host on the allowlist, and
+ * a reference to the exact transaction hash being displayed. Hash binding alone
+ * is not enough, because a hostile host can quote the real hash back; the
+ * allowlist is what keeps a spoofed response from producing a clickable link.
+ * A link that fails any rule is dropped rather than rendered.
  */
 export function validateExplorerUrl(
   rawUrl: string | undefined | null,
   transactionHash: string,
+  allowedHosts: readonly string[] = DEFAULT_EXPLORER_HOSTS,
 ): ExplorerLink {
   if (typeof rawUrl !== 'string' || rawUrl.trim().length === 0) {
     return { href: null, rejectedReason: null };
@@ -161,6 +172,10 @@ export function validateExplorerUrl(
   }
   if (parsed.hostname === '') {
     return { href: null, rejectedReason: 'Explorer link has no host.' };
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (!allowedHosts.some((allowed) => allowed.toLowerCase() === host)) {
+    return { href: null, rejectedReason: 'Explorer host is not on the allowlist.' };
   }
   if (!TRANSACTION_HASH_PATTERN.test(transactionHash)) {
     return { href: null, rejectedReason: 'Transaction hash is not a valid Arc transaction hash.' };
@@ -292,13 +307,48 @@ function hasAuthoritativeArcEvidence(evidence: readonly EvidenceView[]): boolean
 }
 
 /**
+ * Selects the attempt whose authorization status is displayed.
+ *
+ * The contract does not promise that `attempts` is ordered, so recency comes
+ * from `created_at` rather than array position. An equal timestamp keeps the
+ * later element, and an attempt with an unparsable timestamp never displaces
+ * one that carries a usable date.
+ */
+function latestAttempt(attempts: readonly AttemptView[]): AttemptView | null {
+  let selected: AttemptView | null = null;
+  let selectedTime = Number.NEGATIVE_INFINITY;
+
+  for (const attempt of attempts) {
+    const time = Date.parse(attempt.created_at);
+    if (Number.isNaN(time)) {
+      selected ??= attempt;
+      continue;
+    }
+    if (selected === null || time >= selectedTime) {
+      selected = attempt;
+      selectedTime = time;
+    }
+  }
+
+  return selected;
+}
+
+export interface SettlementViewOptions {
+  /** Explorer hosts a link may point at. Defaults to `DEFAULT_EXPLORER_HOSTS`. */
+  readonly allowedExplorerHosts?: readonly string[];
+}
+
+/**
  * Projects one frozen `IntentResponse` into the display model.
  *
  * Only known contract fields are copied, so an added provider field cannot
  * reach a component prop by accident. Malformed identity fields collapse to
  * `null` instead of rendering an unverified value as fact.
  */
-export function toSettlementDetailsView(intent: IntentResponse): SettlementDetailsView {
+export function toSettlementDetailsView(
+  intent: IntentResponse,
+  options: SettlementViewOptions = {},
+): SettlementDetailsView {
   assertNoSensitiveFields(intent);
 
   const state = intent.state;
@@ -314,9 +364,9 @@ export function toSettlementDetailsView(intent: IntentResponse): SettlementDetai
   );
   const capComparison = capAtomic === null ? null : compareAtomic(amountAtomic, capAtomic);
 
-  const latestAttempt = intent.attempts.at(-1) ?? null;
+  const displayedAttempt = latestAttempt(intent.attempts);
   const authorizationStatus: AuthorizationDisplayStatus =
-    latestAttempt?.authorization_status ?? 'NOT_REPORTED';
+    displayedAttempt?.authorization_status ?? 'NOT_REPORTED';
 
   const settlement = intent.settlement ?? null;
   const settlementIsWellFormed =
@@ -350,7 +400,11 @@ export function toSettlementDetailsView(intent: IntentResponse): SettlementDetai
           recipient: intent.recipient,
           amountAtomic,
           amountDisplay: formatAtomicUsdc(amountAtomic),
-          explorer: validateExplorerUrl(settlement.explorer_url, settlement.transaction_hash),
+          explorer: validateExplorerUrl(
+            settlement.explorer_url,
+            settlement.transaction_hash,
+            options.allowedExplorerHosts ?? DEFAULT_EXPLORER_HOSTS,
+          ),
         }
       : null;
 
@@ -382,9 +436,9 @@ export function toSettlementDetailsView(intent: IntentResponse): SettlementDetai
     },
     authorization: {
       status: authorizationStatus,
-      attemptId: latestAttempt?.attempt_id ?? null,
-      occurredAt: latestAttempt?.created_at ?? null,
-      sanitizedReason: sanitizeText(latestAttempt?.sanitized_error),
+      attemptId: displayedAttempt?.attempt_id ?? null,
+      occurredAt: displayedAttempt?.created_at ?? null,
+      sanitizedReason: sanitizeText(displayedAttempt?.sanitized_error),
       terminal: TERMINAL_AUTHORIZATION.has(authorizationStatus),
     },
     verification,

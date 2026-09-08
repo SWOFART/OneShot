@@ -14,6 +14,13 @@ const TOKEN_CONTRACT = '0x3600000000000000000000000000000000000000';
 const REVERT_HASH = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const HOSTILE_HASH = '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 
+/**
+ * Host the synthetic fixtures publish links through. It is not the documented
+ * Arc testnet explorer, so a viewer rendering these fixtures must opt into it
+ * explicitly rather than the package widening `DEFAULT_EXPLORER_HOSTS`.
+ */
+export const FIXTURE_EXPLORER_HOSTS: readonly string[] = ['testnet.arcscan.io'];
+
 const BASE_POLICY = {
   policy_id: 'privy-policy-arc-prod',
   status: 'CONFIGURED',

@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react';
 
 import { createInMemorySettlementClient } from './client.js';
-import { SETTLEMENT_SCENARIOS, SETTLEMENT_SCENARIO_INTENTS } from './fixtures.js';
+import {
+  FIXTURE_EXPLORER_HOSTS,
+  SETTLEMENT_SCENARIOS,
+  SETTLEMENT_SCENARIO_INTENTS,
+} from './fixtures.js';
 import { SettlementDetailsRoute } from './SettlementDetailsRoute.js';
 
 export interface DemoShellProps {
@@ -50,6 +54,7 @@ export function DemoShell({ initialScenario }: DemoShellProps) {
       <SettlementDetailsRoute
         businessIntentId={scenario.intent.business_intent_id}
         client={client}
+        allowedExplorerHosts={FIXTURE_EXPLORER_HOSTS}
       />
     </>
   );

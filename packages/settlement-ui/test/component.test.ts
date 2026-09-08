@@ -10,7 +10,7 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { toSettlementDetailsView } from '../src/contract.js';
-import { SETTLEMENT_SCENARIOS } from '../src/fixtures.js';
+import { FIXTURE_EXPLORER_HOSTS, SETTLEMENT_SCENARIOS } from '../src/fixtures.js';
 import { SettlementDetailsPanel } from '../src/SettlementDetails.js';
 
 afterEach(cleanup);
@@ -21,7 +21,11 @@ function renderScenario(name: string) {
   const scenario = SETTLEMENT_SCENARIOS[name];
   if (scenario === undefined) throw new Error(`Missing fixture: ${name}`);
   return render(
-    createElement(SettlementDetailsPanel, { view: toSettlementDetailsView(scenario.intent) }),
+    createElement(SettlementDetailsPanel, {
+      view: toSettlementDetailsView(scenario.intent, {
+        allowedExplorerHosts: FIXTURE_EXPLORER_HOSTS,
+      }),
+    }),
   );
 }
 
@@ -219,6 +223,19 @@ describe('verified transaction details', () => {
     const panel = screen.getByRole('region', { name: 'Transaction' });
     expect(within(panel).getByText('Explorer link must use https.')).toBeTruthy();
     expect(panel.innerHTML).not.toContain('javascript:');
+  });
+
+  it('drops a link whose host is off the deployment allowlist', () => {
+    const scenario = SETTLEMENT_SCENARIOS['authorized-committed'];
+    if (scenario === undefined) throw new Error('Missing fixture: authorized-committed');
+    render(
+      createElement(SettlementDetailsPanel, {
+        view: toSettlementDetailsView(scenario.intent),
+      }),
+    );
+    expect(screen.queryByRole('link')).toBeNull();
+    const panel = screen.getByRole('region', { name: 'Transaction' });
+    expect(within(panel).getByText('Explorer host is not on the allowlist.')).toBeTruthy();
   });
 
   it('escapes a hostile string rather than injecting markup', () => {

@@ -2,13 +2,14 @@ import type { IntentResponse } from '@oneshot/contracts';
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEFAULT_EXPLORER_HOSTS,
   SanitizationError,
   assertNoSensitiveFields,
   sanitizeText,
   toSettlementDetailsView,
   validateExplorerUrl,
 } from '../src/contract.js';
-import { SETTLEMENT_SCENARIOS } from '../src/fixtures.js';
+import { FIXTURE_EXPLORER_HOSTS, SETTLEMENT_SCENARIOS } from '../src/fixtures.js';
 
 const COMMITTED = SETTLEMENT_SCENARIOS['authorized-committed']?.intent as IntentResponse;
 const HASH = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -21,28 +22,28 @@ function scenarioIntent(name: string): IntentResponse {
 
 describe('outbound explorer URL validation', () => {
   it('accepts an https link that references the displayed transaction', () => {
-    const result = validateExplorerUrl(`https://testnet.arcscan.io/tx/${HASH}`, HASH);
-    expect(result.href).toBe(`https://testnet.arcscan.io/tx/${HASH}`);
+    const result = validateExplorerUrl(`https://testnet.arcscan.app/tx/${HASH}`, HASH);
+    expect(result.href).toBe(`https://testnet.arcscan.app/tx/${HASH}`);
     expect(result.rejectedReason).toBeNull();
   });
 
   it('accepts the hash in a query parameter', () => {
-    const result = validateExplorerUrl(`https://testnet.arcscan.io/search?tx=${HASH}`, HASH);
-    expect(result.href).toBe(`https://testnet.arcscan.io/search?tx=${HASH}`);
+    const result = validateExplorerUrl(`https://testnet.arcscan.app/search?tx=${HASH}`, HASH);
+    expect(result.href).toBe(`https://testnet.arcscan.app/search?tx=${HASH}`);
   });
 
   it.each([
     ['javascript:alert(1)', 'scheme'],
     ['JavaScript:alert(1)', 'uppercase scheme'],
     [`data:text/html,<script>alert(1)</script>${HASH}`, 'data URL'],
-    [`http://testnet.arcscan.io/tx/${HASH}`, 'plaintext http'],
+    [`http://testnet.arcscan.app/tx/${HASH}`, 'plaintext http'],
     [`vbscript:msgbox(${HASH})`, 'vbscript'],
     [`https://user:pass@evil.example/tx/${HASH}`, 'embedded credentials'],
-    ['https://testnet.arcscan.io/tx/0xdeadbeef', 'different transaction'],
-    ['https://testnet.arcscan.io/tx/', 'no transaction reference'],
+    ['https://testnet.arcscan.app/tx/0xdeadbeef', 'different transaction'],
+    ['https://testnet.arcscan.app/tx/', 'no transaction reference'],
     ['/tx/relative', 'relative URL'],
     ['not a url', 'unparsable'],
-    [`https://testnet.arcscan.io/tx/${HASH}\nlocation=1`, 'embedded newline'],
+    [`https://testnet.arcscan.app/tx/${HASH}\nlocation=1`, 'embedded newline'],
   ])('rejects %j (%s)', (candidate) => {
     const result = validateExplorerUrl(candidate, HASH);
     expect(result.href).toBeNull();
@@ -50,7 +51,7 @@ describe('outbound explorer URL validation', () => {
   });
 
   it('rejects a link longer than the contract bound', () => {
-    const long = `https://testnet.arcscan.io/tx/${HASH}?padding=${'a'.repeat(300)}`;
+    const long = `https://testnet.arcscan.app/tx/${HASH}?padding=${'a'.repeat(300)}`;
     expect(validateExplorerUrl(long, HASH).href).toBeNull();
   });
 
@@ -60,7 +61,38 @@ describe('outbound explorer URL validation', () => {
   });
 
   it('refuses to bind a link to a malformed transaction hash', () => {
-    expect(validateExplorerUrl('https://testnet.arcscan.io/tx/0xabc', '0xabc').href).toBeNull();
+    expect(validateExplorerUrl('https://testnet.arcscan.app/tx/0xabc', '0xabc').href).toBeNull();
+  });
+
+  it('rejects a hostile host that quotes the real transaction hash back', () => {
+    const result = validateExplorerUrl(`https://arcscan-app.example/tx/${HASH}`, HASH);
+    expect(result.href).toBeNull();
+    expect(result.rejectedReason).toBe('Explorer host is not on the allowlist.');
+  });
+
+  it.each([
+    `https://evil.example/tx/${HASH}`,
+    `https://testnet.arcscan.app.evil.example/tx/${HASH}`,
+    `https://sub.testnet.arcscan.app/tx/${HASH}`,
+  ])('rejects the off-allowlist host %j', (candidate) => {
+    expect(validateExplorerUrl(candidate, HASH).rejectedReason).toBe(
+      'Explorer host is not on the allowlist.',
+    );
+  });
+
+  it('accepts a host on a caller-supplied allowlist, case-insensitively', () => {
+    const result = validateExplorerUrl(`https://Explorer.Example/tx/${HASH}`, HASH, [
+      'explorer.example',
+    ]);
+    expect(result.href).toBe(`https://explorer.example/tx/${HASH}`);
+  });
+
+  it('rejects every host when the allowlist is empty', () => {
+    expect(validateExplorerUrl(`https://testnet.arcscan.app/tx/${HASH}`, HASH, []).href).toBeNull();
+  });
+
+  it('defaults to the documented Arc testnet explorer host', () => {
+    expect(DEFAULT_EXPLORER_HOSTS).toEqual(['testnet.arcscan.app']);
   });
 });
 
@@ -135,7 +167,9 @@ describe('settlement details projection', () => {
   });
 
   it('verifies a committed settlement backed by authoritative Arc evidence', () => {
-    const view = toSettlementDetailsView(scenarioIntent('authorized-committed'));
+    const view = toSettlementDetailsView(scenarioIntent('authorized-committed'), {
+      allowedExplorerHosts: FIXTURE_EXPLORER_HOSTS,
+    });
     expect(view.verification).toBe('VERIFIED');
     expect(view.transaction?.transactionHash).toBe(HASH);
     expect(view.transaction?.amountDisplay).toBe('1.250000');
@@ -158,7 +192,9 @@ describe('settlement details projection', () => {
   });
 
   it('drops an unsafe explorer link on an otherwise verified settlement', () => {
-    const view = toSettlementDetailsView(scenarioIntent('hostile-explorer-link'));
+    const view = toSettlementDetailsView(scenarioIntent('hostile-explorer-link'), {
+      allowedExplorerHosts: FIXTURE_EXPLORER_HOSTS,
+    });
     expect(view.verification).toBe('VERIFIED');
     expect(view.transaction?.explorer.href).toBeNull();
     expect(view.transaction?.explorer.rejectedReason).toBe('Explorer link must use https.');
@@ -222,6 +258,89 @@ describe('settlement details projection', () => {
     expect(view.evidenceAvailable).toBe(false);
     expect(view.evidence).toEqual([]);
     expect(view.state).toBe('AUTHORIZING');
+  });
+
+  it('selects the attempt with the latest timestamp, not the last array element', () => {
+    const intent: IntentResponse = {
+      ...COMMITTED,
+      attempts: [
+        {
+          attempt_id: 'attempt-newest',
+          stage: 'REJECTED',
+          created_at: '2026-09-08T12:30:00.000Z',
+          authorization_status: 'DENIED',
+        },
+        {
+          attempt_id: 'attempt-oldest',
+          stage: 'AUTHORIZING',
+          created_at: '2026-09-08T12:00:00.000Z',
+          authorization_status: 'CHECKING',
+        },
+      ],
+    };
+    const view = toSettlementDetailsView(intent);
+    expect(view.authorization.attemptId).toBe('attempt-newest');
+    expect(view.authorization.status).toBe('DENIED');
+  });
+
+  it('keeps the later element when two attempts share a timestamp', () => {
+    const intent: IntentResponse = {
+      ...COMMITTED,
+      attempts: [
+        {
+          attempt_id: 'attempt-first',
+          stage: 'AUTHORIZING',
+          created_at: '2026-09-08T12:00:00.000Z',
+          authorization_status: 'CHECKING',
+        },
+        {
+          attempt_id: 'attempt-second',
+          stage: 'READY',
+          created_at: '2026-09-08T12:00:00.000Z',
+          authorization_status: 'AUTHORIZED',
+        },
+      ],
+    };
+    expect(toSettlementDetailsView(intent).authorization.attemptId).toBe('attempt-second');
+  });
+
+  it('never lets an undated attempt displace a dated one', () => {
+    const intent: IntentResponse = {
+      ...COMMITTED,
+      attempts: [
+        {
+          attempt_id: 'attempt-dated',
+          stage: 'READY',
+          created_at: '2026-09-08T12:00:00.000Z',
+          authorization_status: 'AUTHORIZED',
+        },
+        {
+          attempt_id: 'attempt-undated',
+          stage: 'AUTHORIZING',
+          created_at: 'not-a-date',
+          authorization_status: 'CHECKING',
+        },
+      ],
+    };
+    expect(toSettlementDetailsView(intent).authorization.attemptId).toBe('attempt-dated');
+  });
+
+  it('falls back to the first attempt when no timestamp parses', () => {
+    const intent: IntentResponse = {
+      ...COMMITTED,
+      attempts: [
+        { attempt_id: 'attempt-a', stage: 'AUTHORIZING', created_at: 'nope' },
+        { attempt_id: 'attempt-b', stage: 'AUTHORIZING', created_at: 'also-nope' },
+      ],
+    };
+    expect(toSettlementDetailsView(intent).authorization.attemptId).toBe('attempt-a');
+  });
+
+  it('reports no attempt when the list is empty', () => {
+    const intent: IntentResponse = { ...COMMITTED, attempts: [] };
+    const view = toSettlementDetailsView(intent);
+    expect(view.authorization.attemptId).toBeNull();
+    expect(view.authorization.status).toBe('NOT_REPORTED');
   });
 
   it('preserves lagging index freshness as an observation', () => {

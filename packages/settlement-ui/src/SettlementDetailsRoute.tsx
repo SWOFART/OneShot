@@ -9,12 +9,15 @@ import {
   SanitizationError,
   toSettlementDetailsView,
   type SettlementDetailsView,
+  type SettlementViewOptions,
 } from './contract.js';
 import { SettlementDetailsPanel } from './SettlementDetails.js';
 
 export interface SettlementDetailsRouteProps {
   readonly businessIntentId: string;
   readonly client: SettlementClient;
+  /** Explorer hosts this deployment publishes links for. */
+  readonly allowedExplorerHosts?: readonly string[];
 }
 
 type RouteState =
@@ -50,18 +53,25 @@ const FAILURE_COPY: Readonly<Record<SettlementClientFailure, { heading: string; 
  * Read-only: it fetches one intent and renders it. Failure states describe what
  * is unknown rather than offering a retry that could imply a new settlement.
  */
-export function SettlementDetailsRoute({ businessIntentId, client }: SettlementDetailsRouteProps) {
+export function SettlementDetailsRoute({
+  businessIntentId,
+  client,
+  allowedExplorerHosts,
+}: SettlementDetailsRouteProps) {
   const [state, setState] = useState<RouteState>({ kind: 'LOADING' });
 
   useEffect(() => {
     let active = true;
     setState({ kind: 'LOADING' });
 
+    const options: SettlementViewOptions =
+      allowedExplorerHosts === undefined ? {} : { allowedExplorerHosts };
+
     void client
       .readIntent(businessIntentId)
       .then((intent) => {
         if (!active) return;
-        setState({ kind: 'LOADED', view: toSettlementDetailsView(intent) });
+        setState({ kind: 'LOADED', view: toSettlementDetailsView(intent, options) });
       })
       .catch((error: unknown) => {
         if (!active) return;
@@ -89,7 +99,7 @@ export function SettlementDetailsRoute({ businessIntentId, client }: SettlementD
     return () => {
       active = false;
     };
-  }, [businessIntentId, client]);
+  }, [businessIntentId, client, allowedExplorerHosts]);
 
   if (state.kind === 'LOADING') {
     return (

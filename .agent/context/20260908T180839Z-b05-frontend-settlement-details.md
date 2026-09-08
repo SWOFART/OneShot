@@ -49,9 +49,13 @@ readiness audit confirmed Gate P4 froze the frontend boundary.
 
 - Money renders through package-local `bigint` string arithmetic. No import from
   the A-owned `apps/web`, and no JavaScript floating point.
-- Explorer links are validated against an https-only scheme check with the
-  transaction hash bound to the rendered settlement before the anchor renders.
-  A link that fails validation is dropped, not rendered inert.
+- Explorer links are validated before the anchor renders: https only, no embedded
+  credentials, a host on the allowlist, and the rendered transaction hash present
+  in the link. A link that fails any rule is dropped, not rendered inert. The
+  default allowlist holds the documented Arc testnet explorer host; deployments
+  and fixture viewers pass their own list rather than widening it.
+- The displayed attempt is chosen by latest `created_at`, because the contract
+  does not promise that `attempts` is ordered.
 - The slice exposes no submit, resend, force-pay, or adapter action. Reconciliation
   is a read-only trigger owned by Lane C's timeline, so B05 renders state only.
 - Test files use `.ts` with `createElement` (the C05 convention) so the root
@@ -69,10 +73,10 @@ readiness audit confirmed Gate P4 froze the frontend boundary.
 - `git rev-parse origin/develop` - `710614af76ae5c28e2c1f69b2c00480f47b623b7`
 - `git checkout -b milestone/b05-frontend-settlement-details origin/develop` - PASS
 - `pnpm install` - PASS (adds the new workspace package)
-- `pnpm --filter @oneshot/settlement-ui verify` - PASS (format, lint, typecheck, 173 tests, build)
+- `pnpm --filter @oneshot/settlement-ui verify` - PASS (format, lint, typecheck, 186 tests, build)
 - `pnpm lint` - PASS
 - `pnpm typecheck` - PASS
-- `pnpm test` - PASS (53 files, 778 tests; 49 files and 605 tests on the base)
+- `pnpm test` - PASS (53 files, 791 tests; 49 files and 605 tests on the base)
 - `pnpm check:generated` - PASS
 - `pnpm validate:fixtures` - PASS (9 contracts-v1 and 7 ui-v1 fixtures)
 - `npx markdownlint-cli2` on the added Markdown - PASS
@@ -118,18 +122,34 @@ for a presentational slice and remain proven by A03/A04 and Gate P4.
 
 - Branch: `milestone/b05-frontend-settlement-details`
 - Base: `develop` (`710614af76ae5c28e2c1f69b2c00480f47b623b7`)
-- Commit: uncommitted; the candidate tree is the staged index, captured with
-  `git write-tree` immediately before Gate A
-- Diff: 28 files, +2893 lines, all additive except the `tsconfig.json` project
-  reference slot and the `pnpm-lock.yaml` workspace entry
-- PR: not created
-- CI: not applicable
+- Commit: `2fbc8bd9380eb18f1aeff192b84867fbfbc906c5` (28 files, +2913 insertions),
+  plus a second candidate for the Gate A non-blocking findings, staged and
+  captured with `git write-tree` immediately before the second Gate A
+- All changes are additive except the `tsconfig.json` project reference slot and
+  the `pnpm-lock.yaml` workspace entry
+- PR: <https://github.com/SWOFART/OneShot/pull/36> (draft, base `develop`)
+- CI on `2fbc8bd`: ESLint and TypeScript PASS, Markdown and Mermaid PASS,
+  Workers Builds PASS, repository-policy PASS
 
 ## Review gates
 
-- Gate A: NOT RUN. `free-pi-cli@0.2.19` is an interactive terminal agent with no
-  non-interactive prompt mode, and this session cannot drive a TTY. The gate
-  fails closed: nothing is committed or pushed until a human runs it.
+- Gate A (round 1): PASS. Tool `free-pi-cli`, model `deepseek-v4-flash`
+  (provider: free-pi), base `710614af76ae5c28e2c1f69b2c00480f47b623b7`, tree
+  `fe84cc22695d62f19be8ff83b6da9afd03fb3927`. No blocking findings; three
+  non-blocking findings, all now addressed:
+  1. Explorer host was not pinned. `validateExplorerUrl` now takes an allowlist
+     defaulting to `DEFAULT_EXPLORER_HOSTS`
+     (`testnet.arcscan.app`, the host documented in
+     `docs/settlement/PROVIDER_SETUP.md`), and rejects every other host.
+     `SettlementDetailsRoute` accepts `allowedExplorerHosts` for deployments
+     with a different explorer. The synthetic fixtures use
+     `testnet.arcscan.io`, so `FIXTURE_EXPLORER_HOSTS` makes the demo viewer and
+     component tests opt into that host rather than widening the default.
+  2. Line count corrected: the first commit is 28 files and +2913 insertions.
+  3. `attempts.at(-1)` replaced with selection by latest `created_at`, keeping
+     the later element on a tie and never letting an undated attempt displace a
+     dated one.
+- Gate A (round 2): NOT RUN for the new candidate tree.
 - Gate B: NOT RUN
 
 ## Gate A instruction message
@@ -139,7 +159,9 @@ message:
 
 > Read `.agent/review-prompts/freepi-prepush-review.md` and follow it.
 > Base: `710614af76ae5c28e2c1f69b2c00480f47b623b7` (origin/develop).
-> Candidate tree: the SHA printed by `git write-tree`, staged index.
+> Candidate tree: the SHA printed by `git write-tree`, staged index. The index
+> contains pushed commit `2fbc8bd9380eb18f1aeff192b84867fbfbc906c5` plus the
+> round-two fixes, so review the whole branch diff against the base.
 > Branch: `milestone/b05-frontend-settlement-details`.
 > Acceptance criteria: milestone B05 in
 > `milestones/coder-b/B05-frontend-settlement-details.md`.
