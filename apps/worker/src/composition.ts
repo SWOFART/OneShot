@@ -15,10 +15,9 @@ import type {
   WorkerOptions,
 } from './types.js';
 import {
-  createScenario,
-  RecoveryAgentSimulator,
   RecoveryService,
-  SimulatorSubgraphMcpRecoveryPort,
+  UnavailableRecoveryAdvisorPort,
+  UnavailableSubgraphMcpRecoveryPort,
   type RecoveryAdvisorPort,
   type SubgraphMcpRecoveryPort,
 } from '@oneshot/reconciliation';
@@ -44,9 +43,8 @@ export function createProductionRecoveryService(
     localStatePort: localState,
     ...bridgeOptions,
   });
-  const subgraphMcp =
-    subgraphMcpPort ?? new SimulatorSubgraphMcpRecoveryPort(createScenario('empty'));
-  const recoveryAdvisor = advisor ?? new RecoveryAgentSimulator({ scenario: 'auto' });
+  const subgraphMcp = subgraphMcpPort ?? new UnavailableSubgraphMcpRecoveryPort();
+  const recoveryAdvisor = advisor ?? new UnavailableRecoveryAdvisorPort();
   return new RecoveryService({
     localState,
     knownIdentityEvidence,

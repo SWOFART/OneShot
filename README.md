@@ -63,10 +63,11 @@ flowchart TB
     PrivyAdapter --> Privy[Privy wallet and policy]
     ArcAdapter --> Arc[Arc USDC and RPC]
     MCPAdapter -.-> MCP[Subgraph MCP]
-    MCP -.-> GraphIndex[Live OneShot Arc Subgraph]
+    MCP -.-> GraphIndex[OneShot Arc Subgraph]
 ```
 
-Solid edges are implemented. Dashed edges are planned and not yet built.
+Solid edges are implemented. Dashed runtime edges are unavailable in production;
+the Subgraph source exists, but live Subgraph MCP/model composition is not verified.
 
 ### The state machine
 
@@ -101,7 +102,7 @@ These are enforced in code and tests, not by convention:
 - **One atomic transition grants submission ownership.** Exactly one worker
   crosses the external boundary.
 - **Doubt fails closed.** A timeout, reset, truncated response, or any
-  unrecognized error is treated as *possibly submitted*, never as a safe retry.
+  unrecognized error is treated as _possibly submitted_, never as a safe retry.
 - **A successful receipt is not confirmation.** Settlement is committed only
   when the receipt carries exactly one matching ERC-20 Transfer, to the expected
   recipient, for the exact amount, from the configured token.
@@ -112,11 +113,11 @@ These are enforced in code and tests, not by convention:
 
 ## Integrations
 
-| System | Role |
-| --- | --- |
-| **Privy** | Corporate wallet, scoped authorization, and spending policy |
-| **Arc** | USDC settlement rail (Arc Testnet, chain `5042002`) |
-| **The Graph** | Planned candidate discovery when a transaction hash is lost |
+| System        | Role                                                              |
+| ------------- | ----------------------------------------------------------------- |
+| **Privy**     | Corporate wallet, scoped authorization, and spending policy       |
+| **Arc**       | USDC settlement rail (Arc Testnet, chain `5042002`)               |
+| **The Graph** | Arc USDC Subgraph source; live Subgraph MCP qualification pending |
 
 Privy authorizes and constrains the wallet action. It is not the duplicate
 lock: OneShot's durable state is.
@@ -133,7 +134,9 @@ packages/storage-postgres     durable ledger and migrations
 packages/arc-adapter          Arc profiles, money, receipts, readiness
 packages/privy-adapter        authorization, requests, policy, adapters
 packages/reconciliation       recovery evidence and safety core
+packages/recovery-ui          synthetic recovery evidence viewer
 packages/testkit-*            simulators and sanitized fixtures
+subgraph                      Arc Testnet USDC transfer indexer
 ```
 
 ## Quick start
@@ -166,17 +169,28 @@ pnpm --filter @oneshot/arc-adapter probe
 
 That command is read-only. It cannot sign, send, or mutate anything.
 
+To view the recovery UI locally:
+
+```bash
+pnpm --filter @oneshot/recovery-ui dev
+```
+
+Open `http://localhost:5173/?scenario=aged-unknown`. The public Wrangler target
+uses the same clearly labelled synthetic viewer. Wrangler's build hook creates
+the static bundle before local preview or `pnpm deploy`, including on a fresh
+Cloudflare Workers Build checkout.
+
 ## API
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `POST` | `/v1/intents` | Create an intent; an identical replay returns the same result |
-| `GET` | `/v1/intents/{id}` | Authoritative intent, attempts, settlement, evidence |
-| `POST` | `/v1/intents/{id}/reconcile` | Trigger read-only reconciliation; never submits |
-| `GET` | `/v1/intents/{id}/recovery-view` | Local authority plus labelled provider observations |
-| `GET` | `/v1/metrics` | Operational metrics |
-| `GET` | `/health/live` | Process liveness |
-| `GET` | `/health/ready` | Configuration and Arc identity readiness |
+| Method | Path                             | Purpose                                                       |
+| ------ | -------------------------------- | ------------------------------------------------------------- |
+| `POST` | `/v1/intents`                    | Create an intent; an identical replay returns the same result |
+| `GET`  | `/v1/intents/{id}`               | Authoritative intent, attempts, settlement, evidence          |
+| `POST` | `/v1/intents/{id}/reconcile`     | Trigger read-only reconciliation; never submits               |
+| `GET`  | `/v1/intents/{id}/recovery-view` | Local authority plus labelled provider observations           |
+| `GET`  | `/v1/metrics`                    | Operational metrics                                           |
+| `GET`  | `/health/live`                   | Process liveness                                              |
+| `GET`  | `/health/ready`                  | Configuration and Arc identity readiness                      |
 
 The contract is defined in `packages/contracts/openapi/openapi.v1.json`.
 
@@ -184,13 +198,13 @@ The contract is defined in `packages/contracts/openapi/openapi.v1.json`.
 
 Under active development. **Testnet only.**
 
-| Area | Status |
-| --- | --- |
-| Durable intent ledger, API, worker | Implemented |
-| Settlement adapters and error taxonomy | Implemented, exercised against simulators |
-| Recovery evidence and safety core | In progress |
-| Subgraph MCP discovery and LLM recovery agent | Planned |
-| Operator frontend | Intent creation, replay/conflict, and authoritative status implemented |
+| Area                                          | Status                                                                              |
+| --------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Durable intent ledger, API, worker            | Implemented                                                                         |
+| Settlement adapters and error taxonomy        | Implemented, exercised against simulators                                           |
+| Recovery evidence and safety core             | Implemented against simulators                                                      |
+| Subgraph MCP discovery and LLM recovery agent | Implemented boundary; live path not verified                                        |
+| Operator frontend                             | Intent/status UI and synthetic recovery viewer implemented; live API wiring pending |
 
 **No live settlement has been executed.** No Privy application, wallet, policy,
 or funded testnet account has been provisioned for this build. The adapters are
@@ -204,13 +218,14 @@ plus explicit human authorization.
 
 ## Documentation
 
-| Document | Contents |
-| --- | --- |
-| [`plan.md`](plan.md) | Product plan, scope, and delivery gates |
-| [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md) | Domain model and boundaries |
-| [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md) | Frozen v1 contract pack |
-| [`docs/settlement/`](docs/settlement/) | Settlement config, provider setup, live evidence |
-| [`AGENTS.md`](AGENTS.md) | Contribution policy and review gates |
+| Document                                                                 | Contents                                         |
+| ------------------------------------------------------------------------ | ------------------------------------------------ |
+| [`plan.md`](plan.md)                                                     | Product plan, scope, and delivery gates          |
+| [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md)             | Domain model and boundaries                      |
+| [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md)                     | Frozen v1 contract pack                          |
+| [`docs/settlement/`](docs/settlement/)                                   | Settlement config, provider setup, live evidence |
+| [`packages/reconciliation/docs/c06/`](packages/reconciliation/docs/c06/) | C06 demo and qualification evidence index        |
+| [`AGENTS.md`](AGENTS.md)                                                 | Contribution policy and review gates             |
 
 ## License
 

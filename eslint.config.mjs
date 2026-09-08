@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['**/coverage/**', '**/dist/**', '**/generated/**'],
+    ignores: ['**/coverage/**', '**/dist/**', '**/site-dist/**', '**/generated/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -18,6 +18,13 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-import-type-side-effects': 'error',
+    },
+  },
+  {
+    files: ['subgraph/src/**/*.ts'],
+    rules: {
+      // AssemblyScript does not support TypeScript's `import type` syntax.
+      '@typescript-eslint/consistent-type-imports': 'off',
     },
   },
 );

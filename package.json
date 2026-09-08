@@ -9,11 +9,12 @@
     "pnpm": "11.19.0"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && pnpm --filter @oneshot/arc-subgraph build",
     "check:generated": "pnpm --filter @oneshot/contracts check:generated",
     "clean": "tsc -b --clean",
-    "deploy": "pnpm --filter @oneshot/web build && wrangler deploy",
-    "dev:frontend": "pnpm --filter @oneshot/web dev",
+    "deploy": "wrangler deploy",
+    "dev:frontend": "wrangler dev",
+    "dev:web": "pnpm --filter @oneshot/web dev",
     "format": "prettier --write \"**/*.{ts,mts,mjs,json,jsonc,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,mts,mjs,json,jsonc,yml,yaml}\"",
     "generate": "pnpm --filter @oneshot/contracts generate",
