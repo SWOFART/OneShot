@@ -46,6 +46,7 @@ temp/
 
 # Build artifacts and caches (expand per stack)
 dist/
+site-dist/
 build/
 coverage/
 node_modules/

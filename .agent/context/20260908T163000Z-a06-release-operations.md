@@ -14,7 +14,7 @@ Implement Coder A milestone A06 (Operational Demo and Release Bundle): repeatabl
 
 ## Assumptions
 
-- Base commit is fresh `origin/develop` (`8f3249a2820467cb2b64209f119f32718507b419`), which includes Gate P4 freeze (PR #34).
+- Base commit is fresh `origin/develop` (`36df8fa06b94a0c08e32fa729a41ef2f22b464dd`), which includes Gate P4, C06, and the current frontend deployment fix.
 - A06 is an operations and release bundle; it depends on A05 only.
 - Invariant scenarios execute deterministically against an in-memory CAS ledger;
   PostgreSQL durability is covered by the existing integration suites.
@@ -62,7 +62,7 @@ Implement Coder A milestone A06 (Operational Demo and Release Bundle): repeatabl
 - `pnpm format:check`: PASS
 - `pnpm lint`: PASS
 - `pnpm typecheck`: PASS
-- `pnpm test`: PASS (46 test files, 596 tests)
+- `pnpm test`: PASS (49 test files, 605 tests)
 - `npx markdownlint-cli2`: PASS
 
 ## External-doc findings
@@ -77,23 +77,23 @@ Implement Coder A milestone A06 (Operational Demo and Release Bundle): repeatabl
 ## Git and PR state
 
 - Branch: `milestone/a06-release-operations`
-- Base: `origin/develop` (`8f3249a2820467cb2b64209f119f32718507b419`)
-- Commit: pending Gate A
-- PR: pending
-- CI: pending
+- Base: `origin/develop` (`36df8fa06b94a0c08e32fa729a41ef2f22b464dd`)
+- A06 commit before base refresh: `b36f53a3fad0b6fb40f413e91490efb6fbfc2069`
+- PR: #35 (`https://github.com/SWOFART/OneShot/pull/35`)
+- CI: previous head passed Cloudflare Workers build; new merged head pending push
 
 ## Review gates
 
-- Gate A: first review found that the new runbooks overstated safe-disable API
-  behavior. Documentation now matches the existing worker ownership gate; fresh
-  review pending.
+- Gate A: `VERDICT: PASS` for tree
+  `6ce25ac3fe84fcfea32c4c68df2292e6410b5fdf`, then invalidated when `develop`
+  advanced and produced a PR merge conflict. Fresh review required for the
+  merged candidate tree.
 - Gate B: pending
 
 ## Handoff/next steps
 
-1. Run Gate A review via `free-pi-cli`.
-2. Commit, push branch `milestone/a06-release-operations`.
-3. Open draft PR targeting `develop`.
-4. Wait for CI checks.
-5. Run Gate B review via `free-pi-cli`.
-6. Update PR body and mark ready for review.
+1. Run fresh Gate A review on the merged candidate tree.
+2. Complete and push the merge commit to PR #35.
+3. Wait for CI checks on the new head.
+4. Run Gate B review via `free-pi-cli`.
+5. Update PR body and mark ready for review.

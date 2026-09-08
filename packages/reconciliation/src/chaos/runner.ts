@@ -150,6 +150,7 @@ export function runChaosScenario(scenario: ChaosScenario): ChaosExecutionReport 
     evidence: synthesizedEvidence,
     indexView,
     recommendationOutcome: recommendation,
+    evaluatedAt: '2026-09-07T12:00:00.000Z',
   });
 
   // Verify Critical Invariants

@@ -2,6 +2,10 @@
 
 Minimal operator UI for creating or replaying a Business Intent and reading its authoritative status.
 
+This package is not the production Worker asset target yet. Deploy it only after
+`VITE_ONESHOT_API_BASE_URL` points to a reachable OneShot API. An assets-only
+Worker cannot serve `/health` or `/v1`.
+
 ```powershell
 pnpm --filter @oneshot/web dev
 ```

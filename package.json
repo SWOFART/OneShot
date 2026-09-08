@@ -9,13 +9,14 @@
     "pnpm": "11.19.0"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && pnpm --filter @oneshot/arc-subgraph build",
     "check:generated": "pnpm --filter @oneshot/contracts check:generated",
     "clean": "tsc -b --clean",
     "db:bootstrap": "pnpm --filter @oneshot/storage-postgres build && node scripts/bootstrap-db.mjs",
     "db:reset-demo": "pnpm --filter @oneshot/storage-postgres build && node scripts/reset-demo-db.mjs",
-    "deploy": "pnpm --filter @oneshot/web build && wrangler deploy",
-    "dev:frontend": "pnpm --filter @oneshot/web dev",
+    "deploy": "wrangler deploy",
+    "dev:frontend": "wrangler dev",
+    "dev:web": "pnpm --filter @oneshot/web dev",
     "format": "prettier --write \"**/*.{ts,mts,mjs,json,jsonc,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,mts,mjs,json,jsonc,yml,yaml}\"",
     "generate": "pnpm --filter @oneshot/contracts generate",

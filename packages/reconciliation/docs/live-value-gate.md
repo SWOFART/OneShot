@@ -4,10 +4,12 @@
 
 `FALLBACK_DIRECT_RECOVERY` (provisional until the live promotion protocol passes)
 
-No immutable OneShot/Arc Subgraph deployment, approved Gateway connection, or
-sanitized live model trace exists in the repository as of 2026-09-07. The
-production adapter and `subgraph/` are therefore not admitted. This is a safe
-capability fallback, not evidence that The Graph failed technically.
+The Arc Testnet USDC Subgraph source is present and a Studio deployment was
+reported on 2026-09-08. However, no canonical immutable deployment identity
+with an active Indexer allocation, approved Gateway/MCP connection, or sanitized
+live model-to-core trace exists in the repository. The production MCP/model
+adapters are therefore not admitted. This is a safe capability fallback, not
+evidence that The Graph failed technically.
 
 Known-identity Privy/Arc recovery remains available. Automatic hashless
 discovery through Subgraph MCP is unavailable, and The Graph qualification is
