@@ -17,12 +17,6 @@
       "path": "./packages/testkit-domain"
     },
     {
-      "path": "./apps/api"
-    },
-    {
-      "path": "./apps/worker"
-    },
-    {
       "path": "./packages/arc-adapter"
     },
     {
@@ -30,6 +24,12 @@
     },
     {
       "path": "./packages/testkit-settlement"
+    },
+    {
+      "path": "./apps/api"
+    },
+    {
+      "path": "./apps/worker"
     }
   ]
 }

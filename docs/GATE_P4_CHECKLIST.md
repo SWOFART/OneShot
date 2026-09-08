@@ -34,11 +34,11 @@ readiness probing they build on. See
 1. **Replace Settlement Port**: [COMPLETED]
    - In `apps/worker/src/composition.ts`, updated `composeWorker`:
    - Set `profile: 'production'`.
-   - Injected instance of `ArcSettlementAdapter` conforming to `SettlementPort`.
+   - Conformance-verified and wired injection support for real `ArcSettlementAdapter` conforming to `SettlementPort`.
    - Verified contract version `1.0.0` and network `eip155:5042002`.
 
 2. **Replace Authorization Port**: [COMPLETED]
-   - Injected instance of `PrivyAuthorizationAdapter` conforming to `AuthorizationPort`.
+   - Conformance-verified and wired injection support for real `PrivyAuthorizationAdapter` conforming to `AuthorizationPort`.
    - Verified contract version `1.0.0`.
 
 3. **Replace Recovery Engine**: [COMPLETED]
