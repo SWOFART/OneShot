@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "codegen": "graph codegen",
-    "build": "graph build",
+    "build": "graph codegen && graph build",
     "deploy:studio": "graph deploy oneshot-arc-testnet --node https://api.studio.thegraph.com/deploy/"
   },
   "devDependencies": {
