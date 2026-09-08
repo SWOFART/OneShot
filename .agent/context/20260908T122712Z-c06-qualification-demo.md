@@ -19,6 +19,8 @@
 ## Implemented
 
 - Wrangler now builds/deploys the recovery viewer instead of the placeholder.
+- Wrangler owns the frontend build hook, so Cloudflare's direct `wrangler
+deploy` path creates `site-dist` on a clean checkout.
 - The public viewer uses in-memory fixtures, exposes a scenario selector, and
   carries a persistent synthetic/not-live evidence banner.
 - Production recovery defaults no longer substitute Graph/model simulators;
@@ -27,6 +29,10 @@
   requirements and reports `NOT_VERIFIED` for plans, simulators, or missing refs.
 - Added C06 evidence index, demo/reset runbook, live capture checklist,
   qualification report, and limitations.
+- Merged `origin/milestone/c06-live-subgraph` commit `fe54774`: Arc Testnet USDC
+  Subgraph source plus a recorded Studio deployment. This does not upgrade The
+  Graph beyond `NOT VERIFIED` because the canonical immutable identity, Indexer
+  allocation, live MCP trace, and model/core trace remain missing.
 
 ## Validation
 
@@ -50,4 +56,26 @@ until a human provisions and returns the sanitized artifacts in
 ## Review state
 
 - Recorded base: `1250dec79bc702939fe2a3b0fd00e66bb34128af`.
-- Candidate is fully staged; Gate A awaits the user's compact manual FreePi relay.
+- Gate A passed tree `28b9445183b7d453ab813662ab3be0d15afbd2e3` and
+  produced commit `41399ad18433116b71eb9ad910bec34e024f3f60`.
+- That Gate A is now invalidated by the user-requested merge of
+  `milestone/c06-live-subgraph` and the subsequent integration fixes. A new
+  candidate review is required before another push.
+
+## Post-review integration
+
+- Merged commit `fe547744db3ef4d70e8d87a7bdcf8b736cafb6c9` through merge
+  commit `4ce750f`.
+- Cloudflare check `15da7c47-1b3d-4f57-8408-d772eb4396fc` failed at the
+  pre-deploy boundary. Its private log requires Cloudflare login; the local
+  configuration showed that a clean direct `wrangler deploy` had no guaranteed
+  `site-dist` build.
+- Added Wrangler `build.command`; dry-run now logs the custom Vite build before
+  loading four static assets.
+- Added `subgraph` to the root pnpm workspace, moved dependency authority to the
+  root lockfile, and removed the redundant nested lockfile.
+- Subgraph codegen PASS and Graph build PASS on Windows PowerShell.
+- Root lint/type/build PASS; 569 tests PASS after the merge. Root build now
+  includes the Subgraph compiler.
+- Wrangler dry-run PASS with the custom build hook visibly executing before
+  asset discovery. No Cloudflare deployment or rerun was performed.

@@ -63,10 +63,11 @@ flowchart TB
     PrivyAdapter --> Privy[Privy wallet and policy]
     ArcAdapter --> Arc[Arc USDC and RPC]
     MCPAdapter -.-> MCP[Subgraph MCP]
-    MCP -.-> GraphIndex[Live OneShot Arc Subgraph]
+    MCP -.-> GraphIndex[OneShot Arc Subgraph]
 ```
 
-Solid edges are implemented. Dashed edges are planned and not yet built.
+Solid edges are implemented. Dashed runtime edges are unavailable in production;
+the Subgraph source exists, but live Subgraph MCP/model composition is not verified.
 
 ### The state machine
 
@@ -112,11 +113,11 @@ These are enforced in code and tests, not by convention:
 
 ## Integrations
 
-| System        | Role                                                        |
-| ------------- | ----------------------------------------------------------- |
-| **Privy**     | Corporate wallet, scoped authorization, and spending policy |
-| **Arc**       | USDC settlement rail (Arc Testnet, chain `5042002`)         |
-| **The Graph** | Planned candidate discovery when a transaction hash is lost |
+| System        | Role                                                              |
+| ------------- | ----------------------------------------------------------------- |
+| **Privy**     | Corporate wallet, scoped authorization, and spending policy       |
+| **Arc**       | USDC settlement rail (Arc Testnet, chain `5042002`)               |
+| **The Graph** | Arc USDC Subgraph source; live Subgraph MCP qualification pending |
 
 Privy authorizes and constrains the wallet action. It is not the duplicate
 lock: OneShot's durable state is.
@@ -134,6 +135,7 @@ packages/privy-adapter        authorization, requests, policy, adapters
 packages/reconciliation       recovery evidence and safety core
 packages/recovery-ui          synthetic recovery evidence viewer
 packages/testkit-*            simulators and sanitized fixtures
+subgraph                      Arc Testnet USDC transfer indexer
 ```
 
 ## Quick start
@@ -172,8 +174,9 @@ pnpm --filter @oneshot/recovery-ui dev
 ```
 
 Open `http://localhost:5173/?scenario=aged-unknown`. The public Wrangler target
-uses the same clearly labelled synthetic viewer; `pnpm deploy` builds it before
-publishing static assets.
+uses the same clearly labelled synthetic viewer. Wrangler's build hook creates
+the static bundle before local preview or `pnpm deploy`, including on a fresh
+Cloudflare Workers Build checkout.
 
 ## API
 

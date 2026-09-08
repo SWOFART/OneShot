@@ -14,8 +14,8 @@ The subgraph discovers settlement candidates by sender, recipient, amount, and a
 ## Local validation
 
 ```sh
-pnpm --dir subgraph codegen
-pnpm --dir subgraph build
+pnpm --filter @oneshot/arc-subgraph codegen
+pnpm --filter @oneshot/arc-subgraph build
 ```
 
 ## Studio deployment
@@ -24,7 +24,7 @@ Authenticate with the Subgraph Studio deploy key without committing it, then run
 
 ```sh
 graph auth <DEPLOY_KEY>
-pnpm --dir subgraph deploy:studio
+pnpm --filter @oneshot/arc-subgraph deploy:studio
 ```
 
 After deployment, pin the immutable deployment ID in the OneShot runtime. Runtime queries use a separate Gateway API key through Subgraph MCP.

@@ -20,4 +20,11 @@ export default tseslint.config(
       '@typescript-eslint/no-import-type-side-effects': 'error',
     },
   },
+  {
+    files: ['subgraph/src/**/*.ts'],
+    rules: {
+      // AssemblyScript does not support TypeScript's `import type` syntax.
+      '@typescript-eslint/consistent-type-imports': 'off',
+    },
+  },
 );

@@ -6,7 +6,7 @@ dataSources:
     name: ArcTestnetUSDC
     network: arc-testnet
     source:
-      address: "0x3600000000000000000000000000000000000000"
+      address: '0x3600000000000000000000000000000000000000'
       abi: ERC20
       startBlock: 61000000
     mapping:

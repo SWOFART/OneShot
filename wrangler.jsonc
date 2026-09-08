@@ -2,6 +2,10 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "oneshot",
   "compatibility_date": "2026-09-07",
+  "build": {
+    "command": "pnpm --filter @oneshot/recovery-ui build:site",
+    "watch_dir": ["packages/recovery-ui/src", "packages/recovery-ui/index.html"],
+  },
   "assets": {
     "directory": "./packages/recovery-ui/site-dist",
   },
