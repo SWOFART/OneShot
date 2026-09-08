@@ -77,6 +77,40 @@ describe('proof parsing', () => {
     ['a receipt missing logs', { chainId: 1, from: '0x1', to: '0x2', status: 1 }],
     ['a receipt whose logs are not an array', { chainId: 1, from: '0x1', to: '0x2', status: 1, logs: {} }],
     ['a receipt missing chainId', { from: '0x1', to: '0x2', status: 1, logs: [] }],
+    [
+      'a receipt whose log is not an object',
+      { chainId: 1, from: '0x1', to: '0x2', status: 1, logs: ['nope'] },
+    ],
+    [
+      'a receipt whose log has no topics array',
+      {
+        chainId: 1,
+        from: '0x1',
+        to: '0x2',
+        status: 1,
+        logs: [{ address: '0x1', data: '0x0', logIndex: 0 }],
+      },
+    ],
+    [
+      'a receipt whose log topics are not strings',
+      {
+        chainId: 1,
+        from: '0x1',
+        to: '0x2',
+        status: 1,
+        logs: [{ address: '0x1', data: '0x0', logIndex: 0, topics: [42] }],
+      },
+    ],
+    [
+      'a receipt whose log is missing address',
+      {
+        chainId: 1,
+        from: '0x1',
+        to: '0x2',
+        status: 1,
+        logs: [{ data: '0x0', logIndex: 0, topics: [] }],
+      },
+    ],
   ])('rejects %s receipt as a structured failure', (_label, receipt) => {
     expect(() => parseSettlementProof({ ...(RAW_PROOF as object), receipt })).toThrow(EvidenceError);
   });
@@ -277,6 +311,23 @@ describe('B06.3 ambiguity and recovery', () => {
     );
   });
 
+  it.each(['NOT_REPLAYED', 'REPLAY_STOPPED', 'REPLAY_REFUSED', 'ANYTHING_ELSE'])(
+    'fails a replay outcome of %s',
+    (replay_outcome) => {
+      const recovery = { ...PROOF.recovery, replay_outcome };
+      expect(failed(checkAmbiguityEvidence(mutate({ recovery })))).toContain(
+        'ambiguity.replay-idempotent',
+      );
+    },
+  );
+
+  it('accepts only the exact recorded replay outcomes', () => {
+    for (const replay_outcome of ['REPLAYED', 'returned_existing_result']) {
+      const recovery = { ...PROOF.recovery, replay_outcome };
+      expect(checkAmbiguityEvidence(mutate({ recovery })).status).toBe('PASS');
+    }
+  });
+
   it('fails when the lost response did not produce UNKNOWN', () => {
     const recovery = { ...PROOF.recovery, lost_response_initial_state: 'COMMITTED' };
     expect(failed(checkAmbiguityEvidence(mutate({ recovery })))).toContain(
@@ -365,6 +416,19 @@ describe('B06.5 sanitization audit', () => {
     expect(
       auditSanitization({ token_contract: '0x3600000000000000000000000000000000000000' }).status,
     ).toBe('PASS');
+  });
+
+  it.each([
+    ['token_symbol', 'eyJhbGciOiJIUzI1NiJ9', 'USDC'],
+    ['explorer_host', 'eyJhbGciOiJIUzI1NiJ9', 'testnet.arcscan.app'],
+  ])('accepts only a real %s value', (field, hostile, valid) => {
+    expect(auditSanitization({ [field]: hostile }).status).toBe('FAIL');
+    expect(auditSanitization({ [field]: valid }).status).toBe('PASS');
+  });
+
+  it('requires token_decimals to be a small integer', () => {
+    expect(auditSanitization({ token_decimals: '6; DROP TABLE' }).status).toBe('FAIL');
+    expect(auditSanitization({ token_decimals: 6 }).status).toBe('PASS');
   });
 });
 

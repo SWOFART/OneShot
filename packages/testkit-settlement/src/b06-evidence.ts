@@ -144,9 +144,26 @@ function parseReceipt(value: unknown): TransactionReceipt {
   requireInteger(receipt, 'status', '$.receipt');
   requireString(receipt, 'from', '$.receipt');
   requireString(receipt, 'to', '$.receipt');
-  if (!Array.isArray(receipt['logs'])) {
+
+  const logs = receipt['logs'];
+  if (!Array.isArray(logs)) {
     throw new EvidenceError('$.receipt.logs must be an array');
   }
+  // Each log is validated too: the verifier reads address, topics, and data
+  // directly, so a malformed entry would otherwise surface as a TypeError from
+  // inside the adapter instead of a listed failure.
+  logs.forEach((entry, index) => {
+    const path = `$.receipt.logs[${index}]`;
+    const log = requireObject(entry, path);
+    requireString(log, 'address', path);
+    requireString(log, 'data', path);
+    requireInteger(log, 'logIndex', path);
+    const topics = log['topics'];
+    if (!Array.isArray(topics) || topics.some((topic) => typeof topic !== 'string')) {
+      throw new EvidenceError(`${path}.topics must be an array of strings`);
+    }
+  });
+
   return receipt as unknown as TransactionReceipt;
 }
 
@@ -470,6 +487,8 @@ export function checkExplorerUrl(
  * at zero: reaching `COMMITTED` after a second payment would be the exact
  * failure this product exists to prevent.
  */
+const REPLAY_OUTCOMES: ReadonlySet<string> = new Set(['REPLAYED', 'RETURNED_EXISTING_RESULT']);
+
 export function checkAmbiguityEvidence(proof: SanitizedSettlementProof): EvidenceSection {
   const { recovery } = proof;
   const checks: EvidenceCheck[] = [
@@ -494,7 +513,9 @@ export function checkAmbiguityEvidence(proof: SanitizedSettlementProof): Evidenc
     check(
       'ambiguity.replay-idempotent',
       'Replaying the intent returned the existing settlement',
-      recovery.replay_outcome.toUpperCase().includes('REPLAY'),
+      // Exact match, not a substring: "NOT_REPLAYED" contains "REPLAY" and
+      // means the opposite of what this check claims to prove.
+      REPLAY_OUTCOMES.has(recovery.replay_outcome.trim().toUpperCase()),
       recovery.replay_outcome,
     ),
     check(
@@ -583,12 +604,6 @@ export function checkMainnetReadiness(
  * the public datum it claims to be, and the explorer link is separately bound
  * to this transaction by `checkArcEvidence`.
  */
-const PUBLIC_VALUE_PATTERN = /^[A-Za-z0-9:._-]{1,80}$/u;
-
-function isPublicIdentifier(value: unknown): boolean {
-  return typeof value === 'number' || (typeof value === 'string' && PUBLIC_VALUE_PATTERN.test(value));
-}
-
 function isPublicHttpsUrl(value: unknown): boolean {
   if (typeof value !== 'string' || value.length > 256) return false;
   try {
@@ -603,12 +618,27 @@ function isEvmAddress(value: unknown): boolean {
   return typeof value === 'string' && EVM_ADDRESS_PATTERN.test(value);
 }
 
+/** Asset symbol: short and alphanumeric, which no credential shape fits. */
+function isAssetSymbol(value: unknown): boolean {
+  return typeof value === 'string' && /^[A-Za-z0-9]{1,12}$/u.test(value);
+}
+
+/** Token decimals: a small non-negative integer. */
+function isDecimalCount(value: unknown): boolean {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 36;
+}
+
+/** Hostname only: no scheme, no path, no credentials, no query. */
+function isHostname(value: unknown): boolean {
+  return typeof value === 'string' && /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9-]+)+$/iu.test(value);
+}
+
 const PUBLIC_FIELD_ALLOWLIST: ReadonlyMap<string, (value: unknown) => boolean> = new Map([
   ['tokencontract', isEvmAddress],
-  ['tokensymbol', isPublicIdentifier],
-  ['tokendecimals', isPublicIdentifier],
+  ['tokensymbol', isAssetSymbol],
+  ['tokendecimals', isDecimalCount],
   ['explorerurl', isPublicHttpsUrl],
-  ['explorerhost', isPublicIdentifier],
+  ['explorerhost', isHostname],
 ]);
 
 function normalizeFieldName(key: string): string {

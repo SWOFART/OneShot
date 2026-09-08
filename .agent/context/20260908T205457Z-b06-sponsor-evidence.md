@@ -85,7 +85,7 @@ two names, so the audit still rejects a credential arriving under any other key.
 - `git rev-parse origin/develop` - `0291b684e187557e13c47869359cbab445ee4148`
 - `pnpm --filter @oneshot/testkit-settlement build` - PASS
 - `pnpm --filter @oneshot/testkit-settlement lint` - PASS
-- `pnpm --filter @oneshot/testkit-settlement test` - PASS (120 tests, 64 new)
+- `pnpm --filter @oneshot/testkit-settlement test` - PASS (132 tests, 76 new)
 - `pnpm --filter @oneshot/testkit-settlement evidence:b06` - PASS (all five
   sections; Privy QUALIFIED, Arc QUALIFIED, The Graph NOT VERIFIED)
 - `pnpm lint` - PASS
@@ -164,8 +164,37 @@ From `.agent/TEST_MATRIX.md`:
      The reviewer's residual risk about the allowlist accepting any short public
      value under `token_contract` is also closed: that field now requires an EVM
      address shape.
-- Gate A (round 3): NOT RUN for the new candidate tree.
-- Gate B: NOT RUN
+- Gate A (round 3): PASS on tree `e9f89504866075b50201814f4a5da0d494c29028`,
+  committed as `310daf16703957650e6422420fddedc3b627ab59` and pushed. Tool
+  `free-pi-cli`, model `deepseek-v4-flash`. No blocking findings; three
+  non-blocking carried at the time.
+- CI on `310daf16`: ESLint and TypeScript PASS, Markdown and Mermaid PASS,
+  Workers Builds PASS, repository-policy PASS.
+- Gate B (round 1): PASS on head `310daf16703957650e6422420fddedc3b627ab59`,
+  head tree equal to the Gate A tree. Tool `free-pi-cli`, model
+  `deepseek-v4-flash`. No blocking findings; three non-blocking, now all closed:
+  1. `parseReceipt` validated receipt-level fields but not log entries. Every
+     log is now checked for `address`, `data`, `logIndex`, and a string
+     `topics` array, so a malformed log is a listed failure rather than a
+     TypeError from inside the adapter.
+  2. The permissive `isPublicIdentifier` guard would have accepted a short
+     JWT-shaped string under `token_symbol` or `explorer_host`. It is deleted;
+     every allowlisted field now has a specific guard (EVM address, asset
+     symbol, decimal count, hostname, https URL).
+  3. The `OFFLINE_PROTECTED` versus `UNPUBLISHED` terminology drift in
+     `docs/settlement/LIVE_EVIDENCE.md` is fixed on its own branch, since it is
+     a separate concern from this milestone.
+- Gate A (round 4): PASS on tree `b1ce189b054c95e84bbb50ce8b1b1eab403bff54`.
+  No blocking findings. Two non-blocking; the first is fixed:
+  1. `ambiguity.replay-idempotent` matched `REPLAY` as a substring, so a
+     tampered `NOT_REPLAYED` would have passed a check asserting the opposite.
+     It is now an exact match against `REPLAYED` or `RETURNED_EXISTING_RESULT`,
+     with tests for the tampered spellings.
+  2. `isAssetSymbol` still admits up to twelve alphanumeric characters. No
+     credential shape fits that (a JWT is longer and contains dots), so this is
+     noted rather than tightened further.
+- Gate A (round 5): NOT RUN for the tree that closes the round-four finding.
+- Gate B (round 2): NOT RUN
 
 ## Handoff/next steps
 
