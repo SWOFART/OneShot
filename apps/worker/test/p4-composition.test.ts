@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Pool } from 'pg';
 import {
   TRANSFER_EVENT_TOPIC,
@@ -20,7 +20,9 @@ import {
 } from '@oneshot/privy-adapter';
 import {
   createRecoverySimulatorComposition,
+  LiveSubgraphMcpRecoveryPort,
   RecoveryService,
+  VertexAiRecoveryAdvisor,
   type DetailedRecoveryView,
 } from '@oneshot/reconciliation';
 import { composeWorker, createProductionRecoveryService } from '../src/composition.js';
@@ -520,5 +522,148 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     const stored = await commandStore.findByEventId(composition.job.eventId);
     expect(stored).not.toBeNull();
     expect(stored?.externalSubmissionCount).toBe(0);
+  });
+
+  it('composes ProductionRecoveryService with LiveSubgraphMcpRecoveryPort and VertexAiRecoveryAdvisor, converging UNKNOWN intent to COMMITTED with zero external submissions', async () => {
+    let ledgerState: IntentResponse['state'] = 'UNKNOWN';
+    let ledgerVersion = 3;
+    let completedWith: SettlementResult | null = null;
+
+    const mockIntent: IntentResponse = {
+      ...sampleRequest,
+      payload_fingerprint: requestFingerprint,
+      get state() {
+        return ledgerState;
+      },
+      get version() {
+        return ledgerVersion;
+      },
+      attempts: [
+        {
+          attempt_id: 'att-live-1',
+          stage: 'UNKNOWN',
+          created_at: new Date().toISOString(),
+        },
+      ],
+      evidence: [],
+    };
+
+    const mockLedger = {
+      getIntent: async () => mockIntent,
+      appendEvidence: async () => {},
+      completeSubmission: async (
+        _id: string,
+        _att: string,
+        res: SettlementResult,
+      ): Promise<CompleteSubmissionResult> => {
+        completedWith = res;
+        ledgerState = res.kind === 'CONFIRMED' ? 'COMMITTED' : 'FAILED_SAFE';
+        ledgerVersion += 1;
+        return { completed: true, state: ledgerState, version: ledgerVersion };
+      },
+    } as unknown as IntentLedger;
+
+    const candidateRecord = {
+      id: 'cand-live-1',
+      transactionHash: realTxHash,
+      logIndex: '0',
+      blockNumber: '999123',
+      blockHash: realBlockHash,
+      blockTimestamp: '1788786010',
+      network: 'eip155:5042002',
+      tokenContract: sampleConfig.usdcContract,
+      sender: realSender,
+      recipient: sampleRequest.recipient,
+      amountAtomic: sampleRequest.amount_atomic,
+      memoId: null,
+    };
+
+    const graphQlBody = {
+      data: {
+        settlementCandidates: [candidateRecord],
+        _meta: {
+          deployment: recoveryLocalState.mcpPolicy.manifestCid,
+          hasIndexingErrors: false,
+          block: {
+            number: 999125,
+            hash: realBlockHash,
+            timestamp: '1788786020',
+          },
+        },
+      },
+    };
+
+    const mockGraphFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => graphQlBody,
+    } as Response);
+
+    const subgraphMcp = new LiveSubgraphMcpRecoveryPort({
+      graphApiKey: 'test-graph-key',
+      getChainHead: async () => ({
+        blockNumber: '999126',
+        observedAt: '2026-09-08T22:00:00.000Z',
+      }),
+      fetchFn: mockGraphFetch as unknown as typeof fetch,
+      now: () => '2026-09-08T22:00:00.000Z',
+    });
+
+    const mockVertexFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    action: 'RECONCILE',
+                    decisionId: 'dec-live-1',
+                    reason: 'Discovered matching candidate via Subgraph MCP',
+                    referencedEvidenceIds: ['thegraph:cand-live-1'],
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    } as Response);
+
+    const advisor = new VertexAiRecoveryAdvisor({
+      projectId: 'oneshot-508002',
+      getAuthToken: () => 'mock-vertex-token',
+      fetchFn: mockVertexFetch as unknown as typeof fetch,
+      now: () => '2026-09-08T22:00:00.000Z',
+    });
+
+    const recoveryService = createProductionRecoveryService(mockLedger, {
+      localState: recoveryLocalState,
+      bridge: {
+        receiptSource: {
+          getReceipt: async () => realReceipt,
+        },
+        defaultArcTxHash: realTxHash,
+      },
+      subgraphMcp,
+      advisor,
+    });
+
+    const mockPool = {} as unknown as Pool;
+    const worker = composeWorker(mockPool, mockLedger, {
+      profile: 'simulator',
+      recoveryService,
+    });
+
+    const eventId = 'reconcile:live-drill:1';
+    await executeReconcileIntent(mockIntent.business_intent_id, worker.options, eventId);
+
+    expect(mockGraphFetch).toHaveBeenCalled();
+    expect(mockVertexFetch).toHaveBeenCalled();
+    expect(completedWith).not.toBeNull();
+    expect(completedWith?.kind).toBe('CONFIRMED');
+    expect(ledgerState).toBe('COMMITTED');
   });
 });
