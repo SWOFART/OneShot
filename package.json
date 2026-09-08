@@ -12,6 +12,8 @@
     "build": "tsc -b && pnpm --filter @oneshot/arc-subgraph build",
     "check:generated": "pnpm --filter @oneshot/contracts check:generated",
     "clean": "tsc -b --clean",
+    "db:bootstrap": "pnpm --filter @oneshot/storage-postgres build && node scripts/bootstrap-db.mjs",
+    "db:reset-demo": "pnpm --filter @oneshot/storage-postgres build && node scripts/reset-demo-db.mjs",
     "deploy": "wrangler deploy",
     "dev:frontend": "wrangler dev",
     "dev:web": "pnpm --filter @oneshot/web dev",
@@ -19,6 +21,7 @@
     "format:check": "prettier --check \"**/*.{ts,mts,mjs,json,jsonc,yml,yaml}\"",
     "generate": "pnpm --filter @oneshot/contracts generate",
     "lint": "eslint .",
+    "scenarios:invariants": "pnpm build && node scripts/run-invariant-scenarios.mjs",
     "test": "pnpm build && vitest run",
     "test:integration": "pnpm --filter @oneshot/storage-postgres test:integration && pnpm --filter @oneshot/api test:integration && pnpm --filter @oneshot/worker test:integration",
     "typecheck": "tsc -b --pretty false",
@@ -36,5 +39,8 @@
     "vite": "8.0.0",
     "vitest": "5.0.0",
     "wrangler": "4.127.0"
+  },
+  "dependencies": {
+    "pg": "8.23.0"
   }
 }
