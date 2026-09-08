@@ -20,6 +20,7 @@ import {
 } from '@oneshot/privy-adapter';
 import {
   createRecoverySimulatorComposition,
+  RecoveryService,
   type DetailedRecoveryView,
 } from '@oneshot/reconciliation';
 import { composeWorker, createProductionRecoveryService } from '../src/composition.js';
@@ -59,6 +60,22 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
   const realTxHash = '0x' + 'e'.repeat(64);
   const realBlockHash = '0x' + 'b'.repeat(64);
   const realSender = '0x2222222222222222222222222222222222222222';
+  const requestFingerprint = 'f'.repeat(64);
+  const recoveryLocalState = {
+    tokenContract: sampleConfig.usdcContract,
+    correlationSender: realSender,
+    fromBlock: '999000',
+    toBlock: '999200',
+    mcpPolicy: {
+      serverName: 'subgraph-mcp',
+      serverVersion: '1.0.0',
+      deploymentId: `0x${'d'.repeat(64)}`,
+      manifestCid: `Qm${'a'.repeat(44)}`,
+      maxLagBlocks: '5',
+      maxCandidates: 5,
+      maxResultBytes: 65536,
+    },
+  } as const;
 
   const realReceipt: TransactionReceipt = {
     transactionHash: realTxHash,
@@ -104,29 +121,30 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
       () => sampleBaseline,
     );
 
-    const productionRecoveryService = createProductionRecoveryService(mockLedger, {
-      defaultArcTxHash: realTxHash,
-      defaultReceipt: realReceipt,
-    });
-
     const composed = composeWorker(mockPool, mockLedger, {
       profile: 'production',
       settlementPort: settlementAdapter,
       authorizationPort: authorizationAdapter,
-      recoveryService: productionRecoveryService,
+      recovery: {
+        localState: recoveryLocalState,
+        bridge: {
+          defaultArcTxHash: realTxHash,
+          defaultReceipt: realReceipt,
+        },
+      },
     });
 
     const readiness = await composed.checkReadiness();
     expect(readiness.ready).toBe(true);
     expect(composed.options.settlementPort).toBe(settlementAdapter);
     expect(composed.options.authorizationPort).toBe(authorizationAdapter);
-    expect(composed.options.recoveryService).toBe(productionRecoveryService);
+    expect(composed.options.recoveryService).toBeInstanceOf(RecoveryService);
   });
 
   it('IntentLedgerLocalRecoveryStatePort produces valid snapshot from IntentLedger', async () => {
     const mockIntent: IntentResponse = {
       ...sampleRequest,
-      payload_fingerprint: 'fp-p4-1',
+      payload_fingerprint: requestFingerprint,
       state: 'UNKNOWN',
       version: 2,
       attempts: [
@@ -144,7 +162,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
         id === mockIntent.business_intent_id ? mockIntent : undefined,
     } as unknown as IntentLedger;
 
-    const port = new IntentLedgerLocalRecoveryStatePort(mockLedger);
+    const port = new IntentLedgerLocalRecoveryStatePort(mockLedger, recoveryLocalState);
     const snapshot = await port.read('intent-p4-1');
 
     expect(snapshot.schemaVersion).toBe('local-recovery-snapshot-v1');
@@ -153,6 +171,34 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     expect(snapshot.durable.state).toBe('UNKNOWN');
     expect(snapshot.durable.stateVersion).toBe('2');
     expect(snapshot.durable.attemptCount).toBe(1);
+    expect(snapshot.indexRequest.correlation).toEqual({
+      strategy: 'TRANSFER_TUPLE_WINDOW',
+      sender: realSender,
+      fromBlock: '999000',
+      toBlock: '999200',
+    });
+    expect(snapshot.mcpPolicy).toEqual(recoveryLocalState.mcpPolicy);
+  });
+
+  it('rejects placeholder recovery lookup identity before an MCP call', async () => {
+    const mockLedger = {
+      getIntent: async () => ({
+        ...sampleRequest,
+        payload_fingerprint: requestFingerprint,
+        state: 'UNKNOWN',
+        version: 2,
+        attempts: [],
+        evidence: [],
+      }),
+    } as unknown as IntentLedger;
+    const port = new IntentLedgerLocalRecoveryStatePort(mockLedger, {
+      ...recoveryLocalState,
+      mcpPolicy: { ...recoveryLocalState.mcpPolicy, deploymentId: 'oneshot-arc-testnet' },
+    });
+
+    await expect(port.read('intent-p4-1')).rejects.toThrow(
+      'Invalid Subgraph MCP recovery lookup input',
+    );
   });
 
   it('IntentLedgerRecoveryCommandStore enforces durable deduplication, real CAS transitions, and fails closed', async () => {
@@ -163,7 +209,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
 
     const mockIntent: IntentResponse = {
       ...sampleRequest,
-      payload_fingerprint: 'fp-p4-1',
+      payload_fingerprint: requestFingerprint,
       get state() {
         return currentState;
       },
@@ -238,7 +284,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
             authorityClass: 'AUTHORITATIVE_CHAIN_EVIDENCE' as const,
             binding: {
               businessIntentId: 'intent-p4-1',
-              requestFingerprint: 'fp-p4-1',
+              requestFingerprint,
               network: 'eip155:5042002',
               tokenContract: '0x0000000000000000000000000000000000000000',
               recipient: sampleRequest.recipient,
@@ -254,7 +300,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
         schemaVersion: 'reconciliation-command-v1' as const,
         commandType: 'MARK_COMMITTED' as const,
         businessIntentId: 'intent-p4-1',
-        requestFingerprint: 'fp-p4-1',
+        requestFingerprint,
         targetState: 'COMMITTED' as const,
         reason: 'Arc proof verified',
         evidenceReferences: ['arc:0x' + 'e'.repeat(64)],
@@ -318,7 +364,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
 
     const binding = {
       businessIntentId: 'intent-p4-1',
-      requestFingerprint: 'fp-p4-1',
+      requestFingerprint,
       network: 'eip155:5042002',
       tokenContract: '0x3333333333333333333333333333333333333333',
       recipient: sampleRequest.recipient,
@@ -350,7 +396,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
 
     const mockIntent: IntentResponse = {
       ...sampleRequest,
-      payload_fingerprint: 'fp-p4-1',
+      payload_fingerprint: requestFingerprint,
       get state() {
         return ledgerState;
       },
@@ -389,11 +435,14 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     };
 
     const recoveryService = createProductionRecoveryService(mockLedger, {
-      evidencePort: mockEvidencePort as unknown as LaneBEvidencePort,
-      receiptSource: {
-        getReceipt: async () => realReceipt,
+      localState: recoveryLocalState,
+      bridge: {
+        evidencePort: mockEvidencePort as unknown as LaneBEvidencePort,
+        receiptSource: {
+          getReceipt: async () => realReceipt,
+        },
+        defaultArcTxHash: realTxHash,
       },
-      defaultArcTxHash: realTxHash,
     });
 
     const job = {
@@ -418,7 +467,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
 
     const mockIntent: IntentResponse = {
       ...sampleRequest,
-      payload_fingerprint: 'fp-p4-1',
+      payload_fingerprint: requestFingerprint,
       get state() {
         return ledgerState;
       },

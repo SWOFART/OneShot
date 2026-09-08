@@ -6,7 +6,11 @@ export {
   RECOVERY_CANDIDATE_QUERY_DIGEST,
   sha256,
 } from './query.js';
-export { normalizeSubgraphMcpTrace, validateKnownIdentityEvidence } from './validation.js';
+export {
+  isValidSubgraphLookupInput,
+  normalizeSubgraphMcpTrace,
+  validateKnownIdentityEvidence,
+} from './validation.js';
 export {
   CONTRACT_VERSIONS,
   createKnownIdentityFixture,
