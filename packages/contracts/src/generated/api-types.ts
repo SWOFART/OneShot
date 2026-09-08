@@ -9,6 +9,12 @@ export type ErrorCode = (typeof ERROR_CODES)[number];
 export const RECOVERY_ACTIONS = ["WAIT","RECONCILE","ESCALATE","RETURN_EXISTING_RESULT"] as const;
 export type RecoveryActionName = (typeof RECOVERY_ACTIONS)[number];
 
+export const AUTHORIZATION_STATUSES = ["CHECKING","AUTHORIZED","DENIED","UNAVAILABLE","CONFIG_MISMATCH"] as const;
+export type AuthorizationStatus = (typeof AUTHORIZATION_STATUSES)[number];
+
+export const POLICY_STATUSES = ["CONFIGURED","EXCEEDED","NOT_CONFIGURED","UNKNOWN"] as const;
+export type PolicyStatus = (typeof POLICY_STATUSES)[number];
+
 export interface CreateIntentRequest {
   readonly business_intent_id: string;
   readonly recipient: string;
@@ -18,10 +24,18 @@ export interface CreateIntentRequest {
   readonly purpose: string;
 }
 
+export interface PolicySummaryView {
+  readonly policy_id?: string;
+  readonly status: PolicyStatus;
+  readonly settlement_cap_atomic?: string;
+  readonly allowed_recipients?: readonly string[];
+}
+
 export interface IntentResponse extends CreateIntentRequest {
   readonly payload_fingerprint: string;
   readonly state: IntentState;
   readonly version: number;
+  readonly policy?: PolicySummaryView;
   readonly attempts: readonly AttemptView[];
   readonly settlement?: SettlementView;
   readonly evidence: readonly EvidenceView[];
@@ -32,6 +46,7 @@ export interface AttemptView {
   readonly stage: IntentState;
   readonly created_at: string;
   readonly sanitized_error?: string;
+  readonly authorization_status?: AuthorizationStatus;
 }
 
 export interface SettlementView {
@@ -39,6 +54,8 @@ export interface SettlementView {
   readonly transaction_hash: string;
   readonly block_number: string;
   readonly transfer_log_index: number;
+  readonly token_contract?: string;
+  readonly explorer_url?: string;
 }
 
 export interface EvidenceView {
