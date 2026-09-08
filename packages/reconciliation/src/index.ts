@@ -43,3 +43,5 @@ export * from './qualification.js';
 export * from './disabled-ports.js';
 export * from './chaos/index.js';
 export * from './types.js';
+export * from './vertex-advisor.js';
+export * from './subgraph-mcp-client.js';
