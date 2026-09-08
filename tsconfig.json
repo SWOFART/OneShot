@@ -30,6 +30,9 @@
     },
     {
       "path": "./apps/worker"
+    },
+    {
+      "path": "./packages/recovery-ui"
     }
   ]
 }

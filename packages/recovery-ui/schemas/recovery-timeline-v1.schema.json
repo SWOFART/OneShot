@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneshot.invalid/schemas/recovery-timeline-v1.schema.json",
+  "title": "OneShot recovery timeline UI contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "mockServerVersion",
+    "businessIntentId",
+    "authoritativeState",
+    "stateVersion",
+    "settlementPermission",
+    "evaluatedAt",
+    "summary",
+    "attempts",
+    "timeline",
+    "evidence",
+    "graph",
+    "recommendation",
+    "coreDisposition",
+    "contradiction",
+    "contradictionCodes",
+    "diagnostics",
+    "page"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "recovery-timeline-v1" },
+    "mockServerVersion": { "const": "c05-mock-v1" },
+    "businessIntentId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "authoritativeState": {
+      "enum": ["SUBMITTING", "UNKNOWN", "COMMITTED", "FAILED_SAFE"]
+    },
+    "stateVersion": { "$ref": "#/$defs/atomicString" },
+    "settlementPermission": { "const": "NEVER" },
+    "evaluatedAt": { "$ref": "#/$defs/dateTime" },
+    "summary": { "$ref": "#/$defs/safeText" },
+    "attempts": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/attempt" }
+    },
+    "timeline": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/timelineEntry" }
+    },
+    "evidence": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/evidence" }
+    },
+    "graph": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/graph" }]
+    },
+    "recommendation": { "$ref": "#/$defs/recommendation" },
+    "coreDisposition": { "$ref": "#/$defs/coreDisposition" },
+    "contradiction": { "type": "boolean" },
+    "contradictionCodes": { "$ref": "#/$defs/stringList" },
+    "diagnostics": { "$ref": "#/$defs/stringList" },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cursor", "nextCursor", "totalEntries"],
+      "properties": {
+        "cursor": { "type": ["string", "null"], "maxLength": 128 },
+        "nextCursor": { "type": ["string", "null"], "maxLength": 128 },
+        "totalEntries": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "safeText": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "dateTime": { "type": "string", "format": "date-time", "maxLength": 35 },
+    "atomicString": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+    "stringList": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+    },
+    "source": { "enum": ["ONESHOT", "PRIVY", "ARC", "THE_GRAPH", "LLM"] },
+    "authority": {
+      "enum": [
+        "AUTHORITATIVE_ONESHOT",
+        "AUTHORITATIVE_CHAIN_EVIDENCE",
+        "PROVIDER_OBSERVATION",
+        "NON_AUTHORITATIVE_CANDIDATE_DISCOVERY",
+        "ADVISORY_AGENT_OBSERVATION"
+      ]
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attemptId", "stage", "createdAt", "completedAt", "sanitizedError"],
+      "properties": {
+        "attemptId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "stage": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "createdAt": { "$ref": "#/$defs/dateTime" },
+        "completedAt": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/dateTime" }] },
+        "sanitizedError": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/safeText" }] }
+      }
+    },
+    "timelineEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventId",
+        "kind",
+        "timestamp",
+        "sequence",
+        "title",
+        "summary",
+        "source",
+        "authorityClass",
+        "evidenceReferences"
+      ],
+      "properties": {
+        "eventId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "kind": { "enum": ["ATTEMPT", "TRANSITION", "EVIDENCE", "RECONCILIATION", "DECISION"] },
+        "timestamp": { "$ref": "#/$defs/dateTime" },
+        "sequence": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/atomicString" }] },
+        "title": { "$ref": "#/$defs/safeText" },
+        "summary": { "$ref": "#/$defs/safeText" },
+        "source": { "$ref": "#/$defs/source" },
+        "authorityClass": { "$ref": "#/$defs/authority" },
+        "evidenceReferences": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidenceId",
+        "source",
+        "authorityClass",
+        "retrievedAt",
+        "finality",
+        "blockNumber",
+        "digest",
+        "summary",
+        "verifiedBinding",
+        "contradictionCodes"
+      ],
+      "properties": {
+        "evidenceId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "source": { "$ref": "#/$defs/source" },
+        "authorityClass": { "$ref": "#/$defs/authority" },
+        "retrievedAt": { "$ref": "#/$defs/dateTime" },
+        "finality": { "type": ["string", "null"], "enum": ["FINAL", "PENDING", "UNKNOWN", null] },
+        "blockNumber": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/atomicString" }] },
+        "digest": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "summary": { "$ref": "#/$defs/safeText" },
+        "verifiedBinding": { "type": "boolean" },
+        "contradictionCodes": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidateId",
+        "transactionHash",
+        "blockNumber",
+        "bindingStatus",
+        "contradictionCodes"
+      ],
+      "properties": {
+        "candidateId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "transactionHash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+        "blockNumber": { "$ref": "#/$defs/atomicString" },
+        "bindingStatus": { "enum": ["MATCH", "CONTRADICTORY"] },
+        "contradictionCodes": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "retrievalPath",
+        "serverName",
+        "serverVersion",
+        "toolName",
+        "deploymentId",
+        "manifestCid",
+        "observedThroughBlock",
+        "observedThroughTime",
+        "chainHeadBlock",
+        "lagBlocks",
+        "health",
+        "available",
+        "candidateCount",
+        "diagnostics",
+        "candidates"
+      ],
+      "properties": {
+        "retrievalPath": { "const": "SUBGRAPH_MCP" },
+        "serverName": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "serverVersion": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "toolName": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "deploymentId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "manifestCid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "observedThroughBlock": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/atomicString" }]
+        },
+        "observedThroughTime": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/dateTime" }] },
+        "chainHeadBlock": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/atomicString" }] },
+        "lagBlocks": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/atomicString" }] },
+        "health": { "enum": ["FRESH", "LAGGING", "UNHEALTHY", "UNAVAILABLE", "UNKNOWN_FRESHNESS"] },
+        "available": { "type": "boolean" },
+        "candidateCount": { "type": "integer", "minimum": 0, "maximum": 25 },
+        "diagnostics": { "$ref": "#/$defs/stringList" },
+        "candidates": { "type": "array", "maxItems": 25, "items": { "$ref": "#/$defs/candidate" } }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accepted",
+        "action",
+        "reason",
+        "modelName",
+        "promptVersion",
+        "evidenceReferences"
+      ],
+      "properties": {
+        "accepted": { "type": "boolean" },
+        "action": { "enum": ["WAIT", "RECONCILE", "ESCALATE", "RETURN_EXISTING_RESULT"] },
+        "reason": { "$ref": "#/$defs/safeText" },
+        "modelName": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "promptVersion": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "evidenceReferences": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "coreDisposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commandType",
+        "targetState",
+        "reason",
+        "authoritativeProofPresent",
+        "evidenceReferences"
+      ],
+      "properties": {
+        "commandType": {
+          "enum": [
+            "HOLD_UNKNOWN",
+            "READ_ONLY_LOOKUP",
+            "ESCALATE_UNKNOWN",
+            "MARK_COMMITTED",
+            "MARK_FAILED_SAFE"
+          ]
+        },
+        "targetState": { "enum": ["UNKNOWN", "COMMITTED", "FAILED_SAFE"] },
+        "reason": { "$ref": "#/$defs/safeText" },
+        "authoritativeProofPresent": { "type": "boolean" },
+        "evidenceReferences": { "$ref": "#/$defs/stringList" }
+      }
+    }
+  }
+}
