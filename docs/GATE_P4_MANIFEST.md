@@ -95,4 +95,3 @@ Per `docs/plan.md` (procedure steps 8-13):
   - Live proof: `evidence/c06/sanitized-proof.json`
   - Settlement evidence log: `docs/settlement/LIVE_EVIDENCE.md`
   - Qualification report: `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`
-

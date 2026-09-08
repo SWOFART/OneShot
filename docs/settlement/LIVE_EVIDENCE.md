@@ -54,6 +54,7 @@ On-chain nonce remained `0` across both denial tests; wallet balance remained un
 ## Lost-Hash & Lost-Response Recovery Drill
 
 Simulated worker crash / network partition immediately following transaction submission:
+
 - Initial worker intent state: `UNKNOWN`.
 - Authoritative reconciliation lookup via Arc RPC `verifyReceipt`: confirmed on-chain settlement at block `61116056`, log index `23`.
 - Intent transitioned from `UNKNOWN` → `COMMITTED`.
@@ -63,6 +64,7 @@ Simulated worker crash / network partition immediately following transaction sub
 ## What is Proven
 
 - **Privy Authorization**: The corporate execution wallet strictly enforces policy rules on the normal path via `eth_signTransaction`. Disallowed recipients and above-cap amounts are rejected by Privy with zero on-chain transaction broadcast.
+
 - **Arc Testnet Rail**: Real USDC transfer on Arc Testnet succeeds, generating an exact EVM `Transfer(from, to, value)` log verified by `verifyReceipt`.
 - **Durable Identity**: Transaction hash, block number, block hash, and log index are deterministically bound to the durable business intent.
 - **Fail-Closed Recovery**: Unlearned outcomes and crashes preserve `UNKNOWN` state until verified; reconciliation performs read-only checks without duplicate settlement attempts.

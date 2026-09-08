@@ -102,4 +102,3 @@ on fixtures. These remain unverified against reality and are listed in
 - Privy wallet and policy identifier formats are shape-guessed.
 
 `docs/settlement/LIVE_EVIDENCE.md` records `LIVE_RUN` with live Arc Testnet settlement (`0x72ab...`) and live policy denials. Privy and Arc sponsor claims are verified for testnet execution per `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`.
-
