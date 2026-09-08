@@ -3,7 +3,7 @@
   "name": "oneshot",
   "compatibility_date": "2026-09-07",
   "build": {
-    "command": "pnpm --filter @oneshot/web build",
+    "command": "pnpm build:frontend",
   },
   "assets": {
     "directory": "./apps/web/dist",
