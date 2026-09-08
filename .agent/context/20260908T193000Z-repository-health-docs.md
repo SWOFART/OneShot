@@ -32,6 +32,7 @@ Create a branch; first resolve repository health and commit it, then resolve con
 ## Files/components touched
 
 - `.prettierrc.json`: pin LF output so generated-contract and formatting checks are platform-stable.
+- `.gitattributes`: enforce LF checkout for detected text files independently of local Git settings.
 - `README.md`, `docs/settlement/GATE_P4_LANE_B_READINESS.md`, and `packages/reconciliation/docs/c06/README.md`: align sponsor and live-evidence status with the checked-in proof.
 
 ## Commands/checks
@@ -52,15 +53,16 @@ Create a branch; first resolve repository health and commit it, then resolve con
 
 - Branch: `fix/repository-health-and-docs`
 - Base: `develop` at `7f4ad079fd4b3d45b2a6d36c9c00003751f51e7d`
-- Commit: `ea972949d641522032a4cf0c83efbe5b178d7965` (health) and the current documentation commit
+- Commit: `ea972949d641522032a4cf0c83efbe5b178d7965` (health) and `0c027c67584232f11601dfac52d5657dd1342c72` (documentation); line-ending checkout fix pending
 - PR: not created
 - CI: not run
 
 ## Review gates
 
-- Gate A: NOT RUN
+- Gate A: PASS for tree `8577f5bb777b33b065c8fc797a91fed1bb127788` (FreePi / glm-5.3-flash); invalidated by the pending `.gitattributes` change
 - Gate B: NOT RUN
 
 ## Handoff/next steps
 
-1. Capture Gate A identities and start one fresh FreePi reviewer process.
+1. Validate and commit the `.gitattributes` checkout fix.
+2. Capture a new candidate tree and obtain a fresh Gate A review before push.
