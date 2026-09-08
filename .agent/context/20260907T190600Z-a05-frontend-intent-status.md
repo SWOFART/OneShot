@@ -60,8 +60,8 @@ Implement Coder A milestone A05 after Gate P4: "Делай" in response to the i
 - Branch: `milestone/a05-frontend-intent-status`
 - Base: `origin/develop` at `1250dec79bc702939fe2a3b0fd00e66bb34128af`
 - Initial commit: `d3fbfacdee365d159807256a53011140442867ff`
-- PR: `#32` (https://github.com/SWOFART/OneShot/pull/32)
-- Gate A: PASS (pre-push tree `da775d97e7a8c7869803c6f5a6a91894b5714d83`; updating for build command fix)
+- PR: [#32](https://github.com/SWOFART/OneShot/pull/32)
+- Gate A: IN PROGRESS (free-pi-cli glm-5.3-flash)
 - Gate B: pending CI and exact-head review
 
 ## Handoff and next steps
