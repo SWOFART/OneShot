@@ -18,10 +18,17 @@
     "clean": "tsc -b --clean",
     "lint": "eslint src test",
     "test": "vitest run --config vitest.config.ts",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsc -b --pretty false",
+    "evidence:b06": "pnpm run build && node bin/b06-evidence.js"
   },
   "dependencies": {
     "@oneshot/arc-adapter": "workspace:*",
     "@oneshot/privy-adapter": "workspace:*"
-  }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "fixtures",
+    "README.md"
+  ]
 }
