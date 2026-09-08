@@ -1,0 +1,11 @@
+"An immutable USDC transfer observed on Arc Testnet."
+type UsdcTransfer @entity(immutable: true) {
+  id: Bytes!
+  transactionHash: Bytes!
+  logIndex: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  from: Bytes!
+  to: Bytes!
+  amount: BigInt!
+}
