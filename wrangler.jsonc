@@ -2,12 +2,17 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "oneshot",
   "compatibility_date": "2026-09-07",
+  "main": "./apps/web/worker.ts",
   "build": {
     "command": "pnpm build:frontend",
   },
   "assets": {
     "directory": "./apps/web/dist",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
+  },
+  "vars": {
+    "API_BACKEND_URL": "https://oneshot-api-775560462825.europe-west1.run.app",
   },
   "routes": [
     {

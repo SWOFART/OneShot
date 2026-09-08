@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "settlement-evidence-v1",
+  "status": "LIVE_RUN",
+  "captured_at": "2026-09-08T18:58:17.875Z",
+  "network": "eip155:5042002",
+  "chain_name": "Arc Testnet",
+  "wallet_id": "tnfnp0n27bsff7vf6g4dv35r",
+  "execution_wallet": "0xfCC366c88A0c980e2FD5a7Cf7a36494E4457D943",
+  "policy_id": "balx3rtrpns3gnvhz3n32dml",
+  "token_contract": "0x3600000000000000000000000000000000000000",
+  "recipient": "0xa605EE031E41f04f8e193059a39A24407f83677c",
+  "amount_atomic": "1000000",
+  "settlement": {
+    "transaction_hash": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7",
+    "block_number": 61116056,
+    "block_hash": "0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b",
+    "transfer_log_index": 23,
+    "status": "CONFIRMED",
+    "explorer_url": "https://testnet.arcscan.app/tx/0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7"
+  },
+  "denials": [
+    {
+      "dimension": "UNAUTHORIZED_RECIPIENT",
+      "target_recipient": "0x1111111111111111111111111111111111111111",
+      "expected_outcome": "POLICY_VIOLATION",
+      "observed_status": 400,
+      "observed_code": "policy_violation",
+      "broadcast_count": 0,
+      "settlement_count": 0
+    },
+    {
+      "dimension": "ABOVE_CAP_AMOUNT",
+      "attempted_amount_atomic": "2000000",
+      "configured_cap_atomic": "1000000",
+      "expected_outcome": "POLICY_VIOLATION",
+      "observed_status": 400,
+      "observed_code": "policy_violation",
+      "broadcast_count": 0,
+      "settlement_count": 0
+    }
+  ],
+  "recovery": {
+    "lost_response_initial_state": "UNKNOWN",
+    "reconciled_final_state": "COMMITTED",
+    "external_recovery_submissions": 0,
+    "replay_outcome": "REPLAYED",
+    "total_settlements_for_intent": 1
+  }
+}

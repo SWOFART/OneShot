@@ -50,6 +50,18 @@ export type ReadinessResult =
   | { readonly status: 'ok'; readonly submissions_disabled?: boolean }
   | { readonly status: 'not_ready'; readonly message: string };
 
+async function parseJsonResponse<T>(res: Response): Promise<T | null> {
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    return null;
+  }
+  try {
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
 export class OneShotApiClient {
   private readonly baseUrl: string;
   private readonly getAuthToken: () => string | null;
@@ -88,17 +100,37 @@ export class OneShotApiClient {
       });
 
       if (res.status === 202) {
-        const intent = (await res.json()) as IntentResponse;
+        const intent = await parseJsonResponse<IntentResponse>(res);
+        if (!intent) {
+          return {
+            kind: 'ERROR',
+            code: 'INVALID_RESPONSE',
+            message: 'Backend returned non-JSON response',
+            correlationId: corrId,
+          };
+        }
         return { kind: 'ACCEPTED', intent, correlationId: corrId };
       }
 
       if (res.status === 200) {
-        const intent = (await res.json()) as IntentResponse;
+        const intent = await parseJsonResponse<IntentResponse>(res);
+        if (!intent) {
+          return {
+            kind: 'ERROR',
+            code: 'INVALID_RESPONSE',
+            message: 'Backend returned non-JSON response',
+            correlationId: corrId,
+          };
+        }
         return { kind: 'REPLAYED', intent, correlationId: corrId };
       }
 
-      const err = (await res.json().catch(() => ({}))) as Partial<ErrorResponse>;
-      const message = err.message ?? 'Unknown error';
+      const err = (await parseJsonResponse<Partial<ErrorResponse>>(res)) ?? {};
+      const message =
+        err.message ??
+        (res.status === 502 || res.status === 503 || res.status === 504
+          ? 'Backend unavailable'
+          : 'Unknown error');
 
       if (res.status === 409 && err.code === 'INTENT_PAYLOAD_CONFLICT') {
         return { kind: 'PAYLOAD_CONFLICT', message, correlationId: corrId };
@@ -143,7 +175,15 @@ export class OneShotApiClient {
       });
 
       if (res.status === 200) {
-        const intent = (await res.json()) as IntentResponse;
+        const intent = await parseJsonResponse<IntentResponse>(res);
+        if (!intent) {
+          return {
+            kind: 'ERROR',
+            code: 'INVALID_RESPONSE',
+            message: 'Backend returned non-JSON response',
+            correlationId: corrId,
+          };
+        }
         return { kind: 'SUCCESS', intent, correlationId: corrId };
       }
 
@@ -151,8 +191,8 @@ export class OneShotApiClient {
         return { kind: 'NOT_FOUND', correlationId: corrId };
       }
 
-      const err = (await res.json().catch(() => ({}))) as Partial<ErrorResponse>;
-      const message = err.message ?? 'Unknown error';
+      const err = (await parseJsonResponse<Partial<ErrorResponse>>(res)) ?? {};
+      const message = err.message ?? `Request failed with status ${res.status}`;
 
       if (res.status === 401 || res.status === 403) {
         return { kind: 'UNAUTHORIZED', message, correlationId: corrId };
@@ -188,7 +228,14 @@ export class OneShotApiClient {
       );
 
       if (res.status === 202) {
-        const response = (await res.json()) as ReconcileResponse;
+        const response = await parseJsonResponse<ReconcileResponse>(res);
+        if (!response) {
+          return {
+            kind: 'ERROR',
+            message: 'Backend returned non-JSON response',
+            correlationId: corrId,
+          };
+        }
         return { kind: 'QUEUED', response, correlationId: corrId };
       }
 
@@ -196,8 +243,12 @@ export class OneShotApiClient {
         return { kind: 'NOT_FOUND', correlationId: corrId };
       }
 
-      const err = (await res.json().catch(() => ({}))) as Partial<ErrorResponse>;
-      const message = err.message ?? 'Reconciliation not allowed';
+      const err = (await parseJsonResponse<Partial<ErrorResponse>>(res)) ?? {};
+      const message =
+        err.message ??
+        (res.status === 409
+          ? 'Reconciliation not allowed'
+          : `Request failed with status ${res.status}`);
 
       if (res.status === 409) {
         return { kind: 'NOT_ALLOWED', message, correlationId: corrId };
@@ -220,7 +271,16 @@ export class OneShotApiClient {
       });
 
       if (res.status === 200) {
-        const body = (await res.json()) as { status: 'ok'; submissions_disabled?: boolean };
+        const body = await parseJsonResponse<{
+          status: 'ok';
+          submissions_disabled?: boolean;
+        }>(res);
+        if (!body || body.status !== 'ok') {
+          return {
+            status: 'not_ready',
+            message: 'Backend unavailable (HTML or invalid response received)',
+          };
+        }
         return {
           status: 'ok',
           ...(body.submissions_disabled !== undefined
@@ -229,8 +289,8 @@ export class OneShotApiClient {
         };
       }
 
-      const err = (await res.json().catch(() => ({}))) as Partial<ErrorResponse>;
-      return { status: 'not_ready', message: err.message ?? 'Service not ready' };
+      const err = (await parseJsonResponse<Partial<ErrorResponse>>(res)) ?? {};
+      return { status: 'not_ready', message: err.message ?? `Service not ready (${res.status})` };
     } catch (e) {
       return {
         status: 'not_ready',

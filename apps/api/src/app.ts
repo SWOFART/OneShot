@@ -86,6 +86,18 @@ export function buildApi(dependencies: ApiDependencies) {
       return reply;
     }
     void reply.header('x-correlation-id', correlationId);
+    void reply.header('access-control-allow-origin', '*');
+    void reply.header('access-control-allow-methods', 'GET, POST, OPTIONS');
+    void reply.header(
+      'access-control-allow-headers',
+      'authorization, content-type, x-correlation-id',
+    );
+
+    if (request.method === 'OPTIONS') {
+      void reply.code(204).send();
+      return reply;
+    }
+
     if (!request.url.startsWith('/v1/')) return;
     const decision = await dependencies.authenticator.authenticate(request.headers.authorization);
     if (decision !== 'AUTHORIZED') {
