@@ -33,6 +33,9 @@
     },
     {
       "path": "./packages/recovery-ui"
+    },
+    {
+      "path": "./apps/web"
     }
   ]
 }

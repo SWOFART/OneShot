@@ -125,6 +125,7 @@ lock: OneShot's durable state is.
 
 ```text
 apps/api                      HTTP seam
+apps/web                      operator intent and status UI
 apps/worker                   settlement and reconciliation workers
 packages/contracts            frozen v1 contract pack, OpenAPI, fixtures
 packages/domain               intent, attempt, and settlement state
@@ -143,6 +144,7 @@ Requires Node `24.19.0`, pnpm `11.19.0`, and PostgreSQL for integration tests.
 pnpm install
 pnpm lint && pnpm typecheck && pnpm build
 pnpm test
+pnpm dev:frontend
 ```
 
 Integration tests need a database:
@@ -188,7 +190,7 @@ Under active development. **Testnet only.**
 | Settlement adapters and error taxonomy | Implemented, exercised against simulators |
 | Recovery evidence and safety core | In progress |
 | Subgraph MCP discovery and LLM recovery agent | Planned |
-| Operator frontend | Not started |
+| Operator frontend | Intent creation, replay/conflict, and authoritative status implemented |
 
 **No live settlement has been executed.** No Privy application, wallet, policy,
 or funded testnet account has been provisioned for this build. The adapters are
