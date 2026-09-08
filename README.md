@@ -201,16 +201,19 @@ Under active development. **Testnet only.**
 | Area                                          | Status                                                                              |
 | --------------------------------------------- | ----------------------------------------------------------------------------------- |
 | Durable intent ledger, API, worker            | Implemented                                                                         |
-| Settlement adapters and error taxonomy        | Implemented, exercised against simulators                                           |
+| Settlement adapters and error taxonomy        | Implemented; simulator-tested and live-verified on Arc Testnet through Privy        |
 | Recovery evidence and safety core             | Implemented against simulators                                                      |
 | Subgraph MCP discovery and LLM recovery agent | Implemented boundary; live path not verified                                        |
 | Operator frontend                             | Intent/status UI and synthetic recovery viewer implemented; live API wiring pending |
 
-**No live settlement has been executed.** No Privy application, wallet, policy,
-or funded testnet account has been provisioned for this build. The adapters are
-proven against simulators and sanitized fixtures, which demonstrates the logic
-and not the providers' behaviour. The Privy and Arc integrations are therefore
-`NOT VERIFIED`; see `docs/settlement/LIVE_EVIDENCE.md`.
+**One live testnet settlement has been executed.** A Privy-controlled execution
+wallet and scoped policy authorized one 1.00 USDC Arc Testnet transfer; live
+wrong-recipient and above-cap denials produced zero broadcasts. A lost-response
+drill entered `UNKNOWN` and reconciled to that original settlement without a
+replacement payment. Privy and Arc are `QUALIFIED` for the documented testnet
+claim; see `docs/settlement/LIVE_EVIDENCE.md` and
+`packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`. The Graph live
+Subgraph MCP and recovery-agent path remains `NOT VERIFIED`.
 
 Arc Mainnet is not configured. Its profile carries no chain ID, RPC, explorer,
 or token value by design, and enabling it requires published official values
