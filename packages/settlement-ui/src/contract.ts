@@ -72,6 +72,20 @@ const FORBIDDEN_KEY_FRAGMENTS = [
   'raw_provider',
 ] as const;
 
+/**
+ * Value shapes that are credential material whatever the field is called.
+ *
+ * Key names alone are not enough: an upstream change could put a token under a
+ * benign name, and the projection would happily hand it to a component. These
+ * patterns are deliberately narrow so ordinary evidence — hashes, addresses,
+ * digests — is never mistaken for a secret.
+ */
+const FORBIDDEN_VALUE_PATTERNS: readonly RegExp[] = [
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/u,
+  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\./u,
+  /\bBearer\s+[A-Za-z0-9._-]{10,}/iu,
+];
+
 export class SanitizationError extends Error {
   constructor(message: string) {
     super(message);
@@ -91,6 +105,13 @@ export function assertNoSensitiveFields(value: unknown, path = '$'): void {
     });
     return;
   }
+  if (typeof value === 'string') {
+    const pattern = FORBIDDEN_VALUE_PATTERNS.find((entry) => entry.test(value));
+    if (pattern !== undefined) {
+      throw new SanitizationError(`Refusing to render ${path}: value matches a credential shape`);
+    }
+    return;
+  }
   if (value === null || typeof value !== 'object') {
     return;
   }
@@ -103,6 +124,71 @@ export function assertNoSensitiveFields(value: unknown, path = '$'): void {
       );
     }
     assertNoSensitiveFields(entry, `${path}.${key}`);
+  }
+}
+
+/**
+ * Rejects a payload whose required collections are missing.
+ *
+ * The contract requires both arrays, so this only fires on a response that
+ * broke it. Checking here means such a payload fails as a `SanitizationError`
+ * the route renders deliberately, rather than as a `TypeError` from the first
+ * `.map` that happens to touch it.
+ */
+export function assertRequiredCollections(intent: IntentResponse): void {
+  for (const field of ['attempts', 'evidence'] as const) {
+    if (!Array.isArray(intent[field])) {
+      throw new SanitizationError(`Refusing to render: ${field} is missing or not an array`);
+    }
+  }
+}
+
+/**
+ * Rejects control characters in the fields that render verbatim.
+ *
+ * A payload missing its `attempts` or `evidence` arrays is tolerated here so the
+ * guard reports through `SanitizationError` rather than a raw TypeError; the
+ * projection below rejects the malformed shape on its own terms.
+ *
+ * `recipient`, `network`, `asset`, and the state enums are bounded upstream and
+ * are printed without `sanitizeText`, so a control character in one of them
+ * would reach the DOM unchanged. The seam should never produce one; if it does,
+ * the render fails rather than displaying it.
+ */
+export function assertNoControlCharacters(intent: IntentResponse): void {
+  const fields: readonly (readonly [string, string])[] = [
+    ['business_intent_id', intent.business_intent_id],
+    ['recipient', intent.recipient],
+    ['network', intent.network],
+    ['asset', intent.asset],
+    ['state', intent.state],
+    ['payload_fingerprint', intent.payload_fingerprint],
+    // Everything below also renders verbatim: identifiers, timestamps, and
+    // digests all print without sanitizeText. The seam bounds them already;
+    // this keeps one rule for every field that reaches the DOM unescaped.
+    ...(Array.isArray(intent.attempts) ? intent.attempts : []).flatMap((attempt, index) => [
+      [`attempts[${index}].attempt_id`, attempt.attempt_id] as const,
+      [`attempts[${index}].created_at`, attempt.created_at] as const,
+    ]),
+    ...(Array.isArray(intent.evidence) ? intent.evidence : []).flatMap((entry, index) => [
+      [`evidence[${index}].retrieved_at`, entry.retrieved_at] as const,
+      [`evidence[${index}].digest`, entry.digest] as const,
+      [`evidence[${index}].source`, entry.source] as const,
+      [`evidence[${index}].authority_class`, entry.authority_class] as const,
+      [`evidence[${index}].freshness`, entry.freshness ?? ''] as const,
+    ]),
+    ...(intent.settlement === undefined
+      ? []
+      : ([
+          ['settlement.provider_reference_id', intent.settlement.provider_reference_id],
+          ['settlement.transaction_hash', intent.settlement.transaction_hash],
+          ['settlement.block_number', intent.settlement.block_number],
+        ] as const)),
+  ];
+  for (const [name, value] of fields) {
+    if (typeof value === 'string' && containsControlCharacter(value)) {
+      throw new SanitizationError(`Refusing to render ${name}: value contains control characters`);
+    }
   }
 }
 
@@ -350,6 +436,8 @@ export function toSettlementDetailsView(
   options: SettlementViewOptions = {},
 ): SettlementDetailsView {
   assertNoSensitiveFields(intent);
+  assertNoControlCharacters(intent);
+  assertRequiredCollections(intent);
 
   const state = intent.state;
   const phase = PHASE_BY_STATE[state];

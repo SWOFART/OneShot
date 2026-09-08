@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_EXPLORER_HOSTS,
   SanitizationError,
+  assertNoControlCharacters,
   assertNoSensitiveFields,
   sanitizeText,
   toSettlementDetailsView,
@@ -118,6 +119,97 @@ describe('sensitive field rejection', () => {
       expect(() => assertNoSensitiveFields(scenario.intent)).not.toThrow();
     }
   });
+
+  it.each([
+    ['a PEM private key', '-----BEGIN RSA PRIVATE KEY-----'],
+    ['a JWT', 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abcdefghij'],
+    ['a bearer token', 'Bearer abcdefghijklmnopqrst'],
+  ])('rejects %s arriving under a benign field name', (_label, secret) => {
+    expect(() => assertNoSensitiveFields({ purpose: secret })).toThrow(SanitizationError);
+    expect(() => assertNoSensitiveFields({ notes: [secret] })).toThrow(SanitizationError);
+  });
+
+  it('still accepts ordinary settlement evidence', () => {
+    expect(() =>
+      assertNoSensitiveFields({
+        transaction_hash: `0x${'a'.repeat(64)}`,
+        recipient: '0x1111111111111111111111111111111111111111',
+        digest: 'digest-arc-001',
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe('required collections', () => {
+  it.each(['attempts', 'evidence'])('rejects a payload whose %s array is missing', (field) => {
+    const intent = { ...COMMITTED } as Record<string, unknown>;
+    delete intent[field];
+    expect(() => toSettlementDetailsView(intent as unknown as IntentResponse)).toThrow(
+      SanitizationError,
+    );
+  });
+
+  it('rejects a payload whose collection is not an array', () => {
+    const intent = { ...COMMITTED, evidence: 'nope' } as unknown as IntentResponse;
+    expect(() => toSettlementDetailsView(intent)).toThrow(SanitizationError);
+  });
+});
+
+describe('control characters in verbatim identity fields', () => {
+  it('accepts the published fixtures', () => {
+    for (const scenario of Object.values(SETTLEMENT_SCENARIOS)) {
+      expect(() => assertNoControlCharacters(scenario.intent)).not.toThrow();
+    }
+  });
+
+  it('rejects a control character in an attempt identifier', () => {
+    const intent = {
+      ...COMMITTED,
+      attempts: [{ ...COMMITTED.attempts[0], attempt_id: 'attempt\u0007one' }],
+    } as IntentResponse;
+    expect(() => assertNoControlCharacters(intent)).toThrow(SanitizationError);
+  });
+
+  it('rejects a control character in a timestamp or digest', () => {
+    const withAttemptTime = {
+      ...COMMITTED,
+      attempts: [{ ...COMMITTED.attempts[0], created_at: '2026-09-08T12:00:00\u0007Z' }],
+    } as IntentResponse;
+    expect(() => assertNoControlCharacters(withAttemptTime)).toThrow(SanitizationError);
+
+    const withEvidence = {
+      ...COMMITTED,
+      evidence: [{ ...COMMITTED.evidence[0], digest: 'digest\u0007one' }],
+    } as IntentResponse;
+    expect(() => assertNoControlCharacters(withEvidence)).toThrow(SanitizationError);
+  });
+
+  it('rejects a control character in an evidence enum', () => {
+    const intent = {
+      ...COMMITTED,
+      evidence: [{ ...COMMITTED.evidence[0], source: 'AR\u0007C' }],
+    } as unknown as IntentResponse;
+    expect(() => assertNoControlCharacters(intent)).toThrow(SanitizationError);
+  });
+
+  it('rejects a control character in a settlement identifier', () => {
+    const settlement = COMMITTED.settlement;
+    if (settlement === undefined) throw new Error('fixture is missing its settlement');
+    const intent = {
+      ...COMMITTED,
+      settlement: { ...settlement, provider_reference_id: 'arc\u0007tx' },
+    } as IntentResponse;
+    expect(() => assertNoControlCharacters(intent)).toThrow(SanitizationError);
+  });
+
+  it.each(['recipient', 'network', 'asset', 'business_intent_id', 'payload_fingerprint'])(
+    'rejects a control character in %s',
+    (field) => {
+      const intent = { ...COMMITTED, [field]: 'value\u0007here' } as IntentResponse;
+      expect(() => assertNoControlCharacters(intent)).toThrow(SanitizationError);
+      expect(() => toSettlementDetailsView(intent)).toThrow(SanitizationError);
+    },
+  );
 });
 
 describe('text sanitization', () => {

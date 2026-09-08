@@ -70,9 +70,12 @@ P5 composition stays a single-editor change in the shell.
   references the exact transaction hash being displayed. Hash binding alone is
   not enough, because a hostile host can quote the real hash back. Anything else
   is dropped with a stated reason.
-- **Fail-closed redaction.** A response carrying a secret-shaped field name is
-  refused before projection, and the route renders "Response withheld" instead
-  of any part of it.
+- **Fail-closed redaction.** A response carrying a secret-shaped field name, or
+  a credential-shaped value under any name (PEM private key, JWT, bearer token),
+  is refused before projection, and the route renders "Response withheld"
+  instead of any part of it. Identity fields that render verbatim — recipient,
+  network, asset, state, and the identifiers — are rejected outright if they
+  carry control characters, since they bypass `sanitizeText` by design.
 - **Exact money.** Amounts are formatted from integer atomic units with `bigint`
   string arithmetic. A malformed amount renders as malformed, never as a
   rounded number.
@@ -123,4 +126,6 @@ pnpm --filter @oneshot/settlement-ui verify
 This runs format, lint, typecheck, test, and build. Tests cover every fixture,
 redaction, malicious strings and URLs, unavailable evidence, exact amount
 formatting, keyboard reachability, responsive breakpoints, and an `axe-core`
-accessibility scan of every scenario.
+accessibility scan of every scenario. `test/contrast.test.ts` reads the palette
+tokens from the stylesheet and asserts WCAG AA contrast on both surfaces, which
+the axe scan cannot check under jsdom.

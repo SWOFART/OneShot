@@ -15,23 +15,23 @@ Evidence artifact: `evidence/c06/sanitized-proof.json`.
 
 ## Live Execution Summary
 
-| Property | Live Verified Value |
-| --- | --- |
-| **Network** | `eip155:5042002` (Arc Testnet) |
-| **RPC Endpoint** | `https://rpc.testnet.arc.io` |
-| **Execution Wallet** | `0xfCC366c88A0c980e2FD5a7Cf7a36494E4457D943` |
-| **Privy App ID** | `cmtqbf5zo013w0cky3r0jqjca` |
-| **Privy Wallet ID** | `tnfnp0n27bsff7vf6g4dv35r` |
-| **Privy Policy ID** | `balx3rtrpns3gnvhz3n32dml` |
-| **USDC Contract** | `0x3600000000000000000000000000000000000000` |
-| **Authorized Recipient** | `0xa605EE031E41f04f8e193059a39A24407f83677c` |
-| **Settlement Amount** | `1000000` atomic units (1.00 USDC) |
-| **Transaction Hash** | `0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7` |
-| **Block Number** | `61116056` |
-| **Block Hash** | `0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b` |
-| **Transfer Log Index** | `23` |
-| **Explorer URL** | [https://testnet.arcscan.app/tx/0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7](https://testnet.arcscan.app/tx/0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7) |
-| **Settlement Status** | `CONFIRMED` |
+| Property                 | Live Verified Value                                                                                                                                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Network**              | `eip155:5042002` (Arc Testnet)                                                                                                                                                                         |
+| **RPC Endpoint**         | `https://rpc.testnet.arc.io`                                                                                                                                                                           |
+| **Execution Wallet**     | `0xfCC366c88A0c980e2FD5a7Cf7a36494E4457D943`                                                                                                                                                           |
+| **Privy App ID**         | `cmtqbf5zo013w0cky3r0jqjca`                                                                                                                                                                            |
+| **Privy Wallet ID**      | `tnfnp0n27bsff7vf6g4dv35r`                                                                                                                                                                             |
+| **Privy Policy ID**      | `balx3rtrpns3gnvhz3n32dml`                                                                                                                                                                             |
+| **USDC Contract**        | `0x3600000000000000000000000000000000000000`                                                                                                                                                           |
+| **Authorized Recipient** | `0xa605EE031E41f04f8e193059a39A24407f83677c`                                                                                                                                                           |
+| **Settlement Amount**    | `1000000` atomic units (1.00 USDC)                                                                                                                                                                     |
+| **Transaction Hash**     | `0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7`                                                                                                                                   |
+| **Block Number**         | `61116056`                                                                                                                                                                                             |
+| **Block Hash**           | `0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b`                                                                                                                                   |
+| **Transfer Log Index**   | `23`                                                                                                                                                                                                   |
+| **Explorer URL**         | [https://testnet.arcscan.app/tx/0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7](https://testnet.arcscan.app/tx/0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7) |
+| **Settlement Status**    | `CONFIRMED`                                                                                                                                                                                            |
 
 ## Observed Policy Denials (Zero External Broadcasts)
 
@@ -71,5 +71,5 @@ Simulated worker crash / network partition immediately following transaction sub
 
 ## Limitations
 
-- Arc Mainnet profile remains intentionally disabled (`OFFLINE_PROTECTED`) pending production launch and human sign-off.
+- Arc Mainnet profile remains intentionally disabled (`enabled: false`, `verification: UNPUBLISHED`) pending production launch and human sign-off. Those are the values the profile actually carries in `packages/arc-adapter/src/profiles.ts`; the profile holds no chain ID, RPC, explorer, or token value at all.
 - The Graph Subgraph query endpoint remains under `FALLBACK_DIRECT_RECOVERY` (`NOT VERIFIED`) due to the absence of a canonical immutable deployment ID with an active Indexer allocation on the decentralized network.
