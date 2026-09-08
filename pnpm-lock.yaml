@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      pg:
+        specifier: 8.23.0
+        version: 8.23.0
     devDependencies:
       '@eslint/js':
         specifier: 10.0.1
@@ -59,7 +63,7 @@ importers:
     devDependencies:
       '@testcontainers/postgresql':
         specifier: 12.1.0
-        version: 12.1.0(supports-color@7.2.0)
+        version: 12.1.0(supports-color@10.2.2)
 
   apps/web:
     dependencies:
@@ -3163,12 +3167,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@kwsites/file-exists@1.1.1(supports-color@7.2.0)':
-    dependencies:
-      debug: 4.4.3(supports-color@7.2.0)
-    transitivePeerDependencies:
-      - supports-color
-
   '@napi-rs/wasm-runtime@1.2.3(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)':
     dependencies:
       '@emnapi/core': 1.11.3
@@ -3299,15 +3297,6 @@ snapshots:
   '@testcontainers/postgresql@12.1.0(supports-color@10.2.2)':
     dependencies:
       testcontainers: 12.1.0(supports-color@10.2.2)
-    transitivePeerDependencies:
-      - bare-abort-controller
-      - bare-buffer
-      - react-native-b4a
-      - supports-color
-
-  '@testcontainers/postgresql@12.1.0(supports-color@7.2.0)':
-    dependencies:
-      testcontainers: 12.1.0(supports-color@7.2.0)
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
@@ -3832,32 +3821,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  docker-modem@5.0.7(supports-color@7.2.0):
-    dependencies:
-      debug: 4.4.3(supports-color@7.2.0)
-      readable-stream: 3.6.2
-      split-ca: 1.0.1
-      ssh2: 1.17.0
-    transitivePeerDependencies:
-      - supports-color
-
   dockerode@5.0.1(supports-color@10.2.2):
     dependencies:
       '@balena/dockerignore': 1.0.2
       '@grpc/grpc-js': 1.14.4
       '@grpc/proto-loader': 0.7.15
       docker-modem: 5.0.7(supports-color@10.2.2)
-      protobufjs: 7.6.6
-      tar-fs: 2.1.5
-    transitivePeerDependencies:
-      - supports-color
-
-  dockerode@5.0.1(supports-color@7.2.0):
-    dependencies:
-      '@balena/dockerignore': 1.0.2
-      '@grpc/grpc-js': 1.14.4
-      '@grpc/proto-loader': 0.7.15
-      docker-modem: 5.0.7(supports-color@7.2.0)
       protobufjs: 7.6.6
       tar-fs: 2.1.5
     transitivePeerDependencies:
@@ -4576,13 +4545,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  properties-reader@3.0.1(supports-color@7.2.0):
-    dependencies:
-      '@kwsites/file-exists': 1.1.1(supports-color@7.2.0)
-      mkdirp: 3.0.1
-    transitivePeerDependencies:
-      - supports-color
-
   protobufjs@7.6.6:
     dependencies:
       '@protobufjs/aspromise': 1.1.2
@@ -4887,29 +4849,6 @@ snapshots:
       get-port: 5.1.1
       proper-lockfile: 4.1.2
       properties-reader: 3.0.1(supports-color@10.2.2)
-      ssh-remote-port-forward: 1.0.4
-      tar-fs: 3.1.3
-      tmp: 0.2.7
-      undici: 8.10.2
-    transitivePeerDependencies:
-      - bare-abort-controller
-      - bare-buffer
-      - react-native-b4a
-      - supports-color
-
-  testcontainers@12.1.0(supports-color@7.2.0):
-    dependencies:
-      '@balena/dockerignore': 1.0.2
-      '@types/dockerode': 4.0.1
-      archiver: 7.0.1
-      async-lock: 1.4.1
-      byline: 5.0.0
-      debug: 4.4.3(supports-color@7.2.0)
-      docker-compose: 1.4.2
-      dockerode: 5.0.1(supports-color@7.2.0)
-      get-port: 5.1.1
-      proper-lockfile: 4.1.2
-      properties-reader: 3.0.1(supports-color@7.2.0)
       ssh-remote-port-forward: 1.0.4
       tar-fs: 3.1.3
       tmp: 0.2.7
