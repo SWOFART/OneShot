@@ -1,9 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { DemoShell } from './DemoShell.js';
 import { isRecoveryScenario } from './fixtures.js';
-import { createRecoveryClient } from './mock-server.js';
-import { RecoveryRoute } from './RecoveryRoute.js';
 import './styles.css';
 
 const params = new URLSearchParams(window.location.search);
@@ -15,9 +14,6 @@ if (!(root instanceof HTMLElement)) throw new Error('Missing recovery UI root');
 
 createRoot(root).render(
   <StrictMode>
-    <RecoveryRoute
-      businessIntentId="intent_demo_018f"
-      client={createRecoveryClient({ scenario })}
-    />
+    <DemoShell initialScenario={scenario} />
   </StrictMode>,
 );

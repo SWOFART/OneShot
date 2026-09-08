@@ -35,5 +35,7 @@ export {
 export * from './service.js';
 export * from './service-simulator.js';
 export * from './recovery-matrix.js';
+export * from './qualification.js';
+export * from './disabled-ports.js';
 export * from './chaos/index.js';
 export * from './types.js';

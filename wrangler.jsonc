@@ -3,7 +3,7 @@
   "name": "oneshot",
   "compatibility_date": "2026-09-07",
   "assets": {
-    "directory": "./apps/placeholder-frontend",
+    "directory": "./packages/recovery-ui/site-dist",
   },
   "routes": [
     {
