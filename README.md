@@ -198,12 +198,12 @@ The contract is defined in `packages/contracts/openapi/openapi.v1.json`.
 
 Under active development. **Testnet only.**
 
-| Area                                          | Status                                                                             |
-| --------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Durable intent ledger, API, worker            | Implemented                                                                        |
-| Settlement adapters and error taxonomy        | Implemented, exercised against simulators                                          |
-| Recovery evidence and safety core             | Implemented against simulators                                                     |
-| Subgraph MCP discovery and LLM recovery agent | Implemented boundary; live path not verified                                       |
+| Area                                          | Status                                                                              |
+| --------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Durable intent ledger, API, worker            | Implemented                                                                         |
+| Settlement adapters and error taxonomy        | Implemented, exercised against simulators                                           |
+| Recovery evidence and safety core             | Implemented against simulators                                                      |
+| Subgraph MCP discovery and LLM recovery agent | Implemented boundary; live path not verified                                        |
 | Operator frontend                             | Intent/status UI and synthetic recovery viewer implemented; live API wiring pending |
 
 **No live settlement has been executed.** No Privy application, wallet, policy,
