@@ -49,6 +49,7 @@ Implement Coder A milestone A05 after Gate P4: "Делай" in response to the i
 ## External documentation findings
 
 - Wrangler 4.127.0 local schema accepts `assets.not_found_handling = "single-page-application"`.
+- Added `build.command = "pnpm --filter @oneshot/web build"` to `wrangler.jsonc` so Cloudflare Workers Builds automatically builds the Vite SPA before asset upload.
 
 ## Unresolved questions
 
@@ -57,14 +58,16 @@ Implement Coder A milestone A05 after Gate P4: "Делай" in response to the i
 ## Branch, commit, PR, and review state
 
 - Branch: `milestone/a05-frontend-intent-status`
-- Base: `origin/develop` at `1250dec`
-- Commit: pending
-- PR: pending
-- Gate A: pending
-- Gate B: pending
+- Base: `origin/develop` at `1250dec79bc702939fe2a3b0fd00e66bb34128af`
+- Initial commit: `d3fbfacdee365d159807256a53011140442867ff`
+- PR: `#32` (https://github.com/SWOFART/OneShot/pull/32)
+- Gate A: PASS (pre-push tree `da775d97e7a8c7869803c6f5a6a91894b5714d83`; updating for build command fix)
+- Gate B: pending CI and exact-head review
 
 ## Handoff and next steps
 
-- Run root validation and inspect final staged scope.
-- Run required Gate A, commit, push, open draft PR, wait for CI, then run Gate B.
+- Validate wrangler build integration locally.
+- Re-run Gate A, commit fix, push to PR #32.
+- Verify CI passes (including Workers Builds).
+- Run Gate B and mark PR ready for review.
 - Project Gate P5 will compose B05/C05 UI packages after A05 closes.

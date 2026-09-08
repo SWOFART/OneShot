@@ -2,6 +2,9 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "oneshot",
   "compatibility_date": "2026-09-07",
+  "build": {
+    "command": "pnpm --filter @oneshot/web build",
+  },
   "assets": {
     "directory": "./apps/web/dist",
     "not_found_handling": "single-page-application",
