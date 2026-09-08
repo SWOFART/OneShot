@@ -6,6 +6,14 @@ Gate P4 represents the backend convergence boundary across all three coders (A04
 
 All checked simulators in production worker composition are replaced with real reviewed package entry points, and the OpenAPI v1 contract seam is frozen with additive sanitized fields, versioned mock server, and validated UI fixtures.
 
+| Scope | Status | Meaning |
+| --- | --- | --- |
+| Backend package composition | `COMPLETE` | Reviewed package entry points are wired into the production composition boundary. |
+| Frontend contract boundary | `FROZEN` | OpenAPI v1, fixtures, and mock-server semantics are published. |
+| Privy authorization and Arc settlement proof | `LIVE_VERIFIED` | The checked-in sanitized evidence proves the recorded Arc Testnet transaction and denial drills. |
+| Hashless Graph MCP and model recovery proof | `NOT_VERIFIED` | No admitted live MCP transport, immutable deployment with active Indexer allocation, or live model-to-core trace exists. |
+| Overall Gate P4 | `INCOMPLETE` | Composition is complete, but the plan's live lost-hash proof is still missing. |
+
 ## Package Version Slots
 
 | Slot | Planned Package | Owning Lane | Gate P4 State | Pinned Identifier / Digest |
@@ -16,7 +24,7 @@ All checked simulators in production worker composition are replaced with real r
 | Settlement Worker | `@oneshot/worker@0.1.0` | Lane A | Converged | Production profile wired with Lane B and C adapters |
 | Arc Settlement Adapter | `@oneshot/privy-adapter` (`ArcSettlementAdapter`) | Lane B | Integrated & Wired | Pinned Arc testnet `eip155:5042002` |
 | Privy Authorization Adapter | `@oneshot/privy-adapter` (`PrivyAuthorizationAdapter`) | Lane B | Integrated & Wired | Policy authorization `1.0.0` |
-| Subgraph MCP Recovery | `@oneshot/reconciliation` (`RecoveryService`) | Lane C | Integrated & Wired | Wired via `recovery-bridge` over durable `IntentLedger` |
+| Subgraph MCP Recovery | `@oneshot/reconciliation` (`RecoveryService`) | Lane C | Boundary Integrated; Live Path Not Verified | Wired via `recovery-bridge` over durable `IntentLedger`; production remains on `FALLBACK_DIRECT_RECOVERY` |
 | Recovery UI Components | `@oneshot/recovery-ui@0.1.0` | Lane C | Pinned | Mock Server `1.0.0` |
 
 ## Frozen Frontend Boundary (OpenAPI v1)
@@ -69,11 +77,11 @@ Published under `packages/contracts/fixtures/ui/v1/`:
 
 All fixtures are verified free of sensitive keys and conform to the published JSON Schema bundle via `pnpm validate:fixtures`.
 
-## Testnet Evidence Mode Verification Status
+## Privy and Arc Testnet Evidence Status
 
-Per `docs/plan.md` (procedure steps 8-13):
+Per `plan.md` (procedure steps 8-13):
 
-- **Verification Status**: `LIVE_VERIFIED`
+- **Verification Status**: `LIVE_VERIFIED` for Privy authorization and Arc settlement only. This is not an overall Gate P4 verdict.
 - **Human Provisioning (Step 8)**: Completed per `docs/settlement/PROVIDER_SETUP.md` with Privy app `cmtqbf5zo013w0cky3r0jqjca`, server execution wallet `0xfCC366c88A0c980e2FD5a7Cf7a36494E4457D943`, policy `balx3rtrpns3gnvhz3n32dml`, and funded Arc Testnet account.
 - **Live Settlement Drill (Step 9)**: Executed and confirmed on Arc Testnet (`eip155:5042002`).
   - Transaction Hash: `0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7`
@@ -95,3 +103,21 @@ Per `docs/plan.md` (procedure steps 8-13):
   - Live proof: `evidence/c06/sanitized-proof.json`
   - Settlement evidence log: `docs/settlement/LIVE_EVIDENCE.md`
   - Qualification report: `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`
+
+## Remaining Gate P4 Live Proof
+
+- **Verification Status**: `NOT_VERIFIED`
+- Query a canonical immutable OneShot/Arc Subgraph deployment through the live
+  Subgraph MCP transport for a lost-hash case.
+- Record the deployment, query, variables digest, retrieval identity, `_meta`
+  health/freshness, and candidate count without credentials.
+- Feed the sanitized result to a structured-output model adapter and record its
+  bounded recommendation plus referenced evidence IDs.
+- Let the deterministic OneShot core validate the recommendation and verify any
+  candidate through authoritative Arc receipt and Transfer evidence.
+- Prove zero new settlement submissions throughout empty, delayed, malformed,
+  multiple-candidate, invalid-model-output, and successful-existing-result
+  cases.
+
+Until this evidence exists, automatic hashless recovery remains unavailable,
+The Graph remains `NOT VERIFIED`, and Gate P4 cannot receive a global pass.
