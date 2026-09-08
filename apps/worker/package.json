@@ -20,8 +20,11 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "@oneshot/arc-adapter": "workspace:*",
     "@oneshot/contracts": "workspace:*",
     "@oneshot/domain": "workspace:*",
+    "@oneshot/privy-adapter": "workspace:*",
+    "@oneshot/reconciliation": "workspace:*",
     "@oneshot/storage-postgres": "workspace:*",
     "graphile-worker": "0.17.3",
     "pg": "8.23.0"

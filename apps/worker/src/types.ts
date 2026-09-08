@@ -6,6 +6,8 @@ import type {
 import type { IntentLedger } from '@oneshot/storage-postgres';
 import type { Pool } from 'pg';
 
+import type { RecoveryService } from '@oneshot/reconciliation';
+
 export interface AuthorizationPort {
   authorize(request: CreateIntentRequest): Promise<AuthorizationResult>;
 }
@@ -31,6 +33,7 @@ export interface WorkerOptions {
   readonly ledger: IntentLedger;
   readonly authorizationPort?: AuthorizationPort | undefined;
   readonly settlementPort: SettlementPort;
+  readonly recoveryService?: RecoveryService | undefined;
   readonly concurrency?: number | undefined;
   readonly config?: WorkerConfig | undefined;
 }

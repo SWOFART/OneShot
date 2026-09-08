@@ -12,15 +12,15 @@ At Gate P4, checked simulators are replaced with real reviewed package versions,
 
 ## Package Version Slots
 
-| Slot | Planned Package | Owning Lane | Current State in A04 |
+| Slot | Planned Package | Owning Lane | Current State in Gate P4 |
 | --- | --- | --- | --- |
 | Core Contracts | `@oneshot/contracts@0.1.0` | Shared / Frozen | Pinned |
 | Domain Models | `@oneshot/domain@0.1.0` | Lane A | Pinned |
 | PostgreSQL Storage | `@oneshot/storage-postgres@0.1.0` | Lane A | Pinned (Schema Digest: `5d5888894ff0f4f44049579f1c8ffca2a24e0b61c3af65aabdbcd78f06020d65`) |
-| Settlement Worker | `@oneshot/worker@0.1.0` | Lane A | Composed |
-| Arc Settlement Adapter | `@oneshot/privy-adapter` (`ArcSettlementAdapter`) | Lane B | Simulated via `SimulatorSettlementPort` |
-| Privy Authorization Adapter | `@oneshot/privy-adapter` (`PrivyAuthorizationAdapter`) | Lane B | Simulated via `SimulatorAuthorizationPort` |
-| Subgraph MCP Recovery | `@oneshot/reconciliation` | Lane C | Simulated via `c01-simulator-v1` scenarios |
+| Settlement Worker | `@oneshot/worker@0.1.0` | Lane A | Composed & Converged |
+| Arc Settlement Adapter | `@oneshot/privy-adapter` (`ArcSettlementAdapter`) | Lane B | Integrated & Wired in Production Profile |
+| Privy Authorization Adapter | `@oneshot/privy-adapter` (`PrivyAuthorizationAdapter`) | Lane B | Integrated & Wired in Production Profile |
+| Subgraph MCP Recovery | `@oneshot/reconciliation` | Lane C | Integrated & Wired via `recovery-bridge` |
 
 Both lane-B adapters ship from `@oneshot/privy-adapter` rather than from
 separate packages: settlement is a Privy wallet action carrying an Arc
@@ -31,20 +31,22 @@ readiness probing they build on. See
 
 ## Replacement Instructions for Gate P4
 
-1. **Replace Settlement Port**:
-   - In `apps/worker/src/composition.ts`, update `composeWorker`:
+1. **Replace Settlement Port**: [COMPLETED]
+   - In `apps/worker/src/composition.ts`, updated `composeWorker`:
    - Set `profile: 'production'`.
-   - Inject instance of `ArcSettlementAdapter` conforming to `SettlementPort`.
-   - Verify contract version `1.0.0` and network `eip155:5042002`.
+   - Injected instance of `ArcSettlementAdapter` conforming to `SettlementPort`.
+   - Verified contract version `1.0.0` and network `eip155:5042002`.
 
-2. **Replace Authorization Port**:
-   - Inject instance of `PrivyAuthorizationAdapter` conforming to `AuthorizationPort`.
-   - Verify contract version `1.0.0`.
+2. **Replace Authorization Port**: [COMPLETED]
+   - Injected instance of `PrivyAuthorizationAdapter` conforming to `AuthorizationPort`.
+   - Verified contract version `1.0.0`.
 
-3. **Replace Recovery Engine**:
-   - Follow `packages/reconciliation/docs/GATE_P4_RECOVERY_REPLACEMENT.md`.
-   - Inject `RecoveryService` into the `reconcile_intent` task in `createTaskList`.
-   - Keep A-owned persistence behind `RecoveryCommandStorePort`; the recovery package does not write A tables.
+3. **Replace Recovery Engine**: [COMPLETED]
+   - Followed `packages/reconciliation/docs/GATE_P4_RECOVERY_REPLACEMENT.md`.
+   - Injected `RecoveryService` into the `reconcile_intent` task in `createTaskList`.
+   - Bridged `LocalRecoveryStatePort`, `RecoveryCommandStorePort` over `IntentLedger` (with durable `outbox_jobs` deduplication and real `UNKNOWN` CAS transitions), and `KnownIdentityEvidencePort` via `PrivyArcEvidenceBridge` in `apps/worker/src/recovery-bridge.ts`.
+   - Provided `createProductionRecoveryService` in `apps/worker/src/composition.ts` for full production worker recovery composition.
+   - Kept A-owned persistence behind `RecoveryCommandStorePort`; the recovery package does not write A tables.
 
 4. **Freeze the frontend boundary**:
    - Revalidate the A01 OpenAPI v1 artifact against the composed backend.

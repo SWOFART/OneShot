@@ -63,12 +63,21 @@ importers:
 
   apps/worker:
     dependencies:
+      '@oneshot/arc-adapter':
+        specifier: workspace:*
+        version: link:../../packages/arc-adapter
       '@oneshot/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@oneshot/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@oneshot/privy-adapter':
+        specifier: workspace:*
+        version: link:../../packages/privy-adapter
+      '@oneshot/reconciliation':
+        specifier: workspace:*
+        version: link:../../packages/reconciliation
       '@oneshot/storage-postgres':
         specifier: workspace:*
         version: link:../../packages/storage-postgres
