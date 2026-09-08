@@ -24,10 +24,11 @@ pnpm --filter @oneshot/recovery-ui dev
 Open `/?scenario=aged-unknown`. Any scenario exported by
 `RECOVERY_SCENARIOS` may be selected.
 
-The same fixture viewer is the Wrangler static-asset target. From the repository
-root, `pnpm deploy` builds `site-dist` and deploys it to the configured custom
-domain. Its persistent banner identifies all data as synthetic review fixtures;
-it is not live sponsor evidence.
+The same fixture viewer is included in the combined Wrangler static-asset
+target. From the repository root, `pnpm build:frontend` builds the main app and
+emits this viewer to `apps/web/dist/recovery`, where it is served at
+`/recovery/` on the configured custom domain. Its persistent banner identifies
+all data as synthetic review fixtures; it is not live sponsor evidence.
 
 ## Frozen mock boundary
 

@@ -3,8 +3,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react()],
+  base: '/recovery/',
   build: {
-    outDir: 'site-dist',
+    outDir: '../../apps/web/dist/recovery',
     emptyOutDir: true,
   },
 });
