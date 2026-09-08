@@ -91,14 +91,16 @@ policy drift is detected before authorization rather than during a payment.
   exact amount.
 - **Native value is always zero**, asserted by test.
 
-## 6. Still not proven
+## 6. Live evidence and remaining gap
 
-Per `.agents/skills/sponsor-qualification/SKILL.md`, no sponsor claim may rest
-on fixtures. These remain unverified against reality and are listed in
-`COMPATIBILITY_MANIFEST.liveGapsForGateP4`:
+`docs/settlement/LIVE_EVIDENCE.md` records `LIVE_RUN` with a live Arc Testnet
+settlement (`0x72ab...`) and live Privy policy denials. Privy and Arc sponsor
+claims are verified for testnet execution per
+`packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`; their settlement,
+receipt, Transfer-log, wallet, and policy identifiers are no longer merely
+fixture-shaped evidence.
 
-- No Privy tenant has executed a policy denial or an allowed settlement.
-- Arc receipt and Transfer log shapes are modelled from documentation.
-- Privy wallet and policy identifier formats are shape-guessed.
-
-`docs/settlement/LIVE_EVIDENCE.md` records `LIVE_RUN` with live Arc Testnet settlement (`0x72ab...`) and live policy denials. Privy and Arc sponsor claims are verified for testnet execution per `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`.
+The remaining sponsor-qualification gap is the live The Graph path: an
+immutable deployment with an active Indexer allocation, a Subgraph MCP trace,
+and a live recovery-model-to-core trace. Until that evidence exists, The Graph
+remains `NOT VERIFIED` and does not unlock automatic hashless recovery.
