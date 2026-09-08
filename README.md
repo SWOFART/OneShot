@@ -126,6 +126,7 @@ lock: OneShot's durable state is.
 
 ```text
 apps/api                      HTTP seam
+apps/web                      operator intent and status UI
 apps/worker                   settlement and reconciliation workers
 packages/contracts            frozen v1 contract pack, OpenAPI, fixtures
 packages/domain               intent, attempt, and settlement state
@@ -146,6 +147,7 @@ Requires Node `24.19.0`, pnpm `11.19.0`, and PostgreSQL for integration tests.
 pnpm install
 pnpm lint && pnpm typecheck && pnpm build
 pnpm test
+pnpm dev:frontend
 ```
 
 Integration tests need a database:
@@ -196,13 +198,13 @@ The contract is defined in `packages/contracts/openapi/openapi.v1.json`.
 
 Under active development. **Testnet only.**
 
-| Area                                          | Status                                                              |
-| --------------------------------------------- | ------------------------------------------------------------------- |
-| Durable intent ledger, API, worker            | Implemented                                                         |
-| Settlement adapters and error taxonomy        | Implemented, exercised against simulators                           |
-| Recovery evidence and safety core             | Implemented against simulators                                      |
-| Subgraph MCP discovery and LLM recovery agent | Implemented boundary; live path not verified                        |
-| Operator frontend                             | Synthetic recovery viewer implemented; real API composition pending |
+| Area                                          | Status                                                                             |
+| --------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Durable intent ledger, API, worker            | Implemented                                                                        |
+| Settlement adapters and error taxonomy        | Implemented, exercised against simulators                                          |
+| Recovery evidence and safety core             | Implemented against simulators                                                     |
+| Subgraph MCP discovery and LLM recovery agent | Implemented boundary; live path not verified                                       |
+| Operator frontend                             | Intent/status UI and synthetic recovery viewer implemented; live API wiring pending |
 
 **No live settlement has been executed.** No Privy application, wallet, policy,
 or funded testnet account has been provisioned for this build. The adapters are
