@@ -8,7 +8,10 @@ Gate P4 is the project convergence point where backend milestones across all thr
 - **Coder B**: B04 (Settlement adapter, Privy authorization, error taxonomy)
 - **Coder C**: C04 (Recovery matrix integration, Subgraph MCP engine)
 
-At Gate P4, checked simulators are replaced with real reviewed package versions, and integrated end-to-end proofs are executed before frontend milestones (A05/B05/C05) commence.
+At Gate P4, checked simulators are replaced with real reviewed package versions,
+the frontend contract is frozen, and the integrated live proofs required by the
+plan are executed. Composition and contract freeze are complete; the live
+Graph MCP/model lost-hash proof remains incomplete.
 
 ## Package Version Slots
 
@@ -20,7 +23,7 @@ At Gate P4, checked simulators are replaced with real reviewed package versions,
 | Settlement Worker | `@oneshot/worker@0.1.0` | Lane A | Composed & Converged |
 | Arc Settlement Adapter | `@oneshot/privy-adapter` (`ArcSettlementAdapter`) | Lane B | Integrated & Wired in Production Profile |
 | Privy Authorization Adapter | `@oneshot/privy-adapter` (`PrivyAuthorizationAdapter`) | Lane B | Integrated & Wired in Production Profile |
-| Subgraph MCP Recovery | `@oneshot/reconciliation` | Lane C | Integrated & Wired via `recovery-bridge` |
+| Subgraph MCP Recovery | `@oneshot/reconciliation` | Lane C | Boundary integrated via `recovery-bridge`; live MCP/model path `NOT_VERIFIED` |
 
 Both lane-B adapters ship from `@oneshot/privy-adapter` rather than from
 separate packages: settlement is a Privy wallet action carrying an Arc
@@ -54,6 +57,17 @@ readiness probing they build on. See
    - Published versioned OpenAPI mock server (`OPENAPI_MOCK_SERVER_VERSION = '1.0.0'`) in `@oneshot/contracts`.
    - Published sanitized Gate P4 manifest in `docs/GATE_P4_MANIFEST.md`.
    - Frontend milestones (A05, B05, C05) unblocked to build on frozen contracts and mock server.
+
+5. **Prove live hashless recovery**: [INCOMPLETE]
+   - Pin a canonical immutable OneShot/Arc Subgraph deployment with an active
+     Indexer allocation.
+   - Query it through the live Subgraph MCP transport using
+     `execute_query_by_deployment_id`.
+   - Pass the sanitized candidate view to a structured-output model adapter.
+   - Record the bounded model action, referenced evidence, deterministic-core
+     disposition, Arc verification, and zero external replacement submissions.
+   - Keep `FALLBACK_DIRECT_RECOVERY`, The Graph `NOT_VERIFIED`, and the overall
+     Gate P4 status `INCOMPLETE` until every item is evidenced.
 
 ## Verification Commands
 
