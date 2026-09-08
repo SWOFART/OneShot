@@ -71,8 +71,28 @@ All fixtures are verified free of sensitive keys and conform to the published JS
 
 ## Testnet Evidence Mode Verification Status
 
-Per `docs/plan.md` (procedure steps 8-12):
+Per `docs/plan.md` (procedure steps 8-13):
 
-- Local offline verification, simulated external adapter composition, empty/upgrade migrations, and safe-disable checks have passed.
-- Testnet evidence mode configuration is documented in `docs/settlement/SETTLEMENT_CONFIG_V1.md` and `docs/settlement/GATE_P4_LANE_B_READINESS.md`.
-- Live testnet wallet funding and live transaction execution remain gated on explicit human authorization per repository safety rules. No live keys or secret seeds are stored in the repository.
+- **Verification Status**: `LIVE_VERIFIED`
+- **Human Provisioning (Step 8)**: Completed per `docs/settlement/PROVIDER_SETUP.md` with Privy app `cmtqbf5zo013w0cky3r0jqjca`, server execution wallet `0xfCC366c88A0c980e2FD5a7Cf7a36494E4457D943`, policy `balx3rtrpns3gnvhz3n32dml`, and funded Arc Testnet account.
+- **Live Settlement Drill (Step 9)**: Executed and confirmed on Arc Testnet (`eip155:5042002`).
+  - Transaction Hash: `0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7`
+  - Block Number: `61116056` (Hash: `0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b`)
+  - Transfer Event: Confirmed at log index `23` (`1000000` atomic units USDC transferred to `0xa605EE031E41f04f8e193059a39A24407f83677c`).
+  - Explorer Proof: [https://testnet.arcscan.app/tx/0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7](https://testnet.arcscan.app/tx/0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7)
+- **Live Policy Denial Drills (Step 10)**:
+  - Unauthorized recipient (`0x1111...`) &rarr; HTTP 400 `policy_violation`, 0 broadcasts, 0 settlements.
+  - Above-cap amount (`2000000` > `1000000`) &rarr; HTTP 400 `policy_violation`, 0 broadcasts, 0 settlements.
+  - Nonce remained `0`, proving zero unauthorized on-chain transactions.
+- **Lost-Hash & Lost-Response Recovery Drill (Step 11)**:
+  - Simulated worker crash after broadcast: intent marked `UNKNOWN`.
+  - Authoritative read-only reconciliation via `verifyReceipt`: transitioned state to `COMMITTED`.
+  - External replacement submissions: **0**.
+  - Idempotent replay: returned `200 REPLAYED` with 0 duplicate broadcasts, preserving the strict `1 intent -> at most 1 settlement` invariant.
+- **Degraded Matrix Verification (Step 12)**:
+  - All 6 test suites and 74 tests in `@oneshot/reconciliation` passed. Fail-closed behavior verified under degraded Subgraph MCP, indexer lag, and conflicting model advice.
+- **Evidence References**:
+  - Live proof: `evidence/c06/sanitized-proof.json`
+  - Settlement evidence log: `docs/settlement/LIVE_EVIDENCE.md`
+  - Qualification report: `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`
+

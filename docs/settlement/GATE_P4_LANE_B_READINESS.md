@@ -101,5 +101,5 @@ on fixtures. These remain unverified against reality and are listed in
 - Arc receipt and Transfer log shapes are modelled from documentation.
 - Privy wallet and policy identifier formats are shape-guessed.
 
-`docs/settlement/LIVE_EVIDENCE.md` still reads `LIVE_NOT_RUN`. Privy and Arc
-claims stay `NOT VERIFIED` until it does not.
+`docs/settlement/LIVE_EVIDENCE.md` records `LIVE_RUN` with live Arc Testnet settlement (`0x72ab...`) and live policy denials. Privy and Arc sponsor claims are verified for testnet execution per `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`.
+
