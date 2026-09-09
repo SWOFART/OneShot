@@ -1,11 +1,48 @@
 # OneShot Product Delivery Plan
 
-Status: working testnet MVP and mainnet-readiness roadmap
+Status: working testnet MVP; Arc/Privy evidence live; Graph deployment published but not allocated/indexed; P4/P6 live recovery proof incomplete
 Team: exactly three coders
 Implementation base: the human-approved commit containing this plan
 Research basis: `.agent/research/20260906-integration-decisions.md` and `.agent/research/20260907-subgraph-mcp-clarification.md`
 Detailed work packets: [`milestones/README.md`](milestones/README.md)
 Domain architecture: [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md)
+
+## Current delivery status (2026-09-09)
+
+The following pull requests are open against `develop`. Their checks are green,
+but they are not part of this plan's implementation base until a human merges
+them.
+
+| PR | Progress | Impact on this plan |
+| --- | --- | --- |
+| [#42](https://github.com/SWOFART/OneShot/pull/42) `docs: correct Gate P4 verification status` | Separates complete backend composition and Privy/Arc `LIVE_VERIFIED` evidence from the missing Graph MCP/model proof; overall P4 is `INCOMPLETE`. | Makes the P4/P6 status fail-closed and confirms that no Graph qualification claim is supported yet. |
+| [#43](https://github.com/SWOFART/OneShot/pull/43) `fix(settlement): close lane B review follow-ups` | Aligns live-evidence wording with the disabled/unpublished Mainnet profile and adds settlement-UI credential, control-character, and contrast regression coverage. | Strengthens B05/B06 and mainnet-readiness evidence; it does not change the Graph recovery gate. |
+| [#44](https://github.com/SWOFART/OneShot/pull/44) `fix: require recovery lookup config` | Removes placeholder Graph identities and requires explicit token, sender, block window, and MCP policy configuration; unavailable MCP/advisor ports remain the default. | Makes production recovery fail closed and ready for real configuration, but does not prove live MCP/model behavior or authorize hashless recovery. |
+
+### The Graph deployment status
+
+The checked-in [`subgraph/`](subgraph/) source builds for Arc Testnet USDC and
+was deployed to Studio as `oneshot-arc-testnet` version `0.1.0`. The published
+Explorer metadata identifies the following public deployment:
+
+- Public Explorer target: `69FEby7GetXpJVWJShPL6XjMsWWDowLuqf6cE5MvTHdy`.
+- Duplicate published registration observed: `FnXJmkEuxCDeqr4tTejszcLgpodazPoy2ifeNrA5VnBw`; both registrations point to the same deployment.
+- Immutable deployment/manifest CID: `Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi`.
+- Publication network: Arbitrum One; indexed data source: Arc Testnet (`eip155:5042002`).
+- Explorer status: `NOT INDEXED` / `SUBGRAPH NOT INDEXED`, with no indexers or
+  allocations. The Explorer query pane currently reports `subgraph not found:
+  no allocations`.
+
+The earlier successful query evidence is Studio/development evidence, not proof
+that the decentralized Gateway deployment is serving queries. Studio deployment
+is test/staging infrastructure; publication makes a deployment available to
+network Indexers, and the Explorer query path depends on an active allocation.
+There is therefore no contradiction: the source and immutable deployment are
+published, while decentralized indexing has not started. Until allocation,
+live Subgraph MCP access, model output, Arc candidate verification, and the
+sanitized trace are captured, production recovery remains
+`FALLBACK_DIRECT_RECOVERY`, The Graph is `NOT VERIFIED`, and Gate P4 is
+`INCOMPLETE`.
 
 ## Global product vision
 
@@ -79,7 +116,7 @@ name each claimed track explicitly.
 
 | Slot | Claimed track | Basis in this plan |
 | --- | --- | --- |
-| The Graph | AI Tooling or AI Use Case (From Scratch) | Live OneShot/Arc Subgraph read through Subgraph MCP; the LLM recovery agent performs candidate selection and explanation |
+| The Graph | AI Tooling or AI Use Case (From Scratch) | Target: live OneShot/Arc Subgraph read through Subgraph MCP, with LLM candidate selection and explanation; currently `NOT VERIFIED` pending allocation and live trace |
 | Privy | Best B2B financial product | Corporate execution wallet, scoped policy, and a real accounts-payable workflow |
 | Privy | Best financial flow | The committed USDC transfer is a completed financial flow through a Privy wallet action |
 | Arc | Launch on Arc Testnet & Push to Mainnet | Primary Arc claim: working testnet product plus the disabled Mainnet profile, deployment manifest, readiness probe, and rollback runbooks |
@@ -268,7 +305,7 @@ activate real-value execution.
 | EVM encoding and RPC | `viem` for typed addresses, calldata, chain access, receipt reads, and log verification |
 | Authorization | Privy Node SDK, execution wallet, scoped wallet policy, persisted idempotency key, and reference identity |
 | Settlement profiles | Arc Testnet `eip155:5042002` and its official USDC interface are the only enabled live profile; the Arc Mainnet profile contains no guessed network values and remains disabled until official parameters are published, pinned, verified, and human-approved |
-| Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; a deployment-pinned Subgraph MCP adapter is the selected v1 path to the live OneShot/Arc Subgraph. The LLM Recovery Agent emits only four advisory actions. C01 must prove the lost-hash flow, freshness, degradation behavior, and AI-track fit; direct RPC remains the safe fallback |
+| Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; the immutable deployment above is the selected v1 Subgraph MCP target. The LLM Recovery Agent emits only four advisory actions. C01 must prove allocation, the lost-hash flow, freshness, degradation behavior, and AI-track fit; production remains on `FALLBACK_DIRECT_RECOVERY` until then |
 | Money | Canonical integer strings at JSON boundaries and `bigint` internally; no JavaScript monetary floats |
 | Frontend | React and Vite, generated OpenAPI client, exact integer amount formatting, and no direct settlement capability |
 | Testing | Vitest for unit/contract tests, Testcontainers for PostgreSQL integration, Playwright for browser flows, deterministic failure simulators, and Graph adapter/degradation tests |
@@ -468,7 +505,7 @@ Owns:
 - `packages/recovery-agent`
 - `packages/subgraph-mcp-adapter` after the C01 live-value decision
 - `packages/testkit-failures`
-- `subgraph/` after The Graph passes the C01 live discovery and qualification gate
+- `subgraph/` source and deployment metadata; production admission remains gated on The Graph's C01 live discovery and qualification evidence
 - recovery-view schemas and queries
 - failure matrix orchestration and recovery runbooks
 

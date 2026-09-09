@@ -1,9 +1,9 @@
 # Missing Plan Implementation
 
-Audit basis: `plan.md`, current source, tests, and checked-in evidence on the
-`docs/missing-plan-implementation` branch. This is a delivery-gap report, not
-a change to the approved product plan. Completed offline milestones are not
-listed as missing merely because their final project gate is still open.
+Audit basis: `plan.md`, current source, tests, checked-in evidence, and the
+2026-09-09 Graph Explorer status. This is a delivery-gap report, not a change
+to the approved product plan. Completed offline milestones are not listed as
+missing merely because their final project gate is still open.
 
 ## Not Started
 
@@ -35,12 +35,23 @@ recorded submission artifact.
 ### Live The Graph hashless recovery
 
 The boundary, schemas, simulator, deterministic safety core, and fail-closed
-fallback exist. The live production path is intentionally unavailable.
+fallback exist. The Arc Testnet Subgraph source is built, deployed to Studio,
+and published with an immutable deployment, but the live production path is
+intentionally unavailable because Explorer shows no active Indexer allocation.
+
+Verified public deployment metadata:
+
+- Explorer target: `69FEby7GetXpJVWJShPL6XjMsWWDowLuqf6cE5MvTHdy`.
+- Duplicate registration observed: `FnXJmkEuxCDeqr4tTejszcLgpodazPoy2ifeNrA5VnBw`.
+- Deployment/manifest CID: `Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi`.
+- Explorer state: `NOT INDEXED` / `SUBGRAPH NOT INDEXED`; no indexers or
+  allocations. Studio query success is development evidence only.
 
 Remaining work:
 
-- Publish or identify a canonical immutable OneShot/Arc Subgraph deployment
-  with an active Indexer allocation.
+- Obtain an active Indexer allocation and synchronized decentralized query path
+  for the identified deployment; decide whether the duplicate registration
+  should be retained or cleaned up.
 - Configure a live Subgraph MCP transport and query the pinned deployment for
   a lost-hash recovery case.
 - Configure the structured-output recovery-model adapter and capture its
@@ -87,7 +98,7 @@ and the exact release candidate completes CI plus Gate A and Gate B review.
 
 | Item | Dependency or blocker | Safe response while blocked |
 | --- | --- | --- |
-| Live Graph recovery | Immutable deployment, Indexer allocation, Gateway/MCP access, and model credentials supplied by a human | Keep `FALLBACK_DIRECT_RECOVERY`; retain `UNKNOWN`; do not retry payment. |
+| Live Graph recovery | Indexer allocation, Gateway/MCP access, model credentials, and duplicate-registration decision supplied by a human; immutable deployment is now identified | Keep `FALLBACK_DIRECT_RECOVERY`; retain `UNKNOWN`; do not retry payment. |
 | P4 live lost-hash proof | The live Graph recovery trace and Arc verification evidence | Do not claim Gate P4 or Graph qualification. |
 | P5 live UI acceptance | Reachable configured API, safe test data, and browser-test environment | Continue fixture/mock coverage; do not add a payment bypass. |
 | P6 release | P4/P5 completion, CI, exact-tree reviews, and human demo/submission decisions | Keep release candidate and sponsor claims incomplete. |
