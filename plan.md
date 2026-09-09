@@ -1,6 +1,6 @@
 # OneShot Product Delivery Plan
 
-Status: working testnet MVP; Arc/Privy evidence live; Circle Agent Stack Arc qualification slice planned but not yet implemented; Graph Studio/MCP recovery proof qualified while the decentralized Explorer deployment remains unallocated; P4 PASS; P5/P6 open
+Status: working testnet MVP; Arc/Privy evidence live; Circle Agent Stack Arc qualification slice planned but not yet implemented; Graph Studio/MCP recovery proof qualified while the decentralized Explorer deployment remains unallocated; P4 PASS; P5 candidate under review; P6 open
 Team: exactly three coders
 Implementation base: the human-approved commit containing this plan
 Research basis: `.agent/research/20260906-integration-decisions.md` and `.agent/research/20260907-subgraph-mcp-clarification.md`

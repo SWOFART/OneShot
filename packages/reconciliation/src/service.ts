@@ -119,6 +119,7 @@ export interface RecoveryObservationRecord extends RecoveryRecordBase {
 export interface RecoveryDecisionRecord extends RecoveryRecordBase {
   readonly recordType: 'DECISION';
   readonly source: 'LLM';
+  readonly accepted: boolean;
   readonly advisoryAction: string;
   readonly coreDisposition: ReconciliationCommand['commandType'];
 }
@@ -327,8 +328,9 @@ function decisionRecord(
   command: ReconciliationCommand,
 ): RecoveryDecisionRecord {
   const recommendation = outcome.recommendation;
-  const reason = sanitizeText(command.reason);
+  const reason = sanitizeText(recommendation.reason);
   const safe = {
+    accepted: outcome.accepted,
     advisoryAction: recommendation.action,
     coreDisposition: command.commandType,
     reason,
@@ -349,6 +351,7 @@ function decisionRecord(
     evidenceReferences: safe.evidenceReferences,
     digest: stableDigest(safe),
     provenance: { kind: 'MODEL', modelIdentity: recommendation.modelIdentity },
+    accepted: outcome.accepted,
     advisoryAction: recommendation.action,
     coreDisposition: command.commandType,
   };

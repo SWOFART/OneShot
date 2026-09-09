@@ -27,6 +27,14 @@ const errorCodes = [
   'INTERNAL_ERROR',
 ];
 const recoveryActions = ['WAIT', 'RECONCILE', 'ESCALATE', 'RETURN_EXISTING_RESULT'];
+const recoveryDecisionSources = ['RECOVERY_AGENT', 'SAFE_FALLBACK'];
+const coreDispositions = [
+  'HOLD_UNKNOWN',
+  'READ_ONLY_LOOKUP',
+  'ESCALATE_UNKNOWN',
+  'MARK_COMMITTED',
+  'MARK_FAILED_SAFE',
+];
 const authorizationStatuses = [
   'CHECKING',
   'AUTHORIZED',
@@ -166,6 +174,99 @@ const schemas = {
       state: { type: 'string', enum: intentStates },
     },
   },
+  RecoveryAgentDecision: {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'accepted',
+      'reason',
+      'model_name',
+      'model_version',
+      'prompt_version',
+      'evidence_references',
+    ],
+    properties: {
+      accepted: { type: 'boolean' },
+      reason: { type: 'string', minLength: 1, maxLength: 500 },
+      model_name: boundedId,
+      model_version: boundedId,
+      prompt_version: boundedId,
+      evidence_references: { type: 'array', maxItems: 100, items: boundedId },
+    },
+  },
+  RecoveryCoreDecision: {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'disposition',
+      'target_state',
+      'reason',
+      'authoritative_proof_present',
+      'evidence_references',
+    ],
+    properties: {
+      disposition: { type: 'string', enum: coreDispositions },
+      target_state: { type: 'string', enum: ['UNKNOWN', 'COMMITTED', 'FAILED_SAFE'] },
+      reason: { type: 'string', minLength: 1, maxLength: 500 },
+      authoritative_proof_present: { type: 'boolean' },
+      evidence_references: { type: 'array', maxItems: 100, items: boundedId },
+    },
+  },
+  RecoveryCandidate: {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'candidate_id',
+      'transaction_hash',
+      'block_number',
+      'binding_status',
+      'contradiction_codes',
+    ],
+    properties: {
+      candidate_id: boundedId,
+      transaction_hash: { type: 'string', pattern: '^0x[0-9a-fA-F]{64}$' },
+      block_number: amountAtomic,
+      binding_status: { type: 'string', enum: ['MATCH', 'CONTRADICTORY'] },
+      contradiction_codes: { type: 'array', maxItems: 25, items: boundedId },
+    },
+  },
+  RecoveryGraphObservation: {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'server_name',
+      'server_version',
+      'tool_name',
+      'deployment_id',
+      'manifest_cid',
+      'health',
+      'available',
+      'candidate_count',
+      'diagnostics',
+      'candidates',
+    ],
+    properties: {
+      server_name: boundedId,
+      server_version: boundedId,
+      tool_name: boundedId,
+      deployment_id: boundedId,
+      manifest_cid: boundedId,
+      observed_through_block: amountAtomic,
+      observed_through_time: { type: 'string', format: 'date-time' },
+      health: {
+        type: 'string',
+        enum: ['FRESH', 'LAGGING', 'UNHEALTHY', 'UNAVAILABLE', 'UNKNOWN_FRESHNESS'],
+      },
+      available: { type: 'boolean' },
+      candidate_count: { type: 'integer', minimum: 0, maximum: 25 },
+      diagnostics: { type: 'array', maxItems: 25, items: boundedId },
+      candidates: {
+        type: 'array',
+        maxItems: 25,
+        items: { $ref: '#/$defs/RecoveryCandidate' },
+      },
+    },
+  },
   RecoveryView: {
     type: 'object',
     additionalProperties: false,
@@ -174,6 +275,15 @@ const schemas = {
       business_intent_id: boundedId,
       authoritative_state: { type: 'string', enum: intentStates },
       recommended_action: { type: 'string', enum: recoveryActions },
+      recommendation_source: { type: 'string', enum: recoveryDecisionSources },
+      core_disposition: { type: 'string', enum: coreDispositions },
+      settlement_permission: { type: 'string', const: 'NEVER' },
+      agent_decision: { $ref: '#/$defs/RecoveryAgentDecision' },
+      core_decision: { $ref: '#/$defs/RecoveryCoreDecision' },
+      graph_observation: { $ref: '#/$defs/RecoveryGraphObservation' },
+      contradiction: { type: 'boolean' },
+      contradiction_codes: { type: 'array', maxItems: 25, items: boundedId },
+      diagnostics: { type: 'array', maxItems: 25, items: boundedId },
       evidence: { type: 'array', maxItems: 100, items: { $ref: '#/$defs/EvidenceObservation' } },
     },
   },
@@ -345,6 +455,12 @@ export type ErrorCode = (typeof ERROR_CODES)[number];
 export const RECOVERY_ACTIONS = ${JSON.stringify(recoveryActions)} as const;
 export type RecoveryActionName = (typeof RECOVERY_ACTIONS)[number];
 
+export const RECOVERY_DECISION_SOURCES = ${JSON.stringify(recoveryDecisionSources)} as const;
+export type RecoveryDecisionSource = (typeof RECOVERY_DECISION_SOURCES)[number];
+
+export const CORE_DISPOSITIONS = ${JSON.stringify(coreDispositions)} as const;
+export type CoreDispositionName = (typeof CORE_DISPOSITIONS)[number];
+
 export const AUTHORIZATION_STATUSES = ${JSON.stringify(authorizationStatuses)} as const;
 export type AuthorizationStatus = (typeof AUTHORIZATION_STATUSES)[number];
 
@@ -409,10 +525,59 @@ export interface ReconcileResponse {
   readonly state: IntentState;
 }
 
+export interface RecoveryAgentDecisionView {
+  readonly accepted: boolean;
+  readonly reason: string;
+  readonly model_name: string;
+  readonly model_version: string;
+  readonly prompt_version: string;
+  readonly evidence_references: readonly string[];
+}
+
+export interface RecoveryCoreDecisionView {
+  readonly disposition: CoreDispositionName;
+  readonly target_state: 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE';
+  readonly reason: string;
+  readonly authoritative_proof_present: boolean;
+  readonly evidence_references: readonly string[];
+}
+
+export interface RecoveryCandidateView {
+  readonly candidate_id: string;
+  readonly transaction_hash: string;
+  readonly block_number: string;
+  readonly binding_status: 'MATCH' | 'CONTRADICTORY';
+  readonly contradiction_codes: readonly string[];
+}
+
+export interface RecoveryGraphObservationView {
+  readonly server_name: string;
+  readonly server_version: string;
+  readonly tool_name: string;
+  readonly deployment_id: string;
+  readonly manifest_cid: string;
+  readonly observed_through_block?: string;
+  readonly observed_through_time?: string;
+  readonly health: 'FRESH' | 'LAGGING' | 'UNHEALTHY' | 'UNAVAILABLE' | 'UNKNOWN_FRESHNESS';
+  readonly available: boolean;
+  readonly candidate_count: number;
+  readonly diagnostics: readonly string[];
+  readonly candidates: readonly RecoveryCandidateView[];
+}
+
 export interface RecoveryView {
   readonly business_intent_id: string;
   readonly authoritative_state: IntentState;
   readonly recommended_action: RecoveryActionName;
+  readonly recommendation_source?: RecoveryDecisionSource;
+  readonly core_disposition?: CoreDispositionName;
+  readonly settlement_permission?: 'NEVER';
+  readonly agent_decision?: RecoveryAgentDecisionView;
+  readonly core_decision?: RecoveryCoreDecisionView;
+  readonly graph_observation?: RecoveryGraphObservationView;
+  readonly contradiction?: boolean;
+  readonly contradiction_codes?: readonly string[];
+  readonly diagnostics?: readonly string[];
   readonly evidence: readonly EvidenceView[];
 }
 

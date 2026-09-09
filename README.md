@@ -202,9 +202,9 @@ Under active development. **Testnet only.**
 | --------------------------------------------- | ----------------------------------------------------------------------------------- |
 | Durable intent ledger, API, worker            | Implemented                                                                         |
 | Settlement adapters and error taxonomy        | Implemented; simulator-tested and live-verified on Arc Testnet through Privy        |
-| Recovery evidence and safety core             | Implemented against simulators                                                      |
-| Subgraph MCP discovery and LLM recovery agent | Implemented boundary; live path not verified                                        |
-| Operator frontend                             | Intent/status UI and synthetic recovery viewer implemented; live API wiring pending |
+| Recovery evidence and safety core             | Live Graph/Vertex path implemented; deterministic core remains authoritative        |
+| Subgraph MCP discovery and LLM recovery agent | Live Subgraph MCP and Vertex AI path verified; deterministic core remains final      |
+| Operator frontend                             | Gate P5 candidate composes A05/B05/C05 against the frozen API with browser coverage |
 
 **One live testnet settlement has been executed.** A Privy-controlled execution
 wallet and scoped policy authorized one 1.00 USDC Arc Testnet transfer; live
@@ -213,7 +213,7 @@ drill entered `UNKNOWN` and reconciled to that original settlement without a
 replacement payment. Privy and Arc are `QUALIFIED` for the documented testnet
 claim; see `docs/settlement/LIVE_EVIDENCE.md` and
 `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`. The Graph live
-Subgraph MCP and recovery-agent path remains `NOT VERIFIED`.
+Subgraph MCP and recovery-agent path is also `QUALIFIED` by the latter report.
 
 Arc Mainnet is not configured. Its profile carries no chain ID, RPC, explorer,
 or token value by design, and enabling it requires published official values

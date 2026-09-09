@@ -11,7 +11,7 @@ import { authorityLabel, formatUtc, mergeTimelinePages } from './timeline.js';
 export interface RecoveryTimelineProps {
   readonly pages: readonly RecoveryTimelinePage[];
   readonly onRefresh: () => Promise<RecoveryActionReceipt>;
-  readonly onEscalate: () => Promise<RecoveryActionReceipt>;
+  readonly onEscalate: (() => Promise<RecoveryActionReceipt>) | null;
   readonly onLoadMore: (() => Promise<void>) | null;
 }
 
@@ -82,6 +82,12 @@ function EvidenceCard({ evidence }: { readonly evidence: EvidenceSummary }) {
 
 function observationCopy(graph: GraphObservationSummary): string {
   if (!graph.available || graph.health === 'UNAVAILABLE') return 'Subgraph MCP unavailable.';
+  if (graph.diagnostics.includes('MULTIPLE_CANDIDATES')) {
+    return 'Multiple candidate observations require review. No candidate authorizes settlement.';
+  }
+  if (graph.diagnostics.includes('CANDIDATE_DETAILS_WITHHELD')) {
+    return 'Candidate discovery evidence is present; candidate details are withheld by the frozen API.';
+  }
   if (graph.observedThroughBlock === null) return 'Observation height unavailable.';
   if (graph.candidateCount === 0) {
     return `Not observed through block ${graph.observedThroughBlock}. This is not settlement evidence.`;
@@ -250,15 +256,20 @@ export function RecoveryTimeline({
         >
           {pendingAction === 'refresh' ? 'Refreshing…' : 'Refresh status'}
         </button>
-        <button
-          type="button"
-          className="secondary-action"
-          disabled={pendingAction !== null}
-          onClick={() => void runAction('escalate', onEscalate)}
-        >
-          {pendingAction === 'escalate' ? 'Escalating…' : 'Escalate to operator'}
-        </button>
-        <p className="action-note">Read and escalation only. No payment action is available.</p>
+        {onEscalate !== null && (
+          <button
+            type="button"
+            className="secondary-action"
+            disabled={pendingAction !== null}
+            onClick={() => void runAction('escalate', onEscalate)}
+          >
+            {pendingAction === 'escalate' ? 'Escalating…' : 'Escalate to operator'}
+          </button>
+        )}
+        <p className="action-note">
+          {onEscalate === null ? 'Read only.' : 'Read and escalation only.'} No payment action is
+          available.
+        </p>
         <p className="sr-live" role="status" aria-live="polite">
           {actionMessage}
         </p>

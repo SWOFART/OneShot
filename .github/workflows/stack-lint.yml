@@ -107,6 +107,14 @@ jobs:
         if: steps.workspace.outputs.enabled == 'true'
         run: pnpm test
 
+      - name: Install Chromium
+        if: steps.workspace.outputs.enabled == 'true'
+        run: pnpm --filter @oneshot/web exec playwright install --with-deps chromium
+
+      - name: Run Gate P5 browser acceptance
+        if: steps.workspace.outputs.enabled == 'true'
+        run: pnpm --filter @oneshot/web test:browser
+
       - name: Run PostgreSQL integration tests
         if: steps.workspace.outputs.enabled == 'true'
         env:

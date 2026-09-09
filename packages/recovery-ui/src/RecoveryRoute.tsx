@@ -28,45 +28,49 @@ export function RecoveryRoute({ businessIntentId, client }: RecoveryRouteProps) 
     };
   }, [businessIntentId, client]);
 
+  let content;
   if (error !== null) {
-    return (
+    content = (
       <main className="route-state" role="alert">
         <p className="brand">ONESHOT / RECOVERY CONTROL</p>
         <h1>Evidence unavailable</h1>
         <p>{error}</p>
       </main>
     );
-  }
-  if (pages.length === 0) {
-    return (
+  } else if (pages.length === 0) {
+    content = (
       <main className="route-state" aria-busy="true">
         <p className="brand">ONESHOT / RECOVERY CONTROL</p>
         <h1>Loading recovery evidence…</h1>
       </main>
     );
+  } else {
+    const nextCursor = pages.at(-1)?.page.nextCursor ?? null;
+
+    async function refresh(): Promise<RecoveryActionReceipt> {
+      const receipt = await client.refresh(businessIntentId);
+      const page = await client.readPage(businessIntentId, null);
+      setPages([page]);
+      return receipt;
+    }
+
+    async function loadMore(): Promise<void> {
+      if (nextCursor === null) return;
+      const page = await client.readPage(businessIntentId, nextCursor);
+      setPages((current) => [...current, page]);
+    }
+
+    content = (
+      <RecoveryTimeline
+        pages={pages}
+        onRefresh={refresh}
+        onEscalate={
+          client.supportsEscalation === false ? null : () => client.escalate(businessIntentId)
+        }
+        onLoadMore={nextCursor === null ? null : loadMore}
+      />
+    );
   }
 
-  const nextCursor = pages.at(-1)?.page.nextCursor ?? null;
-
-  async function refresh(): Promise<RecoveryActionReceipt> {
-    const receipt = await client.refresh(businessIntentId);
-    const page = await client.readPage(businessIntentId, null);
-    setPages([page]);
-    return receipt;
-  }
-
-  async function loadMore(): Promise<void> {
-    if (nextCursor === null) return;
-    const page = await client.readPage(businessIntentId, nextCursor);
-    setPages((current) => [...current, page]);
-  }
-
-  return (
-    <RecoveryTimeline
-      pages={pages}
-      onRefresh={refresh}
-      onEscalate={() => client.escalate(businessIntentId)}
-      onLoadMore={nextCursor === null ? null : loadMore}
-    />
-  );
+  return <div className="recovery-slice">{content}</div>;
 }

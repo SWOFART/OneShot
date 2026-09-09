@@ -49,6 +49,8 @@ dist/
 site-dist/
 build/
 coverage/
+playwright-report/
+test-results/
 node_modules/
 .venv/
 venv/

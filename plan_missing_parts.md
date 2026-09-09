@@ -75,17 +75,13 @@ All backend composition pieces, the live Privy/Arc allowed, denied, and lost-res
 
 ### Gate P5 frontend acceptance
 
-The intent/status UI and a synthetic recovery viewer are implemented, but the
-repository status still marks live API wiring as pending. Complete the frozen
-API composition and browser-level acceptance coverage for:
-
-- create, replay, and conflicting intent payloads;
-- policy denial, committed settlement, and `UNKNOWN` recovery states;
-- Graph discovery, lag/error, and multiple-candidate states; and
-- accessibility, responsive layout, no-secret, and no-force-pay checks.
-
-The plan calls for Playwright browser flows; the current workspace evidence is
-primarily Vitest component/client tests and fixture-backed recovery UI tests.
+The Gate P5 candidate composes A05/B05/C05 against the frozen API and adds
+Playwright coverage for create, replay, conflict, denial, committed, `UNKNOWN`,
+Graph discovery/degradation, service-unavailable, keyboard, responsive,
+memory-only token, and no-force-pay behavior. The recovery API now returns the
+persisted Recovery Agent and deterministic-core decision instead of a hard-coded
+action. Exact-tree review, CI, and human merge remain before the project gate is
+closed.
 
 ### Gate P6 release candidate
 
@@ -100,16 +96,15 @@ and the exact release candidate completes CI plus Gate A and Gate B review.
 | --- | --- | --- |
 | Live Graph recovery | RESOLVED: Live Subgraph Studio deployment, MCP client, and Vertex AI Gemini adapter operational (`QUALIFIED`) | Preserved `settlementPermission: NEVER`. |
 | P4 live lost-hash proof | RESOLVED: Full live lost-hash recovery trace verified and recorded | Gate P4 is PASS. |
-| P5 live UI acceptance | Reachable configured API, safe test data, and browser-test environment | Continue fixture/mock coverage; do not add a payment bypass. |
+| P5 live UI acceptance | RESOLVED in candidate: configured Cloud Run is reachable and frozen-API Playwright coverage exists | Await exact-tree review, CI, and human merge. |
 | P6 release | P5 completion, CI, exact-tree reviews, and human demo/submission decisions | Keep release candidate and sponsor claims incomplete. |
 | Arc Mainnet | Official published network values and explicit human authorization | Preserve the disabled, fail-closed profile. |
 | Circle Agent Stack Arc lane | Agent Stack/Agent Wallet implementation, supported-chain confirmation, spend controls, live payment, and evidence | Keep the Circle Arc claim `NOT VERIFIED`; continue the proven Privy/Arc path until the complete acceptance checklist passes. |
 
 ## Immediate Priorities
 
-1. Implement and test the bounded Circle Agent Stack Arc service-payment lane;
+1. Complete Gate A, CI, Gate B, and human review for the Gate P5 candidate.
+2. Implement and test the bounded Circle Agent Stack Arc service-payment lane;
    keep Privy as the canonical OneShot settlement authority.
-2. Wire the operator UI to the configured API and add the P5 browser acceptance
-   suite, especially `UNKNOWN` and Graph-degraded recovery views.
 3. After P5 and the Circle evidence pass, capture the demo/submission artifacts
    and perform the P6 release-candidate CI and review sequence.

@@ -7,17 +7,21 @@
     "build": "tsc -b && vite build",
     "clean": "tsc -b --clean",
     "dev": "vite",
-    "lint": "eslint src test",
+    "lint": "eslint src test playwright.config.ts",
     "preview": "vite preview",
     "test": "vitest run --config vitest.config.ts",
+    "test:browser": "playwright test",
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
     "@oneshot/contracts": "workspace:*",
+    "@oneshot/recovery-ui": "workspace:*",
+    "@oneshot/settlement-ui": "workspace:*",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
     "@types/node": "24.13.3",

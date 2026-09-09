@@ -9,7 +9,7 @@
     "pnpm": "11.19.0"
   },
   "scripts": {
-    "build": "tsc -b && pnpm --filter @oneshot/arc-subgraph build",
+    "build": "tsc -b && pnpm --filter @oneshot/recovery-ui build && pnpm --filter @oneshot/settlement-ui build && pnpm --filter @oneshot/arc-subgraph build",
     "check:generated": "pnpm --filter @oneshot/contracts check:generated",
     "clean": "tsc -b --clean",
     "db:bootstrap": "pnpm --filter @oneshot/storage-postgres build && node scripts/bootstrap-db.mjs",
