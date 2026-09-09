@@ -6,9 +6,16 @@ packages:
 saveExact: true
 strictPeerDependencies: true
 autoInstallPeers: true
+overrides:
+  lucide-react: 0.475.0
+  use-sync-external-store: 1.4.0
 allowBuilds:
+  '@reown/appkit': false
+  bufferutil: false
   cpu-features: false
   esbuild: true
+  keccak: false
   protobufjs: true
   ssh2: false
+  utf-8-validate: false
   workerd: true
