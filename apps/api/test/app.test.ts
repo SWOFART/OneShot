@@ -56,6 +56,34 @@ function createMockLedger(
 }
 
 describe('API boundary controls', () => {
+  it('never reaches the ledger when the credential is forbidden', async () => {
+    const calls: string[] = [];
+    const app = buildApi({
+      ledger: createMockLedger({
+        async enqueueReconciliation() {
+          calls.push('enqueueReconciliation');
+          return { business_intent_id: 'intent-api-1', queued: true, state: 'UNKNOWN' };
+        },
+      }),
+      authenticator: {
+        async authenticate() {
+          return 'FORBIDDEN';
+        },
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/intents/intent-api-1/reconcile',
+      headers: { authorization: 'Bearer aaa.bbb.ccc' },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().code).toBe('FORBIDDEN');
+    expect(calls).toEqual([]);
+    await app.close();
+  });
+
   it('requires service authentication and returns a sanitized error', async () => {
     const app = buildApi({
       ledger: createMockLedger(),
