@@ -1,6 +1,6 @@
 # OneShot Product Delivery Plan
 
-Status: working testnet MVP; Arc/Privy evidence live; Circle Agent Stack Arc qualification slice planned but not yet implemented; Graph Studio/MCP recovery proof qualified while the decentralized Explorer deployment remains unallocated; P4 PASS; P5 candidate composes A05/B05/C05 with live frozen-API recovery projection, APG tabs, and Playwright acceptance; P6 open
+Status: Gate P6 release candidate; Arc/Privy testnet evidence live; The Graph Studio/MCP recovery proof qualified; Circle Agent Stack intentionally out of scope and not claimed; decentralized Explorer deployment remains unallocated; P4 and P5 PASS; video artifact not provided
 Team: exactly three coders
 Implementation base: the human-approved commit containing this plan
 Research basis: `.agent/research/20260906-integration-decisions.md` and `.agent/research/20260907-subgraph-mcp-clarification.md`
@@ -47,10 +47,9 @@ not upgrade the Explorer deployment to indexed or allocated status. Sanitized ev
 is recorded in `evidence/c06/graph-proof.json` and
 `evidence/c06/sanitized-proof.json`, and Gate P4 is `PASS`.
 
-Open work after the current base is the Arc/Circle qualification slice described in
-section 5b. It is not implemented or sponsor-qualified merely because the plan names
-it, and it must not change the OneShot settlement authority or the fail-closed
-recovery defaults.
+Open work after the current base is release packaging and human submission review.
+Circle Agent Stack qualification is intentionally out of scope for this release
+candidate and must not be implied by the architecture or sponsor claims.
 
 ## Global product vision
 
@@ -94,13 +93,11 @@ Business Intent contract.
 
 ## Sponsor and product configuration
 
-The primary product configuration is **Privy + Arc + Circle Agent Stack + The Graph**:
+The primary product configuration is **Privy + Arc + The Graph**:
 
 - Privy authorizes and constrains the corporate wallet action.
-- Circle Agent Stack is the planned agent-facing Circle surface: a Circle Agent
-  Wallet with explicit spending controls, connected to Arc/USDC through Circle's
-  CLI and Skills. It is a bounded service-payment lane for the hackathon demo, not
-  a replacement for the corporate Privy wallet.
+- Circle Agent Stack is deliberately excluded from the active release scope; no
+  Circle wallet, CLI, Skills, or agent-payment lane is shipped or claimed.
 - The Graph discovers candidate transfers when a successful submission lost its
   transaction hash or provider response. The production path reaches the live
   OneShot/Arc Subgraph through Subgraph MCP, not a direct application GraphQL client.
@@ -111,10 +108,9 @@ The primary product configuration is **Privy + Arc + Circle Agent Stack + The Gr
 
 This is the final implementation direction for the current event window. The
 Graph is load-bearing for automatic hashless discovery, but never becomes
-settlement authority. Circle Agent Stack is load-bearing only for the planned
-agentic-economy demo lane; the canonical OneShot obligation, policy decision,
-durable state transition, and at-most-once settlement remain under OneShot,
-PostgreSQL, Privy, and verified Arc evidence.
+settlement authority. The canonical OneShot obligation, policy decision, durable
+state transition, and at-most-once settlement remain under OneShot, PostgreSQL,
+Privy, and verified Arc evidence.
 
 The Graph submission targets the AI Tooling or AI Use Case track. One custom
 Subgraph does not satisfy the Composable/Standardized track. One live Subgraph
@@ -135,7 +131,7 @@ name each claimed track explicitly.
 | Privy | Best financial flow | The committed USDC transfer is a completed financial flow through a Privy wallet action |
 | Arc | Launch on Arc Testnet & Push to Mainnet | Primary Arc claim: working testnet product plus the disabled Mainnet profile, deployment manifest, readiness probe, and rollback runbooks |
 | Arc | Best DeFi / Onchain Finance Application | Secondary Arc claim: conditional, multi-step USDC settlement on Arc with programmable authorization |
-| Arc | Best Agentic Economy Application with Circle Agent Stack | Planned Circle Agent Stack lane: an agent-controlled, capped Arc USDC service payment with a visible approval/denial path; `NOT VERIFIED` until Circle tools, live payment evidence, and the end-to-end intent trace exist |
+| Arc | Best Agentic Economy Application with Circle Agent Stack | Not claimed; Circle Agent Stack is intentionally out of scope for this release candidate |
 
 Not claimed, and the reason:
 
@@ -181,16 +177,12 @@ settlement contract; never weaken authorization to obtain a cleaner lookup.
 | Execution worker | OneShot service | Acquire submission ownership and execute the approved settlement |
 | Reconciliation service | Agent and operator | Resolve ambiguous outcomes without blindly paying again |
 | Audit and recovery timeline | Company and supplier | Explain what happened, which evidence is authoritative, and what action is safe |
-| Circle agent-service lane | Autonomous agent | Discover/pay a bounded Arc USDC service through Circle Agent Stack, while OneShot records the intent, cap decision, result, and evidence |
 
 ```mermaid
 flowchart LR
     Company[Company operator] -->|wallet policy and limits| Privy[Privy]
     Agent[Autonomous agent] -->|stable business intent| API[OneShot API]
     Agent -.->|requests paid work| SupplierAPI[Paid API or digital supplier]
-    Agent -->|agent-service profile| CircleStack[Circle Agent Stack]
-    CircleStack --> CircleWallet[Circle Agent Wallet with spend caps]
-    CircleWallet -->|bounded USDC service payment| Arc
     API --> Core[OneShot domain]
     Core --> DB[(PostgreSQL authority)]
     DB --> Worker[Execution worker]
@@ -227,7 +219,7 @@ Privy rail or the explicitly scoped Circle service-payment rail, never both.
 
 ## 1. Mission and v1 release
 
-Deliver a working application that accepts one approved Business Intent, survives retries, crashes, duplicate delivery, parallel workers, and ambiguous provider responses, and produces at most one committed USDC settlement on Arc Testnet through a Privy-controlled corporate wallet. The submission extension adds one bounded Circle Agent Stack service-payment lane for an agentic-economy demo; each demo intent selects exactly one payment rail and cannot double-charge. The same build must include a fail-closed Arc Mainnet profile, deployment and rollback procedure, and readiness evidence so official mainnet values can be enabled without redesigning the domain. Known-identity recovery uses OneShot, Privy, and direct Arc evidence; hashless automatic recovery uses The Graph for candidate discovery.
+Deliver a working application that accepts one approved Business Intent, survives retries, crashes, duplicate delivery, parallel workers, and ambiguous provider responses, and produces at most one committed USDC settlement on Arc Testnet through a Privy-controlled corporate wallet. The same build includes a fail-closed Arc Mainnet profile, deployment and rollback procedure, and readiness evidence so official mainnet values can be enabled without redesigning the domain. Known-identity recovery uses OneShot, Privy, and direct Arc evidence; hashless automatic recovery uses The Graph for candidate discovery.
 
 The release claim is:
 
@@ -393,7 +385,7 @@ evidence, so frontend work can start while B is still obtaining live proof.
 Gate P4 remains the composition and live-proof gate. This rule changes only when
 the contract is published, never what P4 must prove.
 
-### Circle developer-tool surface
+### Deferred: Circle developer-tool surface (not in this release)
 
 The primary Circle implementation is **Circle Agent Stack**, using the Circle
 CLI and Skills to provision/use an Agent Wallet with explicit spending controls.
@@ -425,7 +417,7 @@ not default scope: each requires a concrete user-facing Arc use case, a tested
 adapter, and live evidence. No Circle product is added solely to widen the logo
 surface.
 
-### Circle acceptance checklist
+### Deferred Circle acceptance checklist
 
 The Circle/Arc slice is `NOT VERIFIED` until all of the following are recorded:
 
@@ -760,7 +752,10 @@ This is the frontend unlock gate.
 ### P6 — release candidate
 
 - A06, B06, and C06 evidence bundles compose into one repeatable testnet demo.
+- `pnpm demo:e2e` runs the invariant suite and verifies the sanitized 1.00 USDC,
+  Privy-denial, and lost-response evidence without secrets or external writes.
 - The disabled Arc Mainnet profile passes configuration, deployment-manifest, readiness, safe-disable, and rollback checks without sending a mainnet transaction.
+- Judge-facing walkthrough is documented in [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md); no video artifact is included in this candidate.
 - Sponsor qualification cites working code, tests, live evidence, network, and limitations.
 - Safe-disable and recovery runbooks work without manual database surgery.
 - Exact candidate tree passes repository checks and mandatory independent review gates before human merge.
@@ -1046,7 +1041,7 @@ Before Gate P6 can pass, confirm:
 - UI has no direct/bypass/force-pay action and labels authority/freshness correctly.
 - Demo/reset instructions require no unsafe database surgery or external-history rewrite.
 - Evidence, repository, logs, screenshots, fixtures, source maps, and reviews contain no secrets.
-- Claimed partner tracks match the sponsor claim mapping in section 5. Circle Agent Stack is a planned Arc claim and remains `NOT VERIFIED` until the acceptance checklist in section 5b is complete; Hedera remains out of scope.
+- Claimed partner tracks match the sponsor claim mapping in section 5. Circle Agent Stack is intentionally out of scope and not claimed; Hedera remains out of scope.
 - Every Arc requirement row in section 5b has a delivered artifact, including the README architecture diagram and the explicit track naming in the submission.
 - Public README and submission text contain no statement that undermines a claimed dependency; justifications cite measured numbers.
 - Privy and Arc claims use the qualification standard. The Graph claim requires live hashless discovery plus meaningful recovery-agent automation; otherwise it is `NOT VERIFIED` and removed from the submission.
