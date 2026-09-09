@@ -59,7 +59,7 @@ readiness probing they build on. See
    - Frontend milestones (A05, B05, C05) unblocked to build on frozen contracts and mock server.
 
 5. **Prove live hashless recovery**: [COMPLETED]
-   - Pinned canonical immutable OneShot/Arc Subgraph deployment `Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi` (`0xaf2b444e...`) in Subgraph Studio.
+   - Pinned canonical immutable OneShot/Arc Subgraph deployment `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664...`) in Subgraph Studio.
    - Queried it through live Subgraph Studio endpoint via Subgraph MCP (`execute_query_by_deployment_id`).
    - Passed sanitized candidate view to Vertex AI Gemini 2.5 Flash structured-output model adapter.
    - Recorded bounded model action (`RECONCILE`), referenced evidence (`thegraph:0x72ab1e...`), deterministic-core disposition (`MARK_COMMITTED`), Arc verification on block `61116056`, and zero external replacement submissions (`settlementPermission: NEVER`).

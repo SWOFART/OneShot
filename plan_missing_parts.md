@@ -36,7 +36,7 @@ recorded submission artifact.
 
 Completed and verified with real Subgraph Studio deployment (`1758917/oneshot-arc-testnet/version/latest`), Subgraph MCP client (`execute_query_by_deployment_id`), and Google Cloud Vertex AI Gemini 2.5 Flash:
 
-- Pinned immutable deployment CID: `Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi` (`0xaf2b444e00f8d11eb5db6bf1bd33e9f6ff0a211c4539d899ec8c9615afb893a7`).
+- Pinned immutable deployment CID: `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0`).
 - Canonical Explorer target: `69FEby7GetXpJVWJShPL6XjMsWWDowLuqf6cE5MvTHdy`.
 - Duplicate registration observed: `FnXJmkEuxCDeqr4tTejszcLgpodazPoy2ifeNrA5VnBw` (identical deployment hash).
 - Subgraph MCP trace normalized with health `FRESH` (block `61153492`).

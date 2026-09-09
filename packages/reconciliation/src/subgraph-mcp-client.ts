@@ -94,52 +94,10 @@ export class LiveSubgraphMcpRecoveryPort implements SubgraphMcpRecoveryPort {
         this.options.graphQueryUrl ??
         `${gatewayBase}${apiKeyPart}/deployments/id/${policy.deploymentId}`;
 
-      const queryBody =
-        this.options.graphQueryUrl !== undefined
-          ? {
-              query: `query CandidateTransfers($sender: Bytes!, $recipient: Bytes!, $amount: BigInt!, $minBlock: BigInt!, $maxBlock: BigInt!) {
-  usdcTransfers(
-    where: {
-      from: $sender
-      to: $recipient
-      amount: $amount
-      blockNumber_gte: $minBlock
-      blockNumber_lte: $maxBlock
-    }
-    orderBy: blockNumber
-    orderDirection: asc
-  ) {
-    id
-    transactionHash
-    logIndex
-    blockNumber
-    blockTimestamp
-    from
-    to
-    amount
-  }
-  _meta {
-    deployment
-    hasIndexingErrors
-    block {
-      number
-      hash
-      timestamp
-    }
-  }
-}`,
-              variables: {
-                sender: request.correlation.sender,
-                recipient: request.binding.recipient,
-                amount: request.binding.amountAtomic,
-                minBlock: request.correlation.fromBlock,
-                maxBlock: request.correlation.toBlock,
-              },
-            }
-          : {
-              query: toolArgs.query,
-              variables: toolArgs.variables,
-            };
+      const queryBody = {
+        query: toolArgs.query,
+        variables: toolArgs.variables,
+      };
 
       const res = await this.fetch(endpoint, {
         method: 'POST',
@@ -159,11 +117,7 @@ export class LiveSubgraphMcpRecoveryPort implements SubgraphMcpRecoveryPort {
       };
 
       let normalizedPayload = gatewayResponse;
-      if (
-        gatewayResponse.data &&
-        Array.isArray(gatewayResponse.data.usdcTransfers) &&
-        !gatewayResponse.data.settlementCandidates
-      ) {
+      if (gatewayResponse.data && gatewayResponse.data._meta) {
         const metaObj = (gatewayResponse.data._meta ?? {}) as Record<string, unknown>;
         const blockObj = (metaObj.block ?? {}) as Record<string, unknown>;
         const adaptedMeta = {
@@ -177,27 +131,10 @@ export class LiveSubgraphMcpRecoveryPort implements SubgraphMcpRecoveryPort {
           },
         };
 
-        const settlementCandidates = (
-          gatewayResponse.data.usdcTransfers as Array<Record<string, unknown>>
-        ).map((t) => ({
-          id: String(t.id ?? ''),
-          transactionHash: String(t.transactionHash ?? ''),
-          logIndex: String(t.logIndex ?? '0'),
-          blockNumber: String(t.blockNumber ?? '0'),
-          blockHash: String(blockObj.hash ?? '0x' + '0'.repeat(64)),
-          blockTimestamp: String(t.blockTimestamp ?? '0'),
-          network: 'eip155:5042002',
-          tokenContract: request.binding.tokenContract,
-          sender: String(t.from ?? ''),
-          recipient: String(t.to ?? ''),
-          amountAtomic: String(t.amount ?? '0'),
-          memoId: null,
-        }));
-
         normalizedPayload = {
           ...gatewayResponse,
           data: {
-            settlementCandidates,
+            ...gatewayResponse.data,
             _meta: adaptedMeta,
           },
         };

@@ -108,9 +108,9 @@ Per `plan.md` (procedure steps 8-13):
 ## Gate P4 Live Proof Verification
 
 - **Verification Status**: `LIVE_VERIFIED`
-- Pinned immutable OneShot/Arc Subgraph deployment `Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi` (`0xaf2b444e00f8d11eb5db6bf1bd33e9f6ff0a211c4539d899ec8c9615afb893a7`) queried through live Subgraph Studio endpoint via Subgraph MCP (`execute_query_by_deployment_id`) for a lost-hash recovery case.
+- Pinned immutable OneShot/Arc Subgraph deployment `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0`) queried through live Subgraph Studio endpoint via Subgraph MCP (`execute_query_by_deployment_id`) for a lost-hash recovery case.
 - Recorded the deployment, query, variables digest, retrieval identity, `_meta` health/freshness (`FRESH`), and candidate count (`1`) without credentials.
-- Fed the sanitized candidate result to Vertex AI Gemini 2.5 Flash structured-output model adapter, capturing its bounded recommendation (`RECONCILE`), decision ID (`dec-c2763d59...`), reason, and referenced evidence ID.
+- Fed the sanitized candidate result to Vertex AI Gemini 2.5 Flash structured-output model adapter, capturing its bounded recommendation (`RECONCILE`), decision ID (`dec-a83a0050...`), reason, and referenced evidence ID.
 - The deterministic OneShot safety core validated the recommendation, verified the candidate through authoritative Arc block `61116056` receipt and Transfer log index 23 evidence, and committed the settlement.
 - Proved zero new settlement submissions throughout empty, delayed, malformed, multiple-candidate, invalid-model-output, and successful-existing-result cases (`settlementPermission: NEVER`, `externalSubmissionCount: 0`).
 - Gate P4 backend convergence, frozen frontend contracts, and live settlement/recovery verification across Privy, Arc, and The Graph are complete.

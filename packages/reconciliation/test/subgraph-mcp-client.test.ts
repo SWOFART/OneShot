@@ -90,20 +90,24 @@ describe('LiveSubgraphMcpRecoveryPort', () => {
     );
   });
 
-  it('performs lookup via direct graphQueryUrl and adapts Studio usdcTransfers', async () => {
+  it('performs lookup via direct graphQueryUrl with native settlementCandidates', async () => {
     const freshScenario = createScenario('fresh');
     const mockStudioResponse = {
       data: {
-        usdcTransfers: [
+        settlementCandidates: [
           {
             id: '0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000',
             transactionHash: '0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7',
             logIndex: '23',
             blockNumber: '61116056',
+            blockHash: '0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b',
             blockTimestamp: '1788893876',
-            from: freshScenario.request.correlation.sender,
-            to: freshScenario.request.binding.recipient,
-            amount: freshScenario.request.binding.amountAtomic,
+            network: 'eip155:5042002',
+            tokenContract: freshScenario.request.binding.tokenContract,
+            sender: freshScenario.request.correlation.sender,
+            recipient: freshScenario.request.binding.recipient,
+            amountAtomic: freshScenario.request.binding.amountAtomic,
+            memoId: null,
           },
         ],
         _meta: {
@@ -124,8 +128,7 @@ describe('LiveSubgraphMcpRecoveryPort', () => {
       json: async () => mockStudioResponse,
     } as Response);
 
-    const studioUrl =
-      'https://api.studio.thegraph.com/query/1758917/oneshot-arc-testnet/version/latest';
+    const studioUrl = 'https://api.studio.thegraph.com/query/1758917/oneshot-arc-testnet/v0.2.1';
     const port = new LiveSubgraphMcpRecoveryPort({
       graphQueryUrl: studioUrl,
       getChainHead: async () => freshScenario.trace.chainHead,
@@ -139,13 +142,16 @@ describe('LiveSubgraphMcpRecoveryPort', () => {
     const [url, init] = mockFetch.mock.calls[0];
     expect(url).toBe(studioUrl);
     const parsedBody = JSON.parse(init.body as string);
-    expect(parsedBody.query).toContain('query CandidateTransfers');
+    expect(parsedBody.query).toContain('query OneShotRecoveryCandidatesV1');
 
     expect(outcome.accepted).toBe(true);
     expect(outcome.view.health).toBe('FRESH');
     expect(outcome.view.candidateCount).toBe(1);
     expect(outcome.view.candidates[0].transactionHash).toBe(
       '0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7',
+    );
+    expect(outcome.view.candidates[0].blockHash).toBe(
+      '0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b',
     );
   });
 });

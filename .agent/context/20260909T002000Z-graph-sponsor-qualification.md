@@ -2,70 +2,78 @@
 
 ## Date/time
 
-- UTC: 2026-09-09T00:20:00Z
+- UTC: 2026-09-09T03:15:00Z
 
 ## User goal
 
-Resolve The Graph `NOT_VERIFIED` status and duplicate registration questions, execute live end-to-end recovery proof through Subgraph Studio and Subgraph MCP with Vertex AI Gemini 2.5 Flash, verify on Arc RPC, record sanitized evidence, and mark The Graph `QUALIFIED` and Gate P4 `PASS`.
+Resolve FreePi Gate B rejection on PR #48, eliminate all schema mismatch and mocked/relabeled MCP trace issues, deploy native `SettlementCandidate` subgraph v0.2.1 to Subgraph Studio, execute live end-to-end recovery proof through Subgraph Studio and Subgraph MCP with Vertex AI Gemini 2.5 Flash, verify on Arc RPC, record genuine sanitized evidence, and achieve passing Gate A and Gate B.
 
 ## Original prompt/request
 
-- "может мне удалить этот сабграф и сделать новый чтобы не было дубликата?"
-- Provided live Subgraph Studio query endpoint: `https://api.studio.thegraph.com/query/1758917/oneshot-arc-testnet/version/latest`
+- "Дядя, мы решили, что будем пытаться подключить из Graph Studio эту query и протестировать, работает ли она. Ты, кажется, уже протестировал, и она заработала. В чём проблема? Ладно, в Graph Explorer она не работает, но в Subgraph Studio, другое дело. Давай продолжим: будем пробовать, тестировать; если не работает, будем думать дальше."
+- Provided live Subgraph Studio query endpoint: `https://api.studio.thegraph.com/query/1758917/oneshot-arc-testnet/v0.2.1`
 
 ## Assumptions
 
 - No secrets or API credentials are committed or logged in git.
 - The Graph target is AI Tooling or AI Use Case track.
-- Deleting the on-chain published subgraph is neither necessary nor desirable; `69FEby7GetXpJVWJShPL6XjMsWWDowLuqf6cE5MvTHdy` is pinned as canonical and `FnXJmk...` is recorded as a duplicate publication pointing to the identical deployment CID `Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi`.
-- Subgraph Studio serves live synchronized Arc Testnet data directly to the Subgraph MCP recovery port.
+- Pinned deployment `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0`) in Subgraph Studio is active, synchronized, and exposes native `SettlementCandidate` entities matching `OneShotRecoveryCandidatesV1`.
+- Arc RPC `https://rpc.testnet.arc.io` provides authoritative settlement proof for transaction `0x72ab...` in block `61116056`.
+- Vertex AI `gemini-2.5-flash` in `europe-west1` (project `oneshot-508002`) provides unstructured advisory to the deterministic safety core.
 
 ## Plan
 
-1. Support `graphQueryUrl` in `LiveSubgraphMcpRecoveryPortOptions` and adapt Studio `usdcTransfers` into standard `settlementCandidates` with typed `_meta`.
-2. Run full live recovery proof: fetch mined Arc Testnet receipt, query live Subgraph Studio for USDC transfer candidates, normalize MCP trace with health `FRESH`, feed to Vertex AI Gemini 2.5 Flash, obtain `RECONCILE` advice, verify receipt via deterministic safety core, confirm `MARK_COMMITTED` with zero duplicate broadcasts.
-3. Update `evidence/c06/sanitized-proof.json`, `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`, `docs/GATE_P4_MANIFEST.md`, `docs/GATE_P4_CHECKLIST.md`, `docs/settlement/LIVE_EVIDENCE.md`, `plan.md`, and `plan_missing_parts.md`.
-4. Run full repository verification checks and FreePi review gates.
+1. Update `subgraph/schema.graphql` and `subgraph/src/mapping.ts` to natively index `SettlementCandidate` with real event `blockHash: event.block.hash`, matching `RECOVERY_CANDIDATE_QUERY`.
+2. Deploy v0.2.1 to Subgraph Studio with startBlock `61115500`.
+3. Simplify `packages/reconciliation/src/subgraph-mcp-client.ts` to directly send `toolArgs.query` (`RECOVERY_CANDIDATE_QUERY`) without artificial `usdcTransfers` mapping.
+4. Execute full live recovery proof: fetch mined Arc Testnet receipt, query live Subgraph Studio for candidate, normalize MCP trace (`accepted: true`, health: `FRESH`), invoke Vertex AI Gemini 2.5 Flash, obtain accepted `RECONCILE` recommendation with decision ID, verify receipt via deterministic safety core, confirm `MARK_COMMITTED` with zero duplicate broadcasts (`settlementPermission: NEVER`).
+5. Update `evidence/c06/graph-proof.json`, `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`, `docs/GATE_P4_MANIFEST.md`, `docs/GATE_P4_CHECKLIST.md`, `docs/settlement/LIVE_EVIDENCE.md`, `plan.md`, and `plan_missing_parts.md`.
+6. Run full repository verification checks (`lint`, `typecheck`, `test`, `format:check`, `check:generated`, `validate:fixtures`), pass FreePi Gate A, push to PR #48, pass CI, and pass FreePi Gate B.
 
 ## Key decisions
 
-- Kept both published registrations documented rather than wasting gas on deprecation transactions; the underlying IPFS CID `Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi` is identical.
-- Augmented `LiveSubgraphMcpRecoveryPort` with optional `graphQueryUrl` to query Subgraph Studio directly, transforming `usdcTransfers` into the standardized MCP candidate envelope so internal domain invariants remain unchanged.
-- Ensured all recovery operations maintain `settlementPermission: NEVER` and emit 0 new broadcasts.
+- Pinned immutable deployment CID `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0`).
+- Addressed FreePi Gate B findings directly by providing genuine native `SettlementCandidate` schema and real event `blockHash` (`0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b`), matching the Arc RPC receipt.
+- Added `subgraph/generated` and `subgraph/build` to `.prettierignore`.
+- Preserved all idempotency invariants: `settlementPermission: NEVER` across all reconciliation paths.
 
 ## Files/components touched
 
-- `packages/reconciliation/src/subgraph-mcp-client.ts`: added `graphQueryUrl` option and Studio `usdcTransfers` schema adaptation.
-- `packages/reconciliation/test/subgraph-mcp-client.test.ts`: added unit test for `graphQueryUrl` and Studio schema mapping.
-- `evidence/c06/sanitized-proof.json`: recorded full live The Graph Subgraph MCP + Vertex AI Gemini proof.
-- `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`: updated The Graph to `QUALIFIED`.
-- `docs/GATE_P4_MANIFEST.md`: updated Gate P4 status to `PASS` and The Graph to `LIVE_VERIFIED`.
-- `docs/GATE_P4_CHECKLIST.md`: marked step 5 complete and Gate P4 `PASS`.
-- `docs/settlement/LIVE_EVIDENCE.md`: documented live Subgraph MCP + Vertex AI drill and updated limitations.
-- `plan.md`: updated The Graph deployment status and sponsor claim mapping to `QUALIFIED`.
-- `plan_missing_parts.md`: moved live Graph recovery and Gate P4 proof to completed.
+- `subgraph/schema.graphql`: added `SettlementCandidate` entity.
+- `subgraph/subgraph.yaml`: registered `SettlementCandidate` entity; set `startBlock: 61115500`.
+- `subgraph/src/mapping.ts`: stored `SettlementCandidate` with real `blockHash: event.block.hash`.
+- `packages/reconciliation/src/subgraph-mcp-client.ts`: direct `toolArgs.query` pass-through and uint timestamp handling.
+- `packages/reconciliation/test/subgraph-mcp-client.test.ts`: updated tests for native candidate query.
+- `evidence/c06/graph-proof.json`: recorded full live The Graph Subgraph MCP + Vertex AI Gemini proof.
+- `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`: updated pinned deployment to v0.2.1.
+- `docs/GATE_P4_MANIFEST.md`: updated pinned deployment and decision ID.
+- `docs/GATE_P4_CHECKLIST.md`: updated pinned deployment.
+- `docs/settlement/LIVE_EVIDENCE.md`: updated pinned deployment, query endpoint, and decision ID.
+- `plan.md`: updated Subgraph version to v0.2.1 and CID.
+- `plan_missing_parts.md`: updated Subgraph deployment CID and hex ID.
+- `.prettierignore`: added `subgraph/generated` and `subgraph/build`.
 
 ## Commands/checks
 
-- `pnpm --filter @oneshot/reconciliation test` - PASS (8 files, 84 tests)
-- `pnpm --filter @oneshot/worker test` - PASS (4 files, 27 tests)
-- `node scratch/run-live-graph-proof.mjs` - PASS (live Arc Testnet receipt + Studio Subgraph + Vertex AI Gemini + safety core)
+- `pnpm --filter @oneshot/reconciliation build` - PASS
+- `pnpm test` - PASS (57 test files, 901 tests)
+- `pnpm lint` - PASS (eslint clean)
+- `pnpm typecheck` - PASS (tsc clean)
+- `pnpm format:check` - PASS (prettier clean)
+- `pnpm check:generated` - PASS
+- `pnpm validate:fixtures` - PASS
+- Live proof script - PASS (`MARK_COMMITTED`, `settlementPermission: NEVER`, `authoritativeProofPresent: true`)
 
 ## External-doc findings
 
-- Subgraph Studio Query URL format: `https://api.studio.thegraph.com/query/<id>/<slug>/version/latest`
-- The Graph decentralized network requires active Indexer allocations; Studio indexes custom testnets immediately without GRT staking.
-
-## Unresolved questions
-
-- None.
+- Subgraph Studio Query URL format: `https://api.studio.thegraph.com/query/<id>/<slug>/<version>`
+- Vertex AI Gemini 2.5 Flash requires valid IAM token and correct GCP project (`oneshot-508002`).
 
 ## Git and PR state
 
 - Branch: `feat/graph-sponsor-qualification`
-- Base: `develop` (`d40af37ef1130232fb651cf83087795e5c26b3fb`)
-- Commit: pending
-- PR: pending
+- PR: #48 (Draft)
+- Commit: pending new commit with v0.2.1 evidence
 
 ## Review gates
 
@@ -74,6 +82,5 @@ Resolve The Graph `NOT_VERIFIED` status and duplicate registration questions, ex
 
 ## Handoff/next steps
 
-1. Run root workspace checks (`lint`, `typecheck`, `test`, `format:check`, `check:generated`, `validate:fixtures`, `markdownlint`).
-2. Run Gate A via `free-pi-cli`.
-3. Commit, push, open PR, and run Gate B.
+1. Run Gate A via `free-pi-cli`.
+2. Commit, push, wait for CI, and run Gate B.

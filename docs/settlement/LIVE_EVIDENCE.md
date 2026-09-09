@@ -68,15 +68,15 @@ Executed and verified with real Subgraph Studio indexing, Subgraph MCP normaliza
 | Property | Live Verified Value |
 | --- | --- |
 | **Track** | The Graph: AI Tooling or AI Use Case |
-| **Studio Query Endpoint** | `https://api.studio.thegraph.com/query/1758917/oneshot-arc-testnet/version/latest` |
-| **Pinned Manifest CID** | `Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi` |
-| **Deployment ID** | `0xaf2b444e00f8d11eb5db6bf1bd33e9f6ff0a211c4539d899ec8c9615afb893a7` |
+| **Studio Query Endpoint** | `https://api.studio.thegraph.com/query/1758917/oneshot-arc-testnet/v0.2.1` |
+| **Pinned Manifest CID** | `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` |
+| **Deployment ID** | `0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0` |
 | **Canonical Subgraph ID** | `69FEby7GetXpJVWJShPL6XjMsWWDowLuqf6cE5MvTHdy` |
 | **MCP Tool Name** | `execute_query_by_deployment_id` |
-| **MCP Normalization** | Accepted: `true`, Health: `FRESH`, Synced Block: `61153492` |
+| **MCP Normalization** | Accepted: `true`, Health: `FRESH`, Synced Block: `61143086` |
 | **Discovered Candidate** | Tx `0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7`, block `61116056`, log index `23` |
 | **LLM Model Identity** | Google Cloud Vertex AI `gemini-2.5-flash` (`europe-west1`), prompt `recovery-v1` |
-| **LLM Advisor Outcome** | Recommendation: `RECONCILE`, Decision ID: `dec-c2763d59...`, Referenced Evidence: `["thegraph:0x72ab..."]` |
+| **LLM Advisor Outcome** | Recommendation: `RECONCILE`, Decision ID: `dec-a83a0050...`, Referenced Evidence: `["thegraph:0x72ab..."]` |
 | **Deterministic Safety Core** | Command: `MARK_COMMITTED`, Target State: `COMMITTED`, Settlement Permission: `NEVER` |
 | **External Submissions** | **0** (zero duplicate broadcasts) |
 
@@ -91,4 +91,4 @@ Executed and verified with real Subgraph Studio indexing, Subgraph MCP normaliza
 ## Limitations
 
 - Arc Mainnet profile remains intentionally disabled (`enabled: false`, `verification: UNPUBLISHED`) pending production launch and human sign-off. Those are the values the profile actually carries in `packages/arc-adapter/src/profiles.ts`; the profile holds no chain ID, RPC, explorer, or token value at all.
-- Pinned deployment `Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi` is live and synchronized via Subgraph Studio; decentralized network Indexer allocation on Arbitrum One remains independent future infrastructure.
+- Pinned deployment `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` is live and synchronized via Subgraph Studio; decentralized network Indexer allocation on Arbitrum One remains independent future infrastructure.
