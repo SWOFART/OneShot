@@ -13,6 +13,7 @@ RUN pnpm build
 
 FROM node:24-bookworm-slim AS runner
 
+RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
 WORKDIR /app
 ENV NODE_ENV=production
 
