@@ -112,3 +112,27 @@ jobs:
         env:
           TEST_POSTGRES: '1'
         run: pnpm test:integration
+
+  browser:
+    name: Frontend browser acceptance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm --filter @oneshot/web exec playwright install --with-deps chromium
+
+      - name: Run frontend browser acceptance
+        run: pnpm test:browser

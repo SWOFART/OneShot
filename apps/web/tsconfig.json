@@ -9,5 +9,9 @@
     "types": ["node", "vite/client"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "references": [{ "path": "../../packages/contracts" }]
+  "references": [
+    { "path": "../../packages/contracts" },
+    { "path": "../../packages/recovery-ui" },
+    { "path": "../../packages/settlement-ui" }
+  ]
 }

@@ -79,6 +79,25 @@ describe('IntentForm', () => {
     expect(id.value).toBe(stableId);
   });
 
+  it.each([
+    [403, 'AUTHORIZATION DENIED'],
+    [503, 'SERVICE UNAVAILABLE'],
+  ] as const)('names safe create failure %s without offering a bypass', async (status, title) => {
+    const client = new OneShotApiClient({
+      fetchFn: async () => json(status, { message: 'safe failure' }),
+    });
+    const user = userEvent.setup();
+    render(<IntentForm client={client} />);
+    await user.type(
+      screen.getByLabelText(/Recipient/u),
+      '0x1111111111111111111111111111111111111111',
+    );
+    await user.click(screen.getByRole('button', { name: /Submit Intent/u }));
+
+    expect(await screen.findByText(new RegExp(title, 'u'))).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /force|bypass|pay/iu })).toBeNull();
+  });
+
   it('has no detectable structural accessibility violations', async () => {
     const client = new OneShotApiClient({ fetchFn: async () => json(503, {}) });
     const { container } = render(<IntentForm client={client} />);

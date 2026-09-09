@@ -90,6 +90,61 @@ p {
   background: white;
 }
 
+.surface-empty {
+  min-height: 180px;
+  align-content: center;
+}
+
+.composed-surface {
+  overflow: hidden;
+  border: 1px solid #d8dfeb;
+  border-radius: 0.9rem;
+  background: #07101d;
+}
+
+.fixture-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #f0c36a59;
+  background: #241b0d;
+  color: #f8e7bd;
+}
+
+.fixture-toolbar > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.fixture-toolbar .eyebrow {
+  margin-bottom: 0;
+  color: #ffd47a;
+}
+
+.fixture-toolbar span {
+  color: #dfcfa8;
+  font-size: 0.85rem;
+}
+
+.fixture-toolbar label {
+  display: grid;
+  gap: 0.25rem;
+  color: #ffd47a;
+  font-weight: 700;
+}
+
+.fixture-toolbar select {
+  min-width: 190px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #f0c36a73;
+  border-radius: 0.45rem;
+  color: #f8fafc;
+  background: #0d1724;
+  font: inherit;
+}
+
 .readiness {
   padding: 0.75rem 1rem;
   color: #42516a;
@@ -132,10 +187,12 @@ p {
   display: flex;
   gap: 0.35rem;
   margin: 1rem 0;
+  overflow-x: auto;
   border-bottom: 1px solid #d8dfeb;
 }
 
 .tabs button {
+  flex: 0 0 auto;
   border-radius: 0.65rem 0.65rem 0 0;
   color: #52617a;
   background: transparent;
@@ -343,8 +400,13 @@ p {
   }
 
   .lookup,
-  .state-card {
+  .state-card,
+  .fixture-toolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .fixture-toolbar select {
+    width: 100%;
   }
 }

@@ -1,8 +1,17 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { fileURLToPath } from 'node:url';
+
+const workspaceRoot = fileURLToPath(new URL('../..', import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@oneshot/recovery-ui': `${workspaceRoot}/packages/recovery-ui/src/index.ts`,
+      '@oneshot/settlement-ui': `${workspaceRoot}/packages/settlement-ui/src/index.ts`,
+    },
+  },
   server: {
     port: 3000,
     proxy: {

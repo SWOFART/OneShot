@@ -10,16 +10,21 @@
     "lint": "eslint src test",
     "preview": "vite preview",
     "test": "vitest run --config vitest.config.ts",
+    "test:browser": "pnpm run typecheck:browser && pnpm run build && node scripts/run-browser-tests.mjs",
+    "typecheck:browser": "tsc -p tsconfig.browser.json --pretty false",
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
     "@oneshot/contracts": "workspace:*",
+    "@oneshot/recovery-ui": "workspace:*",
+    "@oneshot/settlement-ui": "workspace:*",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
+    "@playwright/test": "1.52.0",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",

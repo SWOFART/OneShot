@@ -1,6 +1,6 @@
 # OneShot Product Delivery Plan
 
-Status: working testnet MVP; Arc/Privy evidence live; Graph deployment published but not allocated/indexed; live recovery adapters implemented but not default-enabled; P4/P6 live recovery proof incomplete
+Status: working testnet MVP; Arc/Privy evidence live; Graph deployment published but not allocated/indexed; live recovery adapters implemented but not default-enabled; P5 frontend composition and Playwright browser acceptance suite implemented with CI execution configured; P6 release proof remains pending
 Team: exactly three coders
 Implementation base: the human-approved commit containing this plan
 Research basis: `.agent/research/20260906-integration-decisions.md` and `.agent/research/20260907-subgraph-mcp-clarification.md`
