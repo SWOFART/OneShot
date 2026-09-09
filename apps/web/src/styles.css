@@ -410,6 +410,30 @@ p {
   border: 0;
 }
 
+.login-gate {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border, #d0d5dd);
+  border-radius: 8px;
+}
+
+.operator-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.operator-identity code {
+  overflow-wrap: anywhere;
+}
+
+.machine-token summary {
+  cursor: pointer;
+}
+
 @media (max-width: 640px) {
   .app-shell {
     width: min(100% - 1rem, 880px);
