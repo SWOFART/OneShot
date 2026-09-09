@@ -126,7 +126,7 @@ lock: OneShot's durable state is.
 
 ```text
 apps/api                      HTTP seam
-apps/web                      operator intent and status UI
+apps/web                      composed operator UI (intent, settlement, recovery)
 apps/worker                   settlement and reconciliation workers
 packages/contracts            frozen v1 contract pack, OpenAPI, fixtures
 packages/domain               intent, attempt, and settlement state
@@ -134,6 +134,7 @@ packages/storage-postgres     durable ledger and migrations
 packages/arc-adapter          Arc profiles, money, receipts, readiness
 packages/privy-adapter        authorization, requests, policy, adapters
 packages/reconciliation       recovery evidence and safety core
+packages/settlement-ui        policy, authorization, and settlement evidence UI
 packages/recovery-ui          synthetic recovery evidence viewer
 packages/testkit-*            simulators and sanitized fixtures
 subgraph                      Arc Testnet USDC transfer indexer
@@ -147,8 +148,17 @@ Requires Node `24.19.0`, pnpm `11.19.0`, and PostgreSQL for integration tests.
 pnpm install
 pnpm lint && pnpm typecheck && pnpm build
 pnpm test
-pnpm dev:frontend
+pnpm test:browser
+pnpm build:frontend
+pnpm --filter @oneshot/web dev
 ```
+
+Open `http://localhost:3000/`. The app shell composes create/replay,
+authoritative status, settlement evidence, and recovery evidence tabs. The
+settlement tab reads the configured OneShot API; the recovery tab projects the
+frozen `recovery-view` API into the C05 timeline model, with labelled
+fail-closed fallbacks for legacy or unavailable evidence. The P5 browser
+acceptance suite runs with Playwright/Chromium in CI.
 
 Integration tests need a database:
 
@@ -169,7 +179,7 @@ pnpm --filter @oneshot/arc-adapter probe
 
 That command is read-only. It cannot sign, send, or mutate anything.
 
-To view the recovery UI locally:
+To view the standalone recovery fixture UI locally:
 
 ```bash
 pnpm --filter @oneshot/recovery-ui dev
@@ -198,13 +208,13 @@ The contract is defined in `packages/contracts/openapi/openapi.v1.json`.
 
 Under active development. **Testnet only.**
 
-| Area                                          | Status                                                                              |
-| --------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Durable intent ledger, API, worker            | Implemented                                                                         |
-| Settlement adapters and error taxonomy        | Implemented; simulator-tested and live-verified on Arc Testnet through Privy        |
-| Recovery evidence and safety core             | Implemented against simulators                                                      |
-| Subgraph MCP discovery and LLM recovery agent | Implemented boundary; live path not verified                                        |
-| Operator frontend                             | Intent/status UI and synthetic recovery viewer implemented; live API wiring pending |
+| Area                                          | Status                                                                                      |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Durable intent ledger, API, worker            | Implemented                                                                                 |
+| Settlement adapters and error taxonomy        | Implemented; simulator-tested and live-verified on Arc Testnet through Privy                |
+| Recovery evidence and safety core             | Live Graph/Vertex path implemented; deterministic core remains authoritative                |
+| Subgraph MCP discovery and LLM recovery agent | Live Subgraph MCP and Vertex AI path verified; deterministic core remains final             |
+| Operator frontend                             | Gate P5 candidate composes A05/B05/C05 against the frozen API with APG and browser coverage |
 
 **One live testnet settlement has been executed.** A Privy-controlled execution
 wallet and scoped policy authorized one 1.00 USDC Arc Testnet transfer; live
@@ -213,7 +223,7 @@ drill entered `UNKNOWN` and reconciled to that original settlement without a
 replacement payment. Privy and Arc are `QUALIFIED` for the documented testnet
 claim; see `docs/settlement/LIVE_EVIDENCE.md` and
 `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`. The Graph live
-Subgraph MCP and recovery-agent path remains `NOT VERIFIED`.
+Subgraph MCP and recovery-agent path is also `QUALIFIED` by the latter report.
 
 Arc Mainnet is not configured. Its profile carries no chain ID, RPC, explorer,
 or token value by design, and enabling it requires published official values

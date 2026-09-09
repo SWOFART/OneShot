@@ -26,14 +26,16 @@ export function DemoShell({ initialScenario }: DemoShellProps) {
 
   if (scenario === undefined) {
     return (
-      <section className="route-state" role="alert">
-        <h1>No fixtures are published.</h1>
-      </section>
+      <div className="settlement-slice">
+        <section className="route-state" role="alert">
+          <h1>No fixtures are published.</h1>
+        </section>
+      </div>
     );
   }
 
   return (
-    <>
+    <div className="settlement-slice">
       <div className="demo-bar">
         <strong>Synthetic review fixtures. Not live settlement evidence.</strong>
         <div className="demo-scenarios">
@@ -56,6 +58,6 @@ export function DemoShell({ initialScenario }: DemoShellProps) {
         client={client}
         allowedExplorerHosts={FIXTURE_EXPLORER_HOSTS}
       />
-    </>
+    </div>
   );
 }

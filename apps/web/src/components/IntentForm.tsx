@@ -10,7 +10,8 @@ interface Props {
 }
 
 interface Outcome {
-  readonly kind: 'accepted' | 'replayed' | 'conflict' | 'error';
+  readonly kind:
+    'accepted' | 'replayed' | 'conflict' | 'denied' | 'rate-limited' | 'not-ready' | 'error';
   readonly title: string;
   readonly message: string;
 }
@@ -53,6 +54,25 @@ function outcomeFor(result: CreateIntentResult): Outcome {
         title: 'PAYLOAD CONFLICT',
         message:
           'This ID already belongs to another immutable payload. Use a new ID only for a new obligation.',
+      };
+    case 'UNAUTHORIZED':
+      return {
+        kind: 'denied',
+        title: 'AUTHORIZATION DENIED',
+        message:
+          'The service rejected this intent. No settlement was created and no bypass is available.',
+      };
+    case 'RATE_LIMITED':
+      return {
+        kind: 'rate-limited',
+        title: 'RATE LIMITED',
+        message: 'The service asked for a slower retry. No settlement action was taken.',
+      };
+    case 'NOT_READY':
+      return {
+        kind: 'not-ready',
+        title: 'SERVICE UNAVAILABLE',
+        message: 'The service is not ready. No settlement action was taken.',
       };
     default:
       return { kind: 'error', title: 'REQUEST FAILED', message: result.message };

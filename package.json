@@ -9,7 +9,7 @@
     "pnpm": "11.19.0"
   },
   "scripts": {
-    "build": "tsc -b && pnpm --filter @oneshot/arc-subgraph build",
+    "build": "tsc -b && pnpm --filter @oneshot/recovery-ui build && pnpm --filter @oneshot/settlement-ui build && pnpm --filter @oneshot/arc-subgraph build",
     "check:generated": "pnpm --filter @oneshot/contracts check:generated",
     "clean": "tsc -b --clean",
     "db:bootstrap": "pnpm --filter @oneshot/storage-postgres build && node scripts/bootstrap-db.mjs",
@@ -23,7 +23,8 @@
     "generate": "pnpm --filter @oneshot/contracts generate",
     "lint": "eslint .",
     "scenarios:invariants": "pnpm build && node scripts/run-invariant-scenarios.mjs",
-    "test": "pnpm build && vitest run",
+    "test": "pnpm build && vitest run --exclude apps/web/browser/**",
+    "test:browser": "pnpm --filter @oneshot/web test:browser",
     "test:integration": "pnpm --filter @oneshot/storage-postgres test:integration && pnpm --filter @oneshot/api test:integration && pnpm --filter @oneshot/worker test:integration",
     "typecheck": "tsc -b --pretty false",
     "validate:fixtures": "pnpm --filter @oneshot/contracts validate:fixtures"
@@ -34,6 +35,7 @@
     "@types/pg": "8.23.1",
     "eslint": "10.10.0",
     "globals": "17.4.0",
+    "jsdom": "30.0.1",
     "prettier": "3.9.6",
     "typescript": "6.0.3",
     "typescript-eslint": "8.69.0",

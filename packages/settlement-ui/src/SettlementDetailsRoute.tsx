@@ -101,24 +101,25 @@ export function SettlementDetailsRoute({
     };
   }, [businessIntentId, client, allowedExplorerHosts]);
 
+  let content;
   if (state.kind === 'LOADING') {
-    return (
+    content = (
       <section className="route-state" aria-busy="true">
         <p className="eyebrow">ONESHOT / AUTHORIZATION AND SETTLEMENT</p>
         <h1>Loading settlement details…</h1>
       </section>
     );
-  }
-
-  if (state.kind === 'FAILED') {
-    return (
+  } else if (state.kind === 'FAILED') {
+    content = (
       <section className="route-state" role="alert">
         <p className="eyebrow">ONESHOT / AUTHORIZATION AND SETTLEMENT</p>
         <h1>{state.heading}</h1>
         <p>{state.detail}</p>
       </section>
     );
+  } else {
+    content = <SettlementDetailsPanel view={state.view} />;
   }
 
-  return <SettlementDetailsPanel view={state.view} />;
+  return <div className="settlement-slice">{content}</div>;
 }

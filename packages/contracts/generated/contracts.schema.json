@@ -380,6 +380,250 @@
         }
       }
     },
+    "RecoveryAgentDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accepted",
+        "reason",
+        "model_name",
+        "model_version",
+        "prompt_version",
+        "evidence_references"
+      ],
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "model_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "prompt_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "evidence_references": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        }
+      }
+    },
+    "RecoveryCoreDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "disposition",
+        "target_state",
+        "reason",
+        "authoritative_proof_present",
+        "evidence_references"
+      ],
+      "properties": {
+        "disposition": {
+          "type": "string",
+          "enum": [
+            "HOLD_UNKNOWN",
+            "READ_ONLY_LOOKUP",
+            "ESCALATE_UNKNOWN",
+            "MARK_COMMITTED",
+            "MARK_FAILED_SAFE"
+          ]
+        },
+        "target_state": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "COMMITTED",
+            "FAILED_SAFE"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "authoritative_proof_present": {
+          "type": "boolean"
+        },
+        "evidence_references": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        }
+      }
+    },
+    "RecoveryCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "transaction_hash",
+        "block_number",
+        "binding_status",
+        "contradiction_codes"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "transaction_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{64}$"
+        },
+        "block_number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "binding_status": {
+          "type": "string",
+          "enum": [
+            "MATCH",
+            "CONTRADICTORY"
+          ]
+        },
+        "contradiction_codes": {
+          "type": "array",
+          "maxItems": 25,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        }
+      }
+    },
+    "RecoveryGraphObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "server_name",
+        "server_version",
+        "tool_name",
+        "deployment_id",
+        "manifest_cid",
+        "health",
+        "available",
+        "candidate_count",
+        "diagnostics",
+        "candidates"
+      ],
+      "properties": {
+        "server_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "server_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "tool_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "deployment_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "manifest_cid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "observed_through_block": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "observed_through_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "health": {
+          "type": "string",
+          "enum": [
+            "FRESH",
+            "LAGGING",
+            "UNHEALTHY",
+            "UNAVAILABLE",
+            "UNKNOWN_FRESHNESS"
+          ]
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "candidate_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25
+        },
+        "diagnostics": {
+          "type": "array",
+          "maxItems": 25,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        },
+        "candidates": {
+          "type": "array",
+          "maxItems": 25,
+          "items": {
+            "$ref": "#/$defs/RecoveryCandidate"
+          }
+        }
+      }
+    },
     "RecoveryView": {
       "type": "object",
       "additionalProperties": false,
@@ -416,6 +660,59 @@
             "ESCALATE",
             "RETURN_EXISTING_RESULT"
           ]
+        },
+        "recommendation_source": {
+          "type": "string",
+          "enum": [
+            "RECOVERY_AGENT",
+            "SAFE_FALLBACK"
+          ]
+        },
+        "core_disposition": {
+          "type": "string",
+          "enum": [
+            "HOLD_UNKNOWN",
+            "READ_ONLY_LOOKUP",
+            "ESCALATE_UNKNOWN",
+            "MARK_COMMITTED",
+            "MARK_FAILED_SAFE"
+          ]
+        },
+        "settlement_permission": {
+          "type": "string",
+          "const": "NEVER"
+        },
+        "agent_decision": {
+          "$ref": "#/$defs/RecoveryAgentDecision"
+        },
+        "core_decision": {
+          "$ref": "#/$defs/RecoveryCoreDecision"
+        },
+        "graph_observation": {
+          "$ref": "#/$defs/RecoveryGraphObservation"
+        },
+        "contradiction": {
+          "type": "boolean"
+        },
+        "contradiction_codes": {
+          "type": "array",
+          "maxItems": 25,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        },
+        "diagnostics": {
+          "type": "array",
+          "maxItems": 25,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
         },
         "evidence": {
           "type": "array",

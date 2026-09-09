@@ -9,6 +9,12 @@ export type ErrorCode = (typeof ERROR_CODES)[number];
 export const RECOVERY_ACTIONS = ["WAIT","RECONCILE","ESCALATE","RETURN_EXISTING_RESULT"] as const;
 export type RecoveryActionName = (typeof RECOVERY_ACTIONS)[number];
 
+export const RECOVERY_DECISION_SOURCES = ["RECOVERY_AGENT","SAFE_FALLBACK"] as const;
+export type RecoveryDecisionSource = (typeof RECOVERY_DECISION_SOURCES)[number];
+
+export const CORE_DISPOSITIONS = ["HOLD_UNKNOWN","READ_ONLY_LOOKUP","ESCALATE_UNKNOWN","MARK_COMMITTED","MARK_FAILED_SAFE"] as const;
+export type CoreDispositionName = (typeof CORE_DISPOSITIONS)[number];
+
 export const AUTHORIZATION_STATUSES = ["CHECKING","AUTHORIZED","DENIED","UNAVAILABLE","CONFIG_MISMATCH"] as const;
 export type AuthorizationStatus = (typeof AUTHORIZATION_STATUSES)[number];
 
@@ -73,10 +79,59 @@ export interface ReconcileResponse {
   readonly state: IntentState;
 }
 
+export interface RecoveryAgentDecisionView {
+  readonly accepted: boolean;
+  readonly reason: string;
+  readonly model_name: string;
+  readonly model_version: string;
+  readonly prompt_version: string;
+  readonly evidence_references: readonly string[];
+}
+
+export interface RecoveryCoreDecisionView {
+  readonly disposition: CoreDispositionName;
+  readonly target_state: 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE';
+  readonly reason: string;
+  readonly authoritative_proof_present: boolean;
+  readonly evidence_references: readonly string[];
+}
+
+export interface RecoveryCandidateView {
+  readonly candidate_id: string;
+  readonly transaction_hash: string;
+  readonly block_number: string;
+  readonly binding_status: 'MATCH' | 'CONTRADICTORY';
+  readonly contradiction_codes: readonly string[];
+}
+
+export interface RecoveryGraphObservationView {
+  readonly server_name: string;
+  readonly server_version: string;
+  readonly tool_name: string;
+  readonly deployment_id: string;
+  readonly manifest_cid: string;
+  readonly observed_through_block?: string;
+  readonly observed_through_time?: string;
+  readonly health: 'FRESH' | 'LAGGING' | 'UNHEALTHY' | 'UNAVAILABLE' | 'UNKNOWN_FRESHNESS';
+  readonly available: boolean;
+  readonly candidate_count: number;
+  readonly diagnostics: readonly string[];
+  readonly candidates: readonly RecoveryCandidateView[];
+}
+
 export interface RecoveryView {
   readonly business_intent_id: string;
   readonly authoritative_state: IntentState;
   readonly recommended_action: RecoveryActionName;
+  readonly recommendation_source?: RecoveryDecisionSource;
+  readonly core_disposition?: CoreDispositionName;
+  readonly settlement_permission?: 'NEVER';
+  readonly agent_decision?: RecoveryAgentDecisionView;
+  readonly core_decision?: RecoveryCoreDecisionView;
+  readonly graph_observation?: RecoveryGraphObservationView;
+  readonly contradiction?: boolean;
+  readonly contradiction_codes?: readonly string[];
+  readonly diagnostics?: readonly string[];
   readonly evidence: readonly EvidenceView[];
 }
 

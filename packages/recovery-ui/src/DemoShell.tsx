@@ -27,7 +27,7 @@ export function DemoShell({ initialScenario }: DemoShellProps) {
   }
 
   return (
-    <>
+    <div className="recovery-slice">
       <aside className="demo-bar" aria-label="Demo controls">
         <div>
           <strong>Synthetic review demo</strong>
@@ -48,6 +48,6 @@ export function DemoShell({ initialScenario }: DemoShellProps) {
         </label>
       </aside>
       <RecoveryRoute businessIntentId="intent_demo_018f" client={client} />
-    </>
+    </div>
   );
 }
