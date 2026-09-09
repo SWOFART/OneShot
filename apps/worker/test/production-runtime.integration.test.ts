@@ -88,8 +88,12 @@ describePostgres('production worker API to adapter path', () => {
           },
         }),
     });
+    let attemptCounter = 0;
     const api = buildApi({
-      ledger: new IntentLedger(pool),
+      ledger: new IntentLedger(pool, {
+        now: () => new Date(),
+        nextAttemptId: () => `runtime-e2e-attempt-${++attemptCounter}`,
+      }),
       authenticator: staticBearerAuthenticator('test-token'),
     });
     try {
