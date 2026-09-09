@@ -3,5 +3,7 @@ export * from './composition.js';
 export * from './invariant-scenarios.js';
 export * from './recovery-bridge.js';
 export * from './restart-runner.js';
+export * from './runtime-config.js';
+export * from './runtime.js';
 export * from './types.js';
 export * from './worker.js';

@@ -21,3 +21,17 @@ The worker supports dual execution modes:
 
 1. **Graphile Worker TaskList (`createTaskList`)**: Exposes standard typed job handlers conforming to Graphile Worker `TaskList` specification for production multi-worker runner pools.
 2. **Transactional Outbox Poller (`drainOutboxJobs`)**: Embedded transactional worker engine using PostgreSQL `FOR UPDATE SKIP LOCKED` for atomic job delivery without external message broker dependencies.
+
+## Production process
+
+Build the workspace and run `pnpm --filter @oneshot/worker start`, or build
+`Dockerfile.worker`. The process validates all Privy, Arc, Subgraph MCP, Vertex,
+and database configuration before accepting work. It performs startup recovery,
+immediately drains durable outbox work, continues polling without overlapping
+cycles, and waits for an in-flight cycle during SIGTERM/SIGINT shutdown.
+
+The HTTP listener exposes `GET /health/live` and `GET /health/ready`. Readiness
+requires a reachable database, compatible adapter identities, and a running
+outbox runner with no unresolved cycle error. Google Vertex authentication uses
+Application Default Credentials; Privy and Graph secrets must come from the
+deployment secret store. See `.env.example` for the full variable contract.

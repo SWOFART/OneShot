@@ -169,11 +169,6 @@ export async function drainOutboxJobs(options: WorkerOptions, maxJobs = 100): Pr
   let processed = 0;
   while (processed < maxJobs) {
     const client = await options.pool.connect();
-    let job: {
-      outbox_job_id: string;
-      business_intent_id: string;
-      task_identifier: string;
-    } | null = null;
     try {
       await client.query('BEGIN');
       const result = await client.query<{
@@ -188,30 +183,35 @@ export async function drainOutboxJobs(options: WorkerOptions, maxJobs = 100): Pr
         FOR UPDATE SKIP LOCKED
         LIMIT 1`,
       );
-      if (result.rows[0]) {
-        job = result.rows[0];
-        await client.query("UPDATE outbox_jobs SET status = 'DELIVERED' WHERE outbox_job_id = $1", [
-          job.outbox_job_id,
-        ]);
+      const job = result.rows[0];
+      if (!job) {
+        await client.query('COMMIT');
+        break;
       }
+
+      // Keep the row lock until the handler has completed. A process kill or
+      // thrown handler rolls this transaction back, leaving the job PENDING
+      // for restart recovery instead of losing it as falsely DELIVERED.
+      if (job.task_identifier === 'authorize_intent') {
+        await executeAuthorizeIntent(job.business_intent_id, options);
+      } else if (job.task_identifier === 'submit_settlement') {
+        await executeSubmitSettlement(job.business_intent_id, options);
+      } else if (job.task_identifier === 'reconcile_intent') {
+        await executeReconcileIntent(job.business_intent_id, options);
+      } else {
+        throw new Error(`Unsupported outbox task: ${job.task_identifier}`);
+      }
+      await client.query("UPDATE outbox_jobs SET status = 'DELIVERED' WHERE outbox_job_id = $1", [
+        job.outbox_job_id,
+      ]);
       await client.query('COMMIT');
+      processed += 1;
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
     } finally {
       client.release();
     }
-
-    if (!job) break;
-
-    if (job.task_identifier === 'authorize_intent') {
-      await executeAuthorizeIntent(job.business_intent_id, options);
-    } else if (job.task_identifier === 'submit_settlement') {
-      await executeSubmitSettlement(job.business_intent_id, options);
-    } else if (job.task_identifier === 'reconcile_intent') {
-      await executeReconcileIntent(job.business_intent_id, options);
-    }
-    processed += 1;
   }
   return processed;
 }

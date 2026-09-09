@@ -1,0 +1,32 @@
+FROM node:24-bookworm-slim AS builder
+
+RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
+WORKDIR /app
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.json tsconfig.base.json ./
+COPY apps ./apps
+COPY packages ./packages
+COPY subgraph ./subgraph
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm build
+
+FROM node:24-bookworm-slim AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.json tsconfig.base.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/apps ./apps
+
+# The worker image does not need the repository's test/build toolchain.
+RUN pnpm prune --prod
+
+WORKDIR /app/apps/worker
+ENV PORT=8080
+ENV HOST=0.0.0.0
+EXPOSE 8080
+
+CMD ["node", "dist/server.js"]

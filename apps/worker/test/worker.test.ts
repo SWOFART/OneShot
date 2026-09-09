@@ -12,7 +12,12 @@ import type {
   CreateIntentResult,
   IntentLedger,
 } from '@oneshot/storage-postgres';
-import { createTaskList, executeAuthorizeIntent, executeSubmitSettlement } from '../src/index.js';
+import {
+  createTaskList,
+  drainOutboxJobs,
+  executeAuthorizeIntent,
+  executeSubmitSettlement,
+} from '../src/index.js';
 
 const sampleRequest: CreateIntentRequest = {
   business_intent_id: 'intent-worker-unit-1',
@@ -188,5 +193,43 @@ describe('Worker Unit Logic', () => {
     });
 
     expect(completedKind).toBe('POSSIBLY_SUBMITTED');
+  });
+
+  it('rolls back the outbox claim when a handler fails before delivery', async () => {
+    const queries: string[] = [];
+    const client = {
+      async query(sql: string) {
+        queries.push(sql);
+        if (sql.includes('SELECT outbox_job_id')) {
+          return {
+            rows: [
+              {
+                outbox_job_id: '1',
+                business_intent_id: sampleRequest.business_intent_id,
+                task_identifier: 'authorize_intent',
+              },
+            ],
+          };
+        }
+        return { rows: [] };
+      },
+      release() {},
+    };
+    const ledger = createMockLedger({
+      async completeAuthorization() {
+        throw new Error('database write failed');
+      },
+    });
+
+    await expect(
+      drainOutboxJobs({
+        pool: { connect: async () => client } as never,
+        ledger,
+        authorizationPort: { authorize: async () => ({ kind: 'AUTHORIZED' }) },
+        settlementPort: {} as never,
+      }),
+    ).rejects.toThrow('database write failed');
+    expect(queries).toContain('ROLLBACK');
+    expect(queries.some((sql) => sql.includes("status = 'DELIVERED'"))).toBe(false);
   });
 });

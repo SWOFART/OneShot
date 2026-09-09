@@ -15,6 +15,8 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "lint": "eslint src test",
+    "start": "node dist/server.js",
+    "start:local": "node --env-file=../../.env dist/server.js",
     "test": "vitest run --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc -b --pretty false"
@@ -26,6 +28,8 @@
     "@oneshot/privy-adapter": "workspace:*",
     "@oneshot/reconciliation": "workspace:*",
     "@oneshot/storage-postgres": "workspace:*",
+    "@privy-io/node": "0.34.0",
+    "google-auth-library": "11.0.2",
     "graphile-worker": "0.17.3",
     "pg": "8.23.0"
   },
