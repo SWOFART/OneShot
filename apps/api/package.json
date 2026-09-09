@@ -25,6 +25,7 @@
     "@oneshot/contracts": "workspace:*",
     "@oneshot/storage-postgres": "workspace:*",
     "fastify": "5.12.3",
+    "jose": "6.2.12",
     "pg": "8.23.0"
   },
   "devDependencies": {
