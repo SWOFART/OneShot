@@ -25,4 +25,3 @@ type SettlementCandidate @entity(immutable: true) {
   amountAtomic: BigInt!
   memoId: Bytes
 }
-
