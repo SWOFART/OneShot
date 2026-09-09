@@ -71,7 +71,12 @@ export interface WalletProvider {
     readonly data: `0x${string}`;
     readonly idempotencyKey: string;
     readonly referenceId: string;
-  }): Promise<{ readonly transactionHash: string; readonly providerReferenceId: string }>;
+  }): Promise<{
+    readonly transactionHash: string;
+    readonly providerReferenceId: string;
+    /** Execution-wallet identity used to bind the Arc receipt. */
+    readonly walletAddress?: string;
+  }>;
 
   getReceipt(transactionHash: string): Promise<TransactionReceipt | null>;
 }
@@ -219,7 +224,7 @@ export class ArcSettlementAdapter {
       };
     }
 
-    let sent: { transactionHash: string; providerReferenceId: string };
+    let sent: { transactionHash: string; providerReferenceId: string; walletAddress?: string };
     try {
       sent = await this.provider.sendTransaction({
         chainId: canonical.chainId,
@@ -259,7 +264,7 @@ export class ArcSettlementAdapter {
 
     const verdict = verifyReceipt(receipt, {
       chainId: this.config.profile.chainId,
-      walletAddress: sent.providerReferenceId,
+      walletAddress: sent.walletAddress ?? sent.providerReferenceId,
       tokenContract: this.config.profile.tokenContract,
       recipient: request.recipient,
       amountAtomic: amountOf(request),

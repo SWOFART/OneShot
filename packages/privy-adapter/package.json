@@ -22,7 +22,8 @@
   },
   "dependencies": {
     "@oneshot/arc-adapter": "workspace:*",
-    "viem": "2.56.3",
-    "@oneshot/contracts": "workspace:*"
+    "@oneshot/contracts": "workspace:*",
+    "@privy-io/node": "0.34.0",
+    "viem": "2.56.3"
   }
 }
