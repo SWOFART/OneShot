@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { App } from '../src/App.js';
 import { OneShotApiClient } from '../src/api/client.js';
+import { signedInSession } from './support/fake-session.js';
 
 afterEach(cleanup);
 
@@ -29,6 +30,7 @@ describe('Gate P5 shell composition', () => {
         apiClient={apiClient}
         settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
         recoveryClient={createInMemoryRecoveryClient('lagging')}
+        useOperatorSession={() => signedInSession()}
       />,
     );
 

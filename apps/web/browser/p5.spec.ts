@@ -125,6 +125,12 @@ async function stubReadiness(page: Page): Promise<void> {
   await page.route('**/health/ready', (route) => json(route, 200, { status: 'ok' }));
 }
 
+async function unlockConsole(page: Page, token = 'browser-memory-token'): Promise<void> {
+  await page.getByText('Machine token (advanced)').click();
+  await page.getByLabel('Machine token').fill(token);
+  await expect(page.getByRole('tab', { name: 'Create or replay' })).toBeVisible();
+}
+
 async function fillIntentForm(page: Page): Promise<void> {
   await page.getByLabel('Recipient').fill(RECIPIENT);
   await page.getByLabel('Amount in USDC').fill('1.25');
@@ -173,6 +179,7 @@ test.describe('P5 composed operator experience', () => {
     });
 
     await page.goto('/');
+    await unlockConsole(page);
     await expect(page.getByRole('tab', { name: 'Create or replay' })).toBeVisible();
     await fillIntentForm(page);
     await page.getByRole('button', { name: /Submit Intent/u }).click();
@@ -226,6 +233,7 @@ test.describe('P5 composed operator experience', () => {
     });
 
     await page.goto('/');
+    await unlockConsole(page);
     await fillIntentForm(page);
     await page.getByRole('button', { name: /Submit Intent/u }).click();
     await expect(page.locator('.state-card > div:first-child > strong')).toHaveText('COMMITTED');
@@ -261,6 +269,7 @@ test.describe('P5 composed operator experience', () => {
       await json(route, 200, match?.[2] ? recoveryView(id) : intent('UNKNOWN', id));
     });
     await page.goto('/');
+    await unlockConsole(page);
     for (const [id, expected] of [
       ['intent-graph-discovery', 'FRESH'],
       ['intent-graph-lag', 'LAGGING'],
@@ -283,6 +292,7 @@ test.describe('P5 composed operator experience', () => {
   test('covers keyboard tab navigation and responsive layout', async ({ page }) => {
     await stubReadiness(page);
     await page.goto('/');
+    await unlockConsole(page);
     const createTab = page.getByRole('tab', { name: 'Create or replay' });
     await createTab.focus();
     await page.keyboard.press('ArrowRight');

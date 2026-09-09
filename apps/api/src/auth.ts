@@ -18,3 +18,24 @@ export function staticBearerAuthenticator(expectedToken: string): ServiceAuthent
     },
   };
 }
+
+export interface CredentialRoute {
+  readonly matches: (authorization: string | undefined) => boolean;
+  readonly authenticator: ServiceAuthenticator;
+}
+
+export function compositeAuthenticator(routes: readonly CredentialRoute[]): ServiceAuthenticator {
+  return {
+    async authenticate(authorization) {
+      if (!authorization) return 'UNAUTHORIZED';
+      let sawForbidden = false;
+      for (const route of routes) {
+        if (!route.matches(authorization)) continue;
+        const decision = await route.authenticator.authenticate(authorization);
+        if (decision === 'AUTHORIZED') return 'AUTHORIZED';
+        if (decision === 'FORBIDDEN') sawForbidden = true;
+      }
+      return sawForbidden ? 'FORBIDDEN' : 'UNAUTHORIZED';
+    },
+  };
+}
