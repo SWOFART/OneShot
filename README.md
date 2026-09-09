@@ -170,6 +170,23 @@ Copy `.env.example` to `.env` and fill in placeholders. Never commit a real
 secret; see `docs/settlement/SETTLEMENT_CONFIG_V1.md` for how each variable is
 classified.
 
+### Operator sign-in
+
+Privy operator login is optional and separate from the Privy wallet and
+settlement-policy adapter in `packages/privy-adapter`. Set all three API
+variables together: `PRIVY_AUTH_APP_ID`, `PRIVY_AUTH_VERIFICATION_KEY`, and
+`PRIVY_AUTH_ALLOWED_SUBJECTS`. A partial configuration makes the API refuse to
+start. With none set, the API accepts only `SERVICE_BEARER_TOKEN`; worker and
+agent clients continue to use that service credential.
+
+Bootstrap an operator by setting `VITE_PRIVY_APP_ID`, starting the web app,
+signing in, copying the DID shown by the console, adding that DID to
+`PRIVY_AUTH_ALLOWED_SUBJECTS`, and then starting the API. Copy the public ES256
+verification key from Privy Dashboard → Configuration → App settings → Basics
+→ Verify with key instead into runtime environment configuration. Never commit
+the key. This boundary does not use the Privy app secret; never add that secret
+to its configuration.
+
 To verify a configured Arc endpoint really is the chain and token you think it
 is:
 
