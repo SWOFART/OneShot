@@ -1,9 +1,9 @@
 # OneShot Product Delivery Plan
 
-Status: working testnet MVP; Arc/Privy evidence live; Circle Agent Stack Arc qualification slice planned but not yet implemented; Graph Studio/MCP recovery proof qualified while the decentralized Explorer deployment remains unallocated; live recovery adapters implemented but not default-enabled; P5 frontend composition and Playwright browser acceptance suite implemented with CI execution configured; P6 release proof remains pending
+Status: local MVP with recorded Arc/Privy testnet evidence; concrete Privy provider and production runtime bootstrap are not yet checked in; Graph Studio deployment synchronized and queried with live AI recovery evidence; decentralized Graph Network publication remains unallocated; P5 frontend composition and Playwright browser acceptance suite implemented with CI execution configured; sponsor videos, final submission fields, and P6 release proof remain pending
 Team: exactly three coders
 Implementation base: the human-approved commit containing this plan
-Research basis: `.agent/research/20260906-integration-decisions.md` and `.agent/research/20260907-subgraph-mcp-clarification.md`
+Research basis: `.agent/research/20260906-integration-decisions.md`, `.agent/research/20260907-subgraph-mcp-clarification.md`, and the [official ETHOnline 2026 prize requirements](https://ethglobal.com/events/ethonline2026/prizes) reviewed 2026-09-09
 Detailed work packets: [`milestones/README.md`](milestones/README.md)
 Domain architecture: [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md)
 
@@ -12,14 +12,14 @@ Domain architecture: [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md
 The following pull requests have merged into `develop` and are part of the
 current implementation base.
 
-| PR | Progress | Impact on this plan |
-| --- | --- | --- |
-| [#42](https://github.com/SWOFART/OneShot/pull/42) `docs: correct Gate P4 verification status` | Separates complete backend composition and Privy/Arc `LIVE_VERIFIED` evidence from the missing Graph MCP/model proof; overall P4 is `INCOMPLETE`. | Makes the P4/P6 status fail-closed and confirms that no Graph qualification claim is supported yet. |
-| [#43](https://github.com/SWOFART/OneShot/pull/43) `fix(settlement): close lane B review follow-ups` | Aligns live-evidence wording with the disabled/unpublished Mainnet profile and adds settlement-UI credential, control-character, and contrast regression coverage. | Strengthens B05/B06 and mainnet-readiness evidence; it does not change the Graph recovery gate. |
-| [#44](https://github.com/SWOFART/OneShot/pull/44) `fix: require recovery lookup config` | Removes placeholder Graph identities and requires explicit token, sender, block window, and MCP policy configuration; unavailable MCP/advisor ports remain the default. | Makes production recovery fail closed and ready for real configuration, but does not prove live MCP/model behavior or authorize hashless recovery. |
-| [#45](https://github.com/SWOFART/OneShot/pull/45) `docs: update plan with Graph deployment status` | Records the published deployment, duplicate registration, immutable CID, and the Explorer `NOT INDEXED` / no-allocation result, reconciling it with successful Studio queries. | Identifies the deployment while keeping decentralized indexing, live recovery, The Graph qualification, and P4 incomplete. |
+| PR                                                                                                                                          | Progress                                                                                                                                                                                             | Impact on this plan                                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [#42](https://github.com/SWOFART/OneShot/pull/42) `docs: correct Gate P4 verification status`                                               | Separates complete backend composition and Privy/Arc `LIVE_VERIFIED` evidence from the missing Graph MCP/model proof; overall P4 is `INCOMPLETE`.                                                    | Makes the P4/P6 status fail-closed and confirms that no Graph qualification claim is supported yet.                                                                                          |
+| [#43](https://github.com/SWOFART/OneShot/pull/43) `fix(settlement): close lane B review follow-ups`                                         | Aligns live-evidence wording with the disabled/unpublished Mainnet profile and adds settlement-UI credential, control-character, and contrast regression coverage.                                   | Strengthens B05/B06 and mainnet-readiness evidence; it does not change the Graph recovery gate.                                                                                              |
+| [#44](https://github.com/SWOFART/OneShot/pull/44) `fix: require recovery lookup config`                                                     | Removes placeholder Graph identities and requires explicit token, sender, block window, and MCP policy configuration; unavailable MCP/advisor ports remain the default.                              | Makes production recovery fail closed and ready for real configuration, but does not prove live MCP/model behavior or authorize hashless recovery.                                           |
+| [#45](https://github.com/SWOFART/OneShot/pull/45) `docs: update plan with Graph deployment status`                                          | Records the published deployment, duplicate registration, immutable CID, and the Explorer `NOT INDEXED` / no-allocation result, reconciling it with successful Studio queries.                       | Identifies the deployment while keeping decentralized indexing, live recovery, The Graph qualification, and P4 incomplete.                                                                   |
 | [#46](https://github.com/SWOFART/OneShot/pull/46) `feat(reconciliation): implement live Vertex AI recovery advisor and Subgraph MCP client` | Adds tested `VertexAiRecoveryAdvisor` and `LiveSubgraphMcpRecoveryPort` implementations, exports them from reconciliation, and proves explicit worker injection with settlement permission disabled. | Delivers the C02/C06 adapter implementation, but worker defaults remain unavailable ports; runtime admission, live Graph allocation/query evidence, and model-to-core proof remain required. |
-| [#48](https://github.com/SWOFART/OneShot/pull/48) `feat(graph): complete live Subgraph MCP recovery proof and qualify The Graph` | Deploys Subgraph v0.2.1, proves the live Studio-to-MCP-to-Vertex AI recovery path, and records Arc receipt verification with zero duplicate broadcasts. | Closes the live Graph recovery proof and Gate P4 (`PASS`); the default worker remains fail-closed and decentralized Explorer allocation is still not evidenced. |
+| [#48](https://github.com/SWOFART/OneShot/pull/48) `feat(graph): complete live Subgraph MCP recovery proof and qualify The Graph`            | Captures a synchronized Studio query through Subgraph MCP, one matching Arc transfer candidate, Gemini recovery advice, deterministic zero-submit disposition, and Arc verification.                 | Completes the technical Graph/AI integration evidence and Gate P4; the public two-to-four-minute submission video and final pool selection remain P6 gates.                                  |
 
 ### The Graph deployment status
 
@@ -33,19 +33,20 @@ Explorer metadata identifies the following public deployment:
 - Publication network: Arbitrum One; indexed data source: Arc Testnet (`eip155:5042002`).
 - Explorer status: `NOT INDEXED` / `SUBGRAPH NOT INDEXED`, with no indexers or
   allocations. The Explorer query pane currently reports `subgraph not found:
-  no allocations`.
+no allocations`.
 
-The earlier successful query evidence is Studio/development evidence, not proof
-that the decentralized Gateway deployment is serving queries without allocations.
-The current live Subgraph Studio deployment (`1758917/oneshot-arc-testnet/v0.2.1`)
-is active and synchronized, and serves Arc Testnet USDC candidate transfers through
-the Subgraph MCP recovery port (`execute_query_by_deployment_id`). Vertex AI Gemini
-2.5 Flash consumes this live trace to advise `RECONCILE`, confirmed on Arc RPC with
-zero duplicate payments (`settlementPermission: NEVER`). This supports a `QUALIFIED`
-The Graph AI Tooling claim under the event's Studio-accepted provider path; it does
-not upgrade the Explorer deployment to indexed or allocated status. Sanitized evidence
-is recorded in `evidence/c06/graph-proof.json` and
-`evidence/c06/sanitized-proof.json`, and Gate P4 is `PASS`.
+The decentralized Gateway deployment is not serving queries without an
+allocation. That does not invalidate the selected AI track: its official text
+explicitly accepts live Subgraph Studio data. The Studio deployment
+(`1758917/oneshot-arc-testnet/version/latest`) is active and synchronized and
+serves Arc Testnet USDC candidate transfers through the Subgraph MCP recovery
+port (`execute_query_by_deployment_id`). Vertex AI Gemini 2.5 Flash consumes
+this live trace to advise `RECONCILE`, confirmed on Arc RPC with zero duplicate
+payments (`settlementPermission: NEVER`). The technical Graph/AI integration
+checks pass, sanitized evidence is recorded in `evidence/c06/graph-proof.json`
+and `evidence/c06/sanitized-proof.json`, and Gate P4 is `PASS`. Final sponsor
+submission status remains `NOT VERIFIED` until the public two-to-four-minute
+demo video and Start Fresh pool selection are recorded.
 
 Open work after the current base is the Arc/Circle qualification slice described in
 section 5b. It is not implemented or sponsor-qualified merely because the plan names
@@ -94,13 +95,12 @@ Business Intent contract.
 
 ## Sponsor and product configuration
 
-The primary product configuration is **Privy + Arc + Circle Agent Stack + The Graph**:
+The primary product configuration is **Privy + Arc + The Graph**:
 
 - Privy authorizes and constrains the corporate wallet action.
-- Circle Agent Stack is the planned agent-facing Circle surface: a Circle Agent
-  Wallet with explicit spending controls, connected to Arc/USDC through Circle's
-  CLI and Skills. It is a bounded service-payment lane for the hackathon demo, not
-  a replacement for the corporate Privy wallet.
+- Circle-issued USDC is the settlement asset on Arc. Circle Agent Stack and
+  Circle Wallets are optional, separate integrations and are not part of the
+  current prize claim or canonical Privy-controlled settlement rail.
 - The Graph discovers candidate transfers when a successful submission lost its
   transaction hash or provider response. The production path reaches the live
   OneShot/Arc Subgraph through Subgraph MCP, not a direct application GraphQL client.
@@ -109,12 +109,11 @@ The primary product configuration is **Privy + Arc + Circle Agent Stack + The Gr
 - Arc verifies the candidate receipt and exact USDC `Transfer`.
 - OneShot and PostgreSQL alone decide the durable state transition.
 
-This is the final implementation direction for the current event window. The
-Graph is load-bearing for automatic hashless discovery, but never becomes
-settlement authority. Circle Agent Stack is load-bearing only for the planned
-agentic-economy demo lane; the canonical OneShot obligation, policy decision,
-durable state transition, and at-most-once settlement remain under OneShot,
-PostgreSQL, Privy, and verified Arc evidence.
+This is the final implementation direction. The Graph is load-bearing for
+automatic hashless discovery, but never becomes settlement authority. The live
+C06 evidence proves the data, freshness, and candidate-selection behavior; the
+remaining Graph gates are the checked-in live runtime bootstrap and submission
+packaging, not the captured indexing/query/AI behavior.
 
 The Graph submission targets the AI Tooling or AI Use Case track. One custom
 Subgraph does not satisfy the Composable/Standardized track. One live Subgraph
@@ -122,29 +121,176 @@ is sufficient for the selected AI track. The recovery agent uses live Graph data
 obtained through Subgraph MCP to choose and explain candidates; deterministic
 Arc checks and the OneShot state machine retain all financial authority.
 
-### Sponsor claim mapping
+### Official 2026 sponsor claim mapping
 
 Three partner slots. A partner with several tracks counts as one slot and the
 project is eligible for all of that partner's tracks. The submission text must
 name each claimed track explicitly.
 
-| Slot | Claimed track | Basis in this plan |
-| --- | --- | --- |
-| The Graph | AI Tooling or AI Use Case | Live OneShot/Arc Subgraph read through Subgraph MCP, with LLM candidate selection and explanation; verified on Arc RPC; `QUALIFIED` |
-| Privy | Best B2B financial product | Corporate execution wallet, scoped policy, and a real accounts-payable workflow |
-| Privy | Best financial flow | The committed USDC transfer is a completed financial flow through a Privy wallet action |
-| Arc | Launch on Arc Testnet & Push to Mainnet | Primary Arc claim: working testnet product plus the disabled Mainnet profile, deployment manifest, readiness probe, and rollback runbooks |
-| Arc | Best DeFi / Onchain Finance Application | Secondary Arc claim: conditional, multi-step USDC settlement on Arc with programmable authorization |
-| Arc | Best Agentic Economy Application with Circle Agent Stack | Planned Circle Agent Stack lane: an agent-controlled, capped Arc USDC service payment with a visible approval/denial path; `NOT VERIFIED` until Circle tools, live payment evidence, and the end-to-end intent trace exist |
+`QUALIFIED` means the repository contains the required working integration and
+demo evidence. `NOT VERIFIED` means the architecture is eligible but a required
+proof or submission artifact is still missing. `NOT QUALIFIED` means the current
+architecture does not implement a mandatory requirement.
+
+| Slot      | Intended track                                               | Current verdict | Basis and remaining gate                                                                                                                                                                                                                                                                               |
+| --------- | ------------------------------------------------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The Graph | Best AI Tooling or AI Use Case with The Graph (From Scratch) | `NOT VERIFIED`  | Live OneShot/Arc Subgraph data is queried through Subgraph MCP and materially used by the recovery agent, then verified on Arc. The public two-to-four-minute video and confirmed Start Fresh registration are still missing.                                                                          |
+| Privy     | Best B2B financial product                                   | `NOT VERIFIED`  | A Privy execution wallet, scoped policy, business payment workflow, denial drills, and live Arc transfer are recorded. The checked-in runtime still needs a concrete Privy provider and must make authorization mandatory in production before the source implements the demonstrated flow end to end. |
+| Privy     | Best financial flow                                          | `NOT VERIFIED`  | The recorded Privy wallet action completes a real USDC transfer, but the provider client/runtime wiring used for that action is not in the public source.                                                                                                                                              |
+| Arc       | Best DeFi/Onchain Finance Application                        | `NOT VERIFIED`  | Arc Testnet USDC and conditional multi-step settlement are live; backend, diagram, docs, public repo, and composed frontend exist. The concrete Privy provider/live runtime and required video/presentation are missing.                                                                               |
+| Arc       | Launch on Arc Testnet & Push to Mainnet                      | `NOT VERIFIED`  | The Arc Testnet integration and fail-closed deployment package exist, but the official requirement must be re-verified against the final Arc mainnet parameters and deployment-ready/deployed state by 2026-09-30; video/presentation is also missing.                                                 |
 
 Not claimed, and the reason:
 
 - **Composable or Standardized Graph Products.** One custom Subgraph does not
   compose two Graph products and does not build on a standardized schema. The
-  track text states this does not qualify.
-- **Hedera tracks.** No Hedera SDK, HTS, or x402/Blocky402 implementation is
-  in the current architecture. Adding Hedera would dilute the Arc/Circle demo
-  before the submission deadline, so it is explicitly out of scope for this plan.
+  track text states this does not qualify. Current verdict: `NOT QUALIFIED`.
+- **Best Agentic Economy Application with Circle Agent Stack.** Wallet
+  authorization and payment execution run through Privy, not the Circle Agent
+  Stack, and the calling agent executes an approved obligation rather than
+  making autonomous spending decisions. Claiming this track would misrepresent
+  the build. Current verdict: `NOT QUALIFIED`.
+
+### Circle stack, Arc, and wallet-provider relationship
+
+**Decision: yes.** Circle/Arc features can be integrated while Privy remains
+the primary embedded-wallet and authorization provider. The integration must
+preserve a real, load-bearing Privy wallet action; merely keeping Privy login
+while moving the judged financial flow to Circle Wallets is not sufficient.
+
+The names describe different layers and must not be used interchangeably:
+
+- **Circle's stack** is the umbrella portfolio: issued assets such as USDC and
+  EURC, Arc, Circle Wallets, App Kit, Agent Stack, CCTP, Gateway, StableFX, and
+  related contracts/services. It is not one SDK or one custody model.
+- **Arc** is Circle's EVM-compatible L1. It is the network on which OneShot
+  submits and verifies transactions; it does not dictate which wallet provider
+  owns or signs for an account.
+- **Circle Wallets** is Circle's separate wallet-as-a-service product with
+  developer-controlled, user-controlled, and modular wallet variants.
+- **"Arc Wallet"** is not a distinct required product in the prize text. Use it
+  only as a generic description of an EVM wallet configured for Arc, and name
+  the actual provider—Privy, Circle Wallets, or another provider—in technical
+  and submission documentation.
+
+Arc's [official account-abstraction documentation](https://docs.arc.io/arc/tools/account-abstraction)
+lists both Privy and Circle Wallets and explicitly says providers, paymasters,
+bundlers, and SDKs may be mixed. Arc [App Kit](https://docs.arc.io/app-kit) works
+with Viem, Ethers, Circle Wallets, and extensible adapters. Circle Wallets is
+therefore an option, not a prerequisite for an Arc prize.
+
+| Integration option                                                     | Compatible with Privy-first design?                  | Eligibility and implementation rule                                                                                                                                                                                                                                                                                                |
+| ---------------------------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Direct Arc EVM calls and USDC transfers signed by Privy                | Yes; recorded live, runtime incomplete               | Recommended core path. Privy remains source wallet, signer, policy/control, and request identity; Arc remains the settlement and verification rail. Live evidence exists, but the concrete Privy provider/runtime must be checked in before this is implementation-complete.                                                       |
+| Arc-native contracts or a OneShot settlement contract, signed by Privy | Yes                                                  | Preserve Privy policy restrictions over chain, contract, method, recipient, and amount. Prove a live Arc interaction and exact receipt/log binding before claiming it.                                                                                                                                                             |
+| Arc App Kit with a Privy-backed Viem/Ethers/EIP-1193 adapter           | Yes in principle; not implemented                    | App Kit supports custom wallet clients/adapters, but OneShot must spike the exact Privy-to-adapter signing path without exporting a private key. The Privy policy must still authorize every write and the live evidence must identify Privy as signer.                                                                            |
+| USDC/EURC swap, bridge, or Unified Balance flow through App Kit        | Yes in principle; not implemented                    | A strong optional Arc enhancement. Keep the Privy wallet as the initiating signer, preserve integer amounts/idempotency/`UNKNOWN` handling, and add live evidence. Do not claim it from dependencies or mocks.                                                                                                                     |
+| Circle Wallets alongside Privy                                         | Yes, only as a separate wallet/role                  | A Circle wallet can fund, receive, or perform a distinct secondary flow. It cannot be described as the same source wallet or the same signing boundary unless an explicitly reviewed delegation/account-abstraction design proves that relationship. The required OneShot settlement must remain a functional Privy wallet action. |
+| Replace the OneShot source wallet with Circle Wallets                  | No for the present Privy claims                      | This would remove Privy from the load-bearing financial flow and reduce it to login/branding. It would require a separate qualifying Privy workflow before either Privy track could still be claimed.                                                                                                                              |
+| Circle Agent Stack                                                     | Technically coexistence is possible; not implemented | Agent Stack's current first-party path uses Circle CLI and Circle Agent Wallets. A distinct Agent Stack demo could coexist with Privy, but it would add a second wallet/control plane. Do not claim the Agent Stack bounty until an end-to-end Agent Stack wallet/payment/onchain action is live.                                  |
+
+The official Privy prize text does not prohibit a second provider and does not
+require Privy to be the exclusive login service. The disqualifying architecture
+risk is functional, not contractual: if the judged payment uses Circle Wallets
+and Privy is only a login logo, Privy is no longer a core part of that flow.
+
+### Privy authentication and embedded-wallet position
+
+The live evidence uses a Privy embedded **execution wallet** plus a remote
+policy; the operator console itself uses OneShot bearer-token service
+authentication. The intended baseline names the Privy Node SDK, but
+`packages/privy-adapter` currently has no Privy SDK dependency or concrete
+Privy API client. `ArcSettlementAdapter` receives an abstract `WalletProvider`,
+and production `composeWorker` accepts an optional authorization port; when it
+is absent, `executeAuthorizeIntent` currently defaults to `AUTHORIZED`. That
+must be removed before the public source can prove the same fail-closed Privy
+flow shown in the recorded evidence.
+
+The build also does not currently implement `PrivyProvider`, login-created user
+wallets, social/email onboarding, or Privy custom auth.
+
+The missing user-auth features are not a 2026 bounty failure. Both official
+Privy tracks require Privy to be core, at least one Privy wallet, a functional
+business/financial flow, a working demo, source access, and—for B2B—one Privy
+control. They do **not** list custom auth or interactive user onboarding as
+mandatory. The live execution wallet and policy-constrained payment meet the
+wallet/control requirement, but the public-source and no-bypass requirements
+remain `NOT VERIFIED` until the concrete provider path is checked in.
+
+If user-facing onboarding is added, Privy must remain the primary identity and
+embedded-wallet layer for that surface: authenticate through Privy (built-in or
+custom JWT), create/pregenerate the user's Privy wallet, and delegate only a
+policy-scoped signer or quorum to the backend. Treat this as a product UX
+enhancement with its own live login/wallet proof, not as a prerequisite and not
+as evidence already delivered.
+
+### Bounty compliance checklist — The Graph
+
+Selected track: **Best AI Tooling or AI Use Case with The Graph (From Scratch)**.
+The repository's first commit is dated 2026-09-05, after the 2026-09-04 kickoff;
+the final ETHGlobal registration must also select Start Fresh and document any
+starter material.
+
+| Official requirement                                                            | Status           | OneShot evidence or action                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The Graph is load-bearing for the app/agent                                     | `PARTIAL`        | The live proof obtains candidate transfers before the agent recommends read-only reconciliation. The concrete client and service exist, but the production worker defaults to unavailable MCP/model ports and no checked-in runtime bootstrap enables the live pair. Add and demonstrate the fail-closed live configuration. |
+| Consume live Graph-provider data; no mock/local/static substitute               | `PASS`           | Synchronized Subgraph Studio `v0.2.1` query and `_meta.hasIndexingErrors: false` are captured in `evidence/c06/graph-proof.json`. Studio is explicitly accepted by the prize text; decentralized allocation is not a stated requirement for this track.                                                                      |
+| Index and query relevant blockchain data                                        | `PASS`           | `subgraph/subgraph.yaml`, `schema.graphql`, and `src/mapping.ts` index Arc Testnet USDC `Transfer` events into `UsdcTransfer` and `SettlementCandidate`; the live MCP query filters token, sender, recipient, amount, and block window.                                                                                      |
+| Do meaningful AI work with the data                                             | `PASS`           | The live candidate and health metadata are consumed by Gemini 2.5 Flash, which selects `RECONCILE` and explains the need for Arc verification; the deterministic core grants `settlementPermission: NEVER`.                                                                                                                  |
+| Open-source code with clear README/SKILL, public repo, two-to-four-minute video | `PARTIAL`        | Public repository and README exist. Record and link a two-to-four-minute public demo showing the MCP call, `_meta`, candidate, model decision, Arc proof, and zero duplicate submission.                                                                                                                                     |
+| Select the correct eligibility pool and document prior work                     | `PARTIAL`        | Git history supports Start Fresh. Confirm the ETHGlobal registration and explicitly state that project-specific work began after kickoff.                                                                                                                                                                                    |
+| Substreams single-prompt challenge                                              | `NOT APPLICABLE` | Not claimed; OneShot uses a Subgraph and Subgraph MCP.                                                                                                                                                                                                                                                                       |
+
+Overall submission verdict: `NOT VERIFIED` until all `PARTIAL` rows pass.
+
+### Bounty compliance checklist — Arc
+
+Primary selected track: **Best DeFi/Onchain Finance Application**. Secondary
+selected track: **Launch on Arc Testnet & Push to Mainnet**. App Kit and Circle
+Wallets appear in the product suggestions but are not universal qualification
+requirements; the plan must demonstrate effective Arc/USDC use rather than add
+unused Circle dependencies.
+
+| Official requirement or judging signal                                                              | Status               | OneShot evidence or action                                                                                                                                                                                                                                                             |
+| --------------------------------------------------------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Meaningful use of Arc and USDC                                                                      | `PASS`               | A real 1.000000 USDC transfer on Arc Testnet (`eip155:5042002`) is bound to the Privy request and recorded in `evidence/c06/sanitized-proof.json`.                                                                                                                                     |
+| Advanced programmable money flow                                                                    | `PASS`               | Durable intent, atomic submission ownership, Privy policy authorization, Arc receipt/log verification, and read-only recovery form a conditional multi-step settlement workflow.                                                                                                       |
+| Functional backend                                                                                  | `PARTIAL`            | API, worker, PostgreSQL authority, adapters, and reconciliation service are present, but the public source has no concrete Privy `WalletProvider` or production executable that wires it into `composeWorker`; production authorization is also optional. Check in and demo that path. |
+| Functional frontend                                                                                 | `PASS ON BRANCH`     | The composed React/Vite operator surfaces and Playwright suite are committed on this branch. They must still be included in the final reviewed source tree and demo.                                                                                                                   |
+| Architecture diagram                                                                                | `PASS`               | Public README and this plan contain end-to-end diagrams with Privy, Arc, The Graph, and OneShot authority boundaries.                                                                                                                                                                  |
+| Video demonstration and presentation showing effective Circle technology use                        | `MISSING`            | Record and link a concise demo that names the exact Arc track, shows the frontend and backend, executes/replays the Arc flow, and explains Arc/USDC plus Privy's signing role.                                                                                                         |
+| Detailed documentation and GitHub/Replit link                                                       | `PASS`               | Public repository, README, provider setup, live evidence, operations, safe-disable, and recovery documentation exist.                                                                                                                                                                  |
+| Clearly name the bounty in the submission                                                           | `MISSING`            | Submission must explicitly name each Arc track; repository intent alone is not proof.                                                                                                                                                                                                  |
+| Launch track: USDC/EURC or agentic payment added with Arc as core settlement                        | `PASS`               | OneShot is an agent/API payment control plane and Arc is the sole live settlement layer.                                                                                                                                                                                               |
+| Launch track: deployed or deployment-ready on Arc mainnet by 2026-09-30                             | `PARTIAL`            | `docs/MAINNET_READINESS.md`, disabled profile, probe, deployment manifest, safe-disable, and rollback exist. Re-check official mainnet parameters after launch, update the artifact, and record `DEPLOYMENT-READY` or `DEPLOYED` evidence by the deadline.                             |
+| Agent Stack track: use Agent Stack to connect agents to wallets, USDC payments, and onchain actions | `FAIL / NOT CLAIMED` | No Circle CLI, Circle Agent Wallet, Nanopayments, or other Agent Stack path exists. Privy's wallet path does not satisfy this separate requirement.                                                                                                                                    |
+
+Overall verdict: both selected Arc tracks are `NOT VERIFIED` until the missing
+submission artifacts are delivered; the Agent Stack track is `NOT QUALIFIED`.
+
+### Bounty compliance checklist — Privy
+
+Selected tracks: **Best B2B financial product** and **Best financial flow**.
+
+| Official requirement                                                           | Status                           | OneShot evidence or action                                                                                                                                                                                               |
+| ------------------------------------------------------------------------------ | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Privy is a core part of the product                                            | `PARTIAL`                        | The architecture and recorded live evidence make Privy the intended wallet/policy boundary. In source, `ArcSettlementAdapter` accepts a generic injected `WalletProvider`, and no concrete Privy provider is checked in. |
+| Create or use at least one Privy wallet                                        | `PASS`                           | Live execution wallet identity and transaction are captured in `evidence/c06/sanitized-proof.json`.                                                                                                                      |
+| Business or organization use case                                              | `PASS`                           | OneShot controls a corporate agent's approved B2B API/job payment and exposes operator policy/recovery views.                                                                                                            |
+| Functional B2B payment/approval/treasury/wallet workflow                       | `PARTIAL`                        | The allowlisted 1 USDC payment and two zero-broadcast denials are recorded, but the demonstrated provider path is not runnable from the checked-in source.                                                               |
+| Use a Privy control: policy, signer, key quorum, or intent                     | `PASS`                           | A scoped Privy policy constrains wallet, Arc network, USDC contract/method, recipient, and cap; live denial drills prove enforcement.                                                                                    |
+| Complete a functional financial flow using a generally available Privy feature | `PARTIAL`                        | The recorded Privy wallet action signs/broadcasts the Arc Testnet USDC transfer. Check in the concrete provider implementation and a repeatable testnet demo path; no guided/commercial-only feature is counted.         |
+| Working demo and source access                                                 | `PARTIAL`                        | Public source, a B06 record verifier, and sanitized live evidence exist, but the verifier validates a static capture rather than executing the Privy flow. Add the missing provider/runtime code and demonstrate it.     |
+| Explain how Privy enables the product and improves UX                          | `PASS`                           | README, architecture, provider setup, and sponsor evidence explain embedded key management, programmatic signing, policy denial, and hidden onchain complexity.                                                          |
+| Embedded wallet                                                                | `PASS`                           | The server execution wallet is a Privy embedded wallet. A login-created user wallet is not required by the selected tracks.                                                                                              |
+| User onboarding / Privy authentication                                         | `NOT REQUIRED / NOT IMPLEMENTED` | Current operator auth is an application bearer token. Add Privy login only if it improves the product; do not claim it from the wallet integration.                                                                      |
+| Custom auth                                                                    | `NOT REQUIRED / NOT IMPLEMENTED` | No official 2026 qualification row requires custom auth. If added, demonstrate verified-token login plus creation/use of the associated Privy wallet.                                                                    |
+
+Overall verdict for both selected Privy tracks: `NOT VERIFIED`. The live record
+strongly supports eligibility, but qualification remains blocked on a concrete
+Privy provider, mandatory production authorization, and a runnable public demo.
+After those pass, preserve the verdict by keeping the required settlement a
+Privy wallet action if any Circle wallet feature is added.
 
 ```mermaid
 flowchart LR
@@ -174,23 +320,19 @@ settlement contract; never weaken authorization to obtain a cleaner lookup.
 
 ## Product surfaces
 
-| Surface | User | Purpose |
-| --- | --- | --- |
-| Agent API and generated client | Autonomous agent or backend | Create/reuse a Business Intent and read its authoritative state |
-| Operator console | Company operator | Inspect attempts, policy decisions, settlement evidence, and recovery state |
-| Execution worker | OneShot service | Acquire submission ownership and execute the approved settlement |
-| Reconciliation service | Agent and operator | Resolve ambiguous outcomes without blindly paying again |
-| Audit and recovery timeline | Company and supplier | Explain what happened, which evidence is authoritative, and what action is safe |
-| Circle agent-service lane | Autonomous agent | Discover/pay a bounded Arc USDC service through Circle Agent Stack, while OneShot records the intent, cap decision, result, and evidence |
+| Surface                        | User                        | Purpose                                                                         |
+| ------------------------------ | --------------------------- | ------------------------------------------------------------------------------- |
+| Agent API and generated client | Autonomous agent or backend | Create/reuse a Business Intent and read its authoritative state                 |
+| Operator console               | Company operator            | Inspect attempts, policy decisions, settlement evidence, and recovery state     |
+| Execution worker               | OneShot service             | Acquire submission ownership and execute the approved settlement                |
+| Reconciliation service         | Agent and operator          | Resolve ambiguous outcomes without blindly paying again                         |
+| Audit and recovery timeline    | Company and supplier        | Explain what happened, which evidence is authoritative, and what action is safe |
 
 ```mermaid
 flowchart LR
     Company[Company operator] -->|wallet policy and limits| Privy[Privy]
     Agent[Autonomous agent] -->|stable business intent| API[OneShot API]
     Agent -.->|requests paid work| SupplierAPI[Paid API or digital supplier]
-    Agent -->|agent-service profile| CircleStack[Circle Agent Stack]
-    CircleStack --> CircleWallet[Circle Agent Wallet with spend caps]
-    CircleWallet -->|bounded USDC service payment| Arc
     API --> Core[OneShot domain]
     Core --> DB[(PostgreSQL authority)]
     DB --> Worker[Execution worker]
@@ -210,9 +352,9 @@ flowchart LR
 
 OneShot controls payment cardinality. It does not guarantee the quality or
 delivery of the supplier's API result; that remains a separate commercial
-contract. The Circle lane is a provider-specific implementation behind the
-same intent and evidence boundary: one intent chooses either the canonical
-Privy rail or the explicitly scoped Circle service-payment rail, never both.
+contract. This diagram shows the current qualifying path. A future Circle Agent
+Wallet would be a separate payment rail and must not be shown as implemented or
+claimed until the reconsideration checklist in section 5b passes.
 
 ## Production roadmap model
 
@@ -227,7 +369,7 @@ Privy rail or the explicitly scoped Circle service-payment rail, never both.
 
 ## 1. Mission and v1 release
 
-Deliver a working application that accepts one approved Business Intent, survives retries, crashes, duplicate delivery, parallel workers, and ambiguous provider responses, and produces at most one committed USDC settlement on Arc Testnet through a Privy-controlled corporate wallet. The submission extension adds one bounded Circle Agent Stack service-payment lane for an agentic-economy demo; each demo intent selects exactly one payment rail and cannot double-charge. The same build must include a fail-closed Arc Mainnet profile, deployment and rollback procedure, and readiness evidence so official mainnet values can be enabled without redesigning the domain. Known-identity recovery uses OneShot, Privy, and direct Arc evidence; hashless automatic recovery uses The Graph for candidate discovery.
+Deliver a working application that accepts one approved Business Intent, survives retries, crashes, duplicate delivery, parallel workers, and ambiguous provider responses, and produces at most one committed USDC settlement on Arc Testnet through a Privy-controlled corporate wallet. The same build must include a fail-closed Arc Mainnet profile, deployment and rollback procedure, and readiness evidence so official mainnet values can be enabled without redesigning the domain. Known-identity recovery uses OneShot, Privy, and direct Arc evidence; hashless automatic recovery uses The Graph for candidate discovery.
 
 The release claim is:
 
@@ -314,23 +456,23 @@ activate real-value execution.
 
 ## 5. Fixed technical baseline
 
-| Area | Technology and decision |
-| --- | --- |
-| Runtime | Current active Node.js LTS, pinned by A01, with strict TypeScript |
-| Workspace | `pnpm` monorepo with package-local lint, type, test, and build commands |
-| API and contracts | Fastify HTTP JSON API, JSON Schema, OpenAPI source of truth, and generated-client/schema drift checks |
-| Authoritative state | PostgreSQL, explicit SQL migrations, `pg`, uniqueness constraints, compare-and-set transitions, and transactional outbox records |
-| Work delivery | Graphile Worker over the same PostgreSQL database; at-least-once delivery is assumed |
-| EVM encoding and RPC | `viem` for typed addresses, calldata, chain access, receipt reads, and log verification |
-| Authorization | Privy Node SDK for the corporate execution wallet, scoped wallet policy, persisted idempotency key, and reference identity; Circle Agent Stack is a separate, capped agent-facing lane and cannot bypass the OneShot intent/policy core |
-| Settlement profiles | Arc Testnet `eip155:5042002` and its official USDC interface are the only enabled live profile; the Arc Mainnet profile contains no guessed network values and remains disabled until official parameters are published, pinned, verified, and human-approved |
-| Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; the immutable deployment above is the selected v1 Subgraph MCP target. The LLM Recovery Agent emits only four advisory actions. C01's Studio/MCP lost-hash, freshness, degradation, and AI-track evidence is complete; production remains opt-in and fail-closed on `FALLBACK_DIRECT_RECOVERY` until runtime admission is explicitly configured |
-| Money | Canonical integer strings at JSON boundaries and `bigint` internally; no JavaScript monetary floats |
-| Frontend | React and Vite, generated OpenAPI client, exact integer amount formatting, and no direct settlement capability |
-| Testing | Vitest for unit/contract tests, Testcontainers for PostgreSQL integration, Playwright for browser flows, deterministic failure simulators, and Graph adapter/degradation tests |
-| Local and CI | Docker Compose for reproducible local services and GitHub Actions for install, lint, type, test, build, migration, contract, and policy checks |
-| Submission jobs | One queue attempt; the task persists `COMMITTED`, `FAILED_SAFE`, or `UNKNOWN` before returning |
-| Recovery authority | PostgreSQL state and verified Arc evidence are authoritative; Privy may locate the original request; Subgraph MCP supplies freshness-labeled Graph candidates to the LLM; the deterministic core constrains every recommendation and neither MCP nor the model grants settlement permission |
+| Area                               | Technology and decision                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime                            | Current active Node.js LTS, pinned by A01, with strict TypeScript                                                                                                                                                                                                                                                                                                                                 |
+| Workspace                          | `pnpm` monorepo with package-local lint, type, test, and build commands                                                                                                                                                                                                                                                                                                                           |
+| API and contracts                  | Fastify HTTP JSON API, JSON Schema, OpenAPI source of truth, and generated-client/schema drift checks                                                                                                                                                                                                                                                                                             |
+| Authoritative state                | PostgreSQL, explicit SQL migrations, `pg`, uniqueness constraints, compare-and-set transitions, and transactional outbox records                                                                                                                                                                                                                                                                  |
+| Work delivery                      | Graphile Worker over the same PostgreSQL database; at-least-once delivery is assumed                                                                                                                                                                                                                                                                                                              |
+| EVM encoding and RPC               | `viem` for typed addresses, calldata, chain access, receipt reads, and log verification                                                                                                                                                                                                                                                                                                           |
+| Authorization                      | Concrete Privy server-wallet client using the official Node SDK/API, execution wallet, scoped wallet policy, persisted idempotency key, and reference identity. The concrete client and production bootstrap remain to be checked in.                                                                                                                                                             |
+| Settlement profiles                | Arc Testnet `eip155:5042002` and its official USDC interface are the only enabled live profile; the Arc Mainnet profile contains no guessed network values and remains disabled until official parameters are published, pinned, verified, and human-approved                                                                                                                                     |
+| Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; the immutable Studio deployment above is the selected v1 target. Live C06 evidence proves the lost-hash flow, freshness, degradation behavior, and AI-track fit. Production still defaults to unavailable MCP/model ports until an explicit, fail-closed live bootstrap is checked in; Graph Network allocation is optional for the selected official track. |
+| Money                              | Canonical integer strings at JSON boundaries and `bigint` internally; no JavaScript monetary floats                                                                                                                                                                                                                                                                                               |
+| Frontend                           | React and Vite, generated OpenAPI client, exact integer amount formatting, and no direct settlement capability                                                                                                                                                                                                                                                                                    |
+| Testing                            | Vitest for unit/contract tests, Testcontainers for PostgreSQL integration, Playwright for browser flows, deterministic failure simulators, and Graph adapter/degradation tests                                                                                                                                                                                                                    |
+| Local and CI                       | Docker Compose for reproducible local services and GitHub Actions for install, lint, type, test, build, migration, contract, and policy checks                                                                                                                                                                                                                                                    |
+| Submission jobs                    | One queue attempt; the task persists `COMMITTED`, `FAILED_SAFE`, or `UNKNOWN` before returning                                                                                                                                                                                                                                                                                                    |
+| Recovery authority                 | PostgreSQL state and verified Arc evidence are authoritative; Privy may locate the original request; Subgraph MCP supplies freshness-labeled Graph candidates to the LLM; the deterministic core constrains every recommendation and neither MCP nor the model grants settlement permission                                                                                                       |
 
 Exact dependency versions are pinned only after A01/B01 compatibility spikes.
 The exact v1 contracts, state table, fixture catalog, redaction rules, and change
@@ -340,34 +482,35 @@ protocol are frozen in [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md).
 
 Arc has distinct prize mechanics. The submission can select up to three partner
 prize slots, while multiple tracks from one partner count as one slot. The plan
-therefore treats Arc as one partner slot with three possible claims, and keeps
-each claim `NOT VERIFIED` until its own live evidence exists.
+therefore treats Arc as one partner slot with two intended claims. The Agent
+Stack track is recorded separately as unclaimed because its mandatory Circle
+Agent Stack integration is not implemented.
 
-| Arc track | What the judges must see | Current position | Required proof before claiming |
-| --- | --- | --- | --- |
-| Launch on Arc Testnet & Push to Mainnet | Working Arc integration, real USDC/EURC settlement or escrow flow, public repo/docs/video, and a mainnet-ready path by 30 September | Arc/Privy Testnet flow and fail-closed Mainnet profile exist; Circle evidence is pending | Repeatable Arc Testnet transaction, readiness/rollback artifact, 2-4 minute demo, and explicit mainnet-disable evidence |
-| Best DeFi / Onchain Finance Application | Meaningful Arc/USDC programmable money flow such as conditional, automated, or multi-step settlement; Circle developer tooling where relevant | The conditional OneShot settlement is implemented; Circle surface is pending | Circle tool appears in the architecture and live demo, with an Arc receipt, policy outcome, and one-intent/one-settlement trace |
-| Best Agentic Economy Application with Circle Agent Stack | An autonomous agent holds/uses a wallet, makes an agent payment or pays a service, manages risk, and uses Agent Stack to connect to wallets/USDC/onchain actions | `NOT VERIFIED`; no Circle package, wallet, or live Agent Stack trace is in the current base | Circle Agent Stack + Agent Wallet/Skills, spend-cap enforcement, a real Arc testnet paid request or onchain action, and sanitized intent-to-receipt evidence |
+| Arc track                                                | What the judges must see                                                                                                                                         | Current position                                                                                                                 | Required proof before claiming                                                                                                                                                           |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Launch on Arc Testnet & Push to Mainnet                  | Working Arc integration, real USDC/EURC settlement or escrow flow, public repo/docs/video, and a mainnet-ready path by 30 September                              | `NOT VERIFIED`; Arc/Privy Testnet flow and a fail-closed Mainnet profile exist                                                   | Repeatable Arc Testnet transaction, readiness/rollback artifact, 2-4 minute demo, explicit mainnet-disable evidence, and final official mainnet-parameter verification                   |
+| Best DeFi / Onchain Finance Application                  | Meaningful Arc/USDC programmable money flow such as conditional, automated, or multi-step settlement                                                             | `NOT VERIFIED`; the conditional OneShot settlement is implemented                                                                | Concrete Privy provider/runtime wiring, Arc receipt, policy outcome, one-intent/one-settlement trace, architecture/docs, and the required video/presentation                             |
+| Best Agentic Economy Application with Circle Agent Stack | An autonomous agent holds/uses a wallet, makes an agent payment or pays a service, manages risk, and uses Agent Stack to connect to wallets/USDC/onchain actions | `NOT QUALIFIED`; no Circle package, Agent Wallet, or live Agent Stack trace is in the current base, so this track is not claimed | Only reconsider after Circle Agent Stack + Agent Wallet/Skills, spend-cap enforcement, a real Arc testnet paid request or onchain action, and sanitized intent-to-receipt evidence exist |
 
 The shared submission artifacts remain:
 
-| Arc requirement | Satisfied by | Owner | Artifact |
-| --- | --- | --- | --- |
-| Working backend | API, worker, PostgreSQL authority, Privy and Arc adapters | A/B | Gate P4 composition |
-| Working frontend | A05, B05, C05 slices on React and Vite against the frozen OpenAPI | A/B/C | Gate P5 |
-| Architecture diagram | Diagrams exported from this plan into the public repository README | A | `README.md` |
-| Video demonstration and presentation | Scripted demo covering the invariant and Circle tool usage | B | Submission video, 2-4 minutes |
-| Detailed documentation | README, setup guide, operator and recovery runbooks | A/B | Public repository |
-| Public repository link | Public GitHub repository, secret-scanned history | A | Repository URL |
-| Explicit bounty naming | Submission text names each claimed Arc track and identifies Circle Agent Stack where used | B | Submission form |
-| Mainnet deployment-readiness by 30 September | Disabled Mainnet profile, deployment manifest, readiness probe, rollback runbook | A/B | `MAINNET_READINESS.md` in the public repository |
+| Arc requirement                              | Satisfied by                                                                                                                              | Owner | Artifact                                                      |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------- |
+| Working backend                              | API, worker, PostgreSQL authority, Privy and Arc adapters, concrete Privy provider, and production bootstrap with mandatory authorization | A/B   | Gate P4 package composition plus P6 runnable live composition |
+| Working frontend                             | A05, B05, C05 slices on React and Vite against the frozen OpenAPI                                                                         | A/B/C | Gate P5                                                       |
+| Architecture diagram                         | Diagrams exported from this plan into the public repository README                                                                        | A     | `README.md`                                                   |
+| Video demonstration and presentation         | Scripted demo covering the invariant, Privy authorization, and Arc USDC flow                                                              | B     | Submission video, 2-4 minutes                                 |
+| Detailed documentation                       | README, setup guide, operator and recovery runbooks                                                                                       | A/B   | Public repository                                             |
+| Public repository link                       | Public GitHub repository, secret-scanned history                                                                                          | A     | Repository URL                                                |
+| Explicit bounty naming                       | Submission text names both claimed Arc tracks                                                                                             | B     | Submission form                                               |
+| Mainnet deployment-readiness by 30 September | Disabled Mainnet profile, deployment manifest, readiness probe, rollback runbook                                                          | A/B   | `MAINNET_READINESS.md` in the public repository               |
 
 ETHOnline's current submission mechanics add a hard packaging constraint:
 submit by 13 September 2026 at 12:00 PM EDT, select no more than three partner
 prize slots, and keep the demo/presentation within 2-4 minutes. Arc is one
-partner slot even when multiple Arc tracks are claimed. The Circle Agent Stack
-walkthrough therefore gets one short, end-to-end segment rather than separate
-product tours.
+partner slot even when multiple Arc tracks are claimed. Do not spend submission
+time on Circle Agent Stack unless that separate integration becomes real and the
+claim mapping is re-audited.
 
 ### Minimum Arc-qualifying frontend
 
@@ -393,11 +536,12 @@ evidence, so frontend work can start while B is still obtaining live proof.
 Gate P4 remains the composition and live-proof gate. This rule changes only when
 the contract is published, never what P4 must prove.
 
-### Circle developer-tool surface
+### Optional future Circle Agent Stack surface
 
-The primary Circle implementation is **Circle Agent Stack**, using the Circle
-CLI and Skills to provision/use an Agent Wallet with explicit spending controls.
-The demo should use a live Arc Testnet-compatible Circle path for one of these
+This is a contingency plan, not part of the current sponsor claim. A future
+Circle Agent Stack integration would use the Circle CLI and Skills to
+provision/use an Agent Wallet with explicit spending controls. It would need a
+live Arc Testnet-compatible Circle path for one of these
 meaningful actions:
 
 1. discover and pay a paid API/service request (x402 or another documented
@@ -405,11 +549,12 @@ meaningful actions:
 2. execute a bounded USDC action on Arc that is visible in the agent trace and
    verifiable on-chain.
 
-The first option is preferred because it makes the agentic-economy value obvious:
+The first option would make the agentic-economy value obvious:
 the agent chooses a service, presents the payment/approval decision, pays within
 its cap, receives the result, and OneShot records the obligation and outcome.
 Circle Agent Stack must be visible in code/configuration, the architecture
-diagram, and the 2-4 minute video; a README-only reference or logo does not count.
+diagram, and the 2-4 minute video before that track is claimed; a README-only
+reference or logo does not count.
 
 The authorization boundary is explicit. Privy remains the corporate wallet and
 the canonical OneShot settlement rail. The Circle Agent Wallet may execute only
@@ -425,9 +570,10 @@ not default scope: each requires a concrete user-facing Arc use case, a tested
 adapter, and live evidence. No Circle product is added solely to widen the logo
 surface.
 
-### Circle acceptance checklist
+### Circle Agent Stack reconsideration checklist
 
-The Circle/Arc slice is `NOT VERIFIED` until all of the following are recorded:
+The Agent Stack track remains `NOT QUALIFIED` and unclaimed until all of the
+following are recorded and the Privy prize impact is re-audited:
 
 - Circle Agent Stack setup is reproducible from the public repository without
   committing credentials; secrets remain in approved ignored/CI stores.
@@ -568,8 +714,8 @@ Owns:
 - `packages/testkit-settlement`
 - Privy policy and official-response fixtures
 - Arc network, transaction, and receipt validation
-- Circle Agent Stack/Agent Wallet compatibility spike, provider-neutral agent
-  payment port, spend-cap/denial fixtures, and sanitized Arc evidence
+- optional Circle Agent Stack/Agent Wallet compatibility spike only after the
+  current Privy + Arc + The Graph submission path is complete
 - human-run provider setup documentation
 
 Coder B never changes domain tables or state meanings directly.
@@ -642,15 +788,15 @@ The three lanes run in parallel. Phase order expresses dependency and product
 readiness only. A lane may begin its next packet as soon as its own acceptance
 contract passes.
 
-| Phase | Entry condition | Coder A | Coder B | Coder C | Exit evidence |
-| --- | --- | --- | --- | --- | --- |
-| R0 — product and contract freeze | Product vertical selected | Confirm domain/API contract | Confirm provider/chain contract | Confirm recovery/evidence contract | P0 approved scope and immutable v1 pack |
-| R1 — independent foundations | P0 | A01 | B01 | C01 | P1 runnable toolchains and recorded compatibility findings |
-| R2 — durable core and adapters | Own R1 packet | A02 | B02 | C02 | P2 compatible contract packs and simulators |
-| R3 — safety under failure | Own R2 packet | A03 | B03 | C03 | P3 concurrency, ambiguity, and failure proofs |
-| R4 — backend convergence | A03/B03/C03 artifacts available | A04 and composition owner | B04 and live settlement evidence | C04 and live recovery evidence | P4 integrated backend, one real settlement, lost-response recovery |
-| R5 — product interface | P4 | A05 application shell | B05 policy/settlement slice | C05 recovery/history slice | P5 composed operator experience |
-| R6 — hardening and release | P5 | A06 operations/mainnet-readiness bundle | B06 Privy/Arc/Circle evidence and network profiles | C06 Graph discovery/recovery evidence | P6 repeatable testnet release plus mainnet-readiness candidate |
+| Phase                            | Entry condition                 | Coder A                                 | Coder B                                     | Coder C                               | Exit evidence                                                      |
+| -------------------------------- | ------------------------------- | --------------------------------------- | ------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------ |
+| R0 — product and contract freeze | Product vertical selected       | Confirm domain/API contract             | Confirm provider/chain contract             | Confirm recovery/evidence contract    | P0 approved scope and immutable v1 pack                            |
+| R1 — independent foundations     | P0                              | A01                                     | B01                                         | C01                                   | P1 runnable toolchains and recorded compatibility findings         |
+| R2 — durable core and adapters   | Own R1 packet                   | A02                                     | B02                                         | C02                                   | P2 compatible contract packs and simulators                        |
+| R3 — safety under failure        | Own R2 packet                   | A03                                     | B03                                         | C03                                   | P3 concurrency, ambiguity, and failure proofs                      |
+| R4 — backend convergence         | A03/B03/C03 artifacts available | A04 and composition owner               | B04 and live settlement evidence            | C04 and live recovery evidence        | P4 integrated backend, one real settlement, lost-response recovery |
+| R5 — product interface           | P4                              | A05 application shell                   | B05 policy/settlement slice                 | C05 recovery/history slice            | P5 composed operator experience                                    |
+| R6 — hardening and release       | P5                              | A06 operations/mainnet-readiness bundle | B06 Privy/Arc evidence and network profiles | C06 Graph discovery/recovery evidence | P6 repeatable testnet release plus mainnet-readiness candidate     |
 
 Provider access, SDK incompatibility, or failed integration evidence opens an
 owner-specific compatibility task. It never weakens the safety invariant or
@@ -658,26 +804,26 @@ silently changes a contract.
 
 ## 10. Work-packet inventory
 
-| ID | Owner | Own-track prerequisite | Independently verifiable output |
-| --- | --- | --- | --- |
-| [A01](milestones/coder-a/A01-foundation-contracts.md) | A | Frozen contract pack | Workspace, contracts package, OpenAPI, domain simulator |
-| [A02](milestones/coder-a/A02-durable-intents.md) | A | A01 | PostgreSQL intent/replay/conflict API |
-| [A03](milestones/coder-a/A03-atomic-worker.md) | A | A02 | Atomic worker and at-most-once fake-port proof |
-| [A04](milestones/coder-a/A04-restart-operations-composition.md) | A | A03 | Restart-safe orchestration and simulator composition |
-| [A05](milestones/coder-a/A05-frontend-intent-status.md) | A | A04 + project Gate P4 | Intent/status frontend slice against mock server |
-| [A06](milestones/coder-a/A06-release-operations.md) | A | A05 | Operational demo and release bundle |
-| [B01](milestones/coder-b/B01-sdk-network-compatibility.md) | B | Frozen contract pack | SDK/network compatibility and readiness package |
-| [B02](milestones/coder-b/B02-request-policy-receipt.md) | B | B01 | Canonical request, policy, and receipt verifier |
-| [B03](milestones/coder-b/B03-live-settlement-harness.md) | B | B02 | Offline-complete plus live-ready settlement harness |
-| [B04](milestones/coder-b/B04-ambiguity-integration.md) | B | B03 | Conservative outcomes and production adapter pack |
-| [B05](milestones/coder-b/B05-frontend-settlement-details.md) | B | B04 + project Gate P4 | Authorization/settlement UI slice against fixtures |
-| [B06](milestones/coder-b/B06-sponsor-evidence.md) | B | B05 | Privy/Arc sanitized evidence bundle |
-| [C01](milestones/coder-c/C01-recovery-evidence-strategy.md) | C | Frozen contract pack | Recovery evidence contract and live Subgraph MCP value decision |
-| [C02](milestones/coder-c/C02-reconciliation-engine.md) | C | C01 | LLM recommendations plus deterministic reconciliation contract |
-| [C03](milestones/coder-c/C03-failure-injection.md) | C | C02 | Cross-source chaos and restart harness |
-| [C04](milestones/coder-c/C04-recovery-matrix-integration.md) | C | C03 | Recovery matrix and simulator integration pack |
-| [C05](milestones/coder-c/C05-frontend-recovery.md) | C | C04 + project Gate P4 | Recovery timeline UI slice against fixtures |
-| [C06](milestones/coder-c/C06-qualification-demo.md) | C | C05 | Recovery and conditional-index qualification bundle |
+| ID                                                              | Owner | Own-track prerequisite | Independently verifiable output                                 |
+| --------------------------------------------------------------- | ----- | ---------------------- | --------------------------------------------------------------- |
+| [A01](milestones/coder-a/A01-foundation-contracts.md)           | A     | Frozen contract pack   | Workspace, contracts package, OpenAPI, domain simulator         |
+| [A02](milestones/coder-a/A02-durable-intents.md)                | A     | A01                    | PostgreSQL intent/replay/conflict API                           |
+| [A03](milestones/coder-a/A03-atomic-worker.md)                  | A     | A02                    | Atomic worker and at-most-once fake-port proof                  |
+| [A04](milestones/coder-a/A04-restart-operations-composition.md) | A     | A03                    | Restart-safe orchestration and simulator composition            |
+| [A05](milestones/coder-a/A05-frontend-intent-status.md)         | A     | A04 + project Gate P4  | Intent/status frontend slice against mock server                |
+| [A06](milestones/coder-a/A06-release-operations.md)             | A     | A05                    | Operational demo and release bundle                             |
+| [B01](milestones/coder-b/B01-sdk-network-compatibility.md)      | B     | Frozen contract pack   | SDK/network compatibility and readiness package                 |
+| [B02](milestones/coder-b/B02-request-policy-receipt.md)         | B     | B01                    | Canonical request, policy, and receipt verifier                 |
+| [B03](milestones/coder-b/B03-live-settlement-harness.md)        | B     | B02                    | Offline-complete plus live-ready settlement harness             |
+| [B04](milestones/coder-b/B04-ambiguity-integration.md)          | B     | B03                    | Conservative outcomes and production adapter pack               |
+| [B05](milestones/coder-b/B05-frontend-settlement-details.md)    | B     | B04 + project Gate P4  | Authorization/settlement UI slice against fixtures              |
+| [B06](milestones/coder-b/B06-sponsor-evidence.md)               | B     | B05                    | Privy/Arc sanitized evidence bundle                             |
+| [C01](milestones/coder-c/C01-recovery-evidence-strategy.md)     | C     | Frozen contract pack   | Recovery evidence contract and live Subgraph MCP value decision |
+| [C02](milestones/coder-c/C02-reconciliation-engine.md)          | C     | C01                    | LLM recommendations plus deterministic reconciliation contract  |
+| [C03](milestones/coder-c/C03-failure-injection.md)              | C     | C02                    | Cross-source chaos and restart harness                          |
+| [C04](milestones/coder-c/C04-recovery-matrix-integration.md)    | C     | C03                    | Recovery matrix and simulator integration pack                  |
+| [C05](milestones/coder-c/C05-frontend-recovery.md)              | C     | C04 + project Gate P4  | Recovery timeline UI slice against fixtures                     |
+| [C06](milestones/coder-c/C06-qualification-demo.md)             | C     | C05                    | Recovery and conditional-index qualification bundle             |
 
 Each packet contains smaller, one-commit-sized tasks, exact acceptance criteria, tests, output artifacts, and a no-wait continuation instruction.
 
@@ -767,21 +913,21 @@ This is the frontend unlock gate.
 
 ## 13. Test ownership
 
-| Required case | Producer | Independent local proof | Project-gate proof |
-| --- | --- | --- | --- |
-| Normal job | A | Domain fake settlement counter | P4 real adapter |
-| Same request twice | A | HTTP + PostgreSQL | P4 composed worker |
-| Conflicting payload, same ID | A | HTTP + PostgreSQL | P4 recovery view |
-| 10 sequential retries | A | Worker + fake port | P4 adapter call count |
-| 10 parallel workers | A | Real PostgreSQL concurrency | P4 composed worker |
-| Crash before submission | A | Worker kill point | P4 zero external settlement |
-| Crash after possible submission | B | Adapter fault fixture | P4 durable `UNKNOWN` |
-| Lost payment response | B | Proxy/fixture | P4 original transaction reconciled |
-| Graph/MCP delay, absence, malformed data, multiple candidates, or invalid LLM output | C | Provider-neutral MCP/agent simulator | P4 remain `UNKNOWN`; no submission grant |
-| Privy denial/above cap | B | Policy fixture/live-ready harness | P4 zero settlement |
-| Service restart | A | Process orchestration | P4 evidence durability |
-| Downstream failure after payment | A | Supplier fake | P4 original receipt retained |
-| Two agent instances | A | Two processes + fake counter | P4 single settlement history |
+| Required case                                                                        | Producer | Independent local proof              | Project-gate proof                       |
+| ------------------------------------------------------------------------------------ | -------- | ------------------------------------ | ---------------------------------------- |
+| Normal job                                                                           | A        | Domain fake settlement counter       | P4 real adapter                          |
+| Same request twice                                                                   | A        | HTTP + PostgreSQL                    | P4 composed worker                       |
+| Conflicting payload, same ID                                                         | A        | HTTP + PostgreSQL                    | P4 recovery view                         |
+| 10 sequential retries                                                                | A        | Worker + fake port                   | P4 adapter call count                    |
+| 10 parallel workers                                                                  | A        | Real PostgreSQL concurrency          | P4 composed worker                       |
+| Crash before submission                                                              | A        | Worker kill point                    | P4 zero external settlement              |
+| Crash after possible submission                                                      | B        | Adapter fault fixture                | P4 durable `UNKNOWN`                     |
+| Lost payment response                                                                | B        | Proxy/fixture                        | P4 original transaction reconciled       |
+| Graph/MCP delay, absence, malformed data, multiple candidates, or invalid LLM output | C        | Provider-neutral MCP/agent simulator | P4 remain `UNKNOWN`; no submission grant |
+| Privy denial/above cap                                                               | B        | Policy fixture/live-ready harness    | P4 zero settlement                       |
+| Service restart                                                                      | A        | Process orchestration                | P4 evidence durability                   |
+| Downstream failure after payment                                                     | A        | Supplier fake                        | P4 original receipt retained             |
+| Two agent instances                                                                  | A        | Two processes + fake counter         | P4 single settlement history             |
 
 ## 14. Frontend-last rule
 
@@ -824,24 +970,24 @@ Coder B produces a repeatable setup guide or wizard, while Coder C documents Gra
 
 ## 18. Risk controls
 
-| Risk | Fail-closed mitigation | Owner |
-| --- | --- | --- |
-| Privy idempotency expires | PostgreSQL uniqueness remains authoritative; reuse stored key/body only as supplemental guard | A/B |
-| SDK or policy syntax changes | B01 pins after compatibility proof; readiness validates policy identity and network | B |
-| ERC-20/native precision confusion | Six-decimal ERC-20 is the only settlement amount; native balance is gas only | B/C |
-| Lost response after broadcast | Persist identity first, enter `UNKNOWN`, reconcile, forbid another payment | All |
-| Pending/evicted Arc transaction | Hold `UNKNOWN`; no automatic replacement in v1 | B/C |
-| Graph/MCP lag, error, empty/malformed/multiple result | Surface provenance, freshness, and candidate ambiguity; never infer non-payment | C |
-| Prompt injection or unsupported LLM action | Treat tool content as untrusted data; validate the four-action structured output and fail closed | C |
-| Queue redelivery | Domain CAS/constraints plus single-attempt submission task | A |
-| Shared-file conflicts | Exclusive path ownership and A-only root composition | A |
-| Credentials unavailable | Offline contract packs and simulators remain sufficient for packet closure | B |
-| Scope pressure | Cut webhooks, rolling policy support, visual polish, and optional telemetry before safety | All |
-| P4 slips and the frontend never ships | Publish the OpenAPI freeze early so frontend slices start against the mock; cut to the four minimum screens rather than dropping the interface | A |
-| Arc network constants wrong or changed | B01 verifies chain, RPC, explorer, and USDC identities against official Arc docs before pinning; readiness probe re-checks them | B |
-| Arc mainnet launches 16 September, after submission | Ship deployment-readiness evidence in `MAINNET_READINESS.md`; optional post-launch deployment changes only the status line | A/B |
-| Readiness evidence not reachable after the event | Keep the reviewer-facing artifact in the public repository, not only in the submission form | A |
-| Thin Circle tool surface questioned | Record the deliberate decision in section 5b and defend it in the submission rather than adding unused Circle products | B |
+| Risk                                                  | Fail-closed mitigation                                                                                                                         | Owner |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| Privy idempotency expires                             | PostgreSQL uniqueness remains authoritative; reuse stored key/body only as supplemental guard                                                  | A/B   |
+| SDK or policy syntax changes                          | B01 pins after compatibility proof; readiness validates policy identity and network                                                            | B     |
+| ERC-20/native precision confusion                     | Six-decimal ERC-20 is the only settlement amount; native balance is gas only                                                                   | B/C   |
+| Lost response after broadcast                         | Persist identity first, enter `UNKNOWN`, reconcile, forbid another payment                                                                     | All   |
+| Pending/evicted Arc transaction                       | Hold `UNKNOWN`; no automatic replacement in v1                                                                                                 | B/C   |
+| Graph/MCP lag, error, empty/malformed/multiple result | Surface provenance, freshness, and candidate ambiguity; never infer non-payment                                                                | C     |
+| Prompt injection or unsupported LLM action            | Treat tool content as untrusted data; validate the four-action structured output and fail closed                                               | C     |
+| Queue redelivery                                      | Domain CAS/constraints plus single-attempt submission task                                                                                     | A     |
+| Shared-file conflicts                                 | Exclusive path ownership and A-only root composition                                                                                           | A     |
+| Credentials unavailable                               | Offline contract packs and simulators remain sufficient for packet closure                                                                     | B     |
+| Scope pressure                                        | Cut webhooks, rolling policy support, visual polish, and optional telemetry before safety                                                      | All   |
+| P4 slips and the frontend never ships                 | Publish the OpenAPI freeze early so frontend slices start against the mock; cut to the four minimum screens rather than dropping the interface | A     |
+| Arc network constants wrong or changed                | B01 verifies chain, RPC, explorer, and USDC identities against official Arc docs before pinning; readiness probe re-checks them                | B     |
+| Arc mainnet launches 16 September, after submission   | Ship deployment-readiness evidence in `MAINNET_READINESS.md`; optional post-launch deployment changes only the status line                     | A/B   |
+| Readiness evidence not reachable after the event      | Keep the reviewer-facing artifact in the public repository, not only in the submission form                                                    | A     |
+| Thin Circle tool surface questioned                   | Record the deliberate decision in section 5b and defend it in the submission rather than adding unused Circle products                         | B     |
 
 ## 19. Definition of done for every packet
 
@@ -857,26 +1003,26 @@ Coder B produces a repeatable setup guide or wizard, while Coder C documents Gra
 
 ## 20. Packet-to-outcome traceability
 
-| Packet | Primary product outcome | Principal proof |
-| --- | --- | --- |
-| A01 | Stable public seams and deterministic local development | Contract/schema drift and simulator tests |
-| A02 | Durable create, replay, conflict, and status behavior | Real PostgreSQL API tests |
-| A03 | One submission owner under redelivery/concurrency | Ten-worker/two-process counter proof |
-| A04 | Restart-safe, operable backend composition | Restart matrix, safe disable, simulator root suite |
-| A05 | Safe intent creation and authoritative status UI | Frozen-mock browser/accessibility tests |
-| A06 | Repeatable invariant, operations, and mainnet-readiness bundle | Clean bootstrap, scenario table, disabled-profile readiness and rollback proof |
-| B01 | Known-compatible provider/network boundary | SDK spike and fail-closed readiness tests |
-| B02 | Exact request/policy/receipt semantics | Golden calldata, deny matrix, receipt corpus |
-| B03 | Testnet-capable policy-constrained settlement | Offline harness plus optional sanitized live proof |
-| B04 | Conservative handling of provider ambiguity | Fault taxonomy and lookup contract suite |
-| B05 | Safe authorization/transaction UI | Fixture-driven component and redaction tests |
-| B06 | Verifiable Privy/Arc sponsor evidence | Policy denial and real transfer evidence bundle |
-| C01 | Minimal recovery evidence strategy with an explicit Subgraph MCP decision | Removal/value matrix, live MCP spike, and provider-neutral contract tests |
-| C02 | Meaningful AI recovery within deterministic zero-submit reconciliation | Four-action recommendation matrix and safety-core tests |
-| C03 | Safety under loss, lag, contradiction, and restart | Seeded failure-injection suite |
-| C04 | Recovery service ready for real adapter replacement | Simulator composition and matrix report |
-| C05 | Accurate recovery/evidence UI | Degraded-evidence component tests |
-| C06 | Verifiable Subgraph MCP/AI recovery evidence | Live MCP/agent/core trace, degraded demo, qualification report |
+| Packet | Primary product outcome                                                   | Principal proof                                                                |
+| ------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| A01    | Stable public seams and deterministic local development                   | Contract/schema drift and simulator tests                                      |
+| A02    | Durable create, replay, conflict, and status behavior                     | Real PostgreSQL API tests                                                      |
+| A03    | One submission owner under redelivery/concurrency                         | Ten-worker/two-process counter proof                                           |
+| A04    | Restart-safe, operable backend composition                                | Restart matrix, safe disable, simulator root suite                             |
+| A05    | Safe intent creation and authoritative status UI                          | Frozen-mock browser/accessibility tests                                        |
+| A06    | Repeatable invariant, operations, and mainnet-readiness bundle            | Clean bootstrap, scenario table, disabled-profile readiness and rollback proof |
+| B01    | Known-compatible provider/network boundary                                | SDK spike and fail-closed readiness tests                                      |
+| B02    | Exact request/policy/receipt semantics                                    | Golden calldata, deny matrix, receipt corpus                                   |
+| B03    | Testnet-capable policy-constrained settlement                             | Offline harness plus optional sanitized live proof                             |
+| B04    | Conservative handling of provider ambiguity                               | Fault taxonomy and lookup contract suite                                       |
+| B05    | Safe authorization/transaction UI                                         | Fixture-driven component and redaction tests                                   |
+| B06    | Verifiable Privy/Arc sponsor evidence                                     | Policy denial and real transfer evidence bundle                                |
+| C01    | Minimal recovery evidence strategy with an explicit Subgraph MCP decision | Removal/value matrix, live MCP spike, and provider-neutral contract tests      |
+| C02    | Meaningful AI recovery within deterministic zero-submit reconciliation    | Four-action recommendation matrix and safety-core tests                        |
+| C03    | Safety under loss, lag, contradiction, and restart                        | Seeded failure-injection suite                                                 |
+| C04    | Recovery service ready for real adapter replacement                       | Simulator composition and matrix report                                        |
+| C05    | Accurate recovery/evidence UI                                             | Degraded-evidence component tests                                              |
+| C06    | Verifiable Subgraph MCP/AI recovery evidence                              | Live MCP/agent/core trace, degraded demo, qualification report                 |
 
 Every success criterion in Section 3 has at least two independent proof surfaces: a producer packet and a later project-gate verification. Packet closure establishes the producer proof; it never claims final integrated behavior by itself.
 
@@ -1046,9 +1192,11 @@ Before Gate P6 can pass, confirm:
 - UI has no direct/bypass/force-pay action and labels authority/freshness correctly.
 - Demo/reset instructions require no unsafe database surgery or external-history rewrite.
 - Evidence, repository, logs, screenshots, fixtures, source maps, and reviews contain no secrets.
-- Claimed partner tracks match the sponsor claim mapping in section 5. Circle Agent Stack is a planned Arc claim and remains `NOT VERIFIED` until the acceptance checklist in section 5b is complete; Hedera remains out of scope.
+- Claimed partner tracks match the sponsor claim mapping in section 5. Circle Agent Stack remains unclaimed and `NOT QUALIFIED` until the reconsideration checklist in section 5b is complete and its Privy prize impact is re-audited; Hedera remains out of scope.
 - Every Arc requirement row in section 5b has a delivered artifact, including the README architecture diagram and the explicit track naming in the submission.
 - Public README and submission text contain no statement that undermines a claimed dependency; justifications cite measured numbers.
+- Production composition requires a concrete Privy provider and authorization port; no absent-port default may authorize or submit a settlement.
+- The live Graph client/model pair is explicitly configured in the runnable demo; the unavailable default and any direct-query fallback are labeled accurately.
 - Privy and Arc claims use the qualification standard. The Graph claim requires live hashless discovery plus meaningful recovery-agent automation; otherwise it is `NOT VERIFIED` and removed from the submission.
 - Mandatory FreePi gates and required CI apply to the exact candidate tree/head.
 - A human performs the final review and merge.
