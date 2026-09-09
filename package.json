@@ -23,6 +23,7 @@
     "generate": "pnpm --filter @oneshot/contracts generate",
     "lint": "eslint .",
     "scenarios:invariants": "pnpm build && node scripts/run-invariant-scenarios.mjs",
+    "demo:e2e": "pnpm build && node scripts/demo-e2e.mjs",
     "test": "pnpm build && vitest run --exclude apps/web/browser/**",
     "test:browser": "pnpm --filter @oneshot/web test:browser",
     "test:integration": "pnpm --filter @oneshot/storage-postgres test:integration && pnpm --filter @oneshot/api test:integration && pnpm --filter @oneshot/worker test:integration",
