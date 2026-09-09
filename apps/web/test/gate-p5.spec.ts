@@ -165,9 +165,16 @@ async function selectIntent(page: Page, id: string, tab: string): Promise<void> 
   await page.getByRole('tab', { name: tab }).click();
 }
 
+async function unlockConsole(page: Page, token = 'browser-memory-token'): Promise<void> {
+  await page.getByText('Machine token (advanced)').click();
+  await page.getByLabel('Machine token').fill(token);
+  await expect(page.getByRole('tab', { name: 'Create or replay' })).toBeVisible();
+}
+
 test.beforeEach(async ({ page }) => {
   await mockApi(page);
   await page.goto('/');
+  await unlockConsole(page);
 });
 
 test('policy denial and committed settlement render through B05', async ({ page }) => {
@@ -205,7 +212,6 @@ test('service-unavailable, keyboard, responsive, and token-memory checks fail sa
     seenHeaders.push((await route.request().allHeaders()).authorization ?? '');
     await route.fulfill({ status: 503, contentType: 'application/json', body: '{}' });
   });
-  await page.getByLabel('Demo service token').fill('browser-memory-token');
   await selectIntent(page, 'intent-service-unavailable', 'Recovery evidence');
   await expect(page.getByRole('alert')).toContainText('Evidence unavailable');
   expect(seenHeaders).toContain('Bearer browser-memory-token');

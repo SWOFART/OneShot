@@ -9,6 +9,7 @@ import { createInMemoryRecoveryClient, recoveryScenarioPages } from '@oneshot/re
 
 import { App } from '../src/App.js';
 import { SettlementSurface } from '../src/components/FrontendSurfaces.js';
+import { signedInSession } from './support/fake-session.js';
 
 afterEach(() => {
   cleanup();
@@ -30,7 +31,12 @@ describe('composed frontend shell', () => {
     });
 
     const user = userEvent.setup();
-    render(<App recoveryClient={createInMemoryRecoveryClient('lagging')} />);
+    render(
+      <App
+        recoveryClient={createInMemoryRecoveryClient('lagging')}
+        useOperatorSession={() => signedInSession()}
+      />,
+    );
 
     expect(screen.getByRole('tab', { name: 'Create or replay' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Authoritative status' })).toBeTruthy();

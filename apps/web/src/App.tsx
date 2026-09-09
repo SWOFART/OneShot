@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { createSettlementClient, type SettlementClient } from '@oneshot/settlement-ui';
 import type { RecoveryClient } from '@oneshot/recovery-ui';
 import '@oneshot/recovery-ui/styles.css';
@@ -6,9 +6,15 @@ import '@oneshot/settlement-ui/styles.css';
 
 import { OneShotApiClient } from './api/client.js';
 import { createApiRecoveryClient } from './api/recovery-client.js';
+import {
+  selectCredential,
+  unconfiguredOperatorSession,
+  type UseOperatorSession,
+} from './auth/session.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { IntentForm } from './components/IntentForm.js';
 import { IntentStatusView } from './components/IntentStatusView.js';
+import { LoginGate } from './components/LoginGate.js';
 import { ReadinessBanner } from './components/ReadinessBanner.js';
 import { RecoverySurface, SettlementSurface } from './components/FrontendSurfaces.js';
 import './styles.css';
@@ -26,12 +32,18 @@ export interface AppProps {
   readonly apiClient?: OneShotApiClient;
   readonly settlementClient?: SettlementClient;
   readonly recoveryClient?: RecoveryClient;
+  readonly useOperatorSession?: UseOperatorSession;
 }
 
 export function App(props: AppProps = {}) {
+  const useOperatorSession = props.useOperatorSession ?? unconfiguredOperatorSession;
+  const session = useOperatorSession();
   const [activeTab, setActiveTab] = useState<Tab>('create');
   const [selectedIntentId, setSelectedIntentId] = useState('');
-  const [authToken, setAuthToken] = useState('');
+  const [machineToken, setMachineToken] = useState('');
+  const credentialRef = useRef<string | null>(null);
+  credentialRef.current = selectCredential(session, machineToken);
+  const getAuthToken = useCallback(() => credentialRef.current, []);
   const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({
     create: null,
     status: null,
@@ -40,28 +52,20 @@ export function App(props: AppProps = {}) {
   });
   const apiBaseUrl = import.meta.env.VITE_ONESHOT_API_BASE_URL ?? '';
   const apiClient = useMemo(
-    () =>
-      props.apiClient ??
-      new OneShotApiClient({ baseUrl: apiBaseUrl, getAuthToken: () => authToken.trim() || null }),
-    [apiBaseUrl, authToken, props.apiClient],
+    () => props.apiClient ?? new OneShotApiClient({ baseUrl: apiBaseUrl, getAuthToken }),
+    [apiBaseUrl, getAuthToken, props.apiClient],
   );
   const settlementClient = useMemo(
     () =>
       props.settlementClient ??
-      createSettlementClient({
-        baseUrl: apiBaseUrl,
-        getAuthToken: () => authToken.trim() || null,
-      }),
-    [apiBaseUrl, authToken, props.settlementClient],
+      createSettlementClient({ baseUrl: apiBaseUrl, getAuthToken }),
+    [apiBaseUrl, getAuthToken, props.settlementClient],
   );
   const recoveryClient = useMemo(
     () =>
       props.recoveryClient ??
-      createApiRecoveryClient({
-        baseUrl: apiBaseUrl,
-        getAuthToken: () => authToken.trim() || null,
-      }),
-    [apiBaseUrl, authToken, props.recoveryClient],
+      createApiRecoveryClient({ baseUrl: apiBaseUrl, getAuthToken }),
+    [apiBaseUrl, getAuthToken, props.recoveryClient],
   );
 
   function selectIntent(intentId: string): void {
@@ -95,63 +99,57 @@ export function App(props: AppProps = {}) {
           <ReadinessBanner client={apiClient} />
         </header>
 
-        <section className="auth-bar" aria-label="Service authorization">
-          <label htmlFor="auth-token-input">Demo service token</label>
-          <input
-            id="auth-token-input"
-            type="password"
-            autoComplete="off"
-            value={authToken}
-            onChange={(event) => setAuthToken(event.target.value)}
-          />
-          <small>Memory only. Sent as Bearer authorization.</small>
-        </section>
-
-        <section className="intent-context" aria-label="Selected business intent">
-          <label htmlFor="selected-intent-input">Active Business Intent ID</label>
-          <input
-            id="selected-intent-input"
-            value={selectedIntentId}
-            onChange={(event) => setSelectedIntentId(event.target.value)}
-            placeholder="Create an intent or enter its stable ID"
-          />
-        </section>
-
-        <nav className="tabs" aria-label="Application sections" role="tablist">
-          {TAB_ORDER.map((tab) => (
-            <button
-              key={tab}
-              id={`${tab}-tab`}
-              ref={(element) => {
-                tabRefs.current[tab] = element;
-              }}
-              type="button"
-              role="tab"
-              tabIndex={activeTab === tab ? 0 : -1}
-              aria-selected={activeTab === tab}
-              aria-controls={`${tab}-panel`}
-              onClick={() => setActiveTab(tab)}
-              onKeyDown={(event) => handleTabKeyDown(event, tab)}
-            >
-              {TAB_LABELS[tab]}
-            </button>
-          ))}
-        </nav>
-
-        <main id={`${activeTab}-panel`} role="tabpanel" aria-labelledby={`${activeTab}-tab`}>
-          {activeTab === 'create' ? (
-            <IntentForm client={apiClient} onIntentCreatedOrSelected={selectIntent} />
-          ) : activeTab === 'status' ? (
-            <IntentStatusView client={apiClient} initialIntentId={selectedIntentId} />
-          ) : activeTab === 'settlement' ? (
-            <SettlementSurface
-              businessIntentId={selectedIntentId.trim()}
-              client={settlementClient}
+        <LoginGate
+          session={session}
+          machineToken={machineToken}
+          onMachineTokenChange={setMachineToken}
+        >
+          <section className="intent-context" aria-label="Selected business intent">
+            <label htmlFor="selected-intent-input">Active Business Intent ID</label>
+            <input
+              id="selected-intent-input"
+              value={selectedIntentId}
+              onChange={(event) => setSelectedIntentId(event.target.value)}
+              placeholder="Create an intent or enter its stable ID"
             />
-          ) : (
-            <RecoverySurface businessIntentId={selectedIntentId.trim()} client={recoveryClient} />
-          )}
-        </main>
+          </section>
+
+          <nav className="tabs" aria-label="Application sections" role="tablist">
+            {TAB_ORDER.map((tab) => (
+              <button
+                key={tab}
+                id={`${tab}-tab`}
+                ref={(element) => {
+                  tabRefs.current[tab] = element;
+                }}
+                type="button"
+                role="tab"
+                tabIndex={activeTab === tab ? 0 : -1}
+                aria-selected={activeTab === tab}
+                aria-controls={`${tab}-panel`}
+                onClick={() => setActiveTab(tab)}
+                onKeyDown={(event) => handleTabKeyDown(event, tab)}
+              >
+                {TAB_LABELS[tab]}
+              </button>
+            ))}
+          </nav>
+
+          <main id={`${activeTab}-panel`} role="tabpanel" aria-labelledby={`${activeTab}-tab`}>
+            {activeTab === 'create' ? (
+              <IntentForm client={apiClient} onIntentCreatedOrSelected={selectIntent} />
+            ) : activeTab === 'status' ? (
+              <IntentStatusView client={apiClient} initialIntentId={selectedIntentId} />
+            ) : activeTab === 'settlement' ? (
+              <SettlementSurface
+                businessIntentId={selectedIntentId.trim()}
+                client={settlementClient}
+              />
+            ) : (
+              <RecoverySurface businessIntentId={selectedIntentId.trim()} client={recoveryClient} />
+            )}
+          </main>
+        </LoginGate>
       </div>
     </ErrorBoundary>
   );
