@@ -36,8 +36,10 @@ recorded submission artifact.
 
 The boundary, schemas, simulator, deterministic safety core, and fail-closed
 fallback exist. The Arc Testnet Subgraph source is built, deployed to Studio,
-and published with an immutable deployment, but the live production path is
-intentionally unavailable because Explorer shows no active Indexer allocation.
+and published with an immutable deployment. PR #46 now supplies tested
+Vertex AI advisor and Subgraph MCP adapter implementations, but the live
+production path remains unavailable because Explorer shows no active Indexer
+allocation and worker composition defaults to unavailable ports.
 
 Verified public deployment metadata:
 
@@ -52,10 +54,14 @@ Remaining work:
 - Obtain an active Indexer allocation and synchronized decentralized query path
   for the identified deployment; decide whether the duplicate registration
   should be retained or cleaned up.
-- Configure a live Subgraph MCP transport and query the pinned deployment for
-  a lost-hash recovery case.
-- Configure the structured-output recovery-model adapter and capture its
-  recommendation, evidence references, and deterministic-core disposition.
+- Configure and explicitly admit the live Subgraph MCP transport and
+  structured-output recovery-model adapter, including approved runtime
+  credentials, endpoint policy, and bounded outbound behavior; query the
+  pinned deployment for a lost-hash recovery case.
+- Capture the configured adapter's recommendation, evidence references, and
+  deterministic-core disposition in that live case. The adapter implementation
+  itself is delivered by PR #46; live execution and qualification evidence are
+  not.
 - Verify every returned candidate with Arc receipt and exact Transfer evidence,
   while proving zero new settlement submissions.
 - Capture the sanitized trace, including `_meta` freshness/health, MCP tool and
@@ -63,15 +69,17 @@ Remaining work:
 
 Until then, automatic hashless recovery remains unavailable and The Graph is
 `NOT VERIFIED`; this blocks the live lost-hash requirement in Gate P4 and the
-Graph portion of C06/P6.
+Graph portion of C06/P6 even though the adapter implementation is present.
 
 ### Gate P4 integrated proof
 
 Most composition pieces and the live Privy/Arc allowed, denied, and
-lost-response drills are present. Gate P4 remains incomplete because its live
-lost-hash The Graph MCP/model flow has not been proven. The final integrated
-matrix should also record every applicable `.agent/TEST_MATRIX.md` scenario
-with durable state and external-settlement count.
+lost-response drills are present. PR #46 adds tested MCP/model adapters and an
+injection seam, but production still defaults to unavailable ports. Gate P4
+remains incomplete because its live lost-hash The Graph MCP/model flow has not
+been proven. The final integrated matrix should also record every applicable
+`.agent/TEST_MATRIX.md` scenario with durable state and external-settlement
+count.
 
 ### Gate P5 frontend acceptance
 
@@ -98,7 +106,7 @@ and the exact release candidate completes CI plus Gate A and Gate B review.
 
 | Item | Dependency or blocker | Safe response while blocked |
 | --- | --- | --- |
-| Live Graph recovery | Indexer allocation, Gateway/MCP access, model credentials, and duplicate-registration decision supplied by a human; immutable deployment is now identified | Keep `FALLBACK_DIRECT_RECOVERY`; retain `UNKNOWN`; do not retry payment. |
+| Live Graph recovery | Active Indexer allocation and synchronized Gateway/MCP access; explicit runtime admission and credentials for the delivered adapters; duplicate-registration decision supplied by a human; immutable deployment is identified | Keep `FALLBACK_DIRECT_RECOVERY`; retain `UNKNOWN`; do not retry payment. |
 | P4 live lost-hash proof | The live Graph recovery trace and Arc verification evidence | Do not claim Gate P4 or Graph qualification. |
 | P5 live UI acceptance | Reachable configured API, safe test data, and browser-test environment | Continue fixture/mock coverage; do not add a payment bypass. |
 | P6 release | P4/P5 completion, CI, exact-tree reviews, and human demo/submission decisions | Keep release candidate and sponsor claims incomplete. |

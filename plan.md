@@ -1,6 +1,6 @@
 # OneShot Product Delivery Plan
 
-Status: working testnet MVP; Arc/Privy evidence live; Graph deployment published but not allocated/indexed; P4/P6 live recovery proof incomplete
+Status: working testnet MVP; Arc/Privy evidence live; Graph deployment published but not allocated/indexed; live recovery adapters implemented but not default-enabled; P4/P6 live recovery proof incomplete
 Team: exactly three coders
 Implementation base: the human-approved commit containing this plan
 Research basis: `.agent/research/20260906-integration-decisions.md` and `.agent/research/20260907-subgraph-mcp-clarification.md`
@@ -9,15 +9,16 @@ Domain architecture: [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md
 
 ## Current delivery status (2026-09-09)
 
-The following pull requests are open against `develop`. Their checks are green,
-but they are not part of this plan's implementation base until a human merges
-them.
+The following pull requests have merged into `develop` and are part of the
+current implementation base.
 
 | PR | Progress | Impact on this plan |
 | --- | --- | --- |
 | [#42](https://github.com/SWOFART/OneShot/pull/42) `docs: correct Gate P4 verification status` | Separates complete backend composition and Privy/Arc `LIVE_VERIFIED` evidence from the missing Graph MCP/model proof; overall P4 is `INCOMPLETE`. | Makes the P4/P6 status fail-closed and confirms that no Graph qualification claim is supported yet. |
 | [#43](https://github.com/SWOFART/OneShot/pull/43) `fix(settlement): close lane B review follow-ups` | Aligns live-evidence wording with the disabled/unpublished Mainnet profile and adds settlement-UI credential, control-character, and contrast regression coverage. | Strengthens B05/B06 and mainnet-readiness evidence; it does not change the Graph recovery gate. |
 | [#44](https://github.com/SWOFART/OneShot/pull/44) `fix: require recovery lookup config` | Removes placeholder Graph identities and requires explicit token, sender, block window, and MCP policy configuration; unavailable MCP/advisor ports remain the default. | Makes production recovery fail closed and ready for real configuration, but does not prove live MCP/model behavior or authorize hashless recovery. |
+| [#45](https://github.com/SWOFART/OneShot/pull/45) `docs: update plan with Graph deployment status` | Records the published deployment, duplicate registration, immutable CID, and the Explorer `NOT INDEXED` / no-allocation result, reconciling it with successful Studio queries. | Identifies the deployment while keeping decentralized indexing, live recovery, The Graph qualification, and P4 incomplete. |
+| [#46](https://github.com/SWOFART/OneShot/pull/46) `feat(reconciliation): implement live Vertex AI recovery advisor and Subgraph MCP client` | Adds tested `VertexAiRecoveryAdvisor` and `LiveSubgraphMcpRecoveryPort` implementations, exports them from reconciliation, and proves explicit worker injection with settlement permission disabled. | Delivers the C02/C06 adapter implementation, but worker defaults remain unavailable ports; runtime admission, live Graph allocation/query evidence, and model-to-core proof remain required. |
 
 ### The Graph deployment status
 
@@ -39,10 +40,18 @@ is test/staging infrastructure; publication makes a deployment available to
 network Indexers, and the Explorer query path depends on an active allocation.
 There is therefore no contradiction: the source and immutable deployment are
 published, while decentralized indexing has not started. Until allocation,
-live Subgraph MCP access, model output, Arc candidate verification, and the
-sanitized trace are captured, production recovery remains
+runtime admission of the new MCP/model adapters, live Subgraph MCP access,
+model output, Arc candidate verification, and the sanitized trace are captured,
+production recovery remains
 `FALLBACK_DIRECT_RECOVERY`, The Graph is `NOT VERIFIED`, and Gate P4 is
 `INCOMPLETE`.
+
+PR #46 does not change the Explorer result. Its checked-in implementation and
+tests establish the adapter contracts and an explicit injection seam; the
+worker composition still defaults to unavailable MCP and advisor ports. The
+recorded live drill covers Vertex AI and an Arc receipt, but does not provide
+the sanitized Graph MCP query identity, allocation/freshness metadata, and
+model-to-core trace required for qualification.
 
 ## Global product vision
 
