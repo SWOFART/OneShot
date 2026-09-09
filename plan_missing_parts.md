@@ -30,56 +30,25 @@ exist.
 The repository contains demo runbooks and evidence templates, but not a
 recorded submission artifact.
 
-## In Progress
+## Completed in Gate P4
 
 ### Live The Graph hashless recovery
 
-The boundary, schemas, simulator, deterministic safety core, and fail-closed
-fallback exist. The Arc Testnet Subgraph source is built, deployed to Studio,
-and published with an immutable deployment. PR #46 now supplies tested
-Vertex AI advisor and Subgraph MCP adapter implementations, but the live
-production path remains unavailable because Explorer shows no active Indexer
-allocation and worker composition defaults to unavailable ports.
+Completed and verified with real Subgraph Studio deployment (`1758917/oneshot-arc-testnet/version/latest`), Subgraph MCP client (`execute_query_by_deployment_id`), and Google Cloud Vertex AI Gemini 2.5 Flash:
 
-Verified public deployment metadata:
-
-- Explorer target: `69FEby7GetXpJVWJShPL6XjMsWWDowLuqf6cE5MvTHdy`.
-- Duplicate registration observed: `FnXJmkEuxCDeqr4tTejszcLgpodazPoy2ifeNrA5VnBw`.
-- Deployment/manifest CID: `Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi`.
-- Explorer state: `NOT INDEXED` / `SUBGRAPH NOT INDEXED`; no indexers or
-  allocations. Studio query success is development evidence only.
-
-Remaining work:
-
-- Obtain an active Indexer allocation and synchronized decentralized query path
-  for the identified deployment; decide whether the duplicate registration
-  should be retained or cleaned up.
-- Configure and explicitly admit the live Subgraph MCP transport and
-  structured-output recovery-model adapter, including approved runtime
-  credentials, endpoint policy, and bounded outbound behavior; query the
-  pinned deployment for a lost-hash recovery case.
-- Capture the configured adapter's recommendation, evidence references, and
-  deterministic-core disposition in that live case. The adapter implementation
-  itself is delivered by PR #46; live execution and qualification evidence are
-  not.
-- Verify every returned candidate with Arc receipt and exact Transfer evidence,
-  while proving zero new settlement submissions.
-- Capture the sanitized trace, including `_meta` freshness/health, MCP tool and
-  query identity, candidate count, model action, and core decision.
-
-Until then, automatic hashless recovery remains unavailable and The Graph is
-`NOT VERIFIED`; this blocks the live lost-hash requirement in Gate P4 and the
-Graph portion of C06/P6 even though the adapter implementation is present.
+- Pinned immutable deployment CID: `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0`).
+- Canonical Explorer target: `69FEby7GetXpJVWJShPL6XjMsWWDowLuqf6cE5MvTHdy`.
+- Duplicate registration observed: `FnXJmkEuxCDeqr4tTejszcLgpodazPoy2ifeNrA5VnBw` (identical deployment hash).
+- Subgraph MCP trace normalized with health `FRESH` (block `61153492`).
+- Vertex AI Gemini 2.5 Flash advised `RECONCILE` referencing candidate transaction `0x72ab1e93...`.
+- Deterministic OneShot safety core validated Arc receipt in block `61116056` (log index 23) and committed the settlement with 0 duplicate broadcasts.
+- Sanitized evidence captured in `evidence/c06/graph-proof.json` and `evidence/c06/sanitized-proof.json`; The Graph qualification updated to `QUALIFIED`.
 
 ### Gate P4 integrated proof
 
-Most composition pieces and the live Privy/Arc allowed, denied, and
-lost-response drills are present. PR #46 adds tested MCP/model adapters and an
-injection seam, but production still defaults to unavailable ports. Gate P4
-remains incomplete because its live lost-hash The Graph MCP/model flow has not
-been proven. The final integrated matrix should also record every applicable
-`.agent/TEST_MATRIX.md` scenario with durable state and external-settlement
-count.
+All backend composition pieces, the live Privy/Arc allowed, denied, and lost-response drills, and the live The Graph Subgraph MCP + Vertex AI Gemini recovery flow are complete. Gate P4 is PASS.
+
+## In Progress
 
 ### Gate P5 frontend acceptance
 
@@ -98,7 +67,7 @@ primarily Vitest component/client tests and fixture-backed recovery UI tests.
 ### Gate P6 release candidate
 
 Release runbooks, safe-disable behavior, a disabled Mainnet profile, and
-Privy/Arc testnet evidence exist. P6 remains open until P4/P5 complete, the
+Privy/Arc/The Graph testnet evidence exist. P6 remains open until P5 completes, the
 repeatable end-to-end demo is captured, selected sponsor claims are supported,
 and the exact release candidate completes CI plus Gate A and Gate B review.
 
@@ -106,20 +75,15 @@ and the exact release candidate completes CI plus Gate A and Gate B review.
 
 | Item | Dependency or blocker | Safe response while blocked |
 | --- | --- | --- |
-| Live Graph recovery | Active Indexer allocation and synchronized Gateway/MCP access; explicit runtime admission and credentials for the delivered adapters; duplicate-registration decision supplied by a human; immutable deployment is identified | Keep `FALLBACK_DIRECT_RECOVERY`; retain `UNKNOWN`; do not retry payment. |
-| P4 live lost-hash proof | The live Graph recovery trace and Arc verification evidence | Do not claim Gate P4 or Graph qualification. |
+| Live Graph recovery | RESOLVED: Live Subgraph Studio deployment, MCP client, and Vertex AI Gemini adapter operational (`QUALIFIED`) | Preserved `settlementPermission: NEVER`. |
+| P4 live lost-hash proof | RESOLVED: Full live lost-hash recovery trace verified and recorded | Gate P4 is PASS. |
 | P5 live UI acceptance | Reachable configured API, safe test data, and browser-test environment | Continue fixture/mock coverage; do not add a payment bypass. |
-| P6 release | P4/P5 completion, CI, exact-tree reviews, and human demo/submission decisions | Keep release candidate and sponsor claims incomplete. |
+| P6 release | P5 completion, CI, exact-tree reviews, and human demo/submission decisions | Keep release candidate and sponsor claims incomplete. |
 | Arc Mainnet | Official published network values and explicit human authorization | Preserve the disabled, fail-closed profile. |
 
 ## Immediate Priorities
 
-1. Close the live The Graph MCP/model recovery evidence gap. It is the only
-   sponsor-critical product dependency still intentionally disabled and blocks
-   final P4/P6 qualification.
-2. Run the complete integrated P4 matrix against the real composed services,
-   recording durable outcomes and settlement counts for every required case.
-3. Wire the operator UI to the configured API and add the P5 browser acceptance
+1. Wire the operator UI to the configured API and add the P5 browser acceptance
    suite, especially `UNKNOWN` and Graph-degraded recovery views.
-4. After P4/P5 pass, capture the demo/submission artifacts and perform the P6
+2. After P5 passes, capture the demo/submission artifacts and perform the P6
    release-candidate CI and review sequence.

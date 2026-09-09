@@ -12,6 +12,7 @@ import type { SubgraphMcpRecoveryPort } from './service.js';
 export interface LiveSubgraphMcpRecoveryPortOptions {
   readonly mcpEndpoint?: string | undefined;
   readonly graphGatewayBaseUrl?: string | undefined;
+  readonly graphQueryUrl?: string | undefined;
   readonly graphApiKey?: string | undefined;
   readonly getChainHead?:
     (() => Promise<{ blockNumber: string; observedAt: string } | null>) | undefined;
@@ -85,21 +86,25 @@ export class LiveSubgraphMcpRecoveryPort implements SubgraphMcpRecoveryPort {
 
       rawResult = rpcResponse.result;
     } else {
-      // 2. Query Gateway deployment endpoint directly, formatted as MCP result payload
+      // 2. Query Gateway deployment or Studio endpoint directly, formatted as MCP result payload
       const gatewayBase =
         this.options.graphGatewayBaseUrl ?? 'https://gateway-arbitrum.network.thegraph.com/api';
       const apiKeyPart = this.options.graphApiKey ? `/${this.options.graphApiKey}` : '';
-      const endpoint = `${gatewayBase}${apiKeyPart}/deployments/id/${policy.deploymentId}`;
+      const endpoint =
+        this.options.graphQueryUrl ??
+        `${gatewayBase}${apiKeyPart}/deployments/id/${policy.deploymentId}`;
+
+      const queryBody = {
+        query: toolArgs.query,
+        variables: toolArgs.variables,
+      };
 
       const res = await this.fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          query: toolArgs.query,
-          variables: toolArgs.variables,
-        }),
+        body: JSON.stringify(queryBody),
       });
 
       if (!res.ok) {
@@ -107,15 +112,39 @@ export class LiveSubgraphMcpRecoveryPort implements SubgraphMcpRecoveryPort {
       }
 
       const gatewayResponse = (await res.json()) as {
-        data?: unknown;
+        data?: Record<string, unknown>;
         errors?: unknown;
       };
+
+      let normalizedPayload = gatewayResponse;
+      if (gatewayResponse.data && gatewayResponse.data._meta) {
+        const metaObj = (gatewayResponse.data._meta ?? {}) as Record<string, unknown>;
+        const blockObj = (metaObj.block ?? {}) as Record<string, unknown>;
+        const adaptedMeta = {
+          ...metaObj,
+          block: {
+            ...blockObj,
+            timestamp:
+              blockObj.timestamp !== null && blockObj.timestamp !== undefined
+                ? String(blockObj.timestamp)
+                : null,
+          },
+        };
+
+        normalizedPayload = {
+          ...gatewayResponse,
+          data: {
+            ...gatewayResponse.data,
+            _meta: adaptedMeta,
+          },
+        };
+      }
 
       rawResult = {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(gatewayResponse),
+            text: JSON.stringify(normalizedPayload),
           },
         ],
         isError: false,

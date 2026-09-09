@@ -8,3 +8,5 @@ packages/contracts/src/generated
 packages/arc-adapter/
 packages/privy-adapter/
 packages/testkit-settlement/
+subgraph/generated
+subgraph/build

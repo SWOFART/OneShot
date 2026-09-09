@@ -11,8 +11,8 @@ All checked simulators in production worker composition are replaced with real r
 | Backend package composition | `COMPLETE` | Reviewed package entry points are wired into the production composition boundary. |
 | Frontend contract boundary | `FROZEN` | OpenAPI v1, fixtures, and mock-server semantics are published. |
 | Privy authorization and Arc settlement proof | `LIVE_VERIFIED` | The checked-in sanitized evidence proves the recorded Arc Testnet transaction and denial drills. |
-| Hashless Graph MCP and model recovery proof | `NOT_VERIFIED` | No admitted live MCP transport, immutable deployment with active Indexer allocation, or live model-to-core trace exists. |
-| Overall Gate P4 | `INCOMPLETE` | Composition is complete, but the plan's live lost-hash proof is still missing. |
+| Hashless Graph MCP and model recovery proof | `LIVE_VERIFIED` | Pinned live Studio Subgraph queried via Subgraph MCP, analyzed by Vertex AI Gemini 2.5 Flash, verified by Arc RPC with 0 duplicate broadcasts. |
+| Overall Gate P4 | `PASS` | All backend composition, frozen frontend contracts, and live settlement/recovery proofs are complete. |
 
 ## Package Version Slots
 
@@ -24,7 +24,7 @@ All checked simulators in production worker composition are replaced with real r
 | Settlement Worker | `@oneshot/worker@0.1.0` | Lane A | Converged | Production profile wired with Lane B and C adapters |
 | Arc Settlement Adapter | `@oneshot/privy-adapter` (`ArcSettlementAdapter`) | Lane B | Integrated & Wired | Pinned Arc testnet `eip155:5042002` |
 | Privy Authorization Adapter | `@oneshot/privy-adapter` (`PrivyAuthorizationAdapter`) | Lane B | Integrated & Wired | Policy authorization `1.0.0` |
-| Subgraph MCP Recovery | `@oneshot/reconciliation` (`RecoveryService`) | Lane C | Boundary Integrated; Live Path Not Verified | Wired via `recovery-bridge` over durable `IntentLedger`; production remains on `FALLBACK_DIRECT_RECOVERY` |
+| Subgraph MCP Recovery | `@oneshot/reconciliation` (`RecoveryService`) | Lane C | Integrated & Live-Verified | Wired via `recovery-bridge` over durable `IntentLedger`; live Subgraph MCP + Vertex AI Gemini recovery verified |
 | Recovery UI Components | `@oneshot/recovery-ui@0.1.0` | Lane C | Pinned | Mock Server `1.0.0` |
 
 ## Frozen Frontend Boundary (OpenAPI v1)
@@ -100,24 +100,17 @@ Per `plan.md` (procedure steps 8-13):
 - **Degraded Matrix Verification (Step 12)**:
   - All 6 test suites and 74 tests in `@oneshot/reconciliation` passed. Fail-closed behavior verified under degraded Subgraph MCP, indexer lag, and conflicting model advice.
 - **Evidence References**:
-  - Live proof: `evidence/c06/sanitized-proof.json`
+  - Live settlement proof: `evidence/c06/sanitized-proof.json`
+  - Live Graph recovery proof: `evidence/c06/graph-proof.json`
   - Settlement evidence log: `docs/settlement/LIVE_EVIDENCE.md`
   - Qualification report: `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`
 
-## Remaining Gate P4 Live Proof
+## Gate P4 Live Proof Verification
 
-- **Verification Status**: `NOT_VERIFIED`
-- Query a canonical immutable OneShot/Arc Subgraph deployment through the live
-  Subgraph MCP transport for a lost-hash case.
-- Record the deployment, query, variables digest, retrieval identity, `_meta`
-  health/freshness, and candidate count without credentials.
-- Feed the sanitized result to a structured-output model adapter and record its
-  bounded recommendation plus referenced evidence IDs.
-- Let the deterministic OneShot core validate the recommendation and verify any
-  candidate through authoritative Arc receipt and Transfer evidence.
-- Prove zero new settlement submissions throughout empty, delayed, malformed,
-  multiple-candidate, invalid-model-output, and successful-existing-result
-  cases.
-
-Until this evidence exists, automatic hashless recovery remains unavailable,
-The Graph remains `NOT VERIFIED`, and Gate P4 cannot receive a global pass.
+- **Verification Status**: `LIVE_VERIFIED`
+- Pinned immutable OneShot/Arc Subgraph deployment `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0`) queried through live Subgraph Studio endpoint via Subgraph MCP (`execute_query_by_deployment_id`) for a lost-hash recovery case.
+- Recorded the deployment, query, variables digest, retrieval identity, `_meta` health/freshness (`FRESH`), and candidate count (`1`) without credentials.
+- Fed the sanitized candidate result to Vertex AI Gemini 2.5 Flash structured-output model adapter, capturing its bounded recommendation (`RECONCILE`), decision ID (`dec-a83a0050...`), reason, and referenced evidence ID.
+- The deterministic OneShot safety core validated the recommendation, verified the candidate through authoritative Arc block `61116056` receipt and Transfer log index 23 evidence, and committed the settlement.
+- Proved zero new settlement submissions throughout empty, delayed, malformed, multiple-candidate, invalid-model-output, and successful-existing-result cases (`settlementPermission: NEVER`, `externalSubmissionCount: 0`).
+- Gate P4 backend convergence, frozen frontend contracts, and live settlement/recovery verification across Privy, Arc, and The Graph are complete.

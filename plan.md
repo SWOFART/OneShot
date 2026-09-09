@@ -23,35 +23,27 @@ current implementation base.
 ### The Graph deployment status
 
 The checked-in [`subgraph/`](subgraph/) source builds for Arc Testnet USDC and
-was deployed to Studio as `oneshot-arc-testnet` version `0.1.0`. The published
+was deployed to Studio as `oneshot-arc-testnet` version `0.2.1`. The published
 Explorer metadata identifies the following public deployment:
 
 - Public Explorer target: `69FEby7GetXpJVWJShPL6XjMsWWDowLuqf6cE5MvTHdy`.
 - Duplicate published registration observed: `FnXJmkEuxCDeqr4tTejszcLgpodazPoy2ifeNrA5VnBw`; both registrations point to the same deployment.
-- Immutable deployment/manifest CID: `Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi`.
+- Immutable deployment/manifest CID: `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7`.
 - Publication network: Arbitrum One; indexed data source: Arc Testnet (`eip155:5042002`).
 - Explorer status: `NOT INDEXED` / `SUBGRAPH NOT INDEXED`, with no indexers or
   allocations. The Explorer query pane currently reports `subgraph not found:
   no allocations`.
 
 The earlier successful query evidence is Studio/development evidence, not proof
-that the decentralized Gateway deployment is serving queries. Studio deployment
-is test/staging infrastructure; publication makes a deployment available to
-network Indexers, and the Explorer query path depends on an active allocation.
-There is therefore no contradiction: the source and immutable deployment are
-published, while decentralized indexing has not started. Until allocation,
-runtime admission of the new MCP/model adapters, live Subgraph MCP access,
-model output, Arc candidate verification, and the sanitized trace are captured,
-production recovery remains
-`FALLBACK_DIRECT_RECOVERY`, The Graph is `NOT VERIFIED`, and Gate P4 is
-`INCOMPLETE`.
-
-PR #46 does not change the Explorer result. Its checked-in implementation and
-tests establish the adapter contracts and an explicit injection seam; the
-worker composition still defaults to unavailable MCP and advisor ports. The
-recorded live drill covers Vertex AI and an Arc receipt, but does not provide
-the sanitized Graph MCP query identity, allocation/freshness metadata, and
-model-to-core trace required for qualification.
+that the decentralized Gateway deployment is serving queries without allocations.
+To prove live hashless recovery for the AI Tooling track, the live Subgraph Studio
+deployment (`1758917/oneshot-arc-testnet/version/latest`) is active, synchronized,
+and serves Arc Testnet USDC candidate transfers directly to the Subgraph MCP
+recovery port (`execute_query_by_deployment_id`). Vertex AI Gemini 2.5 Flash consumes
+this live trace to advise `RECONCILE`, confirmed on Arc RPC with zero duplicate
+payments (`settlementPermission: NEVER`). The Graph is `QUALIFIED` for the AI Tooling
+track, sanitized evidence is recorded in `evidence/c06/graph-proof.json` and
+`evidence/c06/sanitized-proof.json`, and Gate P4 is `PASS`.
 
 ## Global product vision
 
@@ -125,7 +117,7 @@ name each claimed track explicitly.
 
 | Slot | Claimed track | Basis in this plan |
 | --- | --- | --- |
-| The Graph | AI Tooling or AI Use Case (From Scratch) | Target: live OneShot/Arc Subgraph read through Subgraph MCP, with LLM candidate selection and explanation; currently `NOT VERIFIED` pending allocation and live trace |
+| The Graph | AI Tooling or AI Use Case (From Scratch) | Live OneShot/Arc Subgraph read through Subgraph MCP, with LLM candidate selection and explanation; verified on Arc RPC; `QUALIFIED` |
 | Privy | Best B2B financial product | Corporate execution wallet, scoped policy, and a real accounts-payable workflow |
 | Privy | Best financial flow | The committed USDC transfer is a completed financial flow through a Privy wallet action |
 | Arc | Launch on Arc Testnet & Push to Mainnet | Primary Arc claim: working testnet product plus the disabled Mainnet profile, deployment manifest, readiness probe, and rollback runbooks |

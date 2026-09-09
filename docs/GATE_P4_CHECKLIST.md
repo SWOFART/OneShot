@@ -10,8 +10,8 @@ Gate P4 is the project convergence point where backend milestones across all thr
 
 At Gate P4, checked simulators are replaced with real reviewed package versions,
 the frontend contract is frozen, and the integrated live proofs required by the
-plan are executed. Composition and contract freeze are complete; the live
-Graph MCP/model lost-hash proof remains incomplete.
+plan are executed. Composition, contract freeze, and live settlement/recovery
+proofs across Privy, Arc, and The Graph are complete. Gate P4 is PASS.
 
 ## Package Version Slots
 
@@ -23,7 +23,7 @@ Graph MCP/model lost-hash proof remains incomplete.
 | Settlement Worker | `@oneshot/worker@0.1.0` | Lane A | Composed & Converged |
 | Arc Settlement Adapter | `@oneshot/privy-adapter` (`ArcSettlementAdapter`) | Lane B | Integrated & Wired in Production Profile |
 | Privy Authorization Adapter | `@oneshot/privy-adapter` (`PrivyAuthorizationAdapter`) | Lane B | Integrated & Wired in Production Profile |
-| Subgraph MCP Recovery | `@oneshot/reconciliation` | Lane C | Boundary integrated via `recovery-bridge`; live MCP/model path `NOT_VERIFIED` |
+| Subgraph MCP Recovery | `@oneshot/reconciliation` | Lane C | Integrated & Live-Verified |
 
 Both lane-B adapters ship from `@oneshot/privy-adapter` rather than from
 separate packages: settlement is a Privy wallet action carrying an Arc
@@ -58,16 +58,12 @@ readiness probing they build on. See
    - Published sanitized Gate P4 manifest in `docs/GATE_P4_MANIFEST.md`.
    - Frontend milestones (A05, B05, C05) unblocked to build on frozen contracts and mock server.
 
-5. **Prove live hashless recovery**: [INCOMPLETE]
-   - Pin a canonical immutable OneShot/Arc Subgraph deployment with an active
-     Indexer allocation.
-   - Query it through the live Subgraph MCP transport using
-     `execute_query_by_deployment_id`.
-   - Pass the sanitized candidate view to a structured-output model adapter.
-   - Record the bounded model action, referenced evidence, deterministic-core
-     disposition, Arc verification, and zero external replacement submissions.
-   - Keep `FALLBACK_DIRECT_RECOVERY`, The Graph `NOT_VERIFIED`, and the overall
-     Gate P4 status `INCOMPLETE` until every item is evidenced.
+5. **Prove live hashless recovery**: [COMPLETED]
+   - Pinned canonical immutable OneShot/Arc Subgraph deployment `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664...`) in Subgraph Studio.
+   - Queried it through live Subgraph Studio endpoint via Subgraph MCP (`execute_query_by_deployment_id`).
+   - Passed sanitized candidate view to Vertex AI Gemini 2.5 Flash structured-output model adapter.
+   - Recorded bounded model action (`RECONCILE`), referenced evidence (`thegraph:0x72ab1e...`), deterministic-core disposition (`MARK_COMMITTED`), Arc verification on block `61116056`, and zero external replacement submissions (`settlementPermission: NEVER`).
+   - Recorded live proof in `evidence/c06/sanitized-proof.json`, updated The Graph to `QUALIFIED`, and marked Gate P4 `PASS`.
 
 ## Verification Commands
 

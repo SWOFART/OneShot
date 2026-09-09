@@ -8,13 +8,14 @@ dataSources:
     source:
       address: '0x3600000000000000000000000000000000000000'
       abi: ERC20
-      startBlock: 61000000
+      startBlock: 61115500
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
       entities:
         - UsdcTransfer
+        - SettlementCandidate
       abis:
         - name: ERC20
           file: ./abis/ERC20.json

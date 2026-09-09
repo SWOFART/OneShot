@@ -9,3 +9,19 @@ type UsdcTransfer @entity(immutable: true) {
   to: Bytes!
   amount: BigInt!
 }
+
+"A candidate settlement transfer for OneShot recovery reconciliation."
+type SettlementCandidate @entity(immutable: true) {
+  id: Bytes!
+  transactionHash: Bytes!
+  logIndex: BigInt!
+  blockNumber: BigInt!
+  blockHash: Bytes!
+  blockTimestamp: BigInt!
+  network: String!
+  tokenContract: Bytes!
+  sender: Bytes!
+  recipient: Bytes!
+  amountAtomic: BigInt!
+  memoId: Bytes
+}
