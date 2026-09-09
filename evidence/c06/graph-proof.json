@@ -1,0 +1,157 @@
+{
+  "schemaVersion": "sponsor-qualification-v1",
+  "captured_at": "2026-09-09T00:22:21.643Z",
+  "sponsor_status": {
+    "PRIVY": "QUALIFIED",
+    "ARC": "QUALIFIED",
+    "THE_GRAPH": "QUALIFIED"
+  },
+  "graph_evidence": {
+    "track": "AI Tooling or AI Use Case",
+    "studio_url": "https://api.studio.thegraph.com/query/1758917/oneshot-arc-testnet/version/latest",
+    "canonical_subgraph_id": "69FEby7GetXpJVWJShPL6XjMsWWDowLuqf6cE5MvTHdy",
+    "duplicate_subgraph_id": "FnXJmkEuxCDeqr4tTejszcLgpodazPoy2ifeNrA5VnBw",
+    "manifest_cid": "Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi",
+    "deployment_id": "0xaf2b444e00f8d11eb5db6bf1bd33e9f6ff0a211c4539d899ec8c9615afb893a7",
+    "subgraph_meta": {
+      "deployment": "Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi",
+      "hasIndexingErrors": false,
+      "block": {
+        "number": 61153993,
+        "hash": "0xe93ba1278f8f289e1cb47e3648005c77c418162208bfdf50339657a14a7778fc",
+        "timestamp": 1788913338
+      }
+    },
+    "discovered_candidates": [
+      {
+        "id": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000",
+        "transactionHash": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7",
+        "logIndex": "23",
+        "blockNumber": "61116056",
+        "blockTimestamp": "1788893876",
+        "from": "0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943",
+        "to": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+        "amount": "1000000"
+      }
+    ],
+    "mcp_trace": {
+      "callId": "mcp-call-1788913341644",
+      "serverName": "subgraph-mcp",
+      "serverVersion": "1.0.0",
+      "toolName": "execute_query_by_deployment_id",
+      "arguments": {
+        "deployment_id": "0xaf2b444e00f8d11eb5db6bf1bd33e9f6ff0a211c4539d899ec8c9615afb893a7",
+        "query": "query OneShotRecoveryCandidatesV1(\n  $tokenContract: Bytes!\n  $recipient: Bytes!\n  $amountAtomic: BigInt!\n  $sender: Bytes\n  $fromBlock: BigInt!\n  $toBlock: BigInt!\n) {\n  settlementCandidates(\n    first: 26\n    orderBy: blockNumber\n    orderDirection: asc\n    where: {\n      tokenContract: $tokenContract\n      recipient: $recipient\n      amountAtomic: $amountAtomic\n      sender: $sender\n      blockNumber_gte: $fromBlock\n      blockNumber_lte: $toBlock\n    }\n  ) {\n    id\n    transactionHash\n    logIndex\n    blockNumber\n    blockHash\n    blockTimestamp\n    network\n    tokenContract\n    sender\n    recipient\n    amountAtomic\n    memoId\n  }\n  _meta {\n    deployment\n    hasIndexingErrors\n    block {\n      number\n      hash\n      timestamp\n    }\n  }\n}",
+        "variables": {
+          "tokenContract": "0x3600000000000000000000000000000000000000",
+          "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+          "amountAtomic": "1000000",
+          "sender": "0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943",
+          "fromBlock": "61116000",
+          "toBlock": "61116100"
+        }
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"data\":{\"settlementCandidates\":[{\"id\":\"0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000\",\"transactionHash\":\"0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7\",\"logIndex\":\"23\",\"blockNumber\":\"61116056\",\"blockHash\":\"0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b\",\"blockTimestamp\":\"1788893876\",\"network\":\"eip155:5042002\",\"tokenContract\":\"0x3600000000000000000000000000000000000000\",\"sender\":\"0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943\",\"recipient\":\"0xa605ee031e41f04f8e193059a39a24407f83677c\",\"amountAtomic\":\"1000000\",\"memoId\":null}],\"_meta\":{\"deployment\":\"Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi\",\"hasIndexingErrors\":false,\"block\":{\"number\":61153993,\"hash\":\"0xe93ba1278f8f289e1cb47e3648005c77c418162208bfdf50339657a14a7778fc\",\"timestamp\":\"1788913338\"}}}}"
+          }
+        ],
+        "isError": false
+      },
+      "retrievedAt": "2026-09-09T00:22:21.643Z",
+      "chainHead": {
+        "blockNumber": "61153993",
+        "observedAt": "2026-09-09T00:22:21.643Z"
+      }
+    },
+    "mcp_view": {
+      "schemaVersion": "index-view-v1",
+      "source": {
+        "provider": "THE_GRAPH",
+        "retrieval": "SUBGRAPH_MCP",
+        "authority": "NON_AUTHORITATIVE_CANDIDATE_DISCOVERY"
+      },
+      "binding": {
+        "businessIntentId": "intent-live-full-recovery-001",
+        "requestFingerprint": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "network": "eip155:5042002",
+        "tokenContract": "0x3600000000000000000000000000000000000000",
+        "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+        "amountAtomic": "1000000"
+      },
+      "correlation": {
+        "strategy": "TRANSFER_TUPLE_WINDOW",
+        "sender": "0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943",
+        "fromBlock": "61116000",
+        "toBlock": "61116100"
+      },
+      "mcp": {
+        "callId": "mcp-call-1788913341644",
+        "serverName": "subgraph-mcp",
+        "serverVersion": "1.0.0",
+        "toolName": "execute_query_by_deployment_id",
+        "deploymentId": "0xaf2b444e00f8d11eb5db6bf1bd33e9f6ff0a211c4539d899ec8c9615afb893a7",
+        "manifestCid": "Qma8SKdatVjuwYzrZsHK4ZqVR2MGX8m4BxQFu6PqzXwHLi",
+        "queryName": "OneShotRecoveryCandidatesV1",
+        "queryDigest": "bda358a663504bffd0736d2eeb5ac8bbb8192ad8b4e02d50d4037357c4331d58"
+      },
+      "observedThrough": {
+        "blockNumber": "61153993",
+        "blockHash": "0xe93ba1278f8f289e1cb47e3648005c77c418162208bfdf50339657a14a7778fc",
+        "blockTimestamp": "1788913338"
+      },
+      "chainHead": {
+        "blockNumber": "61153993",
+        "observedAt": "2026-09-09T00:22:21.643Z"
+      },
+      "lagBlocks": "0",
+      "health": "FRESH",
+      "retrievedAt": "2026-09-09T00:22:21.643Z",
+      "candidates": [
+        {
+          "id": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000",
+          "transactionHash": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7",
+          "logIndex": "23",
+          "blockNumber": "61116056",
+          "blockHash": "0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b",
+          "blockTimestamp": "1788893876",
+          "network": "eip155:5042002",
+          "tokenContract": "0x3600000000000000000000000000000000000000",
+          "sender": "0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943",
+          "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+          "amountAtomic": "1000000",
+          "memoId": null,
+          "evidenceId": "graph:0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7:23",
+          "bindingStatus": "MATCH",
+          "contradictionCodes": []
+        }
+      ],
+      "candidateCount": 1,
+      "contradiction": false,
+      "contradictionCodes": [],
+      "diagnostics": [],
+      "settlementPermission": "NEVER"
+    },
+    "llm_advisor": {
+      "model": {
+        "modelName": "gemini-2.5-flash",
+        "modelVersion": "1.0.0",
+        "promptVersion": "recovery-v1"
+      },
+      "action": "RECONCILE",
+      "decision_id": "dec-a7905188-0f04-469b-8e10-91129f12df49",
+      "reason": "A single candidate transaction from The Graph matches the business intent and requires on-chain verification for authoritative confirmation.",
+      "referenced_evidence": [
+        "thegraph:0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000"
+      ]
+    },
+    "reconciliation": {
+      "command": "MARK_COMMITTED",
+      "target_state": "COMMITTED",
+      "reason": "Verified authoritative Arc transfer matches business intent binding",
+      "settlement_permission": "NEVER"
+    }
+  }
+}
