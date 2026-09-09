@@ -1,6 +1,6 @@
 # OneShot Product Delivery Plan
 
-Status: working testnet MVP; Arc/Privy evidence live; Graph deployment published but not allocated/indexed; live recovery adapters implemented but not default-enabled; P4/P6 live recovery proof incomplete
+Status: working testnet MVP; Arc/Privy evidence live; Circle Agent Stack Arc qualification slice planned but not yet implemented; Graph Studio/MCP recovery proof qualified while the decentralized Explorer deployment remains unallocated; P4 PASS; P5/P6 open
 Team: exactly three coders
 Implementation base: the human-approved commit containing this plan
 Research basis: `.agent/research/20260906-integration-decisions.md` and `.agent/research/20260907-subgraph-mcp-clarification.md`
@@ -19,6 +19,7 @@ current implementation base.
 | [#44](https://github.com/SWOFART/OneShot/pull/44) `fix: require recovery lookup config` | Removes placeholder Graph identities and requires explicit token, sender, block window, and MCP policy configuration; unavailable MCP/advisor ports remain the default. | Makes production recovery fail closed and ready for real configuration, but does not prove live MCP/model behavior or authorize hashless recovery. |
 | [#45](https://github.com/SWOFART/OneShot/pull/45) `docs: update plan with Graph deployment status` | Records the published deployment, duplicate registration, immutable CID, and the Explorer `NOT INDEXED` / no-allocation result, reconciling it with successful Studio queries. | Identifies the deployment while keeping decentralized indexing, live recovery, The Graph qualification, and P4 incomplete. |
 | [#46](https://github.com/SWOFART/OneShot/pull/46) `feat(reconciliation): implement live Vertex AI recovery advisor and Subgraph MCP client` | Adds tested `VertexAiRecoveryAdvisor` and `LiveSubgraphMcpRecoveryPort` implementations, exports them from reconciliation, and proves explicit worker injection with settlement permission disabled. | Delivers the C02/C06 adapter implementation, but worker defaults remain unavailable ports; runtime admission, live Graph allocation/query evidence, and model-to-core proof remain required. |
+| [#48](https://github.com/SWOFART/OneShot/pull/48) `feat(graph): complete live Subgraph MCP recovery proof and qualify The Graph` | Deploys Subgraph v0.2.1, proves the live Studio-to-MCP-to-Vertex AI recovery path, and records Arc receipt verification with zero duplicate broadcasts. | Closes the live Graph recovery proof and Gate P4 (`PASS`); the default worker remains fail-closed and decentralized Explorer allocation is still not evidenced. |
 
 ### The Graph deployment status
 
@@ -36,14 +37,20 @@ Explorer metadata identifies the following public deployment:
 
 The earlier successful query evidence is Studio/development evidence, not proof
 that the decentralized Gateway deployment is serving queries without allocations.
-To prove live hashless recovery for the AI Tooling track, the live Subgraph Studio
-deployment (`1758917/oneshot-arc-testnet/version/latest`) is active, synchronized,
-and serves Arc Testnet USDC candidate transfers directly to the Subgraph MCP
-recovery port (`execute_query_by_deployment_id`). Vertex AI Gemini 2.5 Flash consumes
-this live trace to advise `RECONCILE`, confirmed on Arc RPC with zero duplicate
-payments (`settlementPermission: NEVER`). The Graph is `QUALIFIED` for the AI Tooling
-track, sanitized evidence is recorded in `evidence/c06/graph-proof.json` and
+The current live Subgraph Studio deployment (`1758917/oneshot-arc-testnet/v0.2.1`)
+is active and synchronized, and serves Arc Testnet USDC candidate transfers through
+the Subgraph MCP recovery port (`execute_query_by_deployment_id`). Vertex AI Gemini
+2.5 Flash consumes this live trace to advise `RECONCILE`, confirmed on Arc RPC with
+zero duplicate payments (`settlementPermission: NEVER`). This supports a `QUALIFIED`
+The Graph AI Tooling claim under the event's Studio-accepted provider path; it does
+not upgrade the Explorer deployment to indexed or allocated status. Sanitized evidence
+is recorded in `evidence/c06/graph-proof.json` and
 `evidence/c06/sanitized-proof.json`, and Gate P4 is `PASS`.
+
+Open work after the current base is the Arc/Circle qualification slice described in
+section 5b. It is not implemented or sponsor-qualified merely because the plan names
+it, and it must not change the OneShot settlement authority or the fail-closed
+recovery defaults.
 
 ## Global product vision
 
@@ -87,9 +94,13 @@ Business Intent contract.
 
 ## Sponsor and product configuration
 
-The primary product configuration is **Privy + Arc + The Graph**:
+The primary product configuration is **Privy + Arc + Circle Agent Stack + The Graph**:
 
 - Privy authorizes and constrains the corporate wallet action.
+- Circle Agent Stack is the planned agent-facing Circle surface: a Circle Agent
+  Wallet with explicit spending controls, connected to Arc/USDC through Circle's
+  CLI and Skills. It is a bounded service-payment lane for the hackathon demo, not
+  a replacement for the corporate Privy wallet.
 - The Graph discovers candidate transfers when a successful submission lost its
   transaction hash or provider response. The production path reaches the live
   OneShot/Arc Subgraph through Subgraph MCP, not a direct application GraphQL client.
@@ -98,10 +109,12 @@ The primary product configuration is **Privy + Arc + The Graph**:
 - Arc verifies the candidate receipt and exact USDC `Transfer`.
 - OneShot and PostgreSQL alone decide the durable state transition.
 
-This is the final implementation direction. The Graph is load-bearing for
-automatic hashless discovery, but never becomes settlement authority. C01 must
-prove its live data, freshness, and candidate-selection behavior before the
-sponsor claim is made.
+This is the final implementation direction for the current event window. The
+Graph is load-bearing for automatic hashless discovery, but never becomes
+settlement authority. Circle Agent Stack is load-bearing only for the planned
+agentic-economy demo lane; the canonical OneShot obligation, policy decision,
+durable state transition, and at-most-once settlement remain under OneShot,
+PostgreSQL, Privy, and verified Arc evidence.
 
 The Graph submission targets the AI Tooling or AI Use Case track. One custom
 Subgraph does not satisfy the Composable/Standardized track. One live Subgraph
@@ -117,22 +130,21 @@ name each claimed track explicitly.
 
 | Slot | Claimed track | Basis in this plan |
 | --- | --- | --- |
-| The Graph | AI Tooling or AI Use Case (From Scratch) | Live OneShot/Arc Subgraph read through Subgraph MCP, with LLM candidate selection and explanation; verified on Arc RPC; `QUALIFIED` |
+| The Graph | AI Tooling or AI Use Case | Live OneShot/Arc Subgraph read through Subgraph MCP, with LLM candidate selection and explanation; verified on Arc RPC; `QUALIFIED` |
 | Privy | Best B2B financial product | Corporate execution wallet, scoped policy, and a real accounts-payable workflow |
 | Privy | Best financial flow | The committed USDC transfer is a completed financial flow through a Privy wallet action |
 | Arc | Launch on Arc Testnet & Push to Mainnet | Primary Arc claim: working testnet product plus the disabled Mainnet profile, deployment manifest, readiness probe, and rollback runbooks |
 | Arc | Best DeFi / Onchain Finance Application | Secondary Arc claim: conditional, multi-step USDC settlement on Arc with programmable authorization |
+| Arc | Best Agentic Economy Application with Circle Agent Stack | Planned Circle Agent Stack lane: an agent-controlled, capped Arc USDC service payment with a visible approval/denial path; `NOT VERIFIED` until Circle tools, live payment evidence, and the end-to-end intent trace exist |
 
 Not claimed, and the reason:
 
 - **Composable or Standardized Graph Products.** One custom Subgraph does not
   compose two Graph products and does not build on a standardized schema. The
   track text states this does not qualify.
-- **Best Agentic Economy Application with Circle Agent Stack.** Wallet
-  authorization and payment execution run through Privy, not the Circle Agent
-  Stack, and the calling agent executes an approved obligation rather than
-  making autonomous spending decisions. Claiming this track would misrepresent
-  the build.
+- **Hedera tracks.** No Hedera SDK, HTS, or x402/Blocky402 implementation is
+  in the current architecture. Adding Hedera would dilute the Arc/Circle demo
+  before the submission deadline, so it is explicitly out of scope for this plan.
 
 ```mermaid
 flowchart LR
@@ -169,17 +181,21 @@ settlement contract; never weaken authorization to obtain a cleaner lookup.
 | Execution worker | OneShot service | Acquire submission ownership and execute the approved settlement |
 | Reconciliation service | Agent and operator | Resolve ambiguous outcomes without blindly paying again |
 | Audit and recovery timeline | Company and supplier | Explain what happened, which evidence is authoritative, and what action is safe |
+| Circle agent-service lane | Autonomous agent | Discover/pay a bounded Arc USDC service through Circle Agent Stack, while OneShot records the intent, cap decision, result, and evidence |
 
 ```mermaid
 flowchart LR
     Company[Company operator] -->|wallet policy and limits| Privy[Privy]
     Agent[Autonomous agent] -->|stable business intent| API[OneShot API]
     Agent -.->|requests paid work| SupplierAPI[Paid API or digital supplier]
+    Agent -->|agent-service profile| CircleStack[Circle Agent Stack]
+    CircleStack --> CircleWallet[Circle Agent Wallet with spend caps]
+    CircleWallet -->|bounded USDC service payment| Arc
     API --> Core[OneShot domain]
     Core --> DB[(PostgreSQL authority)]
     DB --> Worker[Execution worker]
     Worker -->|authorized transfer request| Privy
-    Privy -->|ERC-20 USDC transaction| Arc[Arc]
+    Privy -->|canonical ERC-20 USDC transaction| Arc[Arc]
     Arc -->|one settlement| SupplierWallet[Supplier wallet]
     Arc --> History[Live OneShot Arc Subgraph]
     DB --> Recovery[Recovery service and view]
@@ -194,7 +210,9 @@ flowchart LR
 
 OneShot controls payment cardinality. It does not guarantee the quality or
 delivery of the supplier's API result; that remains a separate commercial
-contract.
+contract. The Circle lane is a provider-specific implementation behind the
+same intent and evidence boundary: one intent chooses either the canonical
+Privy rail or the explicitly scoped Circle service-payment rail, never both.
 
 ## Production roadmap model
 
@@ -209,7 +227,7 @@ contract.
 
 ## 1. Mission and v1 release
 
-Deliver a working application that accepts one approved Business Intent, survives retries, crashes, duplicate delivery, parallel workers, and ambiguous provider responses, and produces at most one committed USDC settlement on Arc Testnet through a Privy-controlled corporate wallet. The same build must include a fail-closed Arc Mainnet profile, deployment and rollback procedure, and readiness evidence so official mainnet values can be enabled without redesigning the domain. Known-identity recovery uses OneShot, Privy, and direct Arc evidence; hashless automatic recovery uses The Graph for candidate discovery after C01 proves live value and sponsor fit.
+Deliver a working application that accepts one approved Business Intent, survives retries, crashes, duplicate delivery, parallel workers, and ambiguous provider responses, and produces at most one committed USDC settlement on Arc Testnet through a Privy-controlled corporate wallet. The submission extension adds one bounded Circle Agent Stack service-payment lane for an agentic-economy demo; each demo intent selects exactly one payment rail and cannot double-charge. The same build must include a fail-closed Arc Mainnet profile, deployment and rollback procedure, and readiness evidence so official mainnet values can be enabled without redesigning the domain. Known-identity recovery uses OneShot, Privy, and direct Arc evidence; hashless automatic recovery uses The Graph for candidate discovery.
 
 The release claim is:
 
@@ -304,9 +322,9 @@ activate real-value execution.
 | Authoritative state | PostgreSQL, explicit SQL migrations, `pg`, uniqueness constraints, compare-and-set transitions, and transactional outbox records |
 | Work delivery | Graphile Worker over the same PostgreSQL database; at-least-once delivery is assumed |
 | EVM encoding and RPC | `viem` for typed addresses, calldata, chain access, receipt reads, and log verification |
-| Authorization | Privy Node SDK, execution wallet, scoped wallet policy, persisted idempotency key, and reference identity |
+| Authorization | Privy Node SDK for the corporate execution wallet, scoped wallet policy, persisted idempotency key, and reference identity; Circle Agent Stack is a separate, capped agent-facing lane and cannot bypass the OneShot intent/policy core |
 | Settlement profiles | Arc Testnet `eip155:5042002` and its official USDC interface are the only enabled live profile; the Arc Mainnet profile contains no guessed network values and remains disabled until official parameters are published, pinned, verified, and human-approved |
-| Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; the immutable deployment above is the selected v1 Subgraph MCP target. The LLM Recovery Agent emits only four advisory actions. C01 must prove allocation, the lost-hash flow, freshness, degradation behavior, and AI-track fit; production remains on `FALLBACK_DIRECT_RECOVERY` until then |
+| Hashless discovery and AI recovery | `IndexViewPort` is provider-neutral; the immutable deployment above is the selected v1 Subgraph MCP target. The LLM Recovery Agent emits only four advisory actions. C01's Studio/MCP lost-hash, freshness, degradation, and AI-track evidence is complete; production remains opt-in and fail-closed on `FALLBACK_DIRECT_RECOVERY` until runtime admission is explicitly configured |
 | Money | Canonical integer strings at JSON boundaries and `bigint` internally; no JavaScript monetary floats |
 | Frontend | React and Vite, generated OpenAPI client, exact integer amount formatting, and no direct settlement capability |
 | Testing | Vitest for unit/contract tests, Testcontainers for PostgreSQL integration, Playwright for browser flows, deterministic failure simulators, and Graph adapter/degradation tests |
@@ -320,8 +338,18 @@ protocol are frozen in [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md).
 
 ## 5b. Arc qualification and evidence
 
-Both claimed Arc tracks share one requirement set. This section maps each
-requirement to an owner and a concrete artifact so nothing is discovered late.
+Arc has distinct prize mechanics. The submission can select up to three partner
+prize slots, while multiple tracks from one partner count as one slot. The plan
+therefore treats Arc as one partner slot with three possible claims, and keeps
+each claim `NOT VERIFIED` until its own live evidence exists.
+
+| Arc track | What the judges must see | Current position | Required proof before claiming |
+| --- | --- | --- | --- |
+| Launch on Arc Testnet & Push to Mainnet | Working Arc integration, real USDC/EURC settlement or escrow flow, public repo/docs/video, and a mainnet-ready path by 30 September | Arc/Privy Testnet flow and fail-closed Mainnet profile exist; Circle evidence is pending | Repeatable Arc Testnet transaction, readiness/rollback artifact, 2-4 minute demo, and explicit mainnet-disable evidence |
+| Best DeFi / Onchain Finance Application | Meaningful Arc/USDC programmable money flow such as conditional, automated, or multi-step settlement; Circle developer tooling where relevant | The conditional OneShot settlement is implemented; Circle surface is pending | Circle tool appears in the architecture and live demo, with an Arc receipt, policy outcome, and one-intent/one-settlement trace |
+| Best Agentic Economy Application with Circle Agent Stack | An autonomous agent holds/uses a wallet, makes an agent payment or pays a service, manages risk, and uses Agent Stack to connect to wallets/USDC/onchain actions | `NOT VERIFIED`; no Circle package, wallet, or live Agent Stack trace is in the current base | Circle Agent Stack + Agent Wallet/Skills, spend-cap enforcement, a real Arc testnet paid request or onchain action, and sanitized intent-to-receipt evidence |
+
+The shared submission artifacts remain:
 
 | Arc requirement | Satisfied by | Owner | Artifact |
 | --- | --- | --- | --- |
@@ -331,8 +359,15 @@ requirement to an owner and a concrete artifact so nothing is discovered late.
 | Video demonstration and presentation | Scripted demo covering the invariant and Circle tool usage | B | Submission video, 2-4 minutes |
 | Detailed documentation | README, setup guide, operator and recovery runbooks | A/B | Public repository |
 | Public repository link | Public GitHub repository, secret-scanned history | A | Repository URL |
-| Explicit bounty naming | Submission text names both claimed Arc tracks | B | Submission form |
+| Explicit bounty naming | Submission text names each claimed Arc track and identifies Circle Agent Stack where used | B | Submission form |
 | Mainnet deployment-readiness by 30 September | Disabled Mainnet profile, deployment manifest, readiness probe, rollback runbook | A/B | `MAINNET_READINESS.md` in the public repository |
+
+ETHOnline's current submission mechanics add a hard packaging constraint:
+submit by 13 September 2026 at 12:00 PM EDT, select no more than three partner
+prize slots, and keep the demo/presentation within 2-4 minutes. Arc is one
+partner slot even when multiple Arc tracks are claimed. The Circle Agent Stack
+walkthrough therefore gets one short, end-to-end segment rather than separate
+product tours.
 
 ### Minimum Arc-qualifying frontend
 
@@ -360,17 +395,56 @@ the contract is published, never what P4 must prove.
 
 ### Circle developer-tool surface
 
-The project uses Arc and USDC directly. It does not use App Kits, Circle
-Wallets, Circle Contracts, CCTP, Gateway, StableFX, Paymaster, or Nanopayments,
-because wallet control and authorization run through Privy by design.
+The primary Circle implementation is **Circle Agent Stack**, using the Circle
+CLI and Skills to provision/use an Agent Wallet with explicit spending controls.
+The demo should use a live Arc Testnet-compatible Circle path for one of these
+meaningful actions:
 
-The DeFi track lists App Kits only "where relevant", so this is permitted. It
-is nevertheless a deliberate decision and must be defended in one sentence in
-the submission: OneShot's contribution is settlement cardinality on Arc, and
-adding a second wallet or payment product would duplicate the authorization
-boundary that Privy already provides.
+1. discover and pay a paid API/service request (x402 or another documented
+   Circle-supported agent-payment flow); or
+2. execute a bounded USDC action on Arc that is visible in the agent trace and
+   verifiable on-chain.
 
-Adding a Circle product solely to widen the logo surface is rejected.
+The first option is preferred because it makes the agentic-economy value obvious:
+the agent chooses a service, presents the payment/approval decision, pays within
+its cap, receives the result, and OneShot records the obligation and outcome.
+Circle Agent Stack must be visible in code/configuration, the architecture
+diagram, and the 2-4 minute video; a README-only reference or logo does not count.
+
+The authorization boundary is explicit. Privy remains the corporate wallet and
+the canonical OneShot settlement rail. The Circle Agent Wallet may execute only
+the bounded agent-service demo lane, behind a new provider-neutral port and the
+same durable Business Intent/idempotency policy. Circle or the agent cannot
+authorize a hashless recovery settlement, mutate sponsor policy, or bypass
+OneShot's one-intent/one-settlement core. If the Circle flow cannot preserve this
+boundary, it is removed from the claimed track rather than weakening the design.
+
+App Kit may be added only if it supplies a visible wallet/USDC UI used in the
+demo. Circle Contracts, CCTP, Gateway, StableFX, Paymaster, and Nanopayments are
+not default scope: each requires a concrete user-facing Arc use case, a tested
+adapter, and live evidence. No Circle product is added solely to widen the logo
+surface.
+
+### Circle acceptance checklist
+
+The Circle/Arc slice is `NOT VERIFIED` until all of the following are recorded:
+
+- Circle Agent Stack setup is reproducible from the public repository without
+  committing credentials; secrets remain in approved ignored/CI stores.
+- A Circle Agent Wallet is configured for the supported Arc Testnet path with a
+  per-transaction cap and daily cap; the actual values are external secret/config
+  state, not hard-coded plan claims.
+- The agent performs one real testnet service payment or USDC action, and the
+  evidence binds the Business Intent ID, Circle operation/reference, Arc
+  transaction hash or paid response, recipient, amount, network, and timestamp.
+- An over-cap or denied action produces zero settlement, and a lost/ambiguous
+  response remains `UNKNOWN` until deterministic reconciliation; no blind retry
+  or second broadcast is allowed.
+- The demo shows the agent decision, Circle approval/control, OneShot durable
+  state, and Arc verification in under four minutes, with sanitized logs and
+  public links.
+- A sponsor-qualification review upgrades the claim only after the exact tree,
+  live evidence, and required CI pass.
 
 ### Network constants
 
@@ -485,7 +559,7 @@ Owns:
 
 Coder A never implements provider-specific Privy, Arc, or external-index behavior.
 
-### Coder B — authorization and settlement adapters
+### Coder B — authorization, Circle, and settlement adapters
 
 Owns:
 
@@ -494,6 +568,8 @@ Owns:
 - `packages/testkit-settlement`
 - Privy policy and official-response fixtures
 - Arc network, transaction, and receipt validation
+- Circle Agent Stack/Agent Wallet compatibility spike, provider-neutral agent
+  payment port, spend-cap/denial fixtures, and sanitized Arc evidence
 - human-run provider setup documentation
 
 Coder B never changes domain tables or state meanings directly.
@@ -504,9 +580,9 @@ Owns:
 
 - `packages/reconciliation`
 - `packages/recovery-agent`
-- `packages/subgraph-mcp-adapter` after the C01 live-value decision
+- `packages/subgraph-mcp-adapter` and the completed C01 live-value evidence
 - `packages/testkit-failures`
-- `subgraph/` source and deployment metadata; production admission remains gated on The Graph's C01 live discovery and qualification evidence
+- `subgraph/` source and deployment metadata; runtime Graph admission remains gated on explicit configuration and human-reviewed evidence even though the Studio/MCP qualification proof is complete
 - recovery-view schemas and queries
 - failure matrix orchestration and recovery runbooks
 
@@ -574,7 +650,7 @@ contract passes.
 | R3 — safety under failure | Own R2 packet | A03 | B03 | C03 | P3 concurrency, ambiguity, and failure proofs |
 | R4 — backend convergence | A03/B03/C03 artifacts available | A04 and composition owner | B04 and live settlement evidence | C04 and live recovery evidence | P4 integrated backend, one real settlement, lost-response recovery |
 | R5 — product interface | P4 | A05 application shell | B05 policy/settlement slice | C05 recovery/history slice | P5 composed operator experience |
-| R6 — hardening and release | P5 | A06 operations/mainnet-readiness bundle | B06 Privy/Arc evidence and network profiles | C06 Graph discovery/recovery evidence | P6 repeatable testnet release plus mainnet-readiness candidate |
+| R6 — hardening and release | P5 | A06 operations/mainnet-readiness bundle | B06 Privy/Arc/Circle evidence and network profiles | C06 Graph discovery/recovery evidence | P6 repeatable testnet release plus mainnet-readiness candidate |
 
 Provider access, SDK incompatibility, or failed integration evidence opens an
 owner-specific compatibility task. It never weakens the safety invariant or
@@ -970,7 +1046,7 @@ Before Gate P6 can pass, confirm:
 - UI has no direct/bypass/force-pay action and labels authority/freshness correctly.
 - Demo/reset instructions require no unsafe database surgery or external-history rewrite.
 - Evidence, repository, logs, screenshots, fixtures, source maps, and reviews contain no secrets.
-- Claimed partner tracks match the sponsor claim mapping in section 5. Composable/Standardized and Circle Agent Stack remain unclaimed.
+- Claimed partner tracks match the sponsor claim mapping in section 5. Circle Agent Stack is a planned Arc claim and remains `NOT VERIFIED` until the acceptance checklist in section 5b is complete; Hedera remains out of scope.
 - Every Arc requirement row in section 5b has a delivered artifact, including the README architecture diagram and the explicit track naming in the submission.
 - Public README and submission text contain no statement that undermines a claimed dependency; justifications cite measured numbers.
 - Privy and Arc claims use the qualification standard. The Graph claim requires live hashless discovery plus meaningful recovery-agent automation; otherwise it is `NOT VERIFIED` and removed from the submission.
