@@ -56,15 +56,11 @@ export function App(props: AppProps = {}) {
     [apiBaseUrl, getAuthToken, props.apiClient],
   );
   const settlementClient = useMemo(
-    () =>
-      props.settlementClient ??
-      createSettlementClient({ baseUrl: apiBaseUrl, getAuthToken }),
+    () => props.settlementClient ?? createSettlementClient({ baseUrl: apiBaseUrl, getAuthToken }),
     [apiBaseUrl, getAuthToken, props.settlementClient],
   );
   const recoveryClient = useMemo(
-    () =>
-      props.recoveryClient ??
-      createApiRecoveryClient({ baseUrl: apiBaseUrl, getAuthToken }),
+    () => props.recoveryClient ?? createApiRecoveryClient({ baseUrl: apiBaseUrl, getAuthToken }),
     [apiBaseUrl, getAuthToken, props.recoveryClient],
   );
 
