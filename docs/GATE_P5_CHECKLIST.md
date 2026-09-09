@@ -2,73 +2,75 @@
 
 ## Objective
 
-Compose the A05 intent/status shell, B05 authorization and settlement details,
-and C05 recovery/evidence route into one operator-facing web application while
+Compose the A05 intent/status shell, B05 authorization and settlement evidence,
+and C05 recovery evidence into one operator-facing web application while
 preserving the rule that the UI never grants settlement permission.
 
 ## Composition
 
-| Surface              | Entry point                                            | Runtime boundary                                                                                              |
-| -------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Create or replay     | `apps/web` A05 shell                                   | `OneShotApiClient` and frozen OpenAPI v1                                                                      |
-| Authoritative status | `apps/web` A05 shell                                   | Durable OneShot intent state and read-only reconciliation                                                     |
-| Settlement evidence  | `SettlementDetailsRoute` from `@oneshot/settlement-ui` | Read-only `createSettlementClient` using the same API/token seam                                              |
-| Recovery evidence    | `RecoveryRoute` from `@oneshot/recovery-ui`            | Explicit synthetic C05 fixture review; the frozen API exposes `recovery-view`, not the richer timeline schema |
+| Surface              | Entry point                                            | Runtime boundary                                                                            |
+| -------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Create or replay     | `apps/web` A05 shell                                   | `OneShotApiClient` and frozen OpenAPI v1                                                    |
+| Authoritative status | `apps/web` A05 shell                                   | Durable OneShot intent state and read-only reconciliation                                   |
+| Settlement evidence  | `SettlementDetailsRoute` from `@oneshot/settlement-ui` | Read-only settlement client with the shared API/token seam                                  |
+| Recovery evidence    | `RecoveryRoute` from `@oneshot/recovery-ui`            | `createApiRecoveryClient` projects the frozen recovery-view API into the C05 timeline model |
 
-The composed shell exposes no payment, resend, force-pay, policy-bypass, or
-generic retry action. UNKNOWN remains reconciliation-only, and C05 keeps
-`settlementPermission: NEVER` visible in its recovery surface.
+The selected Business Intent ID and memory-only service token are shared across
+all four tabs. The shell uses APG tab semantics with roving focus and
+Arrow/Home/End navigation. No surface exposes payment, resend, force-pay,
+policy-bypass, or generic retry controls. UNKNOWN remains reconciliation-only,
+and recovery evidence always renders `settlementPermission: NEVER`.
+
+## Frozen recovery API boundary
+
+`GET /v1/intents/{id}/recovery-view` remains backward compatible and may expose
+sanitized Recovery Agent, deterministic-core, Subgraph MCP, and bounded
+candidate metadata. The web recovery client maps those fields into the C05
+timeline schema and uses labelled fail-closed fallbacks for legacy or absent
+data. Graph and model observations never grant settlement permission.
 
 ## Acceptance evidence
 
-- [x] Stable create/replay/conflict behavior remains covered by A05 tests.
-- [x] All authoritative intent state families remain covered by A05 tests.
-- [x] B05 package tests cover denial, cap, committed, UNKNOWN, unavailable,
-      malicious URL, redaction, keyboard, and contrast behavior.
-- [x] C05 package tests cover fresh, empty, lagging, unhealthy, unavailable,
-      multiple/contradictory, invalid-agent-output, committed, failed-safe, and
-      aged-UNKNOWN recovery scenarios.
-- [x] The composed web test covers all four tabs, keyboard tab navigation, and
-      both empty and loaded settlement states; it asserts that settlement and
-      recovery surfaces expose no payment action.
-- [x] Clean-run `pnpm --filter @oneshot/web test`: 31 tests passed with the
-      web Vitest config resolving both workspace UI packages from source.
+- [x] A05 stable create/replay/conflict and authoritative state families remain covered.
+- [x] B05 denial, cap, committed, UNKNOWN, unavailable, malicious URL,
+      redaction, keyboard, and contrast behavior remain covered.
+- [x] C05 fresh, empty, lagging, unhealthy, unavailable, multiple/contradictory,
+      invalid-agent-output, committed, failed-safe, and aged-UNKNOWN scenarios remain covered.
+- [x] The composed shell covers all four tabs, loaded and empty settlement
+      states, live frozen-API recovery projection, and no settlement action.
+- [x] `pnpm --filter @oneshot/web test`: 35 tests passed on a clean UI-dist state.
 - [x] `pnpm --filter @oneshot/web lint`: passed.
 - [x] `pnpm --filter @oneshot/web typecheck`: passed.
 - [x] `pnpm --filter @oneshot/web build`: passed.
 - [x] `pnpm build:frontend`: passed.
 - [x] `pnpm lint`: passed.
 - [x] `pnpm typecheck`: passed.
-- [x] Clean-run `pnpm test`: 59 files and 916 tests passed after the root
-      Vitest aliases source the workspace UI packages directly (browser specs
-      excluded from Vitest and run by `pnpm test:browser`).
+- [x] `pnpm test`: 58 files and 904 tests passed after clean UI-dist removal;
+      browser suites are excluded from Vitest.
 - [x] `pnpm --filter @oneshot/web typecheck:browser`: passed.
-- [x] `pnpm format:check`: passed after `pnpm test:browser`; Playwright output
-      is ignored under `apps/web/test-results/` and `apps/web/playwright-report/`.
+- [x] `pnpm test:browser`: 7 Chromium tests passed, including create/replay,
+      conflict, denial, unavailable, committed, UNKNOWN, recovery degradation,
+      read-only settlement, token-memory, keyboard, and 390/1280-pixel checks.
+- [x] `pnpm format:check` passes after browser execution; Playwright output is
+      ignored under `apps/web/test-results/` and `apps/web/playwright-report/`.
 - [x] `pnpm check:generated`: passed.
-- [x] `pnpm validate:fixtures`: passed.
-- [x] Reproducible Playwright browser acceptance covers create, replay,
-      conflict, denial, service-unavailable, committed, `UNKNOWN`, loaded
-      settlement evidence, Graph discovery, lag/error/unavailable/multiple-
-      candidate states, keyboard tab navigation, and 390/1280-pixel layout.
-- [ ] Interactive browser smoke in this agent host: unavailable because no
-      browser provider is exposed to the agent session. CI runs the Playwright
-      suite with Chromium; the local host has not claimed a manual click-through.
+- [x] `pnpm validate:fixtures`: passed (9 contract and 7 UI fixtures).
+- [ ] Interactive human desktop/mobile click-through remains open in this agent
+      host; automated Chromium smoke and CI are the recorded evidence.
 
 ## Security and scope notes
 
-- The runtime service token remains memory-only in the browser.
-- B05 receives sanitized API contract fields through its public read-only
-  client; it has no settlement adapter or submission method.
-- C05 fixture review is visibly labelled synthetic and cannot authorize a
-  payment. Live hashless recovery evidence remains a backend/release concern,
-  not a frontend shortcut.
-- No credentials, keys, wallet material, or ignored runtime files are part of
-  this change.
+- The runtime service token remains memory-only in the browser and is sent only
+  as a Bearer header through the injected API seams.
+- B05 receives sanitized contract fields through a public read-only client; it
+  has no settlement adapter or submission method.
+- C05 recovery projection is read-only and fail-closed. The frozen API has no
+  durable operator-escalation endpoint, so the UI does not invent one.
+- No credentials, keys, wallet material, generated build output, or ignored
+  runtime files are part of this change.
 
 ## Gate state
 
-Implementation and automated acceptance evidence are complete. The gate is
-not claimed as fully closed until a human or an available browser provider
-performs the desktop/mobile smoke check and the required independent FreePi
-reviews bind to the final candidate tree.
+This comparison branch records implementation and local automated evidence only.
+It does not claim Gate A or Gate B. A fresh Gate A is required for the final
+candidate tree after this merge is committed or otherwise submitted for review.

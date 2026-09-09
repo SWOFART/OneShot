@@ -51,6 +51,8 @@ build/
 coverage/
 apps/web/test-results/
 apps/web/playwright-report/
+playwright-report/
+test-results/
 node_modules/
 .venv/
 venv/

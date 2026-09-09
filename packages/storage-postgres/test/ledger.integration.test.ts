@@ -133,4 +133,56 @@ describePostgres('PostgreSQL intent ledger', () => {
       await restartedPool.end();
     }
   });
+
+  it('returns the persisted Recovery Agent and deterministic-core decision', async () => {
+    const ledger = newLedger();
+    await ledger.createOrReplay(request, 'correlation-recovery-view');
+    await ledger.recordRecoveryEvent(request.business_intent_id, 'event-p5', {
+      recoveryView: {
+        recommendedAction: 'ESCALATE',
+        coreDisposition: 'ESCALATE_UNKNOWN',
+        indexedCandidates: [],
+        indexHealth: 'UNAVAILABLE',
+        contradiction: false,
+        contradictionCodes: [],
+        diagnostics: ['MCP_UNAVAILABLE'],
+      },
+      reconciliationCommand: {
+        targetState: 'UNKNOWN',
+        reason: 'No authoritative Arc proof exists.',
+        authoritativeProofPresent: false,
+        evidenceReferences: ['oneshot:state:1'],
+      },
+      appendCommands: [
+        {
+          record: {
+            recordType: 'DECISION',
+            source: 'LLM',
+            accepted: true,
+            reason: 'Escalate because discovery is unavailable.',
+            evidenceReferences: ['oneshot:state:1'],
+            provenance: {
+              modelIdentity: {
+                modelName: 'gemini',
+                modelVersion: '2.5-flash',
+                promptVersion: 'recovery-v1',
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    await expect(ledger.getRecoveryView(request.business_intent_id)).resolves.toMatchObject({
+      recommended_action: 'ESCALATE',
+      recommendation_source: 'RECOVERY_AGENT',
+      core_disposition: 'ESCALATE_UNKNOWN',
+      settlement_permission: 'NEVER',
+      agent_decision: {
+        accepted: true,
+        model_name: 'gemini',
+        model_version: '2.5-flash',
+      },
+    });
+  });
 });

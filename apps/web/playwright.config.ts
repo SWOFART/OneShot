@@ -10,8 +10,8 @@ const webServer = {
 };
 
 export default defineConfig({
-  testDir: './browser',
-  testMatch: '**/*.spec.ts',
+  testDir: '.',
+  testMatch: ['browser/**/*.spec.ts', 'test/gate-p5.spec.ts'],
   timeout: 30_000,
   expect: { timeout: 5_000 },
   fullyParallel: true,

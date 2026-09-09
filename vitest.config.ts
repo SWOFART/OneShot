@@ -12,6 +12,14 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    exclude: ['**/node_modules/**', '**/dist/**', 'apps/web/browser/**'],
+    coverage: { enabled: false },
+    exclude: [
+      '**/*.integration.test.ts',
+      'apps/web/browser/**',
+      'apps/web/test/**/*.spec.ts',
+      '**/node_modules/**',
+      '**/dist/**',
+    ],
+    include: ['{apps,packages}/**/*.{test,spec}.{ts,mjs}'],
   },
 });

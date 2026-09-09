@@ -2,7 +2,9 @@ import {
   asAttemptId,
   asBusinessIntentId,
   asCorrelationId,
+  CORE_DISPOSITIONS,
   ContractValidationError,
+  RECOVERY_ACTIONS,
   type AttemptView,
   type BusinessIntentId,
   type EvidenceView,
@@ -76,6 +78,158 @@ interface IntentRow {
   readonly purpose: string;
   readonly state: IntentState;
   readonly version: number;
+}
+
+function object(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function text(value: unknown, maxLength = 500): string | null {
+  return typeof value === 'string' && value.length > 0 && value.length <= maxLength ? value : null;
+}
+
+function texts(value: unknown): readonly string[] {
+  return Array.isArray(value)
+    ? value.flatMap((item) => {
+        const parsed = text(item, 128);
+        return parsed === null ? [] : [parsed];
+      })
+    : [];
+}
+
+function persistedRecovery(payload: unknown): {
+  readonly action?: RecoveryView['recommended_action'];
+  readonly details: Partial<RecoveryView>;
+} {
+  const pack = object(payload);
+  const view = object(pack?.['recoveryView']);
+  const command = object(pack?.['reconciliationCommand']);
+  const action = RECOVERY_ACTIONS.find((value) => value === view?.['recommendedAction']);
+  const core = CORE_DISPOSITIONS.find((value) => value === view?.['coreDisposition']);
+  if (!view || !command || !action || !core) return { details: {} };
+
+  const records = Array.isArray(pack?.['appendCommands'])
+    ? pack['appendCommands'].flatMap((entry) => {
+        const record = object(object(entry)?.['record']);
+        return record === null ? [] : [record];
+      })
+    : [];
+  const agentRecord = records.find(
+    (record) => record['recordType'] === 'DECISION' && record['source'] === 'LLM',
+  );
+  const model = object(object(agentRecord?.['provenance'])?.['modelIdentity']);
+  const agentReason = text(agentRecord?.['reason']);
+  const modelName = text(model?.['modelName'], 128);
+  const modelVersion = text(model?.['modelVersion'], 128);
+  const promptVersion = text(model?.['promptVersion'], 128);
+
+  const graphRecord = records.find(
+    (record) => record['recordType'] === 'OBSERVATION' && record['source'] === 'THE_GRAPH',
+  );
+  const mcp = object(graphRecord?.['provenance']);
+  const candidates = Array.isArray(view['indexedCandidates'])
+    ? view['indexedCandidates'].flatMap((value) => {
+        const candidate = object(value);
+        const candidateId = text(candidate?.['id'], 128);
+        const transactionHash = text(candidate?.['transactionHash'], 66);
+        const blockNumber = text(candidate?.['blockNumber'], 78);
+        const bindingStatus = candidate?.['bindingStatus'];
+        const contradictionCodes = texts(candidate?.['contradictionCodes']);
+        if (
+          !candidateId ||
+          !transactionHash?.match(/^0x[0-9a-fA-F]{64}$/u) ||
+          !blockNumber?.match(/^(0|[1-9][0-9]*)$/u) ||
+          (bindingStatus !== 'MATCH' && bindingStatus !== 'CONTRADICTORY')
+        ) {
+          return [];
+        }
+        const normalizedBindingStatus: 'MATCH' | 'CONTRADICTORY' = bindingStatus;
+        return [
+          {
+            candidate_id: candidateId,
+            transaction_hash: transactionHash,
+            block_number: blockNumber,
+            binding_status: normalizedBindingStatus,
+            contradiction_codes: contradictionCodes,
+          },
+        ];
+      })
+    : [];
+  const health =
+    view['indexHealth'] === 'FRESH' ||
+    view['indexHealth'] === 'LAGGING' ||
+    view['indexHealth'] === 'UNHEALTHY' ||
+    view['indexHealth'] === 'UNAVAILABLE' ||
+    view['indexHealth'] === 'UNKNOWN_FRESHNESS'
+      ? view['indexHealth']
+      : null;
+  const serverName = text(mcp?.['serverName'], 128);
+  const serverVersion = text(mcp?.['serverVersion'], 128);
+  const toolName = text(mcp?.['toolName'], 128);
+  const deploymentId = text(mcp?.['deploymentId'], 128);
+  const manifestCid = text(mcp?.['manifestCid'], 128);
+  const observedThroughBlock = text(graphRecord?.['blockNumber'], 78);
+  const observedThroughTime = text(graphRecord?.['retrievedAt'], 128);
+
+  const targetState = command['targetState'];
+  const coreReason = text(command['reason']);
+  const details: Partial<RecoveryView> = {
+    core_disposition: core,
+    settlement_permission: 'NEVER',
+    contradiction: view['contradiction'] === true,
+    contradiction_codes: texts(view['contradictionCodes']),
+    diagnostics: texts(view['diagnostics']),
+    ...(agentRecord &&
+    typeof agentRecord['accepted'] === 'boolean' &&
+    agentReason &&
+    modelName &&
+    modelVersion &&
+    promptVersion
+      ? {
+          agent_decision: {
+            accepted: agentRecord['accepted'],
+            reason: agentReason,
+            model_name: modelName,
+            model_version: modelVersion,
+            prompt_version: promptVersion,
+            evidence_references: texts(agentRecord['evidenceReferences']),
+          },
+        }
+      : {}),
+    ...(coreReason &&
+    (targetState === 'UNKNOWN' || targetState === 'COMMITTED' || targetState === 'FAILED_SAFE')
+      ? {
+          core_decision: {
+            disposition: core,
+            target_state: targetState,
+            reason: coreReason,
+            authoritative_proof_present: command['authoritativeProofPresent'] === true,
+            evidence_references: texts(command['evidenceReferences']),
+          },
+        }
+      : {}),
+    ...(health && serverName && serverVersion && toolName && deploymentId && manifestCid
+      ? {
+          graph_observation: {
+            server_name: serverName,
+            server_version: serverVersion,
+            tool_name: toolName,
+            deployment_id: deploymentId,
+            manifest_cid: manifestCid,
+            ...(observedThroughBlock ? { observed_through_block: observedThroughBlock } : {}),
+            ...(observedThroughTime ? { observed_through_time: observedThroughTime } : {}),
+            health,
+            available: health !== 'UNAVAILABLE',
+            candidate_count: candidates.length,
+            diagnostics: texts(view['diagnostics']),
+            candidates,
+          },
+        }
+      : {}),
+  };
+  return { action, details };
 }
 
 interface AttemptRow {
@@ -223,10 +377,24 @@ export class IntentLedger {
   async getRecoveryView(idValue: unknown): Promise<RecoveryView | undefined> {
     const intent = await this.getIntent(idValue);
     if (!intent) return undefined;
+    const latestRecovery = await this.#pool.query<{ payload: unknown }>(
+      `SELECT payload
+       FROM outbox_jobs
+       WHERE business_intent_id = $1
+         AND job_key LIKE 'recovery-event:%'
+       ORDER BY outbox_job_id DESC
+       LIMIT 1`,
+      [intent.business_intent_id],
+    );
+    const persisted = persistedRecovery(latestRecovery.rows[0]?.payload);
     return {
       business_intent_id: intent.business_intent_id,
       authoritative_state: intent.state,
-      recommended_action: intent.state === 'COMMITTED' ? 'RETURN_EXISTING_RESULT' : 'WAIT',
+      recommended_action:
+        persisted.action ?? (intent.state === 'COMMITTED' ? 'RETURN_EXISTING_RESULT' : 'WAIT'),
+      recommendation_source: persisted.action ? 'RECOVERY_AGENT' : 'SAFE_FALLBACK',
+      ...persisted.details,
+      settlement_permission: 'NEVER',
       evidence: intent.evidence,
     };
   }

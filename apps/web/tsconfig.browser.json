@@ -4,5 +4,5 @@
     "noEmit": true,
     "rootDir": "."
   },
-  "include": ["browser/**/*.ts", "playwright.config.ts"]
+  "include": ["browser/**/*.ts", "test/gate-p5.spec.ts", "playwright.config.ts"]
 }

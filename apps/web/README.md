@@ -1,6 +1,7 @@
 # OneShot web
 
-Minimal operator UI for creating or replaying a Business Intent and reading its authoritative status.
+Gate P5 operator UI composing intent creation/status, Privy and Arc settlement
+details, and Recovery Agent/Subgraph MCP evidence.
 
 The Cloudflare asset deployment serves this app at the domain root and the
 recovery fixture viewer from `@oneshot/recovery-ui` at `/recovery/`. Deploy it
@@ -22,4 +23,13 @@ pnpm build:frontend
 This emits the main app to `apps/web/dist` and the recovery viewer to
 `apps/web/dist/recovery`, matching the Wrangler asset directory.
 
-The client consumes generated `@oneshot/contracts` types from frozen OpenAPI v1. Tests use deterministic fetch responses matching that contract.
+The clients consume generated `@oneshot/contracts` types from frozen OpenAPI v1.
+The service token remains in React memory and is never written to browser
+storage. Run the Chromium acceptance suite with:
+
+```powershell
+pnpm --filter @oneshot/web test:browser
+```
+
+See [`../../docs/GATE_P5_CHECKLIST.md`](../../docs/GATE_P5_CHECKLIST.md) for the
+covered states and safety boundary.

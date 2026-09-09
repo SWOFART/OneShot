@@ -1,19 +1,5 @@
-import { useMemo, useState } from 'react';
-
-import {
-  RECOVERY_SCENARIOS,
-  RecoveryRoute,
-  createInMemoryRecoveryClient,
-  type RecoveryScenario,
-} from '@oneshot/recovery-ui';
+import { RecoveryRoute, type RecoveryClient } from '@oneshot/recovery-ui';
 import { SettlementDetailsRoute, type SettlementClient } from '@oneshot/settlement-ui';
-
-function scenarioLabel(scenario: RecoveryScenario): string {
-  return scenario
-    .split('-')
-    .map((word) => `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`)
-    .join(' ');
-}
 
 function EmptySurface({ title, detail }: { readonly title: string; readonly detail: string }) {
   return (
@@ -48,37 +34,25 @@ export function SettlementSurface({
   );
 }
 
-export function RecoverySurface({ businessIntentId }: { readonly businessIntentId: string }) {
-  const [scenario, setScenario] = useState<RecoveryScenario>('aged-unknown');
-  const client = useMemo(() => createInMemoryRecoveryClient(scenario), [scenario]);
-  const intentId = businessIntentId || 'intent_demo_018f';
+export function RecoverySurface({
+  businessIntentId,
+  client,
+}: {
+  readonly businessIntentId: string;
+  readonly client: RecoveryClient;
+}) {
+  if (!businessIntentId) {
+    return (
+      <EmptySurface
+        title="Select an intent to inspect recovery evidence"
+        detail="The recovery view is read-only and always displays settlement permission as NEVER."
+      />
+    );
+  }
 
   return (
-    <section className="composed-surface recovery-surface" aria-label="Recovery evidence review">
-      <div className="fixture-toolbar">
-        <div>
-          <p className="eyebrow">C05 / COMPOSED REVIEW SURFACE</p>
-          <strong>Synthetic recovery fixtures</strong>
-          <span>
-            Review-only states; no fixture exposes settlement permission or a payment action.
-          </span>
-        </div>
-        <label htmlFor="recovery-scenario">
-          Scenario
-          <select
-            id="recovery-scenario"
-            value={scenario}
-            onChange={(event) => setScenario(event.target.value as RecoveryScenario)}
-          >
-            {RECOVERY_SCENARIOS.map((value) => (
-              <option value={value} key={value}>
-                {scenarioLabel(value)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <RecoveryRoute businessIntentId={intentId} client={client} />
-    </section>
+    <div className="composed-surface recovery-surface" aria-label="Recovery evidence review">
+      <RecoveryRoute businessIntentId={businessIntentId} client={client} />
+    </div>
   );
 }

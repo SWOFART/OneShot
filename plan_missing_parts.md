@@ -30,6 +30,29 @@ exist.
 The repository contains demo runbooks and evidence templates, but not a
 recorded submission artifact.
 
+### Arc/Circle Agent Stack qualification
+
+The current base has a real Arc/Privy settlement and a qualified live Graph
+recovery path, but it does not yet contain a Circle Agent Stack integration.
+The remaining Arc sponsor work is therefore an implementation and evidence
+slice, not a documentation-only claim:
+
+- add a provider-neutral agent-service payment port backed by Circle Agent
+  Stack/Agent Wallet and Circle CLI/Skills;
+- configure explicit per-transaction and daily spending controls without
+  committing credentials or relying on an unbounded agent wallet;
+- execute one real Arc Testnet USDC service payment or paid request, bind it to
+  a durable OneShot Business Intent, and verify the Arc receipt/response;
+- prove over-cap/denied and lost-response behavior preserves zero duplicate
+  settlement and `UNKNOWN` reconciliation; and
+- capture sanitized code, test, live transaction, architecture, and 2-4 minute
+  demo evidence before claiming the Arc Agentic Economy track.
+
+Privy remains the canonical corporate authorization rail. Circle must not bypass
+the OneShot policy/idempotency core or gain authority over hashless recovery.
+Hedera HTS and Hedera x402 work are intentionally not part of this submission
+window.
+
 ## Completed in Gate P4
 
 ### Live The Graph hashless recovery
@@ -52,17 +75,13 @@ All backend composition pieces, the live Privy/Arc allowed, denied, and lost-res
 
 ### Gate P5 frontend acceptance
 
-The intent/status UI and a synthetic recovery viewer are implemented, but the
-repository status still marks live API wiring as pending. Complete the frozen
-API composition and browser-level acceptance coverage for:
-
-- create, replay, and conflicting intent payloads;
-- policy denial, committed settlement, and `UNKNOWN` recovery states;
-- Graph discovery, lag/error, and multiple-candidate states; and
-- accessibility, responsive layout, no-secret, and no-force-pay checks.
-
-The plan calls for Playwright browser flows; the current workspace evidence is
-primarily Vitest component/client tests and fixture-backed recovery UI tests.
+The Gate P5 candidate composes A05/B05/C05 against the frozen API and adds
+Playwright coverage for create, replay, conflict, denial, committed, `UNKNOWN`,
+Graph discovery/degradation, service-unavailable, keyboard, responsive,
+memory-only token, and no-force-pay behavior. The recovery API now returns the
+persisted Recovery Agent and deterministic-core decision instead of a hard-coded
+action. Exact-tree review, CI, and human merge remain before the project gate is
+closed.
 
 ### Gate P6 release candidate
 
@@ -77,13 +96,15 @@ and the exact release candidate completes CI plus Gate A and Gate B review.
 | --- | --- | --- |
 | Live Graph recovery | RESOLVED: Live Subgraph Studio deployment, MCP client, and Vertex AI Gemini adapter operational (`QUALIFIED`) | Preserved `settlementPermission: NEVER`. |
 | P4 live lost-hash proof | RESOLVED: Full live lost-hash recovery trace verified and recorded | Gate P4 is PASS. |
-| P5 live UI acceptance | Reachable configured API, safe test data, and browser-test environment | Continue fixture/mock coverage; do not add a payment bypass. |
+| P5 live UI acceptance | RESOLVED in candidate: configured Cloud Run is reachable and frozen-API Playwright coverage exists | Await exact-tree review, CI, and human merge. |
 | P6 release | P5 completion, CI, exact-tree reviews, and human demo/submission decisions | Keep release candidate and sponsor claims incomplete. |
 | Arc Mainnet | Official published network values and explicit human authorization | Preserve the disabled, fail-closed profile. |
+| Circle Agent Stack Arc lane | Agent Stack/Agent Wallet implementation, supported-chain confirmation, spend controls, live payment, and evidence | Keep the Circle Arc claim `NOT VERIFIED`; continue the proven Privy/Arc path until the complete acceptance checklist passes. |
 
 ## Immediate Priorities
 
-1. Wire the operator UI to the configured API and add the P5 browser acceptance
-   suite, especially `UNKNOWN` and Graph-degraded recovery views.
-2. After P5 passes, capture the demo/submission artifacts and perform the P6
-   release-candidate CI and review sequence.
+1. Complete Gate A, CI, Gate B, and human review for the Gate P5 candidate.
+2. Implement and test the bounded Circle Agent Stack Arc service-payment lane;
+   keep Privy as the canonical OneShot settlement authority.
+3. After P5 and the Circle evidence pass, capture the demo/submission artifacts
+   and perform the P6 release-candidate CI and review sequence.

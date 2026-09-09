@@ -7,7 +7,7 @@
     "build": "tsc -b && vite build",
     "clean": "tsc -b --clean",
     "dev": "vite",
-    "lint": "eslint src test",
+    "lint": "eslint src test playwright.config.ts",
     "preview": "vite preview",
     "test": "vitest run --config vitest.config.ts",
     "test:browser": "pnpm run typecheck:browser && pnpm run build && node scripts/run-browser-tests.mjs",
@@ -22,9 +22,9 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
-    "@playwright/test": "1.52.0",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",

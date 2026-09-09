@@ -5,6 +5,7 @@ import {
   SETTLEMENT_SCENARIO_INTENTS,
   createInMemorySettlementClient,
 } from '@oneshot/settlement-ui';
+import { createInMemoryRecoveryClient, recoveryScenarioPages } from '@oneshot/recovery-ui';
 
 import { App } from '../src/App.js';
 import { SettlementSurface } from '../src/components/FrontendSurfaces.js';
@@ -29,7 +30,7 @@ describe('composed frontend shell', () => {
     });
 
     const user = userEvent.setup();
-    render(<App />);
+    render(<App recoveryClient={createInMemoryRecoveryClient('lagging')} />);
 
     expect(screen.getByRole('tab', { name: 'Create or replay' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Authoritative status' })).toBeTruthy();
@@ -44,6 +45,24 @@ describe('composed frontend shell', () => {
     ).toBe('true');
     expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Authoritative status' }));
 
+    await user.keyboard('{ArrowLeft}');
+    expect(
+      screen.getByRole('tab', { name: 'Create or replay' }).getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Create or replay' }));
+
+    await user.keyboard('{End}');
+    expect(
+      screen.getByRole('tab', { name: 'Recovery evidence' }).getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Recovery evidence' }));
+
+    await user.keyboard('{Home}');
+    expect(
+      screen.getByRole('tab', { name: 'Create or replay' }).getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Create or replay' }));
+
     await user.click(screen.getByRole('tab', { name: 'Settlement evidence' }));
     expect(
       await screen.findByText(/Select an intent to inspect settlement evidence/u),
@@ -51,9 +70,12 @@ describe('composed frontend shell', () => {
     expect(screen.queryByRole('button', { name: /pay|retry|resend|force/iu })).toBeNull();
 
     await user.click(screen.getByRole('tab', { name: 'Recovery evidence' }));
-    expect(await screen.findByText('Evidence before action.')).toBeTruthy();
-    expect(screen.getByText('Synthetic recovery fixtures')).toBeTruthy();
-    expect(screen.getByText('New settlement blocked')).toBeTruthy();
+    await user.type(
+      screen.getByLabelText('Active Business Intent ID'),
+      recoveryScenarioPages.lagging[0]?.businessIntentId ?? '',
+    );
+    expect(await screen.findByText('LAGGING')).toBeTruthy();
+    expect(screen.getByText('Subgraph MCP')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /pay|retry|resend|force/iu })).toBeNull();
   });
 

@@ -65,6 +65,7 @@ export interface RecoveryClient {
   readPage(businessIntentId: string, cursor: string | null): Promise<RecoveryTimelinePage>;
   refresh(businessIntentId: string): Promise<RecoveryActionReceipt>;
   escalate(businessIntentId: string): Promise<RecoveryActionReceipt>;
+  readonly supportsEscalation?: boolean;
 }
 
 function parseReceipt(value: unknown): RecoveryActionReceipt {

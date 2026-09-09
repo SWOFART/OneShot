@@ -84,6 +84,7 @@ p {
 
 .readiness,
 .auth-bar,
+.intent-context,
 .panel {
   border: 1px solid #d8dfeb;
   border-radius: 0.9rem;
@@ -171,6 +172,27 @@ p {
   padding: 0.75rem 1rem;
 }
 
+.intent-context {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+}
+
+.intent-context label {
+  font-weight: 700;
+}
+
+.intent-context input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #aeb9ca;
+  border-radius: 0.6rem;
+}
+
 .auth-bar label,
 .field-label,
 .form label {
@@ -185,6 +207,7 @@ p {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.35rem;
   margin: 1rem 0;
   overflow-x: auto;
@@ -394,6 +417,7 @@ p {
   }
 
   .auth-bar,
+  .intent-context,
   .payment-grid,
   .facts div {
     grid-template-columns: 1fr;

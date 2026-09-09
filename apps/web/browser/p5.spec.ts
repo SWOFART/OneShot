@@ -53,6 +53,66 @@ function intent(state: 'READY' | 'COMMITTED' | 'UNKNOWN', id: string) {
   };
 }
 
+function recoveryView(id: string) {
+  const freshness = id.includes('lag') ? 'LAGGING' : id.includes('error') ? 'UNAVAILABLE' : 'FRESH';
+  const count = id.includes('multiple') ? 2 : 1;
+  const diagnostics = id.includes('multiple') ? ['MULTIPLE_CANDIDATES'] : [];
+  return {
+    business_intent_id: id,
+    authoritative_state: 'UNKNOWN',
+    recommended_action: freshness === 'FRESH' ? 'RECONCILE' : 'WAIT',
+    recommendation_source: 'RECOVERY_AGENT',
+    core_disposition: freshness === 'FRESH' ? 'READ_ONLY_LOOKUP' : 'HOLD_UNKNOWN',
+    settlement_permission: 'NEVER',
+    agent_decision: {
+      accepted: true,
+      reason: 'Agent selected a bounded recovery action from sanitized evidence.',
+      model_name: 'gemini',
+      model_version: '2.5-flash',
+      prompt_version: 'recovery-v1',
+      evidence_references: ['graph-1'],
+    },
+    core_decision: {
+      disposition: freshness === 'FRESH' ? 'READ_ONLY_LOOKUP' : 'HOLD_UNKNOWN',
+      target_state: 'UNKNOWN',
+      reason: 'No authoritative Arc proof permits a terminal transition.',
+      authoritative_proof_present: false,
+      evidence_references: [],
+    },
+    graph_observation: {
+      server_name: 'subgraph-mcp',
+      server_version: '1.0.0',
+      tool_name: 'execute_query_by_deployment_id',
+      deployment_id: 'QmP5Deployment',
+      manifest_cid: 'QmP5Manifest',
+      observed_through_block: '61153492',
+      observed_through_time: '2026-09-09T09:01:00.000Z',
+      health: freshness,
+      available: freshness !== 'UNAVAILABLE',
+      candidate_count: count,
+      diagnostics,
+      candidates: Array.from({ length: count }, (_, index) => ({
+        candidate_id: `candidate-${index + 1}`,
+        transaction_hash: `0x${String(index + 1).repeat(64)}`,
+        block_number: String(61153492 + index),
+        binding_status: 'MATCH',
+        contradiction_codes: [],
+      })),
+    },
+    contradiction: id.includes('multiple'),
+    contradiction_codes: id.includes('multiple') ? ['MULTIPLE_DISTINCT_CANDIDATES'] : [],
+    diagnostics,
+    evidence: Array.from({ length: count }, (_, index) => ({
+      source: 'THE_GRAPH',
+      authority_class: 'OBSERVATION',
+      retrieved_at: `2026-09-09T09:0${index + 1}:00.000Z`,
+      digest: `graph-${index + 1}`,
+      block_number: String(61153492 + index),
+      freshness,
+    })),
+  };
+}
+
 async function json(route: Route, status: number, body: unknown): Promise<void> {
   await route.fulfill({
     status,
@@ -68,6 +128,11 @@ async function stubReadiness(page: Page): Promise<void> {
 async function fillIntentForm(page: Page): Promise<void> {
   await page.getByLabel('Recipient').fill(RECIPIENT);
   await page.getByLabel('Amount in USDC').fill('1.25');
+}
+
+async function selectIntent(page: Page, id: string, tab: string): Promise<void> {
+  await page.getByLabel('Active Business Intent ID').fill(id);
+  await page.getByRole('tab', { name: tab }).click();
 }
 
 test.describe('P5 composed operator experience', () => {
@@ -189,35 +254,30 @@ test.describe('P5 composed operator experience', () => {
     page,
   }) => {
     await stubReadiness(page);
+    await page.route('**/v1/intents/**', async (route) => {
+      const url = new URL(route.request().url());
+      const match = /^\/v1\/intents\/([^/]+)(\/recovery-view)?$/u.exec(url.pathname);
+      const id = decodeURIComponent(match?.[1] ?? '');
+      await json(route, 200, match?.[2] ? recoveryView(id) : intent('UNKNOWN', id));
+    });
     await page.goto('/');
-    await page.getByRole('tab', { name: 'Recovery evidence' }).click();
-    const scenario = page.getByLabel('Scenario');
-
-    await scenario.selectOption('empty');
-    await expect(page.getByText(/Not observed through block 704/u)).toBeVisible();
-
-    await scenario.selectOption('lagging');
-    await expect(
-      page.getByRole('region', { name: 'Subgraph MCP' }).getByText('LAGGING', { exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText(/42 blocks/u)).toBeVisible();
-
-    await scenario.selectOption('unhealthy');
-    await expect(
-      page.getByRole('region', { name: 'Subgraph MCP' }).getByText('UNHEALTHY', { exact: true }),
-    ).toBeVisible();
-
-    await scenario.selectOption('unavailable');
-    await expect(page.getByText('Subgraph MCP unavailable.')).toBeVisible();
-
-    await scenario.selectOption('contradictory');
-    await expect(page.getByText('Contradictory evidence.')).toBeVisible();
-    await expect(
-      page
-        .getByRole('list', { name: 'Subgraph MCP diagnostics' })
-        .getByText('MULTIPLE_CANDIDATES', { exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText('New settlement blocked')).toBeVisible();
+    for (const [id, expected] of [
+      ['intent-graph-discovery', 'FRESH'],
+      ['intent-graph-lag', 'LAGGING'],
+      ['intent-graph-error', 'Subgraph MCP unavailable.'],
+      ['intent-graph-multiple', 'Multiple candidate observations require review.'],
+    ] as const) {
+      await selectIntent(page, id, 'Recovery evidence');
+      await expect(
+        page.getByText(expected, { exact: expected === 'FRESH' || expected === 'LAGGING' }),
+      ).toBeVisible();
+    }
+    await expect(page.getByRole('heading', { name: 'UNKNOWN' })).toBeVisible();
+    await expect(page.getByText(/gemini 2.5-flash/u)).toBeVisible();
+    await expect(page.getByText('Settlement permission: NEVER')).toBeVisible();
+    await expect(page.getByRole('button', { name: /force|pay|submit settlement/iu })).toHaveCount(
+      0,
+    );
   });
 
   test('covers keyboard tab navigation and responsive layout', async ({ page }) => {

@@ -6,7 +6,7 @@ const result = spawnSync(
   {
     env: {
       ...process.env,
-      // Playwright 1.52's TS ESM loader can hang under Node 24 on Windows.
+      // Playwright 1.63's TS ESM loader can hang under Node 24 on Windows.
       PW_DISABLE_TS_ESM: '1',
     },
     stdio: 'inherit',
