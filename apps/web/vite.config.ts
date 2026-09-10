@@ -5,6 +5,9 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      '@oneshot/contracts': fileURLToPath(
+        new URL('../../packages/contracts/src/index.ts', import.meta.url),
+      ),
       '@oneshot/recovery-ui/styles.css': fileURLToPath(
         new URL('../../packages/recovery-ui/src/styles.css', import.meta.url),
       ),
