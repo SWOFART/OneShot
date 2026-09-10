@@ -46,6 +46,9 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
   attempt before submission, exposes it to recovery, and rejects committed
   recovery packs that lack that durable identity instead of inventing a pack
   reference.
+- Milestone 3 makes recovery carry the verified Arc Transfer log index and
+  routes known-identity receipt evidence through `verifyReceipt`; mismatched
+  receipts remain non-authoritative instead of being labeled final success.
 
 ## Commands/checks
 
@@ -62,6 +65,9 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 - Milestone 2 checks passed: Privy adapter tests 122, worker tests 35,
   reconciliation tests 85, storage tests 8; Privy adapter, worker, storage,
   and reconciliation lint/typecheck all passed.
+- Milestone 3 checks passed: worker tests 35, reconciliation tests 85, Privy
+  adapter tests 122, storage tests 8; worker and reconciliation typecheck plus
+  all four package lint checks passed.
 
 ## External-doc findings
 
@@ -76,7 +82,7 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 
 - Branch: `milestone/recovery-hardening`
 - Base: `develop` at `cd7439058f94f1128bae70fac4017039a45d3d68`
-- Commit: `a8180f1` (Part 1 pushed); Part 2 candidate is currently unstaged
+- Commit: `27234e2` (Parts 1-2 pushed); Part 3 candidate is currently unstaged
 - PR: not created
 - CI: not applicable yet
 
@@ -84,10 +90,12 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 
 - Gate A: Part 1 PASS on reviewed tree `201c93c3c2fc32fe63ded42a714ac8546719a624`;
   committed as `a8180f1` and pushed.
-- Gate A: fresh review required for the Part 2 candidate after staging.
+- Gate A: Part 2 PASS on reviewed tree `e56f737e94e254c5c70abadd8c4b863d2dca154a`;
+  committed as `27234e2` and pushed.
+- Gate A: fresh review required for the Part 3 candidate after staging.
 - Gate B: NOT RUN
 
 ## Handoff/next steps
 
-1. Stage the Part 2 changes and record the final candidate tree.
+1. Stage the Part 3 changes and record the final candidate tree.
 2. Run a fresh Gate A review for the updated tree; commit and push only after explicit PASS.

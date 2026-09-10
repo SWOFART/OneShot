@@ -127,6 +127,7 @@ interface RecoveryRecordBase {
   readonly blockNumber: string | null;
   readonly reason: string;
   readonly evidenceReferences: readonly string[];
+  readonly transferLogIndex?: number | undefined;
   readonly digest: string;
   readonly provenance: RecoveryRecordProvenance;
 }
@@ -282,6 +283,10 @@ function observationFromBoundRecord(
     evidenceReferences: [record.id],
     sourceDigest: record.digest,
   };
+  const transferLogIndex =
+    record.source === 'ARC' && typeof record.details?.['logIndex'] === 'string'
+      ? Number(record.details['logIndex'])
+      : undefined;
   return {
     schemaVersion: RECOVERY_RECORD_VERSION,
     recordType: 'OBSERVATION',
@@ -294,6 +299,11 @@ function observationFromBoundRecord(
     blockNumber: record.blockNumber ?? null,
     reason: safe.reason,
     evidenceReferences: safe.evidenceReferences,
+    ...(typeof transferLogIndex === 'number' &&
+    Number.isSafeInteger(transferLogIndex) &&
+    transferLogIndex >= 0
+      ? { transferLogIndex }
+      : {}),
     digest: stableDigest(safe),
     provenance: sourceProvenance(record),
   };

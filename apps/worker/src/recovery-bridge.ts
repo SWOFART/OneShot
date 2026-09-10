@@ -24,7 +24,6 @@ import {
   type SubgraphMcpPolicy,
 } from '@oneshot/reconciliation';
 import {
-  TRANSFER_EVENT_TOPIC,
   verifyReceipt,
   type EvidenceResult,
   type ReceiptSource,
@@ -249,6 +248,16 @@ export class IntentLedgerRecoveryCommandStore implements RecoveryCommandStorePor
         );
       }
       const blockNumber = asBlockNumber(arcObs.record.blockNumber);
+      const transferLogIndex = arcObs.record.transferLogIndex;
+      if (
+        typeof transferLogIndex !== 'number' ||
+        !Number.isSafeInteger(transferLogIndex) ||
+        transferLogIndex < 0
+      ) {
+        throw new Error(
+          `Cannot apply MARK_COMMITTED without the verified Arc Transfer log index (intent: ${pack.businessIntentId})`,
+        );
+      }
 
       const privyRef = pack.reconciliationCommand.evidenceReferences.find((ref) =>
         ref.startsWith('privy:'),
@@ -265,7 +274,7 @@ export class IntentLedgerRecoveryCommandStore implements RecoveryCommandStorePor
         provider_reference_id: asProviderReferenceId(providerRef),
         transaction_hash: txHash,
         block_number: blockNumber,
-        transfer_log_index: 0,
+        transfer_log_index: transferLogIndex,
       });
 
       if (!completion.completed) {
@@ -465,9 +474,20 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     let arcEvidence: KnownIdentityRecoveryEvidence['arc'] = null;
 
     if (realReceipt) {
-      const receiptStatus = realReceipt.status === 1 ? 'SUCCESS' : 'REVERT';
+      const expectedWallet = this.options.walletAddress;
+      const receiptMatchesHash =
+        txHash === null || realReceipt.transactionHash.toLowerCase() === txHash.toLowerCase();
+      const verdict =
+        expectedWallet && receiptMatchesHash
+          ? verifyReceipt(realReceipt, {
+              chainId: this.options.chainId ?? 5042002,
+              walletAddress: expectedWallet,
+              tokenContract: binding.tokenContract,
+              recipient: binding.recipient,
+              amountAtomic: BigInt(binding.amountAtomic),
+            })
+          : null;
 
-      // Parse and decode Transfer log: Transfer(address from, address to, uint256 value)
       let transfer: {
         tokenContract: string;
         sender: string;
@@ -475,38 +495,31 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
         amountAtomic: string;
         logIndex: string;
       } | null = null;
-
-      if (receiptStatus === 'SUCCESS') {
-        for (const log of realReceipt.logs) {
-          if (
-            log.topics[0]?.toLowerCase() === TRANSFER_EVENT_TOPIC.toLowerCase() &&
-            log.topics.length >= 3
-          ) {
-            const topic2 = log.topics[2];
-            const decodedTo = topic2 ? `0x${topic2.slice(-40)}`.toLowerCase() : '';
-            let decodedAmount: string;
-            try {
-              decodedAmount = BigInt(log.data).toString();
-            } catch {
-              decodedAmount = '';
-            }
-
-            if (
-              decodedTo === binding.recipient.toLowerCase() &&
-              decodedAmount === binding.amountAtomic
-            ) {
-              transfer = {
-                tokenContract: log.address,
-                sender: realReceipt.from,
-                recipient: binding.recipient,
-                amountAtomic: binding.amountAtomic,
-                logIndex: String(log.logIndex),
-              };
-              break;
-            }
-          }
+      if (verdict?.result === 'CONFIRMED') {
+        const transferLog = realReceipt.logs.find(
+          (log) => log.logIndex === verdict.transferLogIndex,
+        );
+        const fromTopic = transferLog?.topics[1];
+        const toTopic = transferLog?.topics[2];
+        if (transferLog && fromTopic && toTopic) {
+          transfer = {
+            tokenContract: transferLog.address,
+            sender: `0x${fromTopic.slice(-40)}`.toLowerCase(),
+            recipient: `0x${toTopic.slice(-40)}`.toLowerCase(),
+            amountAtomic: BigInt(transferLog.data).toString(),
+            logIndex: String(verdict.transferLogIndex),
+          };
         }
       }
+
+      const receiptStatus =
+        verdict?.result === 'CONFIRMED'
+          ? 'SUCCESS'
+          : verdict?.result === 'FINAL_REVERT'
+            ? 'REVERT'
+            : 'PENDING';
+      const finality =
+        verdict?.result === 'CONFIRMED' || verdict?.result === 'FINAL_REVERT' ? 'FINAL' : 'UNKNOWN';
 
       arcEvidence = {
         authority: 'AUTHORITATIVE_CHAIN_EVIDENCE',
@@ -514,7 +527,7 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
         transactionHash: realReceipt.transactionHash,
         submissionReference, // MUST MATCH local.submissionReference to prevent UNBOUND_EVIDENCE contradiction
         receiptStatus,
-        finality: 'FINAL',
+        finality,
         blockNumber: realReceipt.blockNumber.toString(),
         blockHash: realReceipt.blockHash,
         blockTimestamp: nowIso,
@@ -528,6 +541,7 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
             sender: realReceipt.from,
             status: realReceipt.status,
             transfer,
+            verdict: verdict?.result ?? 'UNAVAILABLE',
           }),
         ),
       };

@@ -208,6 +208,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     let currentVersion = 2;
     const evidenceAppended: EvidenceView[] = [];
     const persistedEvents = new Map<string, unknown>();
+    let completion: SettlementResult | null = null;
 
     const mockIntent: IntentResponse = {
       ...sampleRequest,
@@ -238,6 +239,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
         _att: string,
         res: SettlementResult,
       ): Promise<CompleteSubmissionResult> => {
+        completion = res;
         if (currentState !== 'UNKNOWN' && currentState !== 'SUBMITTING') {
           return { completed: false, reason: 'INVALID_STATE', currentState };
         }
@@ -293,6 +295,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
               amountAtomic: '1000000',
             },
             blockNumber: '999123',
+            transferLogIndex: 2,
             retrievedAt: new Date().toISOString(),
             digest: 'digest-1',
           },
@@ -320,6 +323,10 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     const res1 = await store.append(pack);
     expect(res1.status).toBe('APPENDED');
     expect(evidenceAppended).toHaveLength(1);
+    expect(completion).toMatchObject({
+      kind: 'CONFIRMED',
+      transfer_log_index: 2,
+    });
     expect(currentState).toBe('COMMITTED');
     expect(currentVersion).toBe(3);
 
@@ -361,6 +368,8 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
       receiptSource: {
         getReceipt: async () => realReceipt,
       },
+      walletAddress: realSender,
+      chainId: 5042002,
       defaultArcTxHash: realTxHash,
     });
 
@@ -386,6 +395,22 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     expect(evidence.arc?.blockHash).toBe(realBlockHash);
     expect(evidence.arc?.transfer?.sender).toBe(realSender);
     expect(evidence.arc?.transfer?.amountAtomic).toBe('1000000');
+
+    const mismatchedReceiptBridge = new PrivyArcEvidenceBridge({
+      receiptSource: {
+        getReceipt: async () => ({
+          ...realReceipt,
+          from: '0x4444444444444444444444444444444444444444',
+        }),
+      },
+      walletAddress: realSender,
+      chainId: 5042002,
+      defaultArcTxHash: realTxHash,
+    });
+    const mismatchedEvidence = await mismatchedReceiptBridge.read(binding);
+    expect(mismatchedEvidence.arc?.receiptStatus).toBe('PENDING');
+    expect(mismatchedEvidence.arc?.finality).toBe('UNKNOWN');
+    expect(mismatchedEvidence.arc?.transfer).toBeNull();
 
     // Without receipt source or verified tx, arc evidence is null (not fabricated)
     const emptyBridge = new PrivyArcEvidenceBridge();
@@ -444,6 +469,8 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
         receiptSource: {
           getReceipt: async () => realReceipt,
         },
+        walletAddress: realSender,
+        chainId: 5042002,
         defaultArcTxHash: realTxHash,
       },
     });
