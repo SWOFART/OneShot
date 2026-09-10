@@ -60,6 +60,8 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
   duplicate requests, CAS conflicts, policy denials, ambiguous provider
   outcomes, and reconciliation target states without including sensitive
   payloads or changing settlement authority.
+- `docs/RECOVERY_HARDENING.md` documents the cumulative recovery, runtime,
+  authentication, and metrics contracts; the README links to it.
 
 ## Commands/checks
 
@@ -88,6 +90,10 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 - Milestone 8 storage checks passed: unit tests 8; storage typecheck and lint
   passed. PostgreSQL integration could not start because this machine has no
   working container runtime; the integration scenario is present for CI.
+- Initial PR CI exposed two integration-test defects: the rollback fixture used
+  the now-applied migration version 004, and the provider-identity test omitted
+  the required AUTHORIZED transition. Both were corrected by using temporary
+  migration version 005 and authorizing before claim; focused local checks pass.
 
 ## External-doc findings
 
@@ -102,9 +108,12 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 
 - Branch: `milestone/recovery-hardening`
 - Base: `develop` at `cd7439058f94f1128bae70fac4017039a45d3d68`
-- Commit: `d553ae4` (Parts 1-4 and Part 7 pushed); Part 8 is currently unstaged
-- PR: not created
-- CI: not applicable yet
+- Commit: `26b7dca` (Parts 1-4, Part 7, and Part 8 pushed); documentation and
+  integration-test corrections are currently unstaged
+- PR: draft [#63](https://github.com/SWOFART/OneShot/pull/63)
+- CI: initial policy, Markdown/Mermaid, browser, and deployment checks passed;
+  the combined lint/typecheck job failed only in PostgreSQL integration on two
+  tests, now corrected locally
 
 ## Review gates
 
@@ -122,11 +131,14 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
   `ee31a6d1cd660a14b61e72266455c2974a4c3f79`.
 - Gate A: Part 7 PASS on reviewed tree `f104e10a92c557e6d4a821fcd53ba0da28dbcb35`;
   committed as `d553ae4` and pushed.
+- Gate A: cumulative Parts 1-4 and 7-8 PASS on tree
+  `3d219ab224d659b5c549d83341bcc837396d66b6`, committed as `26b7dca` and
+  pushed; the review covered the complete diff against `develop`.
 - Gate B: NOT RUN
 
 ## Handoff/next steps
 
-1. Finish Part 8 local validation and stage only its files.
-2. Run a fresh Gate A review for the Part 8 tree; commit and push only after
-   explicit PASS.
-3. Run the final requested validation and PR workflow after Part 8.
+1. Commit the documentation and integration-test corrections after validation.
+2. Push the fix and wait for all required PR checks, including PostgreSQL
+   integration, to pass.
+3. Run Gate A again for the new exact tree, then Gate B on the exact PR head.

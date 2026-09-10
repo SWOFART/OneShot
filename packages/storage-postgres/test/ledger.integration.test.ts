@@ -57,7 +57,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const directory = await mkdtemp(join(tmpdir(), 'oneshot-migration-'));
     try {
       await writeFile(
-        join(directory, '004_broken.sql'),
+        join(directory, '005_broken.sql'),
         'CREATE TABLE must_rollback (id integer); SELECT missing_function();',
         'utf8',
       );
@@ -66,7 +66,7 @@ describePostgres('PostgreSQL intent ledger', () => {
         "SELECT to_regclass('public.must_rollback')::text AS name",
       );
       expect(table.rows[0]?.name).toBeNull();
-      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 4');
+      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 5');
       expect(version.rowCount).toBe(0);
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -166,6 +166,7 @@ describePostgres('PostgreSQL intent ledger', () => {
   it('persists and reloads provider request identity on the owned attempt', async () => {
     const ledger = newLedger();
     await ledger.createOrReplay(request, 'correlation-provider-identity');
+    await ledger.completeAuthorization(request.business_intent_id, 1, { kind: 'AUTHORIZED' });
     const claim = await ledger.claimSubmission(request.business_intent_id);
     expect(claim.claimed).toBe(true);
     if (!claim.claimed) return;

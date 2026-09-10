@@ -66,8 +66,10 @@ flowchart TB
     MCP -.-> GraphIndex[OneShot Arc Subgraph]
 ```
 
-Solid edges are implemented. Dashed runtime edges are unavailable in production;
-the Subgraph source exists, but live Subgraph MCP/model composition is not verified.
+Solid edges are implemented. Dashed runtime edges are bounded production paths:
+the Subgraph MCP boundary must be explicitly admitted and configured, while the
+recovery agent remains advisory. Neither external index evidence nor model advice
+can authorize settlement.
 
 ### The state machine
 
@@ -113,11 +115,11 @@ These are enforced in code and tests, not by convention:
 
 ## Integrations
 
-| System        | Role                                                              |
-| ------------- | ----------------------------------------------------------------- |
-| **Privy**     | Corporate wallet, scoped authorization, and spending policy       |
-| **Arc**       | USDC settlement rail (Arc Testnet, chain `5042002`)               |
-| **The Graph** | Arc USDC Subgraph source; live Subgraph MCP qualification pending |
+| System        | Role                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| **Privy**     | Corporate wallet, scoped authorization, and spending policy                                 |
+| **Arc**       | USDC settlement rail (Arc Testnet, chain `5042002`)                                         |
+| **The Graph** | Arc USDC Subgraph discovery through admitted MCP; evidence only, never settlement authority |
 
 Privy authorizes and constrains the wallet action. It is not the duplicate
 lock: OneShot's durable state is.
@@ -248,14 +250,15 @@ plus explicit human authorization.
 
 ## Documentation
 
-| Document                                                                 | Contents                                         |
-| ------------------------------------------------------------------------ | ------------------------------------------------ |
-| [`plan.md`](plan.md)                                                     | Product plan, scope, and delivery gates          |
-| [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md)             | Domain model and boundaries                      |
-| [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md)                     | Frozen v1 contract pack                          |
-| [`docs/settlement/`](docs/settlement/)                                   | Settlement config, provider setup, live evidence |
-| [`packages/reconciliation/docs/c06/`](packages/reconciliation/docs/c06/) | C06 demo and qualification evidence index        |
-| [`AGENTS.md`](AGENTS.md)                                                 | Contribution policy and review gates             |
+| Document                                                                 | Contents                                                 |
+| ------------------------------------------------------------------------ | -------------------------------------------------------- |
+| [`plan.md`](plan.md)                                                     | Product plan, scope, and delivery gates                  |
+| [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md)             | Domain model and boundaries                              |
+| [`docs/RECOVERY_HARDENING.md`](docs/RECOVERY_HARDENING.md)               | Recovery, runtime, authentication, and metrics contracts |
+| [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md)                     | Frozen v1 contract pack                                  |
+| [`docs/settlement/`](docs/settlement/)                                   | Settlement config, provider setup, live evidence         |
+| [`packages/reconciliation/docs/c06/`](packages/reconciliation/docs/c06/) | C06 demo and qualification evidence index                |
+| [`AGENTS.md`](AGENTS.md)                                                 | Contribution policy and review gates                     |
 
 ## License
 
