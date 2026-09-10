@@ -10,7 +10,7 @@
     color-scheme: dark;
     --ink: var(--os-panel-ink);
     --muted: var(--os-panel-ink-muted);
-    --line: var(--os-line);
+    --line: var(--os-panel-line);
     --panel: var(--os-panel);
     --panel-strong: var(--os-panel);
     --cyan: var(--os-signal);
@@ -31,7 +31,7 @@
     justify-content: space-between;
     gap: 24px;
     padding: 12px clamp(16px, 4vw, 52px);
-    border-bottom: 1px solid var(--os-line);
+    border-bottom: 1px solid var(--line);
     background: var(--os-panel);
     color: var(--os-state-unknown);
     font-size: 0.78rem;
@@ -53,7 +53,7 @@
   .demo-bar select {
     min-width: 190px;
     padding: 7px 34px 7px 10px;
-    border: 1px solid var(--os-line);
+    border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--os-panel);
     color: var(--os-panel-ink);

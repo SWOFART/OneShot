@@ -5,7 +5,7 @@
   .route-state {
     --ink: var(--os-panel-ink);
     --muted: var(--os-panel-ink-muted);
-    --line: var(--os-line);
+    --line: var(--os-panel-line);
     --panel: var(--os-panel);
     --green: var(--os-state-committed);
     --amber: var(--os-state-unknown);

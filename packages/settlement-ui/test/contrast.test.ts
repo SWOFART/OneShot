@@ -116,6 +116,7 @@ describe('palette contrast', () => {
     const failures: string[] = [];
     for (const name of ['ink', 'muted', 'green', 'amber', 'red', 'cyan']) {
       const colour = resolveColour(tokens[name] ?? '', brand);
+      expect(colour, `--${name} did not resolve`).toBeDefined();
       if (colour === undefined) continue;
       for (const [surfaceName, surface] of [
         ['panel', panel],

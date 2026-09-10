@@ -41,6 +41,14 @@
   --os-line: rgba(11, 51, 44, 0.14);
   --os-line-strong: #7fa070;
 
+  /* --os-panel is the same colour in both themes, so a border drawn on it must
+   * be too — dark-forest-on-forest reads correctly here in dark but goes
+   * invisible in light. Use --os-panel-line for borders on --os-panel; keep
+   * --os-line for borders on the page ground/surface, which flips with the
+   * theme alongside it. Deliberately not overridden in the dark block below —
+   * that invariance is the point. */
+  --os-panel-line: rgba(238, 247, 230, 0.14);
+
   /* ledger state — committed is the signal itself; the other two are the only
    * hues outside the brand palette, kept because an operator must tell a
    * blocked intent from a settled one at a glance. */
