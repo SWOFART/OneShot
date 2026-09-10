@@ -15,6 +15,7 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "@oneshot/brand": "workspace:*",
     "@oneshot/contracts": "workspace:*",
     "@oneshot/recovery-ui": "workspace:*",
     "@oneshot/settlement-ui": "workspace:*",

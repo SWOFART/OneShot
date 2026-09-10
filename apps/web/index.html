@@ -5,7 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="OneShot: Exactly-once stablecoin payment settlement engine with pre-execution policy checks and hashless recovery on Arc Testnet." />
     <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <title>OneShot — Arc Testnet Stablecoin Engine</title>
+    <script>
+      // Stamp the theme before first paint so no frame renders in the wrong
+      // palette. Mirrors apps/web/src/theme.ts; keep the two in step.
+      (function () {
+        var theme = 'dark';
+        try {
+          var stored = window.localStorage.getItem('oneshot.theme');
+          if (stored === 'light' || stored === 'dark') theme = stored;
+        } catch (error) {
+          // Site data unavailable; the default stands.
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

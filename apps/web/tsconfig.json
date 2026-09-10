@@ -10,6 +10,7 @@
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "references": [
+    { "path": "../../packages/brand" },
     { "path": "../../packages/contracts" },
     { "path": "../../packages/recovery-ui" },
     { "path": "../../packages/settlement-ui" }

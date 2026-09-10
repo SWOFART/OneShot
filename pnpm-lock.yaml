@@ -77,6 +77,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@oneshot/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
       '@oneshot/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
