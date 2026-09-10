@@ -30,6 +30,9 @@ and database configuration before accepting work. It performs startup recovery,
 immediately drains durable outbox work, continues polling without overlapping
 cycles, and waits for an in-flight cycle during SIGTERM/SIGINT shutdown.
 
+Set `ONESHOT_SUBGRAPH_MCP_ENDPOINT` only when a remote MCP server is deployed;
+otherwise the recovery client uses its existing The Graph Gateway path.
+
 The HTTP listener exposes `GET /health/live` and `GET /health/ready`. Readiness
 requires a reachable database, compatible adapter identities, and a running
 outbox runner with no unresolved cycle error. Google Vertex authentication uses

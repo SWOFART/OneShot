@@ -22,9 +22,6 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps ./apps
 
-# The worker image does not need the repository's test/build toolchain.
-RUN pnpm prune --prod
-
 WORKDIR /app/apps/worker
 ENV PORT=8080
 ENV HOST=0.0.0.0

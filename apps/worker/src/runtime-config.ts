@@ -11,7 +11,7 @@ export interface WorkerRuntimeConfig {
   readonly walletAddress: `0x${string}`;
   readonly policyDigest: string;
   readonly recovery: {
-    readonly mcpEndpoint: string;
+    readonly mcpEndpoint?: string;
     readonly graphApiKey?: string;
     readonly fromBlock: string;
     readonly toBlock: string;
@@ -154,7 +154,9 @@ export function loadWorkerRuntimeConfig(
     walletAddress: walletAddress.toLowerCase() as `0x${string}`,
     policyDigest,
     recovery: {
-      mcpEndpoint: httpsUrl(environment, 'ONESHOT_SUBGRAPH_MCP_ENDPOINT'),
+      ...(environment.ONESHOT_SUBGRAPH_MCP_ENDPOINT?.trim()
+        ? { mcpEndpoint: httpsUrl(environment, 'ONESHOT_SUBGRAPH_MCP_ENDPOINT') }
+        : {}),
       ...(environment.ONESHOT_GRAPH_API_KEY?.trim()
         ? { graphApiKey: environment.ONESHOT_GRAPH_API_KEY.trim() }
         : {}),

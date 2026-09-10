@@ -34,6 +34,12 @@ describe('production worker configuration', () => {
     expect(config.pollIntervalMs).toBe(1000);
   });
 
+  it('uses the existing Graph Gateway fallback when no MCP server is deployed', () => {
+    const env = environment();
+    delete env.ONESHOT_SUBGRAPH_MCP_ENDPOINT;
+    expect(loadWorkerRuntimeConfig(env).recovery.mcpEndpoint).toBeUndefined();
+  });
+
   it('fails closed when the Privy secret is absent', () => {
     const env = environment();
     delete env.ONESHOT_PRIVY_APP_SECRET;
