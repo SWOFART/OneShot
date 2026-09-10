@@ -1,6 +1,11 @@
 # OneShot Independent Milestones
 
-This directory turns `plan.md` into small, independently closable work packets for exactly three coders. The folder name is intentionally spelled `milestones`.
+This directory preserves the original P0–P6 settlement-baseline packets for
+three coder lanes. The folder name is intentionally spelled `milestones`.
+The revised [current plan](../plan.md) defines R0–R5 for resumable paid tools;
+those gates do not reopen completed packets or inherit their acceptance.
+The historical kickoff/parallel-lane instructions below apply only when working
+an original packet, not as authorization to launch new agent work.
 
 ## Start here
 

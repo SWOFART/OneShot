@@ -2,9 +2,16 @@
 
 **One job. Many retries. One settlement.**
 
-OneShot executes an approved business obligation exactly once, and keeps that
-guarantee through retries, crashes, lost responses, queue redelivery, parallel
-workers, and multiple agent instances.
+OneShot protects an approved business obligation from duplicate committed
+settlements through retries, crashes, lost responses, queue redelivery,
+parallel workers, and multiple agent instances.
+
+Product direction: **resumable paid tools for business agents** — resume the
+job, not the payment. The existing settlement engine is the foundation. A
+supplier order/result connector, separate delivery tracking, and a public
+landing page plus user cabinet are planned in the [current roadmap](plan.md),
+not yet delivered. Resumable external work requires supplier support; this is
+not a guarantee of exactly-once execution for arbitrary tools.
 
 The cardinality it protects is:
 

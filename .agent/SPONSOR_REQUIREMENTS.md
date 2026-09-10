@@ -5,14 +5,21 @@ release, or submission claims.
 
 ## Primary target: Privy
 
+- Lead with Best B2B financial product: resumable paid tools for business agents.
+  Best financial flow is additional fit from the same purchase experience,
+  not a separate implementation roadmap. The new workflow remains planned.
 - Privy must be core corporate wallet authorization, not login-only branding.
 - The working path must demonstrate a Privy wallet plus scoped authorization,
   policies, signers, quorum, or spending permissions that constrain settlement.
 - Policy denial or an amount above policy must produce zero settlement.
 - The normal agent path must not bypass Privy authorization.
 
-## Primary target: Arc
+## Secondary target: Arc
 
+- Secondary product positioning is Best DeFi/Onchain Finance Application for
+  the eligible pool; verify Continuity registration if applicable. The listed
+  $3,500 award includes $2,500 conditional on mainnet deployment by September
+  30, not an additional bonus. Readiness artifacts are not deployment proof.
 - The demo must execute a real USDC settlement on Arc Testnet.
 - Showing a network label, wallet, explorer page, or mocked payment alone does
   not qualify.
@@ -20,8 +27,9 @@ release, or submission claims.
   public source, documentation, and short demonstration.
 - OneShot must retain settlement identity and result through retries and
   downstream failures.
-- For the Launch track, include a disabled Arc Mainnet profile, deployment and
-  rollback artifacts, and readiness evidence. Actual mainnet execution remains
+- For the conditional mainnet award, readiness artifacts alone are insufficient;
+  retain the disabled profile, deployment/rollback artifacts and require actual
+  authorized deployment proof before claiming that condition. Execution remains
   disabled until Circle publishes official production access/identities and a
   human explicitly authorizes real-value activation.
 
