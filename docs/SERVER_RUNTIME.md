@@ -15,7 +15,8 @@ pnpm build
 pnpm --filter @oneshot/api start:local
 ```
 
-The service requires `SERVICE_BEARER_TOKEN` and one database configuration:
+The service requires `SERVICE_BEARER_TOKEN` (at least 16 characters; provide it
+through a secret store) and one database configuration:
 
 - `DATABASE_URL` for local PostgreSQL, CI, or a managed TCP endpoint.
 - `INSTANCE_CONNECTION_NAME`, `DB_USER`, `DB_PASS`, and `DB_NAME` for Cloud Run with
@@ -23,6 +24,10 @@ The service requires `SERVICE_BEARER_TOKEN` and one database configuration:
   `/cloudsql/INSTANCE_CONNECTION_NAME`.
 - `INSTANCE_UNIX_SOCKET` may be supplied directly instead of the instance connection
   name.
+
+Privy operator authentication is allowlisted by `did:privy:*` subject. A wildcard
+allowlist is disabled unless `PRIVY_AUTH_ALLOW_ALL_SUBJECTS=true` is explicitly
+configured for a public/demo deployment.
 
 `GET /health/live` proves the process is running. `GET /health/ready` also checks the
 database and frozen network/contract identity. Schema migrations must succeed before

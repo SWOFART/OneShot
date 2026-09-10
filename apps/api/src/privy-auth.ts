@@ -64,7 +64,9 @@ export function createPrivyAccessTokenAuthenticator(
         return 'UNAUTHORIZED';
       }
 
-      if (subject === undefined || subject.length === 0) return 'UNAUTHORIZED';
+      if (subject === undefined || subject.length === 0 || !subject.startsWith(PRIVY_DID_PREFIX)) {
+        return 'UNAUTHORIZED';
+      }
       if (allowed !== null && !allowed.has(subject)) {
         config.onForbiddenSubject?.(subject);
         return 'FORBIDDEN';

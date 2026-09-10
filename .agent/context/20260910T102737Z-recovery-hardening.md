@@ -52,6 +52,10 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 - Milestone 4 requires an explicit Subgraph MCP recovery port in production
   composition and a configured HTTPS MCP endpoint in the executable runtime;
   the lower-level client fallback remains available only outside production.
+- Milestone 7 rejects service bearer tokens shorter than 16 characters,
+  requires explicit opt-in for wildcard operator access (including mixed
+  allowlists), and rejects verified access tokens whose subject is not a Privy
+  DID.
 
 ## Commands/checks
 
@@ -74,6 +78,9 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 - Milestone 4 focused checks passed: worker tests 36, reconciliation tests 85;
   worker/reconciliation typecheck and lint passed. The runtime config now
   fails closed without `ONESHOT_SUBGRAPH_MCP_ENDPOINT`.
+- Milestone 7 focused checks passed: API tests 46; API typecheck and lint
+  passed. The bearer minimum, wildcard opt-in, and Privy subject-shape checks
+  are now enforced at runtime.
 
 ## External-doc findings
 
@@ -88,7 +95,7 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 
 - Branch: `milestone/recovery-hardening`
 - Base: `develop` at `cd7439058f94f1128bae70fac4017039a45d3d68`
-- Commit: `6d0497c` (Parts 1-3 pushed); Part 4 candidate is currently unstaged
+- Commit: `608a9ce` (Parts 1-4 pushed); Part 7 is currently staged
 - PR: not created
 - CI: not applicable yet
 
@@ -100,10 +107,17 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
   committed as `27234e2` and pushed.
 - Gate A: Part 3 PASS on reviewed tree `511ee2bbc5804639ae21f8c12e8a9de13c58a52a`;
   committed as `6d0497c` and pushed.
-- Gate A: fresh review required for the Part 4 candidate after staging.
+- Gate A: Part 4 PASS on reviewed tree `b47f1df27169aae76ca7a35c694a0922565b7fd5`;
+  committed as `608a9ce` and pushed.
+- Gate A: Part 7 FAIL on reviewed tree `95d1e5aa50190b275189af2a225d557e779fdaca`;
+  mixed allowlists containing `*` bypassed the opt-in. Fixed with a regression
+  test; fresh review required for candidate tree
+  `ee31a6d1cd660a14b61e72266455c2974a4c3f79`.
 - Gate B: NOT RUN
 
 ## Handoff/next steps
 
-1. Stage the Part 4 changes and record the final candidate tree.
+1. Stage the Part 7 changes and record the final candidate tree.
 2. Run a fresh Gate A review for the updated tree; commit and push only after explicit PASS.
+3. Implement Part 8 operational metrics after Part 7 is pushed, then repeat
+   local validation, Gate A, commit, and push.

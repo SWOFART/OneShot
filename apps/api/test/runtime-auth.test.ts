@@ -21,7 +21,7 @@ function config(privyEnabled: boolean): ApiRuntimeConfig {
   return {
     host: '0.0.0.0',
     port: 3000,
-    serviceBearerToken: 'service-token',
+    serviceBearerToken: 'service-token-1234',
     database: { connectionString: 'postgresql://localhost/oneshot' },
     submissionsDisabled: false,
     ...(privyEnabled
@@ -44,13 +44,13 @@ async function token(subject: string): Promise<string> {
 describe('API authenticator composition', () => {
   it('accepts only the service bearer when Privy is disabled', async () => {
     const auth = buildApiAuthenticator(config(false));
-    expect(await auth.authenticate('Bearer service-token')).toBe('AUTHORIZED');
+    expect(await auth.authenticate('Bearer service-token-1234')).toBe('AUTHORIZED');
     expect(await auth.authenticate(`Bearer ${await token(OPERATOR)}`)).toBe('UNAUTHORIZED');
   });
 
   it('accepts both credential classes when Privy is enabled', async () => {
     const auth = buildApiAuthenticator(config(true));
-    expect(await auth.authenticate('Bearer service-token')).toBe('AUTHORIZED');
+    expect(await auth.authenticate('Bearer service-token-1234')).toBe('AUTHORIZED');
     expect(await auth.authenticate(`Bearer ${await token(OPERATOR)}`)).toBe('AUTHORIZED');
   });
 

@@ -70,6 +70,11 @@ describe('Privy access token authenticator', () => {
     expect(await authenticator().authenticate(`Bearer ${token}`)).toBe('UNAUTHORIZED');
   });
 
+  it('rejects a verified token whose subject is not a Privy DID', async () => {
+    const token = await sign({ subject: 'operator@example.com' });
+    expect(await authenticator().authenticate(`Bearer ${token}`)).toBe('UNAUTHORIZED');
+  });
+
   it('rejects an expired token', async () => {
     const token = await sign({ expiresIn: '-10m' });
     expect(await authenticator().authenticate(`Bearer ${token}`)).toBe('UNAUTHORIZED');
