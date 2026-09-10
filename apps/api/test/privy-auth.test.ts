@@ -98,6 +98,16 @@ describe('Privy access token authenticator', () => {
     expect(await authenticator().authenticate('Basic abc.def.ghi')).toBe('UNAUTHORIZED');
   });
 
+  it('authorizes any verified subject when configured with wildcard allow-all', async () => {
+    const auth = createPrivyAccessTokenAuthenticator({
+      appId: APP_ID,
+      verificationKey,
+      allowedSubjects: ['*'],
+    });
+    const token = await sign({ subject: OUTSIDER });
+    expect(await auth.authenticate(`Bearer ${token}`)).toBe('AUTHORIZED');
+  });
+
   it('refuses to construct without an allowlist', () => {
     expect(() =>
       createPrivyAccessTokenAuthenticator({ appId: APP_ID, verificationKey, allowedSubjects: [] }),
