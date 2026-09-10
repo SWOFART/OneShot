@@ -32,6 +32,7 @@ export interface SettlementPort {
 
 export interface WorkerConfig {
   readonly submissionsDisabled?: boolean | undefined;
+  readonly authorizationRetryDelayMs?: number | undefined;
   readonly submissionLeaseMs?: number | undefined;
   readonly contractVersion?: string | undefined;
   readonly network?: string | undefined;

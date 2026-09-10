@@ -67,8 +67,8 @@ non-sensitive `operational_metric_events` table. It records:
 
 `GET /v1/metrics` combines these durable counters with the existing state,
 `UNKNOWN`, and outbox queue gauges. Metric writes are observational: failures
-are swallowed and metric data never grants settlement permission or changes a
-ledger transition. The table stores only the business-intent foreign key,
+are isolated with a PostgreSQL savepoint before being swallowed, so metric data
+never grants settlement permission or changes a ledger transition. The table stores only the business-intent foreign key,
 bounded event type/outcome, and timestamp; request bodies, tokens, wallet
 credentials, and provider secrets are excluded.
 

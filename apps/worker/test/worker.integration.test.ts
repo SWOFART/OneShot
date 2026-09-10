@@ -291,4 +291,93 @@ describePostgres('Atomic at-most-once worker (A03)', () => {
     const processedThird = await drainOutboxJobs(workerOptions, 1);
     expect(processedThird).toBe(0);
   });
+
+  it('safe disable leaves submission work pending and re-enable settles exactly once', async () => {
+    const ledger = newLedger();
+    await ledger.createOrReplay(sampleRequest, 'corr-safe-disable');
+
+    let portCalls = 0;
+    const settlementPort: SettlementPort = {
+      async submit() {
+        portCalls += 1;
+        return {
+          kind: 'CONFIRMED',
+          provider_reference_id: 'provider-safe-disable',
+          transaction_hash: `0x${'f'.repeat(64)}`,
+          block_number: '88888',
+          transfer_log_index: 0,
+        };
+      },
+    };
+
+    const enabledOptions = { pool, ledger, settlementPort };
+    expect(await drainOutboxJobs(enabledOptions, 1)).toBe(1);
+    expect((await ledger.getIntent(sampleRequest.business_intent_id))?.state).toBe('READY');
+
+    const disabledOptions = {
+      ...enabledOptions,
+      config: { submissionsDisabled: true },
+    };
+    expect(await drainOutboxJobs(disabledOptions, 1)).toBe(0);
+    expect(portCalls).toBe(0);
+    await expect(
+      pool.query<{ status: string }>(
+        'SELECT status FROM outbox_jobs WHERE business_intent_id = $1 AND task_identifier = $2',
+        [sampleRequest.business_intent_id, 'submit_settlement'],
+      ),
+    ).resolves.toMatchObject({ rows: [{ status: 'PENDING' }] });
+
+    expect(await drainOutboxJobs(enabledOptions, 1)).toBe(1);
+    expect((await ledger.getIntent(sampleRequest.business_intent_id))?.state).toBe('COMMITTED');
+    expect(portCalls).toBe(1);
+  });
+
+  it('authorization UNAVAILABLE remains pending and retries after the backoff window', async () => {
+    const ledger = newLedger();
+    await ledger.createOrReplay(sampleRequest, 'corr-auth-unavailable');
+
+    let available = false;
+    const workerOptions = {
+      pool,
+      ledger,
+      authorizationPort: {
+        async authorize() {
+          return available
+            ? ({ kind: 'AUTHORIZED' as const } as const)
+            : ({ kind: 'UNAVAILABLE' as const, reason: 'Privy unavailable' } as const);
+        },
+      },
+      settlementPort: {
+        async submit() {
+          return {
+            kind: 'CONFIRMED' as const,
+            provider_reference_id: 'provider-auth-retry',
+            transaction_hash: `0x${'1'.repeat(64)}`,
+            block_number: '99999',
+            transfer_log_index: 0,
+          };
+        },
+      },
+      config: { authorizationRetryDelayMs: 60_000 },
+    };
+
+    expect(await drainOutboxJobs(workerOptions, 1)).toBe(1);
+    const unavailable = await ledger.getIntent(sampleRequest.business_intent_id);
+    expect(unavailable?.state).toBe('AUTHORIZING');
+    expect(unavailable?.attempts[0]?.sanitized_error).toBe('Privy unavailable');
+    await expect(
+      pool.query<{ status: string }>(
+        'SELECT status FROM outbox_jobs WHERE business_intent_id = $1 AND task_identifier = $2',
+        [sampleRequest.business_intent_id, 'authorize_intent'],
+      ),
+    ).resolves.toMatchObject({ rows: [{ status: 'PENDING' }] });
+
+    await pool.query(
+      'UPDATE outbox_jobs SET available_at = now() WHERE business_intent_id = $1 AND task_identifier = $2',
+      [sampleRequest.business_intent_id, 'authorize_intent'],
+    );
+    available = true;
+    expect(await drainOutboxJobs(workerOptions, 1)).toBe(1);
+    expect((await ledger.getIntent(sampleRequest.business_intent_id))?.state).toBe('READY');
+  });
 });

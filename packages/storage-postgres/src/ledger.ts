@@ -80,6 +80,20 @@ export type CompleteAuthorizationResult =
       readonly currentState?: IntentState;
     };
 
+export type ScheduleFailedSafeRetryResult =
+  | {
+      readonly scheduled: true;
+      readonly intent: IntentResponse;
+      readonly attemptId: string;
+      readonly version: number;
+    }
+  | {
+      readonly scheduled: false;
+      readonly reason: 'NOT_FOUND' | 'NOT_FAILED_SAFE';
+      readonly currentState?: IntentState;
+      readonly version?: number;
+    };
+
 interface IntentRow {
   readonly business_intent_id: string;
   readonly payload_fingerprint: string;
@@ -241,6 +255,7 @@ function persistedRecovery(payload: unknown): {
         }
       : {}),
   };
+
   return { action, details };
 }
 
@@ -322,15 +337,29 @@ export class IntentLedger {
     eventType: MetricEventType,
     outcome?: string,
   ): Promise<void> {
+    let savepointCreated = false;
     try {
+      await client.query('SAVEPOINT oneshot_metric_event');
+      savepointCreated = true;
       await client.query(
         `INSERT INTO operational_metric_events (
           business_intent_id, event_type, outcome, created_at
         ) VALUES ($1, $2, $3, $4)`,
         [businessIntentId, eventType, outcome ?? null, this.#dependencies.now()],
       );
+      await client.query('RELEASE SAVEPOINT oneshot_metric_event');
     } catch {
-      // Metrics are operational evidence only and must never change ledger behavior.
+      // Isolate metric failures from the surrounding ledger transaction. PostgreSQL
+      // marks a transaction failed after a statement error; catching the INSERT
+      // alone is not sufficient to preserve the business transition.
+      if (savepointCreated) {
+        try {
+          await client.query('ROLLBACK TO SAVEPOINT oneshot_metric_event');
+          await client.query('RELEASE SAVEPOINT oneshot_metric_event');
+        } catch {
+          // The business transaction remains authoritative; metric evidence is not.
+        }
+      }
     }
   }
 
@@ -569,6 +598,29 @@ export class IntentLedger {
         await this.#recordMetricEventOnClient(client, id, 'POLICY_DENIAL', 'AUTHORIZATION');
         await client.query('COMMIT');
         return { completed: true, state: 'REJECTED', version: newVersion };
+      }
+      if (result.kind === 'UNAVAILABLE') {
+        const newVersion = row.version;
+        await client.query(
+          `UPDATE attempts
+           SET sanitized_error = $1
+           WHERE attempt_id = (
+             SELECT attempt_id
+             FROM attempts
+             WHERE business_intent_id = $2 AND stage = 'AUTHORIZING'
+             ORDER BY attempt_sequence DESC
+             LIMIT 1
+           )`,
+          [result.reason, id],
+        );
+        await this.#recordMetricEventOnClient(
+          client,
+          id,
+          'PROVIDER_ERROR',
+          'AUTHORIZATION_UNAVAILABLE',
+        );
+        await client.query('COMMIT');
+        return { completed: true, state: 'AUTHORIZING', version: newVersion };
       }
       await client.query('COMMIT');
       return { completed: true, state: 'AUTHORIZING', version: row.version };
@@ -821,6 +873,103 @@ export class IntentLedger {
       }
       await client.query('COMMIT');
       return { completed: true, state: 'UNKNOWN', version: row.version };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Opens a fresh authorization attempt only after authoritative no-effect
+   * proof. This is intentionally a storage primitive for a policy layer; the
+   * public API must not expose a generic blind retry control.
+   */
+  async scheduleFailedSafeRetry(
+    idValue: unknown,
+    correlationIdValue: unknown,
+  ): Promise<ScheduleFailedSafeRetryResult> {
+    const id = asBusinessIntentId(idValue);
+    const correlationId = asCorrelationId(correlationIdValue);
+    const client = await this.#pool.connect();
+    try {
+      await client.query('BEGIN');
+      const intentResult = await client.query<{
+        state: IntentState;
+        version: number;
+        payload_fingerprint: string;
+        recipient: string;
+        amount_atomic: string;
+        asset: 'USDC';
+        network: 'eip155:5042002';
+        purpose: string;
+      }>(
+        `SELECT state, version, payload_fingerprint, recipient, amount_atomic,
+                asset, network, purpose
+         FROM business_intents
+         WHERE business_intent_id = $1
+         FOR UPDATE`,
+        [id],
+      );
+      const row = intentResult.rows[0];
+      if (!row) {
+        await client.query('ROLLBACK');
+        return { scheduled: false, reason: 'NOT_FOUND' };
+      }
+      if (row.state !== 'FAILED_SAFE') {
+        await client.query('ROLLBACK');
+        return {
+          scheduled: false,
+          reason: 'NOT_FAILED_SAFE',
+          currentState: row.state,
+          version: row.version,
+        };
+      }
+
+      const countResult = await client.query<{ count: string }>(
+        'SELECT count(*)::text AS count FROM attempts WHERE business_intent_id = $1',
+        [id],
+      );
+      const attemptSequence = Number(countResult.rows[0]?.count ?? '0') + 1;
+      const attemptId = asAttemptId(this.#dependencies.nextAttemptId());
+      const newVersion = row.version + 1;
+      const now = this.#dependencies.now();
+
+      const updateResult = await client.query(
+        `UPDATE business_intents
+         SET state = 'AUTHORIZING', version = $1, updated_at = $2
+         WHERE business_intent_id = $3 AND state = 'FAILED_SAFE' AND version = $4`,
+        [newVersion, now, id, row.version],
+      );
+      if (updateResult.rowCount !== 1) {
+        await client.query('ROLLBACK');
+        return {
+          scheduled: false,
+          reason: 'NOT_FAILED_SAFE',
+          currentState: row.state,
+          version: row.version,
+        };
+      }
+      await client.query(
+        `INSERT INTO attempts (
+          attempt_id, business_intent_id, attempt_sequence, stage,
+          correlation_id, request_body_fingerprint, token_contract,
+          method, native_value_atomic, created_at
+        ) VALUES ($1, $2, $3, 'AUTHORIZING', $4, $5,
+                  '0x3600000000000000000000000000000000000000', 'transfer', '0', $6)`,
+        [attemptId, id, attemptSequence, correlationId, row.payload_fingerprint, now],
+      );
+      await client.query(
+        `INSERT INTO outbox_jobs (
+          business_intent_id, job_key, task_identifier, payload,
+          available_at, created_at
+        ) VALUES ($1, $2, 'authorize_intent', $3::jsonb, $4, $4)`,
+        [id, `authorize:${id}:${newVersion}`, JSON.stringify({ business_intent_id: id }), now],
+      );
+      const intent = await this.#readIntent(client, id);
+      await client.query('COMMIT');
+      return { scheduled: true, intent: intent!, attemptId, version: newVersion };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

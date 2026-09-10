@@ -108,6 +108,72 @@ describePostgres('PostgreSQL intent ledger', () => {
     expect(counts.rows[0]).toEqual({ attempts: '1', jobs: '1', settlements: '0' });
   });
 
+  it('preserves a ledger replay when operational metrics fail inside the transaction', async () => {
+    const ledger = newLedger();
+    await ledger.createOrReplay(request, 'correlation-metric-failure-create');
+    await pool.query('DROP TABLE operational_metric_events');
+    try {
+      await expect(
+        ledger.createOrReplay(request, 'correlation-metric-failure-replay'),
+      ).resolves.toMatchObject({
+        kind: 'REPLAY_IDENTICAL',
+      });
+      await expect(
+        pool.query<{ state: string }>(
+          'SELECT state FROM business_intents WHERE business_intent_id = $1',
+          [request.business_intent_id],
+        ),
+      ).resolves.toMatchObject({ rows: [{ state: 'AUTHORIZING' }] });
+    } finally {
+      await pool.query(`
+        CREATE TABLE operational_metric_events (
+          event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+          business_intent_id text NOT NULL REFERENCES business_intents(business_intent_id) ON DELETE RESTRICT,
+          event_type text NOT NULL CHECK (event_type IN (
+            'DUPLICATE_REQUEST', 'CAS_CONFLICT', 'POLICY_DENIAL',
+            'PROVIDER_ERROR', 'RECONCILIATION_OUTCOME'
+          )),
+          outcome text,
+          created_at timestamptz NOT NULL
+        )
+      `);
+      await pool.query(
+        'CREATE INDEX operational_metric_events_type_idx ON operational_metric_events (event_type, outcome, created_at)',
+      );
+    }
+  });
+
+  it('opens a new authorization attempt only from FAILED_SAFE', async () => {
+    const ledger = newLedger();
+    await ledger.createOrReplay(request, 'correlation-safe-retry-create');
+    await ledger.completeAuthorization(request.business_intent_id, 1, { kind: 'AUTHORIZED' });
+    await pool.query(
+      "UPDATE outbox_jobs SET status = 'DELIVERED' WHERE business_intent_id = $1 AND task_identifier = 'authorize_intent'",
+      [request.business_intent_id],
+    );
+    const claim = await ledger.claimSubmission(
+      request.business_intent_id,
+      'correlation-safe-retry-submit',
+    );
+    expect(claim.claimed).toBe(true);
+    if (!claim.claimed) return;
+    await ledger.completeSubmission(request.business_intent_id, claim.attemptId, {
+      kind: 'DEFINITELY_NOT_SUBMITTED',
+      reason: 'Provider rejected before broadcast',
+    });
+
+    await expect(
+      ledger.scheduleFailedSafeRetry(request.business_intent_id, 'correlation-safe-retry-next'),
+    ).resolves.toMatchObject({ scheduled: true, version: 5 });
+    const retried = await ledger.getIntent(request.business_intent_id);
+    expect(retried?.state).toBe('AUTHORIZING');
+    expect(retried?.attempts).toHaveLength(3);
+    expect(retried?.attempts[retried.attempts.length - 1]?.stage).toBe('AUTHORIZING');
+    await expect(
+      ledger.scheduleFailedSafeRetry(request.business_intent_id, 'correlation-safe-retry-again'),
+    ).resolves.toMatchObject({ scheduled: false, reason: 'NOT_FAILED_SAFE' });
+  });
+
   it('reports durable operational counters without changing ledger authority', async () => {
     const ledger = newLedger();
     await ledger.createOrReplay(request, 'correlation-metrics-first');

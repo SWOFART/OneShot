@@ -7,21 +7,22 @@ import type { WorkerOptions } from './types.js';
 export async function executeAuthorizeIntent(
   businessIntentId: string,
   options: WorkerOptions,
-): Promise<void> {
+): Promise<AuthorizationResult | undefined> {
   const intent = await options.ledger.getIntent(businessIntentId);
-  if (!intent || intent.state !== 'AUTHORIZING') return;
+  if (!intent || intent.state !== 'AUTHORIZING') return undefined;
 
   const authResult: AuthorizationResult = options.authorizationPort
     ? await options.authorizationPort.authorize(intent)
     : { kind: 'AUTHORIZED' };
 
   await options.ledger.completeAuthorization(businessIntentId, intent.version, authResult);
+  return authResult;
 }
 
 export async function executeSubmitSettlement(
   businessIntentId: string,
   options: WorkerOptions,
-): Promise<void> {
+): Promise<boolean> {
   // A04.2 — Safe disable: audited configuration switch that stops new submission ownership
   if (options.config?.submissionsDisabled || process.env.ONESHOT_SUBMISSIONS_DISABLED === 'true') {
     formatStateTransitionLog({
@@ -32,13 +33,13 @@ export async function executeSubmitSettlement(
       reason: 'Submission ownership paused by safe disable configuration switch',
       timestamp: new Date().toISOString(),
     });
-    return;
+    return false;
   }
 
   // A03.2 — Submission ownership CAS: READY -> SUBMITTING
   // The database transaction ends before calling the port!
   const claim = await options.ledger.claimSubmission(businessIntentId);
-  if (!claim.claimed) return;
+  if (!claim.claimed) return true;
 
   formatStateTransitionLog({
     correlationId: claim.correlationId,
@@ -60,7 +61,7 @@ export async function executeSubmitSettlement(
         kind: 'DEFINITELY_NOT_SUBMITTED',
         reason: 'Provider request identity could not be persisted before submission',
       });
-      return;
+      return true;
     }
   }
 
@@ -98,6 +99,19 @@ export async function executeSubmitSettlement(
     reason: result.kind !== 'CONFIRMED' ? result.reason : undefined,
     timestamp: new Date().toISOString(),
   });
+  return true;
+}
+
+function submissionsDisabled(options: WorkerOptions): boolean {
+  return (
+    options.config?.submissionsDisabled === true ||
+    process.env.ONESHOT_SUBMISSIONS_DISABLED === 'true'
+  );
+}
+
+function authorizationRetryDelayMs(options: WorkerOptions): number {
+  const configured = options.config?.authorizationRetryDelayMs ?? 5_000;
+  return Number.isFinite(configured) && configured >= 0 ? configured : 5_000;
 }
 
 export async function runStartupRecovery(
@@ -162,11 +176,15 @@ export function createTaskList(options: WorkerOptions): TaskList {
   return {
     authorize_intent: async (payload) => {
       const { business_intent_id } = payload as { business_intent_id: string };
-      await executeAuthorizeIntent(business_intent_id, options);
+      const result = await executeAuthorizeIntent(business_intent_id, options);
+      if (result?.kind === 'UNAVAILABLE') {
+        throw new Error('Authorization unavailable; queue retry required');
+      }
     },
     submit_settlement: async (payload) => {
       const { business_intent_id } = payload as { business_intent_id: string };
-      await executeSubmitSettlement(business_intent_id, options);
+      const processed = await executeSubmitSettlement(business_intent_id, options);
+      if (!processed) throw new Error('Settlement submission is disabled; queue retry required');
     },
     reconcile_intent: async (payload) => {
       const { business_intent_id, event_id } = (payload ?? {}) as {
@@ -204,11 +222,20 @@ export async function drainOutboxJobs(options: WorkerOptions, maxJobs = 100): Pr
         break;
       }
 
+      // Leave submission work pending while paused. A disabled handler must
+      // never be acknowledged as delivered or the intent can be stranded in
+      // READY after the pause is lifted.
+      if (job.task_identifier === 'submit_settlement' && submissionsDisabled(options)) {
+        await client.query('COMMIT');
+        break;
+      }
+
       // Keep the row lock until the handler has completed. A process kill or
       // thrown handler rolls this transaction back, leaving the job PENDING
       // for restart recovery instead of losing it as falsely DELIVERED.
+      let authorizationResult: AuthorizationResult | undefined;
       if (job.task_identifier === 'authorize_intent') {
-        await executeAuthorizeIntent(job.business_intent_id, options);
+        authorizationResult = await executeAuthorizeIntent(job.business_intent_id, options);
       } else if (job.task_identifier === 'submit_settlement') {
         await executeSubmitSettlement(job.business_intent_id, options);
       } else if (job.task_identifier === 'reconcile_intent') {
@@ -216,9 +243,17 @@ export async function drainOutboxJobs(options: WorkerOptions, maxJobs = 100): Pr
       } else {
         throw new Error(`Unsupported outbox task: ${job.task_identifier}`);
       }
-      await client.query("UPDATE outbox_jobs SET status = 'DELIVERED' WHERE outbox_job_id = $1", [
-        job.outbox_job_id,
-      ]);
+      if (authorizationResult?.kind === 'UNAVAILABLE') {
+        const retryAt = new Date(Date.now() + authorizationRetryDelayMs(options));
+        await client.query(
+          "UPDATE outbox_jobs SET available_at = $1 WHERE outbox_job_id = $2 AND status = 'PENDING'",
+          [retryAt, job.outbox_job_id],
+        );
+      } else {
+        await client.query("UPDATE outbox_jobs SET status = 'DELIVERED' WHERE outbox_job_id = $1", [
+          job.outbox_job_id,
+        ]);
+      }
       await client.query('COMMIT');
       processed += 1;
     } catch (error) {

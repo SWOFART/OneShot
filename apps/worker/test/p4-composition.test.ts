@@ -390,6 +390,16 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
       walletAddress: realSender,
       chainId: 5042002,
       defaultArcTxHash: realTxHash,
+      localStatePort: {
+        read: async () =>
+          ({
+            providerIdentity: {
+              referenceId: 'privy-ref-p4',
+              requestFingerprint,
+            },
+            durable: { state: 'UNKNOWN', stateVersion: '2', attemptCount: 1 },
+          }) as never,
+      },
     });
 
     const binding = {
@@ -404,11 +414,11 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     const evidence = await bridge.read(binding);
     expect(evidence.schemaVersion).toBe('recovery-evidence-v1');
     expect(evidence.binding.businessIntentId).toBe('intent-p4-1');
-    expect(evidence.local.submissionReference).toBe('sub-intent-p4-1');
-    expect(evidence.privy?.referenceId).toBe('oneshot-intent-p4-1');
+    expect(evidence.local.submissionReference).toBe('privy-ref-p4');
+    expect(evidence.privy?.referenceId).toBe('privy-ref-p4');
     expect(evidence.privy?.requestStatus).toBe('SUCCEEDED');
     expect(evidence.arc?.receiptStatus).toBe('SUCCESS');
-    expect(evidence.arc?.submissionReference).toBe('sub-intent-p4-1'); // Must match local
+    expect(evidence.arc?.submissionReference).toBe('privy-ref-p4'); // Must match durable identity
     expect(evidence.arc?.finality).toBe('FINAL');
     expect(evidence.arc?.blockNumber).toBe('999123');
     expect(evidence.arc?.blockHash).toBe(realBlockHash);
@@ -425,6 +435,16 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
       walletAddress: realSender,
       chainId: 5042002,
       defaultArcTxHash: realTxHash,
+      localStatePort: {
+        read: async () =>
+          ({
+            providerIdentity: {
+              referenceId: 'privy-ref-p4',
+              requestFingerprint,
+            },
+            durable: { state: 'UNKNOWN', stateVersion: '2', attemptCount: 1 },
+          }) as never,
+      },
     });
     const mismatchedEvidence = await mismatchedReceiptBridge.read(binding);
     expect(mismatchedEvidence.arc?.receiptStatus).toBe('PENDING');
@@ -435,6 +455,16 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     const emptyBridge = new PrivyArcEvidenceBridge();
     const emptyEvidence = await emptyBridge.read(binding);
     expect(emptyEvidence.arc).toBeNull();
+
+    const fabricatedIdentityBridge = new PrivyArcEvidenceBridge({
+      receiptSource: { getReceipt: async () => realReceipt },
+      walletAddress: realSender,
+      chainId: 5042002,
+      defaultArcTxHash: realTxHash,
+    });
+    await expect(fabricatedIdentityBridge.read(binding)).rejects.toThrow(
+      'durable provider identity',
+    );
   });
 
   it('PrivyArcEvidenceBridge integrated with RecoveryService converges UNKNOWN intent to COMMITTED without UNBOUND_EVIDENCE contradiction', async () => {
@@ -462,6 +492,11 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
 
     const mockLedger = {
       getIntent: async () => mockIntent,
+      getProviderRequestIdentity: async () => ({
+        idempotencyKey: `0x${'a'.repeat(64)}`,
+        referenceId: 'oneshot-intent-p4-1',
+        requestFingerprint,
+      }),
       appendEvidence: async () => {},
       completeSubmission: async (
         _id: string,
@@ -534,6 +569,11 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
 
     const mockLedger = {
       getIntent: async () => mockIntent,
+      getProviderRequestIdentity: async () => ({
+        idempotencyKey: `0x${'a'.repeat(64)}`,
+        referenceId: 'oneshot-intent-p4-1',
+        requestFingerprint,
+      }),
       appendEvidence: async () => {},
       completeSubmission: async (
         _id: string,
@@ -598,6 +638,11 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
 
     const mockLedger = {
       getIntent: async () => mockIntent,
+      getProviderRequestIdentity: async () => ({
+        idempotencyKey: `0x${'a'.repeat(64)}`,
+        referenceId: 'oneshot-intent-p4-1',
+        requestFingerprint,
+      }),
       appendEvidence: async () => {},
       completeSubmission: async (
         _id: string,
