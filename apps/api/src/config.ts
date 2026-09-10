@@ -86,6 +86,10 @@ function privyAuthConfig(environment: NodeJS.ProcessEnv): PrivyAuthRuntimeConfig
     throw new Error('Missing required environment variable: PRIVY_AUTH_ALLOWED_SUBJECTS');
   }
 
+  if (rawSubjects === '*') {
+    return { appId, verificationKey: normalizeVerificationKey(rawKey), allowedSubjects: ['*'] };
+  }
+
   const allowedSubjects = [
     ...new Set(
       rawSubjects
@@ -98,7 +102,7 @@ function privyAuthConfig(environment: NodeJS.ProcessEnv): PrivyAuthRuntimeConfig
     throw new Error('PRIVY_AUTH_ALLOWED_SUBJECTS must list at least one Privy DID');
   }
   for (const subject of allowedSubjects) {
-    if (!subject.startsWith(PRIVY_DID_PREFIX)) {
+    if (subject !== '*' && !subject.startsWith(PRIVY_DID_PREFIX)) {
       throw new Error(`PRIVY_AUTH_ALLOWED_SUBJECTS entries must start with ${PRIVY_DID_PREFIX}`);
     }
   }

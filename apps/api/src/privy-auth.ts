@@ -3,6 +3,7 @@ import type { ServiceAuthenticator } from './auth.js';
 
 export const PRIVY_ISSUER = 'privy.io';
 export const PRIVY_DID_PREFIX = 'did:privy:';
+export const PRIVY_ALLOW_ALL = '*';
 
 const BEARER_PREFIX = 'Bearer ';
 const BASE64URL_SEGMENT = /^[A-Za-z0-9_-]+$/;
@@ -38,7 +39,8 @@ export function createPrivyAccessTokenAuthenticator(
   if (config.allowedSubjects.length === 0) {
     throw new Error('Privy operator allowlist must not be empty');
   }
-  const allowed = new Set(config.allowedSubjects);
+  const allowAll = config.allowedSubjects.includes(PRIVY_ALLOW_ALL);
+  const allowed = allowAll ? null : new Set(config.allowedSubjects);
   const clockTolerance = config.clockToleranceSeconds ?? 60;
   const keyPromise = importSPKI(config.verificationKey, 'ES256');
   // An unusable key must not become an unhandled rejection before the first request.
@@ -63,7 +65,7 @@ export function createPrivyAccessTokenAuthenticator(
       }
 
       if (subject === undefined || subject.length === 0) return 'UNAUTHORIZED';
-      if (!allowed.has(subject)) {
+      if (allowed !== null && !allowed.has(subject)) {
         config.onForbiddenSubject?.(subject);
         return 'FORBIDDEN';
       }

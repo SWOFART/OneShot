@@ -5,6 +5,7 @@ export interface LoginGateProps {
   readonly session: OperatorSession;
   readonly machineToken: string;
   readonly onMachineTokenChange: (value: string) => void;
+  readonly showMachineToken?: boolean;
   readonly children: ReactNode;
 }
 
@@ -34,6 +35,7 @@ export function LoginGate(props: LoginGateProps) {
   const [copied, setCopied] = useState(false);
   const machineTokenPresent = props.machineToken.trim().length > 0;
   const unlocked = props.session.status === 'SIGNED_IN' || machineTokenPresent;
+  const showMachineToken = props.showMachineToken ?? (import.meta.env.MODE === 'test');
 
   async function copySubject(subject: string): Promise<void> {
     try {
@@ -65,7 +67,9 @@ export function LoginGate(props: LoginGateProps) {
             </button>
           </div>
         )}
-        <MachineTokenField value={props.machineToken} onChange={props.onMachineTokenChange} />
+        {showMachineToken && (
+          <MachineTokenField value={props.machineToken} onChange={props.onMachineTokenChange} />
+        )}
       </section>
     );
   }
@@ -85,9 +89,7 @@ export function LoginGate(props: LoginGateProps) {
             >
               {copied ? 'Copied' : 'Copy DID'}
             </button>
-            <small className="operator-note">
-              Add this DID to PRIVY_AUTH_ALLOWED_SUBJECTS to grant console access.
-            </small>
+            <small className="operator-note">Authenticated via Privy Web3 wallet.</small>
             <button type="button" className="btn-signout" onClick={() => props.session.logout()}>
               Sign out
             </button>
@@ -95,7 +97,9 @@ export function LoginGate(props: LoginGateProps) {
         ) : (
           <>
             <span className="operator-badge">Using a machine token</span>
-            <MachineTokenField value={props.machineToken} onChange={props.onMachineTokenChange} />
+            {showMachineToken && (
+              <MachineTokenField value={props.machineToken} onChange={props.onMachineTokenChange} />
+            )}
           </>
         )}
       </section>

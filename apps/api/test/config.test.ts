@@ -73,6 +73,16 @@ describe('API runtime configuration', () => {
     expect(config.privyAuth?.verificationKey).toContain('BEGIN PUBLIC KEY');
   });
 
+  it('accepts wildcard allow-all for open wallet authentication', () => {
+    const config = loadApiRuntimeConfig({
+      ...base,
+      PRIVY_AUTH_APP_ID: 'cmtqbf5zo013w0cky3r0jqjca',
+      PRIVY_AUTH_VERIFICATION_KEY: testKey,
+      PRIVY_AUTH_ALLOWED_SUBJECTS: '*',
+    });
+    expect(config.privyAuth?.allowedSubjects).toEqual(['*']);
+  });
+
   it('accepts a verification key carrying escaped newlines', () => {
     const config = loadApiRuntimeConfig({
       ...base,
