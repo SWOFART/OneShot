@@ -453,15 +453,10 @@ export function toSettlementDetailsView(
   const capComparison = capAtomic === null ? null : compareAtomic(amountAtomic, capAtomic);
 
   const displayedAttempt = latestAttempt(intent.attempts);
-  const authorizationStatus: AuthorizationDisplayStatus =
-    !displayedAttempt
-      ? 'NOT_REPORTED'
-      : (displayedAttempt.authorization_status ??
-        (state === 'AUTHORIZING'
-          ? 'CHECKING'
-          : state === 'REJECTED'
-            ? 'DENIED'
-            : 'AUTHORIZED'));
+  const authorizationStatus: AuthorizationDisplayStatus = !displayedAttempt
+    ? 'NOT_REPORTED'
+    : (displayedAttempt.authorization_status ??
+      (state === 'AUTHORIZING' ? 'CHECKING' : state === 'REJECTED' ? 'DENIED' : 'AUTHORIZED'));
 
   const settlement = intent.settlement ?? null;
   const settlementIsWellFormed =
@@ -534,7 +529,9 @@ export function toSettlementDetailsView(
       attemptId: displayedAttempt?.attempt_id ?? null,
       occurredAt: displayedAttempt?.created_at ?? null,
       sanitizedReason:
-        authorizationStatus === 'AUTHORIZED' ? null : sanitizeText(displayedAttempt?.sanitized_error),
+        authorizationStatus === 'AUTHORIZED'
+          ? null
+          : sanitizeText(displayedAttempt?.sanitized_error),
       terminal: TERMINAL_AUTHORIZATION.has(authorizationStatus),
     },
     verification,
