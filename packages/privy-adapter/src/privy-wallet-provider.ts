@@ -44,17 +44,28 @@ export interface PrivyArcWalletProviderOptions {
           readonly to: `0x${string}`;
           readonly value: Hex;
           readonly data: Hex;
-          readonly nonce: number;
-          readonly gas_limit?: number;
-          readonly max_fee_per_gas?: number;
-          readonly max_priority_fee_per_gas?: number;
+          readonly nonce: Hex;
+          readonly gas_limit?: Hex;
+          readonly max_fee_per_gas?: Hex;
+          readonly max_priority_fee_per_gas?: Hex;
         };
       };
     },
   ) => Promise<{ readonly signed_transaction: string; readonly encoding?: string }>;
   readonly sendRawTransaction?: (serializedTransaction: Hex) => Promise<Hex>;
-  readonly getTransactionCount?: (address: `0x${string}`) => Promise<number | bigint>;
+  /** Must return the pending nonce, not only the latest mined nonce. */
+  readonly getTransactionCount?: (
+    address: `0x${string}`,
+    blockTag?: 'latest' | 'pending',
+  ) => Promise<number | bigint>;
   readonly getGasPrice?: () => Promise<bigint>;
+  readonly estimateGas?: (input: {
+    readonly account: `0x${string}`;
+    readonly to: `0x${string}`;
+    readonly value: bigint;
+    readonly data: Hex;
+  }) => Promise<bigint>;
+  readonly getNativeBalance?: (address: `0x${string}`) => Promise<bigint>;
   readonly getTransactionReceipt?: (hash: Hex) => Promise<{
     readonly transactionHash: Hex;
     readonly from: `0x${string}`;
@@ -80,6 +91,9 @@ export class PrivyArcWalletProvider implements WalletProvider {
   readonly #send: NonNullable<PrivyArcWalletProviderOptions['sendTransaction']>;
   readonly #getReceipt: NonNullable<PrivyArcWalletProviderOptions['getTransactionReceipt']>;
   readonly #getBlock: NonNullable<PrivyArcWalletProviderOptions['getBlockNumber']>;
+  readonly #getNativeBalance: NonNullable<PrivyArcWalletProviderOptions['getNativeBalance']>;
+  readonly #getGasPrice: NonNullable<PrivyArcWalletProviderOptions['getGasPrice']>;
+  readonly #estimateGas: NonNullable<PrivyArcWalletProviderOptions['estimateGas']>;
 
   constructor(options: PrivyArcWalletProviderOptions) {
     this.#options = options;
@@ -101,12 +115,50 @@ export class PrivyArcWalletProvider implements WalletProvider {
 
     const getNonce =
       options.getTransactionCount ??
-      ((address) => publicClient.getTransactionCount({ address }));
+      ((address, blockTag = 'pending') => publicClient.getTransactionCount({ address, blockTag }));
     const getGas =
       options.getGasPrice ?? (() => publicClient.getGasPrice());
+    const estimateGas =
+      options.estimateGas ??
+      ((input: {
+        readonly account: `0x${string}`;
+        readonly to: `0x${string}`;
+        readonly value: bigint;
+        readonly data: Hex;
+      }) =>
+        publicClient.estimateGas({
+          account: input.account,
+          to: input.to,
+          value: input.value,
+          data: input.data,
+        }));
     const sendRaw =
       options.sendRawTransaction ??
       ((serializedTransaction) => publicClient.sendRawTransaction({ serializedTransaction }));
+
+    // The raw RPC fallback has no provider idempotency key. Collapse duplicate
+    // calls for one intent in this provider instance and serialize all raw
+    // submissions so concurrent calls in this instance cannot choose the same
+    // pending nonce. Durable OneShot state remains the authority across
+    // processes and restarts.
+    let fallbackQueue = Promise.resolve();
+    const fallbackSubmissions = new Map<
+      string,
+      { readonly fingerprint: string; readonly result: Promise<PrivyTransactionResult> }
+    >();
+    const withFallbackLock = async <T>(work: () => Promise<T>): Promise<T> => {
+      const previous = fallbackQueue;
+      let release!: () => void;
+      fallbackQueue = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await previous;
+      try {
+        return await work();
+      } finally {
+        release();
+      }
+    };
 
     const executeSignAndSendWith = (
       signTx: NonNullable<PrivyArcWalletProviderOptions['signTransaction']>,
@@ -114,30 +166,61 @@ export class PrivyArcWalletProvider implements WalletProvider {
       walletId: string,
       input: Parameters<NonNullable<PrivyArcWalletProviderOptions['sendTransaction']>>[1],
     ): Promise<PrivyTransactionResult> => {
-      const [nonce, gasPrice] = await Promise.all([
-        getNonce(options.walletAddress),
-        getGas(),
-      ]);
-      const signResult = await signTx(walletId, {
-        params: {
-          transaction: {
+      const fingerprint = JSON.stringify(input.params.transaction);
+      const existing = fallbackSubmissions.get(input.idempotency_key);
+      if (existing) {
+        if (existing.fingerprint !== fingerprint) {
+          throw new Error('Privy fallback idempotency key was reused for a different transaction');
+        }
+        return existing.result;
+      }
+
+      let rawSendAttempted = false;
+      const result = withFallbackLock(async () => {
+        const [nonce, gasPrice, estimatedGas] = await Promise.all([
+          getNonce(options.walletAddress, 'pending'),
+          getGas(),
+          estimateGas({
+            account: options.walletAddress,
             to: input.params.transaction.to,
-            value: input.params.transaction.value,
+            value: BigInt(input.params.transaction.value),
             data: input.params.transaction.data,
-            chain_id: input.params.transaction.chain_id,
-            nonce: Number(nonce),
-            gas_limit: 100_000,
-            max_fee_per_gas: Number(gasPrice * 2n),
-            max_priority_fee_per_gas: Number(gasPrice),
+          }),
+        ]);
+        if (estimatedGas <= 0n) throw new Error('Arc gas estimation returned zero');
+        const gasLimit = estimatedGas + (estimatedGas + 4n) / 5n;
+        const signResult = await signTx(walletId, {
+          params: {
+            transaction: {
+              to: input.params.transaction.to,
+              value: input.params.transaction.value,
+              data: input.params.transaction.data,
+              chain_id: input.params.transaction.chain_id,
+              nonce: toHex(BigInt(nonce)),
+              gas_limit: toHex(gasLimit),
+              max_fee_per_gas: toHex(gasPrice * 2n),
+              max_priority_fee_per_gas: toHex(gasPrice),
+            },
           },
-        },
+        });
+        rawSendAttempted = true;
+        const hash = await sendRaw(signResult.signed_transaction as Hex);
+        return {
+          caip2: input.caip2,
+          hash,
+          transaction_id: input.reference_id,
+        };
       });
-      const hash = await sendRaw(signResult.signed_transaction as Hex);
-      return {
-        caip2: input.caip2,
-        hash,
-        transaction_id: input.reference_id,
-      };
+      fallbackSubmissions.set(input.idempotency_key, { fingerprint, result });
+      try {
+        return await result;
+      } catch (error) {
+        // Before raw broadcast, a retry is safe. Once sendRawTransaction was
+        // invoked, retain the rejected promise so this instance never blindly
+        // broadcasts the same business intent twice.
+        if (!rawSendAttempted) fallbackSubmissions.delete(input.idempotency_key);
+        throw error;
+      }
     };
 
     if (options.sendTransaction) {
@@ -176,10 +259,32 @@ export class PrivyArcWalletProvider implements WalletProvider {
     this.#getReceipt =
       options.getTransactionReceipt ?? ((hash) => publicClient.getTransactionReceipt({ hash }));
     this.#getBlock = options.getBlockNumber ?? (() => publicClient.getBlockNumber());
+    this.#getNativeBalance =
+      options.getNativeBalance ?? ((address) => publicClient.getBalance({ address }));
+    this.#getGasPrice = getGas;
+    this.#estimateGas = estimateGas;
   }
 
   getBlockNumber(): Promise<bigint> {
     return this.#getBlock();
+  }
+
+  getNativeBalance(): Promise<bigint> {
+    return this.#getNativeBalance(this.#options.walletAddress);
+  }
+
+  async estimateNativeFee(input: {
+    readonly to: `0x${string}`;
+    readonly value: bigint;
+    readonly data: Hex;
+  }): Promise<bigint> {
+    const [estimatedGas, gasPrice] = await Promise.all([
+      this.#estimateGas({ account: this.#options.walletAddress, ...input }),
+      this.#getGasPrice(),
+    ]);
+    if (estimatedGas <= 0n) throw new Error('Arc gas estimation returned zero');
+    const gasLimit = estimatedGas + (estimatedGas + 4n) / 5n;
+    return gasLimit * gasPrice;
   }
 
   async sendTransaction(input: Parameters<WalletProvider['sendTransaction']>[0]) {

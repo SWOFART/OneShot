@@ -14,6 +14,7 @@
 export interface SimulatedRpcProbe {
   getChainId(): Promise<number>;
   getCode(address: `0x${string}`): Promise<string | null>;
+  getTokenDecimals(address: `0x${string}`): Promise<number>;
 }
 
 export type RpcScenario =
@@ -56,6 +57,7 @@ export function simulateRpc(
       return {
         getChainId: () => Promise.resolve(chainId),
         getCode: () => Promise.resolve(BYTECODE),
+        getTokenDecimals: () => Promise.resolve(6),
       };
 
     case 'wrong-chain':
@@ -63,36 +65,42 @@ export function simulateRpc(
         // Ethereum mainnet. A settlement sent here would be irrecoverable.
         getChainId: () => Promise.resolve(1),
         getCode: () => Promise.resolve(BYTECODE),
+        getTokenDecimals: () => Promise.resolve(6),
       };
 
     case 'token-missing-bytecode':
       return {
         getChainId: () => Promise.resolve(chainId),
         getCode: () => Promise.resolve('0x'),
+        getTokenDecimals: () => Promise.resolve(6),
       };
 
     case 'token-null-code':
       return {
         getChainId: () => Promise.resolve(chainId),
         getCode: () => Promise.resolve(null),
+        getTokenDecimals: () => Promise.resolve(6),
       };
 
     case 'unreachable':
       return {
         getChainId: () => Promise.reject(new Error('ECONNREFUSED')),
         getCode: () => Promise.reject(new Error('ECONNREFUSED')),
+        getTokenDecimals: () => Promise.reject(new Error('ECONNREFUSED')),
       };
 
     case 'chain-ok-token-unreachable':
       return {
         getChainId: () => Promise.resolve(chainId),
         getCode: () => Promise.reject(new Error('ETIMEDOUT')),
+        getTokenDecimals: () => Promise.reject(new Error('ETIMEDOUT')),
       };
 
     case 'oversized-error':
       return {
         getChainId: () => Promise.reject(new Error('x'.repeat(20_000))),
         getCode: () => Promise.reject(new Error('x'.repeat(20_000))),
+        getTokenDecimals: () => Promise.reject(new Error('x'.repeat(20_000))),
       };
 
     default: {

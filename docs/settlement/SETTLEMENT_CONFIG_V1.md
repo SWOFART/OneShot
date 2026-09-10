@@ -82,6 +82,7 @@ ready only when every check passes. There is no partial-ready state.
 | `privy.identityFormat` | Wallet and policy identifier shape, printing neither value |
 | `rpc.chainId` | Live `eth_chainId` equals the profile chain ID |
 | `token.bytecode` | The configured USDC address holds contract bytecode |
+| `token.decimals` | Live `decimals()` equals the profile's six-decimal ERC-20 settlement precision |
 
 ### `UNAVAILABLE` versus `MISMATCH`
 
@@ -91,7 +92,8 @@ ready only when every check passes. There is no partial-ready state.
   must never be retried into working.
 
 Both block readiness. Only `MISMATCH` is permanent. The probe runs against the
-`RpcProbe` interface, so it works fully offline with no credential.
+`RpcProbe` interface, so it works fully offline with no credential. The live
+probe also reads the token's `decimals()` view method; it never signs or sends.
 
 ## 4. Selected settlement path
 
