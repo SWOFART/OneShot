@@ -17,7 +17,16 @@ export interface SettlementContext {
   readonly correlationId: string;
 }
 
+export interface ProviderRequestIdentity {
+  readonly idempotencyKey: string;
+  readonly referenceId: string;
+  readonly requestFingerprint: string;
+  readonly walletId?: string | undefined;
+  readonly policyId?: string | undefined;
+}
+
 export interface SettlementPort {
+  getSubmissionIdentity?(request: CreateIntentRequest): ProviderRequestIdentity;
   submit(request: CreateIntentRequest, context: SettlementContext): Promise<SettlementResult>;
 }
 

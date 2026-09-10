@@ -49,6 +49,21 @@ export async function executeSubmitSettlement(
     timestamp: new Date().toISOString(),
   });
 
+  // Persist the exact provider request identity before crossing the external
+  // effect boundary. Recovery must reuse it after a lost response or restart.
+  if (options.settlementPort.getSubmissionIdentity) {
+    try {
+      const identity = options.settlementPort.getSubmissionIdentity(claim.intent);
+      await options.ledger.persistProviderRequestIdentity(claim.attemptId, identity);
+    } catch {
+      await options.ledger.completeSubmission(businessIntentId, claim.attemptId, {
+        kind: 'DEFINITELY_NOT_SUBMITTED',
+        reason: 'Provider request identity could not be persisted before submission',
+      });
+      return;
+    }
+  }
+
   // A03.3 — Call settlement port outside database transaction
   let result: SettlementResult;
   try {

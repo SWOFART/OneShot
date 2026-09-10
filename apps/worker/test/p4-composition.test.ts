@@ -305,7 +305,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
         requestFingerprint,
         targetState: 'COMMITTED' as const,
         reason: 'Arc proof verified',
-        evidenceReferences: ['arc:0x' + 'e'.repeat(64)],
+        evidenceReferences: ['privy:oneshot-intent-p4-1', 'arc:0x' + 'e'.repeat(64)],
         disposition: 'MARK_COMMITTED',
         advisoryAction: 'RETURN_EXISTING_RESULT' as const,
         authoritativeProofPresent: true,
@@ -377,6 +377,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     expect(evidence.schemaVersion).toBe('recovery-evidence-v1');
     expect(evidence.binding.businessIntentId).toBe('intent-p4-1');
     expect(evidence.local.submissionReference).toBe('sub-intent-p4-1');
+    expect(evidence.privy?.referenceId).toBe('oneshot-intent-p4-1');
     expect(evidence.privy?.requestStatus).toBe('SUCCEEDED');
     expect(evidence.arc?.receiptStatus).toBe('SUCCESS');
     expect(evidence.arc?.submissionReference).toBe('sub-intent-p4-1'); // Must match local
@@ -665,6 +666,9 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     expect(mockVertexFetch).toHaveBeenCalled();
     expect(completedWith).not.toBeNull();
     expect(completedWith?.kind).toBe('CONFIRMED');
+    if (completedWith?.kind === 'CONFIRMED') {
+      expect(completedWith.provider_reference_id).toBe('oneshot-intent-p4-1');
+    }
     expect(ledgerState).toBe('COMMITTED');
   });
 });

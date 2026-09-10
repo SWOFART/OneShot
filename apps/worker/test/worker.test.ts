@@ -151,6 +151,85 @@ describe('Worker Unit Logic', () => {
     expect(completedState).toBe('CONFIRMED');
   });
 
+  it('persists provider request identity before calling the settlement port', async () => {
+    const order: string[] = [];
+    let persisted: unknown;
+    const ledger = createMockLedger({
+      async persistProviderRequestIdentity(_attemptId, identity) {
+        order.push('persist');
+        persisted = identity;
+      },
+    });
+
+    await executeSubmitSettlement('intent-worker-unit-1', {
+      pool: {} as never,
+      ledger,
+      settlementPort: {
+        getSubmissionIdentity() {
+          return {
+            idempotencyKey: '0x' + '1'.repeat(64),
+            referenceId: 'oneshot-intent-worker-unit-1',
+            requestFingerprint: '0x' + '2'.repeat(64),
+            walletId: 'wallet-test',
+            policyId: 'policy-test',
+          };
+        },
+        async submit() {
+          order.push('submit');
+          return {
+            kind: 'CONFIRMED',
+            provider_reference_id: 'provider-ref-identity',
+            transaction_hash: `0x${'c'.repeat(64)}`,
+            block_number: '500',
+            transfer_log_index: 0,
+          };
+        },
+      },
+    });
+
+    expect(order).toEqual(['persist', 'submit']);
+    expect(persisted).toEqual({
+      idempotencyKey: '0x' + '1'.repeat(64),
+      referenceId: 'oneshot-intent-worker-unit-1',
+      requestFingerprint: '0x' + '2'.repeat(64),
+      walletId: 'wallet-test',
+      policyId: 'policy-test',
+    });
+  });
+
+  it('does not call the provider when identity persistence fails', async () => {
+    let portCalled = false;
+    let completedKind: string | undefined;
+    const ledger = createMockLedger({
+      async persistProviderRequestIdentity() {
+        throw new Error('database unavailable');
+      },
+      async completeSubmission(_id, _attemptId, result: SettlementResult) {
+        completedKind = result.kind;
+        return { completed: true, state: 'FAILED_SAFE', version: 3 };
+      },
+    });
+
+    await executeSubmitSettlement('intent-worker-unit-1', {
+      pool: {} as never,
+      ledger,
+      settlementPort: {
+        getSubmissionIdentity: () => ({
+          idempotencyKey: '0x' + '3'.repeat(64),
+          referenceId: 'oneshot-intent-worker-unit-1',
+          requestFingerprint: '0x' + '4'.repeat(64),
+        }),
+        async submit() {
+          portCalled = true;
+          throw new Error('must not submit');
+        },
+      },
+    });
+
+    expect(portCalled).toBe(false);
+    expect(completedKind).toBe('DEFINITELY_NOT_SUBMITTED');
+  });
+
   it('does not invoke port if CAS claim returns claimed=false', async () => {
     let portCalled = false;
     const ledger = createMockLedger({

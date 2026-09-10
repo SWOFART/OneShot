@@ -56,6 +56,12 @@ export interface RecoveryJob {
 export interface LocalRecoverySnapshot {
   readonly schemaVersion: typeof LOCAL_RECOVERY_SNAPSHOT_VERSION;
   readonly binding: EvidenceBinding;
+  readonly providerIdentity?: {
+    readonly referenceId: string;
+    readonly requestFingerprint: string;
+    readonly walletId?: string | undefined;
+    readonly policyId?: string | undefined;
+  };
   readonly durable: {
     readonly state: 'SUBMITTING' | 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE';
     readonly stateVersion: string;

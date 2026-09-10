@@ -107,9 +107,24 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
       throw new Error('Invalid Subgraph MCP recovery lookup input');
     }
 
+    const providerIdentity =
+      typeof this.ledger.getProviderRequestIdentity === 'function'
+        ? await this.ledger.getProviderRequestIdentity(businessIntentId)
+        : null;
+
     return {
       schemaVersion: LOCAL_RECOVERY_SNAPSHOT_VERSION,
       binding,
+      ...(providerIdentity
+        ? {
+            providerIdentity: {
+              referenceId: providerIdentity.referenceId,
+              requestFingerprint: providerIdentity.requestFingerprint,
+              ...(providerIdentity.walletId ? { walletId: providerIdentity.walletId } : {}),
+              ...(providerIdentity.policyId ? { policyId: providerIdentity.policyId } : {}),
+            },
+          }
+        : {}),
       durable: {
         state: durableState,
         stateVersion: String(intent.version),
@@ -238,7 +253,12 @@ export class IntentLedgerRecoveryCommandStore implements RecoveryCommandStorePor
       const privyRef = pack.reconciliationCommand.evidenceReferences.find((ref) =>
         ref.startsWith('privy:'),
       );
-      const providerRef = privyRef ? privyRef.slice(6) : `recovery-${pack.packId}`;
+      if (!privyRef) {
+        throw new Error(
+          `Cannot apply MARK_COMMITTED without the durable provider request identity (intent: ${pack.businessIntentId})`,
+        );
+      }
+      const providerRef = privyRef.slice(6);
 
       const completion = await this.ledger.completeSubmission(pack.businessIntentId, attemptId, {
         kind: 'CONFIRMED',
@@ -360,7 +380,7 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
       ),
     };
 
-    return { ...base, privy: null, arc };
+    return { ...base, arc };
   }
 
   async read(binding: EvidenceBinding): Promise<KnownIdentityRecoveryEvidence> {
@@ -412,11 +432,13 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     // Retrieve local state from port if available to match actual stateVersion
     let localStateVersion = '1';
     let localSettlementState: 'SUBMITTING' | 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE' = 'UNKNOWN';
+    let providerReferenceId = `oneshot-${binding.businessIntentId}`;
     if (this.options.localStatePort) {
       try {
         const snapshot = await this.options.localStatePort.read(binding.businessIntentId);
         localStateVersion = snapshot.durable.stateVersion;
         localSettlementState = snapshot.durable.state;
+        providerReferenceId = snapshot.providerIdentity?.referenceId ?? providerReferenceId;
       } catch {
         // Fall back to default
       }
@@ -524,7 +546,7 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
       },
       privy: {
         authority: 'PROVIDER_OBSERVATION',
-        referenceId: `privy:${binding.businessIntentId}`,
+        referenceId: providerReferenceId,
         requestFingerprint: binding.requestFingerprint,
         requestStatus: privyStatus,
         transactionHash: txHash,

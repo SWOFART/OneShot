@@ -24,6 +24,18 @@ export interface LedgerDependencies {
   readonly nextAttemptId: () => string;
 }
 
+/**
+ * Provider request identity persisted before an external submission begins.
+ * The adapter owns the derivation; the ledger owns durability and replay.
+ */
+export interface ProviderRequestIdentity {
+  readonly idempotencyKey: string;
+  readonly referenceId: string;
+  readonly requestFingerprint: string;
+  readonly walletId?: string | undefined;
+  readonly policyId?: string | undefined;
+}
+
 export type CreateIntentResult =
   | { readonly kind: 'ACCEPTED'; readonly intent: IntentResponse }
   | { readonly kind: 'REPLAY_IDENTICAL'; readonly intent: IntentResponse }
@@ -590,6 +602,61 @@ export class IntentLedger {
     } finally {
       client.release();
     }
+  }
+
+  async persistProviderRequestIdentity(
+    attemptIdValue: unknown,
+    identity: ProviderRequestIdentity,
+  ): Promise<void> {
+    const attemptId = asAttemptId(attemptIdValue);
+    const result = await this.#pool.query(
+      `UPDATE attempts
+       SET privy_idempotency_key = $1,
+           privy_reference_id = $2,
+           request_body_fingerprint = $3,
+           wallet_id = $4,
+           policy_id = $5
+       WHERE attempt_id = $6 AND stage = 'SUBMITTING'`,
+      [
+        identity.idempotencyKey,
+        identity.referenceId,
+        identity.requestFingerprint,
+        identity.walletId ?? null,
+        identity.policyId ?? null,
+        attemptId,
+      ],
+    );
+    if (result.rowCount !== 1) {
+      throw new Error(`Cannot persist provider request identity for attempt ${attemptId}`);
+    }
+  }
+
+  async getProviderRequestIdentity(idValue: unknown): Promise<ProviderRequestIdentity | null> {
+    const id = asBusinessIntentId(idValue);
+    const result = await this.#pool.query<{
+      privy_idempotency_key: string | null;
+      privy_reference_id: string | null;
+      request_body_fingerprint: string;
+      wallet_id: string | null;
+      policy_id: string | null;
+    }>(
+      `SELECT privy_idempotency_key, privy_reference_id, request_body_fingerprint,
+              wallet_id, policy_id
+       FROM attempts
+       WHERE business_intent_id = $1
+       ORDER BY attempt_sequence DESC
+       LIMIT 1`,
+      [id],
+    );
+    const row = result.rows[0];
+    if (!row?.privy_idempotency_key || !row.privy_reference_id) return null;
+    return {
+      idempotencyKey: row.privy_idempotency_key,
+      referenceId: row.privy_reference_id,
+      requestFingerprint: row.request_body_fingerprint,
+      ...(row.wallet_id ? { walletId: row.wallet_id } : {}),
+      ...(row.policy_id ? { policyId: row.policy_id } : {}),
+    };
   }
 
   async completeSubmission(

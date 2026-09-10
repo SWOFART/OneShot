@@ -108,6 +108,30 @@ describePostgres('PostgreSQL intent ledger', () => {
     expect(counts.rows[0]).toEqual({ attempts: '1', jobs: '1', settlements: '0' });
   });
 
+  it('persists and reloads provider request identity on the owned attempt', async () => {
+    const ledger = newLedger();
+    await ledger.createOrReplay(request, 'correlation-provider-identity');
+    const claim = await ledger.claimSubmission(request.business_intent_id);
+    expect(claim.claimed).toBe(true);
+    if (!claim.claimed) return;
+
+    await ledger.persistProviderRequestIdentity(claim.attemptId, {
+      idempotencyKey: `0x${'a'.repeat(64)}`,
+      referenceId: `oneshot-${request.business_intent_id}`,
+      requestFingerprint: 'b'.repeat(64),
+      walletId: 'wallet-test',
+      policyId: 'policy-test',
+    });
+
+    await expect(ledger.getProviderRequestIdentity(request.business_intent_id)).resolves.toEqual({
+      idempotencyKey: `0x${'a'.repeat(64)}`,
+      referenceId: `oneshot-${request.business_intent_id}`,
+      requestFingerprint: 'b'.repeat(64),
+      walletId: 'wallet-test',
+      policyId: 'policy-test',
+    });
+  });
+
   it('survives a client restart and preserves evidence order', async () => {
     const ledger = newLedger();
     await ledger.createOrReplay(request, 'correlation-restart');

@@ -42,6 +42,10 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 - The staged candidate verifier performs read-only Arc receipt verification for
   Graph candidates and refuses to substitute evidence for zero, failed, or
   multiple matching candidates.
+- Milestone 2 persists the adapter-derived Privy request identity on the owned
+  attempt before submission, exposes it to recovery, and rejects committed
+  recovery packs that lack that durable identity instead of inventing a pack
+  reference.
 
 ## Commands/checks
 
@@ -55,6 +59,9 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 - Package-wide reconciliation `verify` is not green on this Windows checkout
   because 12 unchanged documentation files retain pre-existing CRLF/Prettier
   differences; no unrelated docs were reformatted.
+- Milestone 2 checks passed: Privy adapter tests 122, worker tests 35,
+  reconciliation tests 85, storage tests 8; Privy adapter, worker, storage,
+  and reconciliation lint/typecheck all passed.
 
 ## External-doc findings
 
@@ -69,17 +76,18 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 
 - Branch: `milestone/recovery-hardening`
 - Base: `develop` at `cd7439058f94f1128bae70fac4017039a45d3d68`
-- Commit: uncommitted baseline
+- Commit: `a8180f1` (Part 1 pushed); Part 2 candidate is currently unstaged
 - PR: not created
 - CI: not applicable yet
 
 ## Review gates
 
-- Gate A: prior candidate review explicitly PASSed before the ambiguity regression test was added; its non-blocking follow-up recommended dedicated coverage for zero/multiple/contradictory paths.
-- Gate A: fresh review required for the updated tree after the ambiguity test.
+- Gate A: Part 1 PASS on reviewed tree `201c93c3c2fc32fe63ded42a714ac8546719a624`;
+  committed as `a8180f1` and pushed.
+- Gate A: fresh review required for the Part 2 candidate after staging.
 - Gate B: NOT RUN
 
 ## Handoff/next steps
 
-1. Stage the new ambiguity regression test and record the final candidate tree.
-2. Run a fresh Gate A review for the updated tree; commit only after explicit PASS.
+1. Stage the Part 2 changes and record the final candidate tree.
+2. Run a fresh Gate A review for the updated tree; commit and push only after explicit PASS.
