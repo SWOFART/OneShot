@@ -993,7 +993,9 @@ import `fileURLToPath`:
       '@oneshot/brand/fonts.css': fileURLToPath(
         new URL('../../packages/brand/src/fonts.css', import.meta.url),
       ),
-      '@oneshot/brand': fileURLToPath(new URL('../../packages/brand/src/index.ts', import.meta.url)),
+      '@oneshot/brand': fileURLToPath(
+        new URL('../../packages/brand/src/index.ts', import.meta.url),
+      ),
 ```
 
 Replace the `<head>` of `apps/web/index.html` with:
