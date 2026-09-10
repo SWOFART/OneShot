@@ -864,9 +864,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { applyTheme, readStoredTheme, THEME_STORAGE_KEY } from '../src/theme.js';
 
 afterEach(() => {
+  // Unstub FIRST. The last case replaces localStorage with an object that has
+  // only getItem and setItem, so clearing before restoring would throw on a
+  // missing `clear` — in the hook, where it looks like a failure of the test
+  // that happened to run last.
+  vi.unstubAllGlobals();
   window.localStorage.clear();
   document.documentElement.removeAttribute('data-theme');
-  vi.unstubAllGlobals();
 });
 
 describe('theme', () => {
