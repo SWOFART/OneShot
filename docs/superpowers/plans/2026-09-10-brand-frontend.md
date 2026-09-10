@@ -658,9 +658,12 @@ describe('heroClipPaths', () => {
 
   it('rounds every vertex, including the acute ones', () => {
     const { panel, figure } = heroClipPaths(1032, 268);
-    // Six vertices each: four box corners plus two diagonal apexes.
-    expect(panel.match(/Q/gu)).toHaveLength(6);
-    expect(figure.match(/Q/gu)).toHaveLength(6);
+    // Each shape is a quadrilateral, so four rounded vertices each: the panel
+    // takes the box's two LEFT corners plus its two diagonal apexes, and the
+    // figure the two RIGHT corners plus its own two apexes. The diagonal is
+    // what removes the other two corners from each — that is the cut.
+    expect(panel.match(/Q/gu)).toHaveLength(4);
+    expect(figure.match(/Q/gu)).toHaveLength(4);
   });
 
   it('leans further right as the box grows taller', () => {
