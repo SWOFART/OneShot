@@ -30,8 +30,10 @@ and database configuration before accepting work. It performs startup recovery,
 immediately drains durable outbox work, continues polling without overlapping
 cycles, and waits for an in-flight cycle during SIGTERM/SIGINT shutdown.
 
-Set `ONESHOT_SUBGRAPH_MCP_ENDPOINT` only when a remote MCP server is deployed;
-otherwise the recovery client uses its existing The Graph Gateway path.
+Production requires `ONESHOT_SUBGRAPH_MCP_ENDPOINT` to identify the admitted
+remote MCP server. The production composition rejects an omitted MCP port;
+direct The Graph Gateway access remains available only to lower-level client
+tests and non-production tooling.
 
 The HTTP listener exposes `GET /health/live` and `GET /health/ready`. Readiness
 requires a reachable database, compatible adapter identities, and a running

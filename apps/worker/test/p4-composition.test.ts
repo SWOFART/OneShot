@@ -24,6 +24,7 @@ import {
   RecoveryService,
   VertexAiRecoveryAdvisor,
   type DetailedRecoveryView,
+  type SubgraphMcpRecoveryPort,
 } from '@oneshot/reconciliation';
 import { composeWorker, createProductionRecoveryService } from '../src/composition.js';
 import { executeReconcileIntent } from '../src/worker.js';
@@ -109,6 +110,12 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     getReceipt: async () => realReceipt,
   };
 
+  const explicitMcpStub: SubgraphMcpRecoveryPort = {
+    lookup: async () => {
+      throw new Error('MCP stub is not used by this composition test');
+    },
+  };
+
   it('composes worker under production profile with real ArcSettlementAdapter, PrivyAuthorizationAdapter, and RecoveryService', async () => {
     const mockLedger = {
       ping: async () => {},
@@ -129,6 +136,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
       authorizationPort: authorizationAdapter,
       recovery: {
         localState: recoveryLocalState,
+        subgraphMcp: explicitMcpStub,
         bridge: {
           defaultArcTxHash: realTxHash,
           defaultReceipt: realReceipt,
@@ -141,6 +149,17 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     expect(composed.options.settlementPort).toBe(settlementAdapter);
     expect(composed.options.authorizationPort).toBe(authorizationAdapter);
     expect(composed.options.recoveryService).toBeInstanceOf(RecoveryService);
+  });
+
+  it('rejects production recovery composition without an explicit MCP port', () => {
+    expect(() =>
+      createProductionRecoveryService(
+        {} as IntentLedger,
+        {
+          localState: recoveryLocalState,
+        } as never,
+      ),
+    ).toThrow('explicit subgraphMcp port');
   });
 
   it('IntentLedgerLocalRecoveryStatePort produces valid snapshot from IntentLedger', async () => {
@@ -464,6 +483,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
 
     const recoveryService = createProductionRecoveryService(mockLedger, {
       localState: recoveryLocalState,
+      subgraphMcp: explicitMcpStub,
       bridge: {
         evidencePort: mockEvidencePort as unknown as LaneBEvidencePort,
         receiptSource: {

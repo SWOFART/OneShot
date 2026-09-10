@@ -49,6 +49,9 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 - Milestone 3 makes recovery carry the verified Arc Transfer log index and
   routes known-identity receipt evidence through `verifyReceipt`; mismatched
   receipts remain non-authoritative instead of being labeled final success.
+- Milestone 4 requires an explicit Subgraph MCP recovery port in production
+  composition and a configured HTTPS MCP endpoint in the executable runtime;
+  the lower-level client fallback remains available only outside production.
 
 ## Commands/checks
 
@@ -68,6 +71,9 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 - Milestone 3 checks passed: worker tests 35, reconciliation tests 85, Privy
   adapter tests 122, storage tests 8; worker and reconciliation typecheck plus
   all four package lint checks passed.
+- Milestone 4 focused checks passed: worker tests 36, reconciliation tests 85;
+  worker/reconciliation typecheck and lint passed. The runtime config now
+  fails closed without `ONESHOT_SUBGRAPH_MCP_ENDPOINT`.
 
 ## External-doc findings
 
@@ -82,7 +88,7 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 
 - Branch: `milestone/recovery-hardening`
 - Base: `develop` at `cd7439058f94f1128bae70fac4017039a45d3d68`
-- Commit: `27234e2` (Parts 1-2 pushed); Part 3 candidate is currently unstaged
+- Commit: `6d0497c` (Parts 1-3 pushed); Part 4 candidate is currently unstaged
 - PR: not created
 - CI: not applicable yet
 
@@ -92,10 +98,12 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
   committed as `a8180f1` and pushed.
 - Gate A: Part 2 PASS on reviewed tree `e56f737e94e254c5c70abadd8c4b863d2dca154a`;
   committed as `27234e2` and pushed.
-- Gate A: fresh review required for the Part 3 candidate after staging.
+- Gate A: Part 3 PASS on reviewed tree `511ee2bbc5804639ae21f8c12e8a9de13c58a52a`;
+  committed as `6d0497c` and pushed.
+- Gate A: fresh review required for the Part 4 candidate after staging.
 - Gate B: NOT RUN
 
 ## Handoff/next steps
 
-1. Stage the Part 3 changes and record the final candidate tree.
+1. Stage the Part 4 changes and record the final candidate tree.
 2. Run a fresh Gate A review for the updated tree; commit and push only after explicit PASS.
