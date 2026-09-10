@@ -14,7 +14,7 @@ function environment(): NodeJS.ProcessEnv {
     ONESHOT_PRIVY_POLICY_DIGEST: 'a'.repeat(64),
     ONESHOT_RECIPIENT_ALLOWLIST: '0x2222222222222222222222222222222222222222',
     ONESHOT_SETTLEMENT_CAP_ATOMIC: '1000000',
-    ONESHOT_SUBGRAPH_MCP_ENDPOINT: 'https://mcp.example.invalid',
+    ONESHOT_SUBGRAPH_QUERY_URL: 'https://api.studio.thegraph.com/query/example',
     ONESHOT_SUBGRAPH_MCP_SERVER_VERSION: '1.0.0',
     ONESHOT_SUBGRAPH_DEPLOYMENT_ID: `0x${'d'.repeat(64)}`,
     ONESHOT_SUBGRAPH_MANIFEST_CID: `Qm${'a'.repeat(44)}`,
@@ -30,14 +30,20 @@ describe('production worker configuration', () => {
     const config = loadWorkerRuntimeConfig(environment());
     expect(config.settlement.profile.chainId).toBe(5042002);
     expect(config.recovery.policy.serverName).toBe('subgraph-mcp');
+    expect(config.recovery.graphQueryUrl).toBe('https://api.studio.thegraph.com/query/example');
     expect(config.recovery.vertexModel).toBe('gemini-2.5-flash');
     expect(config.pollIntervalMs).toBe(1000);
   });
 
-  it('fails closed when the production MCP endpoint is absent', () => {
+  it('uses the Studio query URL when no MCP server is available for Arc', () => {
     const env = environment();
-    delete env.ONESHOT_SUBGRAPH_MCP_ENDPOINT;
-    expect(() => loadWorkerRuntimeConfig(env)).toThrow('ONESHOT_SUBGRAPH_MCP_ENDPOINT');
+    expect(loadWorkerRuntimeConfig(env).recovery.mcpEndpoint).toBeUndefined();
+  });
+
+  it('fails closed without a configured recovery query source', () => {
+    const env = environment();
+    delete env.ONESHOT_SUBGRAPH_QUERY_URL;
+    expect(() => loadWorkerRuntimeConfig(env)).toThrow('Recovery requires');
   });
 
   it('fails closed when the Privy secret is absent', () => {

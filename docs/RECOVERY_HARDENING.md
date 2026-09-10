@@ -36,13 +36,13 @@ Confirmed settlements bind the verified transaction hash, block number, and
 Transfer log index through a guarded ledger transition. Existing settlement
 identity is not overwritten by recovery or duplicate delivery.
 
-## Production Subgraph MCP boundary
+## Production Graph boundary
 
-Production composition requires an explicit `subgraphMcp` port and the runtime
-requires `ONESHOT_SUBGRAPH_MCP_ENDPOINT` to be a configured HTTPS endpoint.
-Production does not silently substitute the unavailable MCP adapter. Local
-non-production composition may use test adapters, but any missing production
-boundary fails closed during startup.
+Production composition requires an explicit read-only Graph recovery port. The
+runtime requires either `ONESHOT_SUBGRAPH_MCP_ENDPOINT` for a supported remote
+MCP server or `ONESHOT_SUBGRAPH_QUERY_URL` for the Studio-only Arc deployment.
+It does not silently fall back to an unavailable Network Gateway. Direct Studio
+GraphQL is operational recovery evidence, not official MCP qualification.
 
 ## Operator authentication
 

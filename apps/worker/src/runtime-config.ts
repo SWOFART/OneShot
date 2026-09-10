@@ -11,7 +11,8 @@ export interface WorkerRuntimeConfig {
   readonly walletAddress: `0x${string}`;
   readonly policyDigest: string;
   readonly recovery: {
-    readonly mcpEndpoint: string;
+    readonly mcpEndpoint?: string;
+    readonly graphQueryUrl?: string;
     readonly graphApiKey?: string;
     readonly fromBlock: string;
     readonly toBlock: string;
@@ -127,6 +128,18 @@ export function loadWorkerRuntimeConfig(
     throw new Error('Invalid environment variable: ONESHOT_SUBGRAPH_MANIFEST_CID');
   }
 
+  const mcpEndpoint = environment.ONESHOT_SUBGRAPH_MCP_ENDPOINT?.trim()
+    ? httpsUrl(environment, 'ONESHOT_SUBGRAPH_MCP_ENDPOINT')
+    : undefined;
+  const graphQueryUrl = environment.ONESHOT_SUBGRAPH_QUERY_URL?.trim()
+    ? httpsUrl(environment, 'ONESHOT_SUBGRAPH_QUERY_URL')
+    : undefined;
+  if (!mcpEndpoint && !graphQueryUrl) {
+    throw new Error(
+      'Recovery requires ONESHOT_SUBGRAPH_QUERY_URL or ONESHOT_SUBGRAPH_MCP_ENDPOINT',
+    );
+  }
+
   const fromBlock = unsigned(environment, 'ONESHOT_RECOVERY_FROM_BLOCK');
   const toBlock = unsigned(environment, 'ONESHOT_RECOVERY_TO_BLOCK');
   if (BigInt(fromBlock) > BigInt(toBlock)) {
@@ -154,7 +167,8 @@ export function loadWorkerRuntimeConfig(
     walletAddress: walletAddress.toLowerCase() as `0x${string}`,
     policyDigest,
     recovery: {
-      mcpEndpoint: httpsUrl(environment, 'ONESHOT_SUBGRAPH_MCP_ENDPOINT'),
+      ...(mcpEndpoint ? { mcpEndpoint } : {}),
+      ...(graphQueryUrl ? { graphQueryUrl } : {}),
       ...(environment.ONESHOT_GRAPH_API_KEY?.trim()
         ? { graphApiKey: environment.ONESHOT_GRAPH_API_KEY.trim() }
         : {}),

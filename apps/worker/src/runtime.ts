@@ -135,6 +135,7 @@ async function composeProduction(
     });
   const subgraphMcp = new LiveSubgraphMcpRecoveryPort({
     mcpEndpoint: config.recovery.mcpEndpoint,
+    graphQueryUrl: config.recovery.graphQueryUrl,
     ...(config.recovery.graphApiKey ? { graphApiKey: config.recovery.graphApiKey } : {}),
     fetchFn: boundedFetch,
     getChainHead: async () => ({
@@ -191,6 +192,7 @@ async function composeProduction(
         correlationSender: config.walletAddress,
         fromBlock: config.recovery.fromBlock,
         toBlock: config.recovery.toBlock,
+        getToBlock: async () => (await provider.getBlockNumber()).toString(10),
         mcpPolicy: config.recovery.policy,
       },
       bridge: {
