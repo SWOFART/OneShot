@@ -96,6 +96,14 @@ function errorCodeOf(error: unknown): string | undefined {
  * failure mode that pays twice.
  */
 export function classifyTransportError(error: unknown): TransportFailure {
+  if (typeof error === 'object' && error !== null) {
+    const status =
+      (error as { status?: unknown }).status ?? (error as { statusCode?: unknown }).statusCode;
+    if (typeof status === 'number') {
+      return classifyHttpStatus(status);
+    }
+  }
+
   const code = errorCodeOf(error);
 
   if (code !== undefined) {

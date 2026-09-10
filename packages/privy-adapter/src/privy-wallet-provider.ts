@@ -35,6 +35,26 @@ export interface PrivyArcWalletProviderOptions {
       };
     },
   ) => Promise<PrivyTransactionResult>;
+  readonly signTransaction?: (
+    walletId: string,
+    input: {
+      readonly params: {
+        readonly transaction: {
+          readonly chain_id: number;
+          readonly to: `0x${string}`;
+          readonly value: Hex;
+          readonly data: Hex;
+          readonly nonce: number;
+          readonly gas_limit?: number;
+          readonly max_fee_per_gas?: number;
+          readonly max_priority_fee_per_gas?: number;
+        };
+      };
+    },
+  ) => Promise<{ readonly signed_transaction: string; readonly encoding?: string }>;
+  readonly sendRawTransaction?: (serializedTransaction: Hex) => Promise<Hex>;
+  readonly getTransactionCount?: (address: `0x${string}`) => Promise<number | bigint>;
+  readonly getGasPrice?: () => Promise<bigint>;
   readonly getTransactionReceipt?: (hash: Hex) => Promise<{
     readonly transactionHash: Hex;
     readonly from: `0x${string}`;
@@ -63,8 +83,67 @@ export class PrivyArcWalletProvider implements WalletProvider {
 
   constructor(options: PrivyArcWalletProviderOptions) {
     this.#options = options;
+
+    const chain = defineChain({
+      id: options.chainId,
+      name: 'Arc',
+      nativeCurrency: {
+        name: 'Arc gas token (USDC)',
+        symbol: 'USDC',
+        decimals: options.nativeDecimals ?? 18,
+      },
+      rpcUrls: { default: { http: [options.rpcUrl] } },
+    });
+    const publicClient = createPublicClient({
+      chain,
+      transport: http(options.rpcUrl, { timeout: options.rpcTimeoutMs ?? 10_000 }),
+    });
+
+    const getNonce =
+      options.getTransactionCount ??
+      ((address) => publicClient.getTransactionCount({ address }));
+    const getGas =
+      options.getGasPrice ?? (() => publicClient.getGasPrice());
+    const sendRaw =
+      options.sendRawTransaction ??
+      ((serializedTransaction) => publicClient.sendRawTransaction({ serializedTransaction }));
+
+    const executeSignAndSendWith = (
+      signTx: NonNullable<PrivyArcWalletProviderOptions['signTransaction']>,
+    ) => async (
+      walletId: string,
+      input: Parameters<NonNullable<PrivyArcWalletProviderOptions['sendTransaction']>>[1],
+    ): Promise<PrivyTransactionResult> => {
+      const [nonce, gasPrice] = await Promise.all([
+        getNonce(options.walletAddress),
+        getGas(),
+      ]);
+      const signResult = await signTx(walletId, {
+        params: {
+          transaction: {
+            to: input.params.transaction.to,
+            value: input.params.transaction.value,
+            data: input.params.transaction.data,
+            chain_id: input.params.transaction.chain_id,
+            nonce: Number(nonce),
+            gas_limit: 100_000,
+            max_fee_per_gas: Number(gasPrice * 2n),
+            max_priority_fee_per_gas: Number(gasPrice),
+          },
+        },
+      });
+      const hash = await sendRaw(signResult.signed_transaction as Hex);
+      return {
+        caip2: input.caip2,
+        hash,
+        transaction_id: input.reference_id,
+      };
+    };
+
     if (options.sendTransaction) {
       this.#send = options.sendTransaction;
+    } else if (options.signTransaction) {
+      this.#send = executeSignAndSendWith(options.signTransaction);
     } else {
       const client = new PrivyClient({
         appId: options.appId,
@@ -72,32 +151,31 @@ export class PrivyArcWalletProvider implements WalletProvider {
         timeout: options.rpcTimeoutMs ?? 10_000,
         maxRetries: 0,
       });
-      this.#send = (walletId, input) =>
-        client.wallets().ethereum().sendTransaction(walletId, input);
+      const signTx = (walletId: string, input: Parameters<NonNullable<PrivyArcWalletProviderOptions['signTransaction']>>[1]) =>
+        client.wallets().ethereum().signTransaction(walletId, input);
+      const signAndSend = executeSignAndSendWith(signTx);
+
+      this.#send = async (walletId, input) => {
+        try {
+          return await client.wallets().ethereum().sendTransaction(walletId, input);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          const status = (error as { status?: unknown }).status;
+          if (
+            status === 401 ||
+            message.includes('not authorized to transact on chain') ||
+            message.includes('App is not authorized')
+          ) {
+            return await signAndSend(walletId, input);
+          }
+          throw error;
+        }
+      };
     }
 
-    if (options.getTransactionReceipt && options.getBlockNumber) {
-      this.#getReceipt = options.getTransactionReceipt;
-      this.#getBlock = options.getBlockNumber;
-    } else {
-      const chain = defineChain({
-        id: options.chainId,
-        name: 'Arc',
-        nativeCurrency: {
-          name: 'Arc gas token (USDC)',
-          symbol: 'USDC',
-          decimals: options.nativeDecimals ?? 18,
-        },
-        rpcUrls: { default: { http: [options.rpcUrl] } },
-      });
-      const publicClient = createPublicClient({
-        chain,
-        transport: http(options.rpcUrl, { timeout: options.rpcTimeoutMs ?? 10_000 }),
-      });
-      this.#getReceipt = options.getTransactionReceipt ??
-        ((hash) => publicClient.getTransactionReceipt({ hash }));
-      this.#getBlock = options.getBlockNumber ?? (() => publicClient.getBlockNumber());
-    }
+    this.#getReceipt =
+      options.getTransactionReceipt ?? ((hash) => publicClient.getTransactionReceipt({ hash }));
+    this.#getBlock = options.getBlockNumber ?? (() => publicClient.getBlockNumber());
   }
 
   getBlockNumber(): Promise<bigint> {

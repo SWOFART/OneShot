@@ -59,6 +59,25 @@ describe('errors that may have followed a sent request', () => {
       expect(classifyTransportError(value).phase).toBe('POST_SEND');
     },
   );
+
+  it('classifies error objects bearing HTTP status properties', () => {
+    expect(classifyTransportError({ status: 400 })).toEqual({
+      phase: 'PRE_BROADCAST',
+      kind: 'LOCAL_VALIDATION_FAILED',
+    });
+    expect(classifyTransportError({ statusCode: 403 })).toEqual({
+      phase: 'PRE_BROADCAST',
+      kind: 'LOCAL_VALIDATION_FAILED',
+    });
+    expect(classifyTransportError({ status: 429 })).toEqual({
+      phase: 'POST_SEND',
+      kind: 'RATE_LIMITED_429',
+    });
+    expect(classifyTransportError({ status: 500 })).toEqual({
+      phase: 'POST_SEND',
+      kind: 'SERVER_ERROR_5XX',
+    });
+  });
 });
 
 describe('http status classification', () => {

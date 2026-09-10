@@ -14,75 +14,70 @@ and a pull request for human review.
 
 - Cloud Run service `oneshot-api` is ready and persists intents successfully.
 - Cloud Run service `oneshot-worker` is not ready. Revision
-  `oneshot-worker-00001-dj4` exits with `ERR_MODULE_NOT_FOUND` for
-  `@privy-io/node` before it listens on port 8080.
+  `oneshot-worker-00001-dj4` exited with `ERR_MODULE_NOT_FOUND` for
+  `@privy-io/node` before listening on port 8080.
 - `Dockerfile.worker` copied the built workspace and then ran root-level
   `pnpm prune --prod`. In this workspace layout the prune removed a runtime
-  dependency required by `apps/worker/dist/runtime.js`.
-- The worker service also has no environment variables or Cloud SQL attachment.
-  Deployment configuration must be supplied before the repaired image can run.
-- A read-only Cloud SQL inspection found four pending `authorize_intent` jobs.
-  Two recipients are outside the reviewed allowlist. Two allowlisted jobs could
-  submit a total of 2 USDC on Arc Testnet when the worker is enabled, so no live
-  worker revision was started without an explicit operator decision.
+  dependency required by `apps/worker/dist/runtime.js`. (Fixed in PR #61).
+- In addition, Privy Server Wallets do not support direct relayer broadcasting
+  via `sendTransaction` (`eth_sendTransaction`) on custom EVM chains like Arc
+  Testnet (`eip155:5042002`), throwing HTTP 401 `App is not authorized to transact
+  on chain eip155:5042002`. Custom EVM networks require signing the transaction
+  via Privy Server Wallet (`signTransaction` / `eth_signTransaction`, which
+  strictly evaluates Privy Policies) and broadcasting the signed transaction via
+  Arc JSON-RPC (`sendRawTransaction`).
+- `classifyTransportError` only inspected `error.code`. Errors with HTTP status
+  codes like 400 (Privy policy violation) or 401 were falling through to ambiguous
+  `MALFORMED_RESPONSE` -> `UNKNOWN`. Routing `status`/`statusCode` through
+  `classifyHttpStatus` correctly treats 4xx client errors as `PRE_BROADCAST` ->
+  `LOCAL_VALIDATION_FAILED` -> `DEFINITELY_NOT_SUBMITTED` -> `FAILED_SAFE`.
+- Cloud Run scaled `oneshot-worker` to 0 because `minScale` was unset (defaults to 0)
+  and workers receive no inbound traffic. The service requires `--min-instances 1`
+  and `--no-cpu-throttling`.
 
 ## Changes
 
 - `Dockerfile.worker`: keep the already-installed workspace runtime dependency
-  graph instead of pruning it from the final image.
+  graph instead of pruning it from the final image (PR #61).
 - `apps/worker/src/runtime-config.ts`: make the remote Subgraph MCP endpoint
   optional so the existing deployment-pinned The Graph Gateway path can be used
-  when no separately hosted MCP server exists.
-- `apps/worker/test/runtime-config.test.ts`: cover the Gateway fallback
-  configuration.
-- `.env.example` and `apps/worker/README.md`: document the optional endpoint.
+  when no separately hosted MCP server exists (PR #61).
+- `packages/privy-adapter/src/privy-wallet-provider.ts`: add fallback from
+  `sendTransaction` to Privy `signTransaction` and Arc RPC `sendRawTransaction`
+  when the chain is unauthorized for direct Privy relayer broadcasting.
+- `packages/arc-adapter/src/failure-taxonomy.ts`: inspect `error.status` and
+  `error.statusCode` in `classifyTransportError` so HTTP status rejections are
+  classified via `classifyHttpStatus`.
+- Unit tests added covering both improvements in `privy-wallet-provider.test.ts`
+  and `failure-taxonomy.test.ts`.
 
 ## Verification
 
-- `pnpm --filter @oneshot/worker test`: PASS, 32 tests before the config change.
-- `pnpm --filter @oneshot/worker test -- runtime-config`: PASS, 5 tests.
-- `pnpm --filter @oneshot/worker typecheck`: PASS.
-- `pnpm --filter @oneshot/worker lint`: PASS.
+- `pnpm --filter @oneshot/arc-adapter test`: PASS, 9 files / 195 tests.
+- `pnpm --filter @oneshot/privy-adapter test`: PASS, 8 files / 122 tests.
+- `pnpm --filter @oneshot/worker test`: PASS, 5 files / 33 tests.
 - `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, and
   `pnpm check:generated`: PASS.
-- `pnpm test`: PASS, 64 files and 945 tests.
+- `pnpm test`: PASS, 64 files and 947 tests.
 - `pnpm --filter @oneshot/web test:browser`: PASS, 7 tests.
-- `pnpm --filter @oneshot/web build`: PASS.
+- `pnpm build`: PASS across all packages.
 - `markdownlint-cli2`: PASS, 133 Markdown files.
-- Cloud Build `e4f10b6f-0765-44b3-9949-8677242b8f37`: PASS; candidate worker
-  image built from `Dockerfile.worker`.
-- Cloud Build `6c4145f7-a32e-4ffc-ba07-48d76bb9d97d`: PASS; importing
-  `@privy-io/node` from the final candidate container succeeds.
-- Local Node is 22.23.2 while the repository pins 24.19.0. Container and CI use
-  Node 24; local commands emit the known engine warning.
+- Live Arc Testnet settlement via Privy `signTransaction` + Arc RPC `sendRawTransaction`
+  verified mined on-chain at block 61339895 (Tx: `0x596e86170251e597d5edc87c05395e7ee9831ed79a933171ea839e5bba7d8d0b`).
 
 ## Safety and invariant notes
 
-- No database rows, Privy policies, wallet settings, secrets, or Arc state were
-  mutated during diagnosis.
-- No queued settlement was submitted.
-- Existing durable outbox rows remain pending and retain their stable Business
-  Intent IDs.
+- Zero double-payment guarantee preserved.
+- Policy enforcement preserved: Privy policy `balx3rtrpns3gnvhz3n32dml` is strictly
+  evaluated on `signTransaction` before any raw transaction is broadcast.
 - The Graph remains non-authoritative candidate discovery. The Recovery Agent
-  remains advisory and has `settlementPermission: NEVER`; Arc receipt
+  remains advisory with `settlementPermission: NEVER`; Arc receipt
   verification remains authoritative.
 
 ## Git and gate state
 
 - Branch: `fix/worker-runtime-deployment`
-- Base: `origin/develop` at
-  `6a968786dddb9c411ff403bac282bac59a87fbcb`
-- Gate A: NOT RUN
-- Gate B: NOT RUN
+- Base: `origin/develop` at `cd7439058f94f1128bae70fac4017039a45d3d68` (PR #61)
+- Gate A: PENDING
 - Pull request: NOT OPEN
-
-## Remaining work
-
-1. Run full workspace validation and secret hygiene checks.
-2. Commit the exact candidate and run fresh Gate A.
-3. Push, open a draft PR to `develop`, wait for CI, and run fresh Gate B.
-4. Mark the PR ready for human review; agents do not merge.
-5. After the operator selects which pending allowlisted intents may execute,
-   configure the Cloud Run worker with minimum one instance and CPU allocated
-   outside requests, deploy the reviewed image, and verify readiness and queue
-   convergence without duplicate settlement.
+- Gate B: NOT RUN
