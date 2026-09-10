@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { createSettlementClient, type SettlementClient } from '@oneshot/settlement-ui';
 import type { RecoveryClient } from '@oneshot/recovery-ui';
+import { CommitRing } from '@oneshot/brand';
 import '@oneshot/recovery-ui/styles.css';
 import '@oneshot/settlement-ui/styles.css';
 
@@ -17,6 +18,7 @@ import { IntentStatusView } from './components/IntentStatusView.js';
 import { LoginGate } from './components/LoginGate.js';
 import { ReadinessBanner } from './components/ReadinessBanner.js';
 import { RecoverySurface, SettlementSurface } from './components/FrontendSurfaces.js';
+import { applyTheme, readStoredTheme, type Theme } from './theme.js';
 import './styles.css';
 
 type Tab = 'create' | 'status' | 'settlement' | 'recovery';
@@ -41,6 +43,13 @@ export function App(props: AppProps = {}) {
   const [activeTab, setActiveTab] = useState<Tab>('create');
   const [selectedIntentId, setSelectedIntentId] = useState('');
   const [machineToken, setMachineToken] = useState('');
+  const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
+
+  function toggleTheme(): void {
+    const next: Theme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    applyTheme(next);
+  }
   const credentialRef = useRef<string | null>(null);
   credentialRef.current = selectCredential(session, machineToken);
   const getAuthToken = useCallback(() => credentialRef.current, []);
@@ -90,9 +99,9 @@ export function App(props: AppProps = {}) {
       <div className="app-shell">
         <nav className="top-nav" aria-label="Site Navigation">
           <div className="brand-group">
-            <img src="/logo.png" alt="OneShot Logo" className="brand-logo" width="36" height="36" />
+            <CommitRing size={36} title="OneShot" />
             <div className="brand-text">
-              <span className="brand-name">ONESHOT</span>
+              <span className="brand-name">OneShot</span>
               <span className="brand-tag">SETTLEMENT ENGINE</span>
             </div>
           </div>
@@ -103,6 +112,9 @@ export function App(props: AppProps = {}) {
               Arc Testnet (5042002)
             </span>
             <span className="status-badge token-badge">Native USDC</span>
+            <button type="button" className="theme-toggle" onClick={toggleTheme}>
+              {theme === 'dark' ? 'Light theme' : 'Dark theme'}
+            </button>
           </div>
 
           <a href="#console" className="nav-console-link">
@@ -253,14 +265,8 @@ export function App(props: AppProps = {}) {
           <div className="footer-top">
             <div className="footer-brand">
               <div className="brand-group">
-                <img
-                  src="/logo.png"
-                  alt="OneShot Logo"
-                  className="brand-logo"
-                  width="28"
-                  height="28"
-                />
-                <span className="brand-name">ONESHOT</span>
+                <CommitRing size={28} />
+                <span className="brand-name">OneShot</span>
               </div>
               <p className="footer-desc">
                 Stablecoin-native payment lifecycle engine with pre-flight policy gating and
