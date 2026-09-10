@@ -612,27 +612,38 @@ function points(path: string): readonly (readonly [number, number])[] {
   );
 }
 
-/** The x of the apex where a shape's diagonal meets the given edge. */
-function apexAt(path: string, y: number): number {
-  return Number(new RegExp(`Q([\\d.]+) ${y} `, 'u').exec(path)?.[1]);
+/**
+ * The x of the apex where a shape's diagonal meets the given edge.
+ *
+ * Both shapes have several `Q` commands landing on the same edge — the box
+ * corners as well as the apex. On the panel the diagonal apex is the first
+ * one; on the figure, whose path runs the other way round, it is the last.
+ */
+function apexAt(path: string, y: number, which: 'first' | 'last'): number {
+  const matches = [...path.matchAll(new RegExp(`Q([\\d.]+) ${y} `, 'gu'))];
+  const match = which === 'first' ? matches[0] : matches[matches.length - 1];
+  return Number(match?.[1]);
 }
+
+const panelApex = (path: string, y: number): number => apexAt(path, y, 'first');
+const figureApex = (path: string, y: number): number => apexAt(path, y, 'last');
 
 describe('heroClipPaths', () => {
   it('places the apexes where the canvas drew them', () => {
     const { panel, figure } = heroClipPaths(1032, 268);
     // The canvas cut the panel's diagonal out of the top edge at x≈671 and into
     // the bottom edge at x≈557, with the figure's mirroring one channel away.
-    expect(apexAt(panel, 0)).toBeCloseTo(670.8, 1);
-    expect(apexAt(panel, 268)).toBeCloseTo(556.8, 1);
-    expect(apexAt(figure, 0)).toBeCloseTo(686, 0);
-    expect(apexAt(figure, 268)).toBeCloseTo(572, 0);
+    expect(panelApex(panel, 0)).toBeCloseTo(670.8, 1);
+    expect(panelApex(panel, 268)).toBeCloseTo(556.8, 1);
+    expect(figureApex(figure, 0)).toBeCloseTo(686, 0);
+    expect(figureApex(figure, 268)).toBeCloseTo(572, 0);
   });
 
   it('separates the shapes by exactly the channel, measured perpendicular', () => {
     const height = 268;
     const { panel, figure } = heroClipPaths(1032, height);
     const lean = (114 / 268) * height;
-    const horizontal = apexAt(figure, 0) - apexAt(panel, 0);
+    const horizontal = figureApex(figure, 0) - panelApex(panel, 0);
     const perpendicular = horizontal * (height / Math.hypot(lean, height));
     expect(perpendicular).toBeCloseTo(HERO_CHANNEL, 1);
   });
@@ -647,22 +658,33 @@ describe('heroClipPaths', () => {
   it('leans further right as the box grows taller', () => {
     const short = heroClipPaths(1032, 200);
     const tall = heroClipPaths(1032, 400);
-    expect(apexAt(short.panel, 0) - apexAt(short.panel, 200)).toBeGreaterThan(0);
-    expect(apexAt(tall.panel, 0) - apexAt(tall.panel, 400)).toBeGreaterThan(
-      apexAt(short.panel, 0) - apexAt(short.panel, 200),
-    );
+    const shortLean = panelApex(short.panel, 0) - panelApex(short.panel, 200);
+    const tallLean = panelApex(tall.panel, 0) - panelApex(tall.panel, 400);
+    expect(shortLean).toBeGreaterThan(0);
+    expect(tallLean).toBeGreaterThan(shortLean);
   });
 
-  it('stays inside the box on a tiny one by shrinking the radius', () => {
-    const { panel, figure } = heroClipPaths(40, 30);
+  it('stays inside the box at the narrowest width it is used at', () => {
+    // HERO_MIN_WIDTH gates the component, so 720 is the smallest box this ever
+    // has to draw. Narrower than that, the channel offset alone would push the
+    // figure's apex past the right edge — which is why the component falls back
+    // to a plain panel rather than this function clamping.
+    const { panel, figure } = heroClipPaths(720, 268);
     for (const path of [panel, figure]) {
       for (const [x, y] of points(path)) {
         expect(x).toBeGreaterThanOrEqual(0);
-        expect(x).toBeLessThanOrEqual(40);
+        expect(x).toBeLessThanOrEqual(720);
         expect(y).toBeGreaterThanOrEqual(0);
-        expect(y).toBeLessThanOrEqual(30);
+        expect(y).toBeLessThanOrEqual(268);
       }
     }
+  });
+
+  it('shrinks the corner radius on a short box', () => {
+    // radius = min(HERO_RADIUS, width/4, height/4) — 60/4 = 15 wins here, so
+    // the top edge's first vertex sits at x = 15 rather than 24.
+    const { panel } = heroClipPaths(1032, 60);
+    expect(panel.startsWith('M15 0')).toBe(true);
     expect(HERO_RADIUS).toBe(24);
   });
 
@@ -789,7 +811,7 @@ export {
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `pnpm --filter @oneshot/brand test hero-cut`
-Expected: PASS, 6 tests.
+Expected: PASS, 7 tests.
 
 If the canvas-parity assertions miss by a tenth, correct the **expected**
 numbers, never the constants — the constants are the design, the rounding is
@@ -1643,8 +1665,11 @@ export function Hero({ children }: { readonly children: ReactNode }) {
   }, []);
 
   const cut = width >= HERO_MIN_WIDTH ? heroClipPaths(width, HERO_HEIGHT) : null;
-  const panelClip = `${id}-panel`;
-  const figureClip = `${id}-figure`;
+  // useId's punctuation varies by React version and ends up inside a `url(#…)`
+  // reference. Strip it; the uniqueness still comes from React.
+  const safeId = id.replace(/[^a-zA-Z0-9]/gu, '');
+  const panelClip = `${safeId}-panel`;
+  const figureClip = `${safeId}-figure`;
 
   return (
     <div ref={box}>
@@ -1674,10 +1699,8 @@ export function Hero({ children }: { readonly children: ReactNode }) {
 }
 ```
 
-`useId` returns a value containing colons, which is legal in an `id` attribute
-and in a `url(#…)` reference. If a browser build disagrees, swap it for a
-counter — do not fall back to a constant id, which is what the fourth test
-guards.
+Do not replace the sanitised `useId` with a constant id — a constant would make
+two heroes on one page share a clip path, which is what the fourth test guards.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -1816,8 +1839,13 @@ Replace the token block in the `.settlement-details, .route-state` rule:
   --cyan: var(--os-signal);
   font-family: var(--os-font-secondary);
   font-weight: 300;
-  background: var(--os-ground);
+  background: var(--os-panel);
 ```
+
+The slice's surface is `--os-panel`, not `--os-ground`. The slices render inside
+the console panel, and `--os-panel` is one of the tokens that does **not** change
+between themes — so light ink on it stays readable in both. Setting the ground
+here would put light ink on a near-white page in the light theme.
 
 Then sweep the 16 remaining literal hexes in the file onto the same tokens using
 the mapping table from Task 5.
