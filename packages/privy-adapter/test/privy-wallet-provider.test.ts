@@ -77,4 +77,69 @@ describe('PrivyArcWalletProvider', () => {
     });
     await expect(provider.getBlockNumber()).resolves.toBe(99n);
   });
+
+  it('signs with Privy and broadcasts via raw transaction when chain is not relay-enabled', async () => {
+    const signTx = vi.fn(async () => ({
+      signed_transaction: '0x02f8a8834cef5201',
+      encoding: 'rlp',
+    }));
+    const sendRaw = vi.fn(async () => HASH);
+
+    const provider = new PrivyArcWalletProvider({
+      appId: 'app-test',
+      appSecret: 'secret-test',
+      walletId: 'wallet-test',
+      walletAddress: WALLET,
+      chainId: 5042002,
+      rpcUrl: 'https://rpc.example.invalid',
+      signTransaction: signTx,
+      sendRawTransaction: sendRaw,
+      getTransactionCount: async () => 3n,
+      getGasPrice: async () => 20_000_000_000n,
+      getTransactionReceipt: async () => ({
+        transactionHash: HASH,
+        from: WALLET,
+        to: '0x3333333333333333333333333333333333333333',
+        status: 'success',
+        blockNumber: 100n,
+        blockHash: `0x${'b'.repeat(64)}`,
+        logs: [],
+      }),
+      getBlockNumber: async () => 100n,
+    });
+
+    await expect(
+      provider.sendTransaction({
+        chainId: 5042002,
+        to: '0x2222222222222222222222222222222222222222',
+        value: 0n,
+        data: '0x1234',
+        idempotencyKey: 'intent-key-2',
+        referenceId: 'intent-reference-2',
+      }),
+    ).resolves.toEqual({
+      transactionHash: HASH,
+      providerReferenceId: 'intent-reference-2',
+      walletAddress: WALLET,
+    });
+
+    expect(signTx).toHaveBeenCalledWith(
+      'wallet-test',
+      {
+        params: {
+          transaction: {
+            chain_id: 5042002,
+            to: '0x2222222222222222222222222222222222222222',
+            value: '0x0',
+            data: '0x1234',
+            nonce: 3,
+            gas_limit: 100_000,
+            max_fee_per_gas: 40_000_000_000,
+            max_priority_fee_per_gas: 20_000_000_000,
+          },
+        },
+      },
+    );
+    expect(sendRaw).toHaveBeenCalledWith('0x02f8a8834cef5201');
+  });
 });
