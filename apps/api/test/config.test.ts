@@ -11,13 +11,13 @@ describe('API runtime configuration', () => {
 
   const base = {
     DATABASE_URL: 'postgresql://oneshot:secret@localhost:5432/oneshot',
-    SERVICE_BEARER_TOKEN: 'service-token',
+    SERVICE_BEARER_TOKEN: 'service-token-1234',
   };
 
   it('uses DATABASE_URL for local and managed TCP PostgreSQL', () => {
     const config = loadApiRuntimeConfig({
       DATABASE_URL: 'postgresql://oneshot:secret@localhost:5432/oneshot',
-      SERVICE_BEARER_TOKEN: 'service-token',
+      SERVICE_BEARER_TOKEN: 'service-token-1234',
       PORT: '8080',
     });
 
@@ -34,7 +34,7 @@ describe('API runtime configuration', () => {
       DB_USER: 'oneshot',
       DB_PASS: 'secret',
       DB_NAME: 'oneshot',
-      SERVICE_BEARER_TOKEN: 'service-token',
+      SERVICE_BEARER_TOKEN: 'service-token-1234',
     });
 
     expect(config.database).toEqual({
@@ -50,7 +50,7 @@ describe('API runtime configuration', () => {
     expect(() => loadApiRuntimeConfig({ DATABASE_URL: 'postgresql://localhost/oneshot' })).toThrow(
       'SERVICE_BEARER_TOKEN',
     );
-    expect(() => loadApiRuntimeConfig({ SERVICE_BEARER_TOKEN: 'service-token' })).toThrow(
+    expect(() => loadApiRuntimeConfig({ SERVICE_BEARER_TOKEN: 'service-token-1234' })).toThrow(
       'Database configuration requires',
     );
   });
@@ -58,7 +58,7 @@ describe('API runtime configuration', () => {
   it('leaves Privy login disabled when no Privy variable is set', () => {
     const config = loadApiRuntimeConfig({ ...base });
     expect(config.privyAuth).toBeUndefined();
-    expect(config.serviceBearerToken).toBe('service-token');
+    expect(config.serviceBearerToken).toBe('service-token-1234');
   });
 
   it('loads a complete Privy configuration', () => {
@@ -79,8 +79,31 @@ describe('API runtime configuration', () => {
       PRIVY_AUTH_APP_ID: 'cmtqbf5zo013w0cky3r0jqjca',
       PRIVY_AUTH_VERIFICATION_KEY: testKey,
       PRIVY_AUTH_ALLOWED_SUBJECTS: '*',
+      PRIVY_AUTH_ALLOW_ALL_SUBJECTS: 'true',
     });
     expect(config.privyAuth?.allowedSubjects).toEqual(['*']);
+  });
+
+  it('rejects wildcard Privy authentication without an explicit opt-in', () => {
+    expect(() =>
+      loadApiRuntimeConfig({
+        ...base,
+        PRIVY_AUTH_APP_ID: 'cmtqbf5zo013w0cky3r0jqjca',
+        PRIVY_AUTH_VERIFICATION_KEY: testKey,
+        PRIVY_AUTH_ALLOWED_SUBJECTS: '*',
+      }),
+    ).toThrow('PRIVY_AUTH_ALLOW_ALL_SUBJECTS=true');
+  });
+
+  it('rejects a wildcard entry mixed into an allowlist without explicit opt-in', () => {
+    expect(() =>
+      loadApiRuntimeConfig({
+        ...base,
+        PRIVY_AUTH_APP_ID: 'cmtqbf5zo013w0cky3r0jqjca',
+        PRIVY_AUTH_VERIFICATION_KEY: testKey,
+        PRIVY_AUTH_ALLOWED_SUBJECTS: 'did:privy:operator,*',
+      }),
+    ).toThrow('PRIVY_AUTH_ALLOW_ALL_SUBJECTS=true');
   });
 
   it('accepts a verification key carrying escaped newlines', () => {
@@ -112,6 +135,15 @@ describe('API runtime configuration', () => {
         PRIVY_AUTH_ALLOWED_SUBJECTS: '   ',
       }),
     ).toThrow('PRIVY_AUTH_ALLOWED_SUBJECTS');
+  });
+
+  it('rejects a service bearer shorter than the production minimum', () => {
+    expect(() =>
+      loadApiRuntimeConfig({
+        DATABASE_URL: 'postgresql://oneshot:secret@localhost:5432/oneshot',
+        SERVICE_BEARER_TOKEN: 'too-short',
+      }),
+    ).toThrow('at least 16 characters');
   });
 
   it('rejects an allowlist entry that is not a Privy DID', () => {

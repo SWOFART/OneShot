@@ -2,7 +2,11 @@
 
 ## Overview
 
-Structured telemetry and operational metrics for the OneShot settlement control plane (Milestone A04.3).
+Structured telemetry and durable operational metrics for the OneShot settlement control plane (Milestone A04.3).
+
+`GET /v1/metrics` reads state gauges and non-sensitive event counters from
+PostgreSQL. Metric event writes are best-effort and never participate in a
+ledger transition or grant settlement permission.
 
 ## Key Metrics
 
@@ -13,9 +17,9 @@ Structured telemetry and operational metrics for the OneShot settlement control 
 | `oneshot_oldest_unknown_age_ms` | Gauge | Age in milliseconds of the oldest un-reconciled intent in `UNKNOWN` state |
 | `oneshot_cas_conflicts_total` | Counter | Total count of atomic CAS claim collisions |
 | `oneshot_outbox_queue_lag_ms` | Gauge | Maximum latency in milliseconds between `available_at` and current execution |
-| `oneshot_duplicate_requests_total` | Counter | Total count of duplicate replay requests received |
+| `oneshot_duplicate_requests_total` | Counter | Total count of duplicate replay requests received and durably recorded |
 | `oneshot_policy_denials_total` | Counter | Total count of intents rejected by authorization policy |
-| `oneshot_provider_errors_total` | Counter | Total count of external port or network failures |
+| `oneshot_provider_errors_total` | Counter | Total count of ambiguous external submission failures durably recorded |
 
 ## Alert Definitions
 

@@ -185,6 +185,14 @@ Effect of safe disable:
 The system provides structured metric evaluation via
 `evaluateAlerts(systemMetrics)` in `@oneshot/domain`:
 
+`GET /v1/metrics` reads the state gauges and durable operational event counters
+from PostgreSQL. The event stream records duplicate requests, failed CAS
+claims, authorization policy denials, ambiguous provider submissions, and
+reconciliation target outcomes. Event payloads contain only bounded event
+types/outcomes and a business-intent foreign key; they never contain tokens,
+wallet credentials, or raw request bodies. Event recording is best-effort and
+never grants settlement permission or changes a ledger transition.
+
 1. **`UNKNOWN` State Alert**:
    - Condition: `activeUnknownIntents > 0`.
    - Severity: `CRITICAL`.

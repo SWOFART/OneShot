@@ -13,6 +13,7 @@ import {
   RECOVERY_EVIDENCE_VERSION,
   type EvidenceBinding,
   type IndexLookupRequest,
+  type IndexedCandidate,
   type KnownIdentityEvidencePort,
   type KnownIdentityRecoveryEvidence,
   type LocalRecoverySnapshot,
@@ -23,7 +24,7 @@ import {
   type SubgraphMcpPolicy,
 } from '@oneshot/reconciliation';
 import {
-  TRANSFER_EVENT_TOPIC,
+  verifyReceipt,
   type EvidenceResult,
   type ReceiptSource,
   type TransactionReceipt,
@@ -105,9 +106,24 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
       throw new Error('Invalid Subgraph MCP recovery lookup input');
     }
 
+    const providerIdentity =
+      typeof this.ledger.getProviderRequestIdentity === 'function'
+        ? await this.ledger.getProviderRequestIdentity(businessIntentId)
+        : null;
+
     return {
       schemaVersion: LOCAL_RECOVERY_SNAPSHOT_VERSION,
       binding,
+      ...(providerIdentity
+        ? {
+            providerIdentity: {
+              referenceId: providerIdentity.referenceId,
+              requestFingerprint: providerIdentity.requestFingerprint,
+              ...(providerIdentity.walletId ? { walletId: providerIdentity.walletId } : {}),
+              ...(providerIdentity.policyId ? { policyId: providerIdentity.policyId } : {}),
+            },
+          }
+        : {}),
       durable: {
         state: durableState,
         stateVersion: String(intent.version),
@@ -232,18 +248,33 @@ export class IntentLedgerRecoveryCommandStore implements RecoveryCommandStorePor
         );
       }
       const blockNumber = asBlockNumber(arcObs.record.blockNumber);
+      const transferLogIndex = arcObs.record.transferLogIndex;
+      if (
+        typeof transferLogIndex !== 'number' ||
+        !Number.isSafeInteger(transferLogIndex) ||
+        transferLogIndex < 0
+      ) {
+        throw new Error(
+          `Cannot apply MARK_COMMITTED without the verified Arc Transfer log index (intent: ${pack.businessIntentId})`,
+        );
+      }
 
       const privyRef = pack.reconciliationCommand.evidenceReferences.find((ref) =>
         ref.startsWith('privy:'),
       );
-      const providerRef = privyRef ? privyRef.slice(6) : `recovery-${pack.packId}`;
+      if (!privyRef) {
+        throw new Error(
+          `Cannot apply MARK_COMMITTED without the durable provider request identity (intent: ${pack.businessIntentId})`,
+        );
+      }
+      const providerRef = privyRef.slice(6);
 
       const completion = await this.ledger.completeSubmission(pack.businessIntentId, attemptId, {
         kind: 'CONFIRMED',
         provider_reference_id: asProviderReferenceId(providerRef),
         transaction_hash: txHash,
         block_number: blockNumber,
-        transfer_log_index: 0,
+        transfer_log_index: transferLogIndex,
       });
 
       if (!completion.completed) {
@@ -278,6 +309,8 @@ export class IntentLedgerRecoveryCommandStore implements RecoveryCommandStorePor
 export interface PrivyArcEvidenceBridgeOptions {
   readonly evidencePort?: LaneBEvidencePort;
   readonly receiptSource?: ReceiptSource;
+  readonly walletAddress?: string;
+  readonly chainId?: number;
   readonly defaultArcTxHash?: string;
   readonly defaultReceipt?: TransactionReceipt;
   readonly localStatePort?: LocalRecoveryStatePort;
@@ -288,6 +321,76 @@ export interface PrivyArcEvidenceBridgeOptions {
  */
 export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
   constructor(private readonly options: PrivyArcEvidenceBridgeOptions = {}) {}
+
+  async verifyCandidate(
+    binding: EvidenceBinding,
+    candidate: IndexedCandidate,
+  ): Promise<KnownIdentityRecoveryEvidence | null> {
+    if (!this.options.receiptSource || !this.options.walletAddress) return null;
+    if (candidate.network !== binding.network) return null;
+    if (candidate.tokenContract.toLowerCase() !== binding.tokenContract.toLowerCase()) return null;
+    if (candidate.recipient.toLowerCase() !== binding.recipient.toLowerCase()) return null;
+    if (candidate.amountAtomic !== binding.amountAtomic) return null;
+    if (candidate.sender.toLowerCase() !== this.options.walletAddress.toLowerCase()) return null;
+
+    const receipt = await this.options.receiptSource.getReceipt(candidate.transactionHash);
+    if (!receipt) return null;
+    if (receipt.transactionHash.toLowerCase() !== candidate.transactionHash.toLowerCase()) {
+      return null;
+    }
+    if (receipt.blockNumber.toString() !== candidate.blockNumber) return null;
+    if (receipt.blockHash.toLowerCase() !== candidate.blockHash.toLowerCase()) return null;
+
+    const verdict = verifyReceipt(receipt, {
+      chainId: this.options.chainId ?? 5042002,
+      walletAddress: this.options.walletAddress,
+      tokenContract: binding.tokenContract,
+      recipient: binding.recipient,
+      amountAtomic: BigInt(binding.amountAtomic),
+    });
+    if (verdict.result !== 'CONFIRMED') return null;
+    if (String(verdict.transferLogIndex) !== candidate.logIndex) return null;
+
+    const transferLog = receipt.logs.find((log) => log.logIndex === verdict.transferLogIndex);
+    const fromTopic = transferLog?.topics[1];
+    const toTopic = transferLog?.topics[2];
+    if (!transferLog || !fromTopic || !toTopic) return null;
+
+    const nowIso = new Date().toISOString();
+    const base = await this.read(binding);
+    const transfer = {
+      tokenContract: transferLog.address,
+      sender: `0x${fromTopic.slice(-40)}`.toLowerCase(),
+      recipient: `0x${toTopic.slice(-40)}`.toLowerCase(),
+      amountAtomic: BigInt(transferLog.data).toString(),
+      logIndex: String(verdict.transferLogIndex),
+    };
+    const arc = {
+      authority: 'AUTHORITATIVE_CHAIN_EVIDENCE' as const,
+      network: binding.network,
+      transactionHash: receipt.transactionHash,
+      submissionReference: base.local.submissionReference,
+      receiptStatus: 'SUCCESS' as const,
+      finality: 'FINAL' as const,
+      blockNumber: receipt.blockNumber.toString(),
+      blockHash: receipt.blockHash,
+      blockTimestamp: nowIso,
+      transfer,
+      retrievedAt: nowIso,
+      digest: sha256Hex(
+        JSON.stringify({
+          transactionHash: receipt.transactionHash,
+          blockNumber: receipt.blockNumber.toString(),
+          blockHash: receipt.blockHash,
+          sender: receipt.from,
+          status: receipt.status,
+          transfer,
+        }),
+      ),
+    };
+
+    return { ...base, arc };
+  }
 
   async read(binding: EvidenceBinding): Promise<KnownIdentityRecoveryEvidence> {
     const nowIso = new Date().toISOString();
@@ -338,11 +441,13 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     // Retrieve local state from port if available to match actual stateVersion
     let localStateVersion = '1';
     let localSettlementState: 'SUBMITTING' | 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE' = 'UNKNOWN';
+    let providerReferenceId = `oneshot-${binding.businessIntentId}`;
     if (this.options.localStatePort) {
       try {
         const snapshot = await this.options.localStatePort.read(binding.businessIntentId);
         localStateVersion = snapshot.durable.stateVersion;
         localSettlementState = snapshot.durable.state;
+        providerReferenceId = snapshot.providerIdentity?.referenceId ?? providerReferenceId;
       } catch {
         // Fall back to default
       }
@@ -369,9 +474,20 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     let arcEvidence: KnownIdentityRecoveryEvidence['arc'] = null;
 
     if (realReceipt) {
-      const receiptStatus = realReceipt.status === 1 ? 'SUCCESS' : 'REVERT';
+      const expectedWallet = this.options.walletAddress;
+      const receiptMatchesHash =
+        txHash === null || realReceipt.transactionHash.toLowerCase() === txHash.toLowerCase();
+      const verdict =
+        expectedWallet && receiptMatchesHash
+          ? verifyReceipt(realReceipt, {
+              chainId: this.options.chainId ?? 5042002,
+              walletAddress: expectedWallet,
+              tokenContract: binding.tokenContract,
+              recipient: binding.recipient,
+              amountAtomic: BigInt(binding.amountAtomic),
+            })
+          : null;
 
-      // Parse and decode Transfer log: Transfer(address from, address to, uint256 value)
       let transfer: {
         tokenContract: string;
         sender: string;
@@ -379,38 +495,31 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
         amountAtomic: string;
         logIndex: string;
       } | null = null;
-
-      if (receiptStatus === 'SUCCESS') {
-        for (const log of realReceipt.logs) {
-          if (
-            log.topics[0]?.toLowerCase() === TRANSFER_EVENT_TOPIC.toLowerCase() &&
-            log.topics.length >= 3
-          ) {
-            const topic2 = log.topics[2];
-            const decodedTo = topic2 ? `0x${topic2.slice(-40)}`.toLowerCase() : '';
-            let decodedAmount: string;
-            try {
-              decodedAmount = BigInt(log.data).toString();
-            } catch {
-              decodedAmount = '';
-            }
-
-            if (
-              decodedTo === binding.recipient.toLowerCase() &&
-              decodedAmount === binding.amountAtomic
-            ) {
-              transfer = {
-                tokenContract: log.address,
-                sender: realReceipt.from,
-                recipient: binding.recipient,
-                amountAtomic: binding.amountAtomic,
-                logIndex: String(log.logIndex),
-              };
-              break;
-            }
-          }
+      if (verdict?.result === 'CONFIRMED') {
+        const transferLog = realReceipt.logs.find(
+          (log) => log.logIndex === verdict.transferLogIndex,
+        );
+        const fromTopic = transferLog?.topics[1];
+        const toTopic = transferLog?.topics[2];
+        if (transferLog && fromTopic && toTopic) {
+          transfer = {
+            tokenContract: transferLog.address,
+            sender: `0x${fromTopic.slice(-40)}`.toLowerCase(),
+            recipient: `0x${toTopic.slice(-40)}`.toLowerCase(),
+            amountAtomic: BigInt(transferLog.data).toString(),
+            logIndex: String(verdict.transferLogIndex),
+          };
         }
       }
+
+      const receiptStatus =
+        verdict?.result === 'CONFIRMED'
+          ? 'SUCCESS'
+          : verdict?.result === 'FINAL_REVERT'
+            ? 'REVERT'
+            : 'PENDING';
+      const finality =
+        verdict?.result === 'CONFIRMED' || verdict?.result === 'FINAL_REVERT' ? 'FINAL' : 'UNKNOWN';
 
       arcEvidence = {
         authority: 'AUTHORITATIVE_CHAIN_EVIDENCE',
@@ -418,7 +527,7 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
         transactionHash: realReceipt.transactionHash,
         submissionReference, // MUST MATCH local.submissionReference to prevent UNBOUND_EVIDENCE contradiction
         receiptStatus,
-        finality: 'FINAL',
+        finality,
         blockNumber: realReceipt.blockNumber.toString(),
         blockHash: realReceipt.blockHash,
         blockTimestamp: nowIso,
@@ -432,6 +541,7 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
             sender: realReceipt.from,
             status: realReceipt.status,
             transfer,
+            verdict: verdict?.result ?? 'UNAVAILABLE',
           }),
         ),
       };
@@ -450,7 +560,7 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
       },
       privy: {
         authority: 'PROVIDER_OBSERVATION',
-        referenceId: `privy:${binding.businessIntentId}`,
+        referenceId: providerReferenceId,
         requestFingerprint: binding.requestFingerprint,
         requestStatus: privyStatus,
         transactionHash: txHash,

@@ -13,6 +13,7 @@ import {
   type IndexLookupOutcome,
   type IndexLookupRequest,
   type IndexView,
+  type IndexedCandidate,
   type KnownIdentityRecoveryEvidence,
   type ModelIdentity,
   type ReconciliationCommand,
@@ -30,6 +31,8 @@ export const RECOVERY_COMMAND_PACK_VERSION = 'recovery-command-pack-v1' as const
 export type RecoveryServiceIssueCode =
   | 'ADVISOR_BOUNDARY_REJECTED'
   | 'ADVISOR_UNAVAILABLE'
+  | 'CANDIDATE_EVIDENCE_AMBIGUOUS'
+  | 'CANDIDATE_EVIDENCE_UNAVAILABLE'
   | 'COMMAND_STORE_UNAVAILABLE'
   | 'CONTRACT_VERSION_MISMATCH'
   | 'DUPLICATE_EVENT'
@@ -53,6 +56,12 @@ export interface RecoveryJob {
 export interface LocalRecoverySnapshot {
   readonly schemaVersion: typeof LOCAL_RECOVERY_SNAPSHOT_VERSION;
   readonly binding: EvidenceBinding;
+  readonly providerIdentity?: {
+    readonly referenceId: string;
+    readonly requestFingerprint: string;
+    readonly walletId?: string | undefined;
+    readonly policyId?: string | undefined;
+  };
   readonly durable: {
     readonly state: 'SUBMITTING' | 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE';
     readonly stateVersion: string;
@@ -70,6 +79,17 @@ export interface LocalRecoveryStatePort {
 
 export interface KnownIdentityEvidencePort {
   read(binding: EvidenceBinding): Promise<KnownIdentityRecoveryEvidence>;
+}
+
+/**
+ * Verifies a non-authoritative Graph candidate against an independently
+ * fetched Arc receipt. Candidate discovery never proves settlement by itself.
+ */
+export interface CandidateEvidencePort {
+  verifyCandidate(
+    binding: EvidenceBinding,
+    candidate: IndexedCandidate,
+  ): Promise<KnownIdentityRecoveryEvidence | null>;
 }
 
 export interface SubgraphMcpRecoveryPort {
@@ -107,6 +127,7 @@ interface RecoveryRecordBase {
   readonly blockNumber: string | null;
   readonly reason: string;
   readonly evidenceReferences: readonly string[];
+  readonly transferLogIndex?: number | undefined;
   readonly digest: string;
   readonly provenance: RecoveryRecordProvenance;
 }
@@ -168,6 +189,7 @@ export interface RecoveryServiceResult {
 export interface RecoveryServicePorts {
   readonly localState: LocalRecoveryStatePort;
   readonly knownIdentityEvidence: KnownIdentityEvidencePort;
+  readonly candidateEvidence?: CandidateEvidencePort;
   readonly subgraphMcp: SubgraphMcpRecoveryPort;
   readonly advisor: RecoveryAdvisorPort;
   readonly commandStore: RecoveryCommandStorePort;
@@ -261,6 +283,10 @@ function observationFromBoundRecord(
     evidenceReferences: [record.id],
     sourceDigest: record.digest,
   };
+  const transferLogIndex =
+    record.source === 'ARC' && typeof record.details?.['logIndex'] === 'string'
+      ? Number(record.details['logIndex'])
+      : undefined;
   return {
     schemaVersion: RECOVERY_RECORD_VERSION,
     recordType: 'OBSERVATION',
@@ -273,6 +299,11 @@ function observationFromBoundRecord(
     blockNumber: record.blockNumber ?? null,
     reason: safe.reason,
     evidenceReferences: safe.evidenceReferences,
+    ...(typeof transferLogIndex === 'number' &&
+    Number.isSafeInteger(transferLogIndex) &&
+    transferLogIndex >= 0
+      ? { transferLogIndex }
+      : {}),
     digest: stableDigest(safe),
     provenance: sourceProvenance(record),
   };
@@ -520,6 +551,49 @@ export class RecoveryService {
       }
     } catch {
       issues.push('MCP_UNAVAILABLE');
+    }
+
+    // Graph results are search hints only. When known-identity evidence did
+    // not resolve the intent, independently verify every matching candidate
+    // against Arc before the deterministic core can see authoritative proof.
+    if (indexView !== null && this.ports.candidateEvidence) {
+      const knownEvidence = buildBoundEvidenceRecords(snapshot.binding, evidence, null);
+      if (!knownEvidence.hasAuthoritativeSuccess && !knownEvidence.hasAuthoritativeRevert) {
+        const matchingCandidates = indexView.candidates.filter(
+          (candidate) => candidate.bindingStatus === 'MATCH',
+        );
+        const verifiedCandidates: KnownIdentityRecoveryEvidence[] = [];
+        for (const candidate of matchingCandidates) {
+          try {
+            const candidateEvidence = await this.ports.candidateEvidence.verifyCandidate(
+              snapshot.binding,
+              candidate,
+            );
+            if (candidateEvidence === null) {
+              issues.push('CANDIDATE_EVIDENCE_UNAVAILABLE');
+              continue;
+            }
+            if (
+              candidateEvidence.schemaVersion === RECOVERY_EVIDENCE_VERSION &&
+              sameBinding(snapshot.binding, candidateEvidence.binding) &&
+              !hasForbiddenPayload(candidateEvidence) &&
+              buildBoundEvidenceRecords(snapshot.binding, candidateEvidence, null)
+                .hasAuthoritativeSuccess
+            ) {
+              verifiedCandidates.push(candidateEvidence);
+            }
+          } catch {
+            issues.push('CANDIDATE_EVIDENCE_UNAVAILABLE');
+          }
+        }
+        if (matchingCandidates.length === 1 && verifiedCandidates.length === 1) {
+          evidence = verifiedCandidates[0] as KnownIdentityRecoveryEvidence;
+        } else if (matchingCandidates.length > 1) {
+          // Multiple verified transfers are contradictory. Keep the original
+          // non-authoritative evidence so this run cannot select one payment.
+          issues.push('CANDIDATE_EVIDENCE_AMBIGUOUS');
+        }
+      }
     }
 
     const input = buildRecoveryAgentInput({

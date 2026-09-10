@@ -137,6 +137,21 @@ describe('PrivyAuthorizationAdapter', () => {
 });
 
 describe('ArcSettlementAdapter', () => {
+  it('derives the durable provider request identity from the intent', () => {
+    const identity = new ArcSettlementAdapter(config, provider()).getSubmissionIdentity(
+      intent(),
+    );
+
+    expect(identity).toEqual({
+      idempotencyKey: expect.stringMatching(/^0x[0-9a-f]{64}$/),
+      referenceId: 'oneshot-018f-adapter-intent',
+      requestFingerprint: expect.stringMatching(/^[0-9a-f]{64}$/),
+      walletId: 'wallet_1234567890',
+      policyId: 'policy_1234567890',
+    });
+    expect(identity.idempotencyKey).not.toBe(identity.requestFingerprint);
+  });
+
   it('confirms from a verified receipt with contract-shaped fields', async () => {
     const wallet = provider();
     const result = await new ArcSettlementAdapter(config, wallet).submit(intent(), {

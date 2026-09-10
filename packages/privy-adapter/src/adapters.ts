@@ -16,6 +16,7 @@
  * offline and P4 supplies the live implementations.
  */
 
+import { createHash } from 'node:crypto';
 import {
   asBlockNumber,
   asProviderReferenceId,
@@ -192,6 +193,25 @@ export class ArcSettlementAdapter {
     private readonly config: SettlementConfig,
     private readonly provider: WalletProvider,
   ) {}
+
+  getSubmissionIdentity(request: CreateIntentRequest) {
+    const canonical = buildCanonicalRequest({
+      businessIntentId: request.business_intent_id,
+      chainId: this.config.profile.chainId,
+      tokenContract: this.config.profile.tokenContract,
+      recipient: request.recipient as `0x${string}`,
+      amountAtomic: amountOf(request),
+    });
+    return {
+      idempotencyKey: canonical.idempotencyKey,
+      referenceId: canonical.referenceId,
+      requestFingerprint: createHash('sha256')
+        .update(canonical.canonicalBody, 'utf8')
+        .digest('hex'),
+      walletId: this.config.privyWalletId,
+      policyId: this.config.privyPolicyId,
+    };
+  }
 
   /**
    * Takes no `SettlementContext`: a method with fewer parameters still

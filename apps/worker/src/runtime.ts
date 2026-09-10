@@ -193,7 +193,12 @@ async function composeProduction(
         toBlock: config.recovery.toBlock,
         mcpPolicy: config.recovery.policy,
       },
-      bridge: { evidencePort, receiptSource: provider },
+      bridge: {
+        evidencePort,
+        receiptSource: provider,
+        walletAddress: config.walletAddress,
+        chainId: config.settlement.profile.chainId,
+      },
       subgraphMcp,
       advisor,
     },

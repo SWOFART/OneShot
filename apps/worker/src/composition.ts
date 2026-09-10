@@ -17,7 +17,6 @@ import type {
 import {
   RecoveryService,
   UnavailableRecoveryAdvisorPort,
-  UnavailableSubgraphMcpRecoveryPort,
   type RecoveryAdvisorPort,
   type SubgraphMcpRecoveryPort,
 } from '@oneshot/reconciliation';
@@ -35,7 +34,8 @@ export const SUPPORTED_NETWORK = 'eip155:5042002';
 export interface ProductionRecoveryServiceOptions {
   readonly localState: IntentLedgerLocalRecoveryStatePortOptions;
   readonly bridge?: PrivyArcEvidenceBridgeOptions;
-  readonly subgraphMcp?: SubgraphMcpRecoveryPort;
+  /** Production recovery must be admitted through an explicit MCP transport. */
+  readonly subgraphMcp: SubgraphMcpRecoveryPort;
   readonly advisor?: RecoveryAdvisorPort;
 }
 
@@ -43,18 +43,21 @@ export function createProductionRecoveryService(
   ledger: IntentLedger,
   options: ProductionRecoveryServiceOptions,
 ): RecoveryService {
+  if (!options.subgraphMcp) {
+    throw new Error('Production recovery requires an explicit subgraphMcp port');
+  }
   const localState = new IntentLedgerLocalRecoveryStatePort(ledger, options.localState);
   const commandStore = new IntentLedgerRecoveryCommandStore(ledger);
   const knownIdentityEvidence = new PrivyArcEvidenceBridge({
     localStatePort: localState,
     ...options.bridge,
   });
-  const subgraphMcp = options.subgraphMcp ?? new UnavailableSubgraphMcpRecoveryPort();
   const recoveryAdvisor = options.advisor ?? new UnavailableRecoveryAdvisorPort();
   return new RecoveryService({
     localState,
     knownIdentityEvidence,
-    subgraphMcp,
+    candidateEvidence: knownIdentityEvidence,
+    subgraphMcp: options.subgraphMcp,
     advisor: recoveryAdvisor,
     commandStore,
   });

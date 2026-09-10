@@ -1,6 +1,6 @@
 import { createPublicKey } from 'node:crypto';
 import type { PoolConfig } from 'pg';
-import { PRIVY_DID_PREFIX } from './privy-auth.js';
+import { PRIVY_ALLOW_ALL, PRIVY_DID_PREFIX } from './privy-auth.js';
 
 export interface PrivyAuthRuntimeConfig {
   readonly appId: string;
@@ -17,9 +17,12 @@ export interface ApiRuntimeConfig {
   readonly privyAuth?: PrivyAuthRuntimeConfig;
 }
 
-function required(environment: NodeJS.ProcessEnv, name: string): string {
+function required(environment: NodeJS.ProcessEnv, name: string, minimumLength = 1): string {
   const value = environment[name]?.trim();
   if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  if (value.length < minimumLength) {
+    throw new Error(`Environment variable ${name} must be at least ${minimumLength} characters`);
+  }
   return value;
 }
 
@@ -75,6 +78,7 @@ function privyAuthConfig(environment: NodeJS.ProcessEnv): PrivyAuthRuntimeConfig
   const appId = environment.PRIVY_AUTH_APP_ID?.trim() ?? '';
   const rawKey = environment.PRIVY_AUTH_VERIFICATION_KEY?.trim() ?? '';
   const rawSubjects = environment.PRIVY_AUTH_ALLOWED_SUBJECTS?.trim() ?? '';
+  const allowAllSubjects = environment.PRIVY_AUTH_ALLOW_ALL_SUBJECTS?.trim() === 'true';
   if (appId.length === 0 && rawKey.length === 0 && rawSubjects.length === 0) return undefined;
 
   if (appId.length === 0)
@@ -87,6 +91,9 @@ function privyAuthConfig(environment: NodeJS.ProcessEnv): PrivyAuthRuntimeConfig
   }
 
   if (rawSubjects === '*') {
+    if (!allowAllSubjects) {
+      throw new Error('PRIVY_AUTH_ALLOWED_SUBJECTS=* requires PRIVY_AUTH_ALLOW_ALL_SUBJECTS=true');
+    }
     return { appId, verificationKey: normalizeVerificationKey(rawKey), allowedSubjects: ['*'] };
   }
 
@@ -101,8 +108,14 @@ function privyAuthConfig(environment: NodeJS.ProcessEnv): PrivyAuthRuntimeConfig
   if (allowedSubjects.length === 0) {
     throw new Error('PRIVY_AUTH_ALLOWED_SUBJECTS must list at least one Privy DID');
   }
+  if (allowedSubjects.includes(PRIVY_ALLOW_ALL)) {
+    if (!allowAllSubjects) {
+      throw new Error('PRIVY_AUTH_ALLOWED_SUBJECTS=* requires PRIVY_AUTH_ALLOW_ALL_SUBJECTS=true');
+    }
+    return { appId, verificationKey: normalizeVerificationKey(rawKey), allowedSubjects: ['*'] };
+  }
   for (const subject of allowedSubjects) {
-    if (subject !== '*' && !subject.startsWith(PRIVY_DID_PREFIX)) {
+    if (!subject.startsWith(PRIVY_DID_PREFIX)) {
       throw new Error(`PRIVY_AUTH_ALLOWED_SUBJECTS entries must start with ${PRIVY_DID_PREFIX}`);
     }
   }
@@ -117,7 +130,7 @@ export function loadApiRuntimeConfig(
   return {
     host: environment.HOST?.trim() || '0.0.0.0',
     port: integer(environment, 'PORT', 3000, 1, 65_535),
-    serviceBearerToken: required(environment, 'SERVICE_BEARER_TOKEN'),
+    serviceBearerToken: required(environment, 'SERVICE_BEARER_TOKEN', 16),
     database: databaseConfig(environment),
     submissionsDisabled: environment.ONESHOT_SUBMISSIONS_DISABLED === 'true',
     ...(privyAuth ? { privyAuth } : {}),
