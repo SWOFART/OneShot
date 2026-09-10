@@ -26,9 +26,10 @@ The adapter is stateless about settlement rights. A must supply:
 ## 3. Not provided
 
 - Reconciliation decisions. The adapter reports; it does not decide to retry.
-- External-index authority. Hashless discovery is Coder C's Subgraph MCP path,
-  deliberately absent here so no second, weaker way to decide a payment
-  happened can develop.
+- External-index authority. Hashless discovery belongs to the provider-neutral
+  recovery service. The current Arc Testnet runtime uses the configured
+  `STUDIO_GRAPHQL` path; `SUBGRAPH_MCP` is optional when an officially served
+  deployment exists. Both paths remain non-authoritative.
 - Automatic transaction replacement.
 - User interface.
 
@@ -106,33 +107,35 @@ surface without adding capability.
   block hashes, topics, and fingerprints survive as evidence.
 - No module in either package reads `ONESHOT_PRIVY_APP_SECRET`.
 
-## 9. Live gaps for Gate P4
+## 9. Current qualification status
 
-Listed so fixtures cannot pass as live evidence:
+The historical B04 fixture gaps below are resolved for the current testnet
+evidence bundle:
 
-- No Privy tenant has executed a policy denial or an allowed settlement.
-- Arc receipt and Transfer log shapes are modelled from documentation, never
-  observed.
-- Privy wallet and policy identifier formats are shape-guessed; the documented
-  format should replace `IDENTIFIER_SHAPE`.
+- Privy is `QUALIFIED` for the recorded testnet policy denials and allowed
+  settlement.
+- Arc is `QUALIFIED` for the recorded testnet USDC settlement and bound receipt
+  evidence.
+- The Graph is `NOT VERIFIED`: the live Studio path exists, but a fresh trace
+  showing meaningful data use by the model and deterministic core is pending.
 
 Per `.agents/skills/sponsor-qualification/SKILL.md`, the Privy and Arc claims
-stay `NOT VERIFIED` until `docs/settlement/LIVE_EVIDENCE.md` records a sanitized
-live transaction.
+are backed by the sanitized records in
+[`LIVE_EVIDENCE.md`](LIVE_EVIDENCE.md) and the
+[C06 qualification report](../../packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md).
 
-## 10. P4 replacement instructions
+## 10. Evidence refresh instructions
 
-When credentials exist:
+For a future evidence refresh:
 
-1. Run `docs/settlement/PROVIDER_SETUP.md`.
-2. Verify with `cd packages/arc-adapter && npm run probe`.
-3. Record the observed policy digest and wallet identity as the baseline.
-4. Execute the negative suite against the live tenant and confirm zero
-   transfers, then one allowed settlement.
-5. Capture responses through `captureReceiptFixture` and replace the modelled
-   fixtures with sanitized real ones.
-6. Update `LIVE_EVIDENCE.md` from `LIVE_NOT_RUN` to `LIVE_RUN` with the
-   sanitized hash, block, and explorer URL.
+1. Follow `docs/settlement/PROVIDER_SETUP.md` and verify the reviewed Privy and
+   Arc identities.
+2. Execute the negative policy suite and confirm zero broadcasts and zero
+   settlements before any allowed testnet settlement.
+3. Capture only sanitized evidence and update
+   [`LIVE_EVIDENCE.md`](LIVE_EVIDENCE.md) and the C06 qualification report.
+4. Keep The Graph `NOT VERIFIED` unless a fresh Studio trace proves meaningful
+   model/core use through the active `STUDIO_GRAPHQL` path.
 
 Replacing fixtures must not change any classifier or verifier result. If it
 does, the model was wrong and the difference is the finding.

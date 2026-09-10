@@ -76,7 +76,7 @@ READY: Configuration structurally complete and fail-closed.
 The production runtime target consists of:
 
 1. **API Service**: Fastify application running in Google Cloud Run.
-2. **Worker Service**: Graphile Worker background runner running in Google Cloud Run (or Cloud Run Job).
+2. **Worker Service**: `RestartRunner` driving the transactional PostgreSQL outbox poller in Google Cloud Run.
 3. **Database**: Managed Google Cloud SQL for PostgreSQL 16+ instance.
 4. **Secret Store**: Google Secret Manager.
 5. **Operator Console**: Vite SPA deployed on Cloudflare Workers / Pages.

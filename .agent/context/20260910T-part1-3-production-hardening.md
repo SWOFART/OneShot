@@ -75,3 +75,19 @@ secret values to Secret Manager.
 - All PostgreSQL Testcontainers suites guard cleanup when setup fails. Actual
   container-backed integration remains unrun locally because no runtime is
   available.
+
+## Part 3 evidence
+
+- `pnpm.cmd format:check`: PASS.
+- `npx.cmd --yes markdownlint-cli2@0.18.1 "**/*.md" "#node_modules"`: PASS
+  (142 Markdown files, 0 errors).
+- A targeted stale-term scan over the reconciled operational and implementation
+  docs found no remaining references to the retired `ONESHOT_PROFILE`,
+  `ONESHOT_NETWORK`, or `ONESHOT_CONTRACT_VERSION` variables, old P5 test
+  count, pre-evidence Privy/Arc gap wording, or Graphile Worker as the
+  executable production scheduler.
+- The reconciled docs now match the executable production scheduler
+  (`RestartRunner`), current API rate-limit settings, current P5 implementation
+  status, current Privy/Arc qualification evidence, and the still-unverified
+  Graph claim. Historical context records are not treated as current runtime
+  documentation.
