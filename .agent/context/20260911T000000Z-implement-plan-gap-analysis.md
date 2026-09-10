@@ -47,6 +47,7 @@ Compare our updated plan.md against the current codebase to identify all unimple
 - `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm check:generated`, `pnpm validate:fixtures`, `pnpm build`, and `pnpm test` - PASS after the repair; root test: 69 files / 984 tests.
 - `TEST_POSTGRES=1 pnpm --filter @oneshot/storage-postgres test:integration` - blocked: this workspace has no working Testcontainers container runtime. The new real-PostgreSQL concurrent task-binding test is present but not executable here.
 - CI follow-up after draft PR #72: the PostgreSQL rollback test incorrectly reused migration version 006 after this increment introduced that migration, so it now uses synthetic version 007. Legacy browser acceptance was opening the new public landing at `/` while expecting the retired operator console; it now exercises the public landing and authenticated `/app` cabinet/job/recovery flow. `pnpm --filter @oneshot/web test:browser` passes locally (4 Chromium tests), alongside the full local validation stack and 984 unit tests.
+- CI follow-up after commit `0cccf6d`: storage and API PostgreSQL integration suites passed, but worker and restart-recovery cleanup failed because their `afterEach` TRUNCATE lists omitted `resumable_jobs`, the migration-006 child table referencing `business_intents`. Adding that table to both cleanup lists prevents cascading dirty-state failures; format, lint, typecheck, build, and 984 unit tests pass locally.
 
 ## External-doc findings
 
