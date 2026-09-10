@@ -125,7 +125,10 @@ export class PrivyAuthorizationAdapter {
 
     const recipient = request.recipient as `0x${string}`;
 
-    if (!this.config.recipientAllowlist.includes(recipient.toLowerCase() as `0x${string}`)) {
+    if (
+      this.config.recipientAllowlist.length > 0 &&
+      !this.config.recipientAllowlist.includes(recipient.toLowerCase() as `0x${string}`)
+    ) {
       return Promise.resolve({ kind: 'DENIED', reason: 'Recipient is not allowlisted' });
     }
 
