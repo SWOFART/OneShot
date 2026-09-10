@@ -108,6 +108,43 @@ describePostgres('PostgreSQL intent ledger', () => {
     expect(counts.rows[0]).toEqual({ attempts: '1', jobs: '1', settlements: '0' });
   });
 
+  it('queues one reconciliation retry after the prior job is delivered', async () => {
+    const ledger = newLedger();
+    await ledger.createOrReplay(request, 'correlation-recovery-retry');
+    await ledger.completeAuthorization(request.business_intent_id, 1, { kind: 'AUTHORIZED' });
+    const claim = await ledger.claimSubmission(request.business_intent_id);
+    expect(claim.claimed).toBe(true);
+    if (!claim.claimed) return;
+
+    await ledger.completeSubmission(request.business_intent_id, claim.attemptId, {
+      kind: 'POSSIBLY_SUBMITTED',
+      reason: 'provider response lost',
+    });
+    await expect(ledger.enqueueReconciliation(request.business_intent_id)).resolves.toMatchObject({
+      queued: false,
+      state: 'UNKNOWN',
+    });
+
+    await pool.query(
+      "UPDATE outbox_jobs SET status = 'DELIVERED' WHERE task_identifier = 'reconcile_intent'",
+    );
+    const retries = await Promise.all(
+      Array.from({ length: 5 }, () => ledger.enqueueReconciliation(request.business_intent_id)),
+    );
+    expect(retries.filter((result) => result?.queued)).toHaveLength(1);
+
+    const jobs = await pool.query<{ job_key: string; status: string }>(
+      `SELECT job_key, status FROM outbox_jobs
+       WHERE business_intent_id = $1 AND job_key LIKE 'reconcile:%'
+       ORDER BY outbox_job_id`,
+      [request.business_intent_id],
+    );
+    expect(jobs.rows).toEqual([
+      { job_key: 'reconcile:intent-storage-1:4', status: 'DELIVERED' },
+      { job_key: 'reconcile:intent-storage-1:4:2', status: 'PENDING' },
+    ]);
+  });
+
   it('preserves a ledger replay when operational metrics fail inside the transaction', async () => {
     const ledger = newLedger();
     await ledger.createOrReplay(request, 'correlation-metric-failure-create');

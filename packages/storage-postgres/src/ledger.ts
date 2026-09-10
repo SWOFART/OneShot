@@ -507,14 +507,32 @@ export class IntentLedger {
         await client.query('COMMIT');
         return { business_intent_id: id, queued: false, state: row.state };
       }
+      const reconciliationJobs = await client.query<{ count: string; pending: boolean | null }>(
+        `SELECT count(*)::text AS count, bool_or(status = 'PENDING') AS pending
+         FROM outbox_jobs
+         WHERE business_intent_id = $1
+           AND job_key LIKE 'reconcile:%'`,
+        [id],
+      );
+      const jobs = reconciliationJobs.rows[0];
+      if (jobs?.pending === true) {
+        await client.query('COMMIT');
+        return { business_intent_id: id, queued: false, state: row.state };
+      }
       const now = this.#dependencies.now();
+      const generation = BigInt(jobs?.count ?? '0') + 1n;
       const inserted = await client.query(
         `INSERT INTO outbox_jobs (
           business_intent_id, job_key, task_identifier, payload,
           available_at, created_at
         ) VALUES ($1, $2, 'reconcile_intent', $3::jsonb, $4, $4)
         ON CONFLICT (job_key) DO NOTHING`,
-        [id, `reconcile:${id}:${row.version}`, JSON.stringify({ business_intent_id: id }), now],
+        [
+          id,
+          `reconcile:${id}:${row.version}:${generation}`,
+          JSON.stringify({ business_intent_id: id }),
+          now,
+        ],
       );
       await client.query('COMMIT');
       return { business_intent_id: id, queued: inserted.rowCount === 1, state: row.state };
