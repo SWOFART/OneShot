@@ -58,7 +58,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const directory = await mkdtemp(join(tmpdir(), 'oneshot-migration-'));
     try {
       await writeFile(
-        join(directory, '005_broken.sql'),
+        join(directory, '006_broken.sql'),
         'CREATE TABLE must_rollback (id integer); SELECT missing_function();',
         'utf8',
       );
@@ -67,7 +67,7 @@ describePostgres('PostgreSQL intent ledger', () => {
         "SELECT to_regclass('public.must_rollback')::text AS name",
       );
       expect(table.rows[0]?.name).toBeNull();
-      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 5');
+      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 6');
       expect(version.rowCount).toBe(0);
     } finally {
       await rm(directory, { recursive: true, force: true });
