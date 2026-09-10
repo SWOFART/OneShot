@@ -14,6 +14,10 @@ export interface ApiRuntimeConfig {
   readonly serviceBearerToken: string;
   readonly database: PoolConfig;
   readonly submissionsDisabled: boolean;
+  readonly rateLimit: {
+    readonly maxRequests: number;
+    readonly windowMs: number;
+  };
   readonly privyAuth?: PrivyAuthRuntimeConfig;
 }
 
@@ -133,6 +137,10 @@ export function loadApiRuntimeConfig(
     serviceBearerToken: required(environment, 'SERVICE_BEARER_TOKEN', 16),
     database: databaseConfig(environment),
     submissionsDisabled: environment.ONESHOT_SUBMISSIONS_DISABLED === 'true',
+    rateLimit: {
+      maxRequests: integer(environment, 'ONESHOT_API_RATE_LIMIT_MAX_REQUESTS', 60, 1, 10_000),
+      windowMs: integer(environment, 'ONESHOT_API_RATE_LIMIT_WINDOW_MS', 60_000, 1_000, 3_600_000),
+    },
     ...(privyAuth ? { privyAuth } : {}),
   };
 }

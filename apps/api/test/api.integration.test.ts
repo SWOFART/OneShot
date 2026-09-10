@@ -82,6 +82,7 @@ describePostgres('durable HTTP API', () => {
       serviceBearerToken: 'integration-token',
       database: { connectionString: container.getConnectionUri() },
       submissionsDisabled: false,
+      rateLimit: { maxRequests: 60, windowMs: 60_000 },
     });
     try {
       const response = await fetch(`${runtime.address}/health/ready`);

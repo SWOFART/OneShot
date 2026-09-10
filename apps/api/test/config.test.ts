@@ -22,6 +22,7 @@ describe('API runtime configuration', () => {
     });
 
     expect(config.port).toBe(8080);
+    expect(config.rateLimit).toEqual({ maxRequests: 60, windowMs: 60_000 });
     expect(config.database).toEqual({
       connectionString: 'postgresql://oneshot:secret@localhost:5432/oneshot',
       max: 10,
@@ -144,6 +145,18 @@ describe('API runtime configuration', () => {
         SERVICE_BEARER_TOKEN: 'too-short',
       }),
     ).toThrow('at least 16 characters');
+  });
+
+  it('loads and validates the shared API rate-limit settings', () => {
+    const config = loadApiRuntimeConfig({
+      ...base,
+      ONESHOT_API_RATE_LIMIT_MAX_REQUESTS: '12',
+      ONESHOT_API_RATE_LIMIT_WINDOW_MS: '5000',
+    });
+    expect(config.rateLimit).toEqual({ maxRequests: 12, windowMs: 5000 });
+    expect(() =>
+      loadApiRuntimeConfig({ ...base, ONESHOT_API_RATE_LIMIT_MAX_REQUESTS: '0' }),
+    ).toThrow('ONESHOT_API_RATE_LIMIT_MAX_REQUESTS');
   });
 
   it('rejects an allowlist entry that is not a Privy DID', () => {

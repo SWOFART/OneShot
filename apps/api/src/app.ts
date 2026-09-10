@@ -125,7 +125,11 @@ export function buildApi(dependencies: ApiDependencies) {
     }
     if (
       request.method === 'POST' &&
-      !(await rateLimiter.allow({ correlationId, route: request.url }))
+      !(await rateLimiter.allow({
+        correlationId,
+        key: request.ip || 'unknown-client',
+        route: request.url.split('?')[0] ?? request.url,
+      }))
     ) {
       sendError(reply, 429, 'RATE_LIMITED', 'Request rate limit exceeded', correlationId);
       return reply;

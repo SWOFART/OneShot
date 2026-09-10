@@ -49,7 +49,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const versions = await pool.query<{ version: number }>(
       'SELECT version FROM schema_versions ORDER BY version',
     );
-    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4]);
+    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4, 5]);
     expect(await migrationDigest()).toMatch(/^[0-9a-f]{64}$/u);
   });
 
