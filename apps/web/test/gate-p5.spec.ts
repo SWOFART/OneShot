@@ -126,6 +126,9 @@ async function mockApi(page: Page): Promise<void> {
   await page.route('**/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1' && url.hostname !== 'localhost') {
+      return route.continue();
+    }
     if (request.method() === 'POST' && url.pathname === '/v1/intents') {
       const body = request.postData() ?? '';
       const parsed = JSON.parse(body) as { business_intent_id: string };
@@ -209,6 +212,10 @@ test('service-unavailable, keyboard, responsive, and token-memory checks fail sa
   const seenHeaders: string[] = [];
   await page.unroute('**/v1/**');
   await page.route('**/v1/**', async (route: Route) => {
+    const url = new URL(route.request().url());
+    if (url.hostname !== '127.0.0.1' && url.hostname !== 'localhost') {
+      return route.continue();
+    }
     seenHeaders.push((await route.request().allHeaders()).authorization ?? '');
     await route.fulfill({ status: 503, contentType: 'application/json', body: '{}' });
   });

@@ -48,20 +48,22 @@ export function LoginGate(props: LoginGateProps) {
     return (
       <section className="login-gate" aria-label="Operator sign-in">
         {props.session.status === 'LOADING' ? (
-          <p>Checking your session…</p>
+          <p className="loading-text">Checking your session…</p>
         ) : props.session.status === 'UNCONFIGURED' ? (
-          <p role="status">
+          <p role="status" className="gate-unconfigured">
             Privy login is not configured for this build. Set <code>VITE_PRIVY_APP_ID</code> to
             enable it.
           </p>
         ) : (
-          <>
+          <div className="gate-action-box">
             <h2>Operator sign-in</h2>
-            <p>The console reads authoritative payment state. Sign in to continue.</p>
-            <button type="button" onClick={() => props.session.login()}>
+            <p className="gate-subtitle">
+              The console reads authoritative payment state. Sign in to continue.
+            </p>
+            <button type="button" className="btn-privy" onClick={() => props.session.login()}>
               Sign in with Privy
             </button>
-          </>
+          </div>
         )}
         <MachineTokenField value={props.machineToken} onChange={props.onMachineTokenChange} />
       </section>
@@ -73,19 +75,26 @@ export function LoginGate(props: LoginGateProps) {
       <section className="operator-identity" aria-label="Operator identity">
         {props.session.status === 'SIGNED_IN' && props.session.subject ? (
           <>
+            <span className="operator-badge">OPERATOR</span>
             <span>Signed in as</span>
-            <code>{props.session.subject}</code>
-            <button type="button" onClick={() => void copySubject(props.session.subject ?? '')}>
+            <code className="operator-did">{props.session.subject}</code>
+            <button
+              type="button"
+              className="btn-copy"
+              onClick={() => void copySubject(props.session.subject ?? '')}
+            >
               {copied ? 'Copied' : 'Copy DID'}
             </button>
-            <small>Add this DID to PRIVY_AUTH_ALLOWED_SUBJECTS to grant console access.</small>
-            <button type="button" onClick={() => props.session.logout()}>
+            <small className="operator-note">
+              Add this DID to PRIVY_AUTH_ALLOWED_SUBJECTS to grant console access.
+            </small>
+            <button type="button" className="btn-signout" onClick={() => props.session.logout()}>
               Sign out
             </button>
           </>
         ) : (
           <>
-            <span>Using a machine token</span>
+            <span className="operator-badge">Using a machine token</span>
             <MachineTokenField value={props.machineToken} onChange={props.onMachineTokenChange} />
           </>
         )}

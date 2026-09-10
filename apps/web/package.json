@@ -10,7 +10,7 @@
     "lint": "eslint src test playwright.config.ts",
     "preview": "vite preview",
     "test": "vitest run --config vitest.config.ts",
-    "test:browser": "pnpm run typecheck:browser && pnpm run build && node scripts/run-browser-tests.mjs",
+    "test:browser": "pnpm run typecheck:browser && tsc -b && vite build --mode test && node scripts/run-browser-tests.mjs",
     "typecheck:browser": "tsc -p tsconfig.browser.json --pretty false",
     "typecheck": "tsc -b --pretty false"
   },
