@@ -147,6 +147,14 @@ export function composeWorker(
     if (!options.settlementPort) {
       throw new Error('Production composition profile requires an injected settlementPort');
     }
+    if (!options.authorizationPort) {
+      throw new Error('Production composition profile requires an injected authorizationPort');
+    }
+    if (!options.settlementPort.getSubmissionIdentity) {
+      throw new Error(
+        'Production composition profile requires settlement provider identity support',
+      );
+    }
     settlementPort = options.settlementPort;
     authorizationPort = options.authorizationPort;
   }
@@ -154,6 +162,9 @@ export function composeWorker(
   let recoveryService = options.recoveryService;
   if (!recoveryService && options.profile === 'production' && options.recovery) {
     recoveryService = createProductionRecoveryService(ledger, options.recovery);
+  }
+  if (options.profile === 'production' && !recoveryService) {
+    throw new Error('Production composition profile requires an injected recoveryService');
   }
 
   const workerOptions: WorkerOptions = {
@@ -205,6 +216,10 @@ export function composeWorker(
           reason: `Authorization adapter contract version ${authVersion} does not match expected ${expectedContractVersion}`,
         };
       }
+    }
+
+    if (options.profile === 'production' && !recoveryService) {
+      return { ready: false, reason: 'Production recovery service is unavailable' };
     }
 
     return { ready: true };

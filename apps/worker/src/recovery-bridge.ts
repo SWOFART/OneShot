@@ -341,6 +341,11 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     if (receipt.blockNumber.toString() !== candidate.blockNumber) return null;
     if (receipt.blockHash.toLowerCase() !== candidate.blockHash.toLowerCase()) return null;
 
+    const base = await this.read(binding);
+    // Candidate discovery can never establish the provider identity. Without
+    // the durable identity, an Arc receipt is not bound to this attempt.
+    if (!base.privy) return null;
+
     const verdict = verifyReceipt(receipt, {
       chainId: this.options.chainId ?? 5042002,
       walletAddress: this.options.walletAddress,
@@ -357,7 +362,6 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     if (!transferLog || !fromTopic || !toTopic) return null;
 
     const nowIso = new Date().toISOString();
-    const base = await this.read(binding);
     const transfer = {
       tokenContract: transferLog.address,
       sender: `0x${fromTopic.slice(-40)}`.toLowerCase(),
@@ -395,7 +399,6 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
   async read(binding: EvidenceBinding): Promise<KnownIdentityRecoveryEvidence> {
     const nowIso = new Date().toISOString();
     const txHash = this.options.defaultArcTxHash ?? null;
-    const submissionReference = `sub-${binding.businessIntentId}`;
 
     let laneBResult: EvidenceResult = 'UNAVAILABLE';
     let lookupError: string | undefined;
@@ -441,17 +444,24 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     // Retrieve local state from port if available to match actual stateVersion
     let localStateVersion = '1';
     let localSettlementState: 'SUBMITTING' | 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE' = 'UNKNOWN';
-    let providerReferenceId = `oneshot-${binding.businessIntentId}`;
+    let providerReferenceId: string | undefined;
     if (this.options.localStatePort) {
       try {
         const snapshot = await this.options.localStatePort.read(binding.businessIntentId);
         localStateVersion = snapshot.durable.stateVersion;
         localSettlementState = snapshot.durable.state;
-        providerReferenceId = snapshot.providerIdentity?.referenceId ?? providerReferenceId;
+        providerReferenceId = snapshot.providerIdentity?.referenceId;
       } catch {
-        // Fall back to default
+        // Missing durable state is not permission to invent a provider identity.
       }
     }
+
+    if ((txHash || realReceipt) && !providerReferenceId) {
+      throw new Error(
+        `Cannot build recovery evidence without durable provider identity for ${binding.businessIntentId}`,
+      );
+    }
+    const submissionReference = providerReferenceId ?? `unavailable-${binding.businessIntentId}`;
 
     const localDigest = sha256Hex(
       JSON.stringify({
@@ -558,15 +568,17 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
         persistedAt: nowIso,
         digest: localDigest,
       },
-      privy: {
-        authority: 'PROVIDER_OBSERVATION',
-        referenceId: providerReferenceId,
-        requestFingerprint: binding.requestFingerprint,
-        requestStatus: privyStatus,
-        transactionHash: txHash,
-        retrievedAt: nowIso,
-        digest: privyDigest,
-      },
+      privy: providerReferenceId
+        ? {
+            authority: 'PROVIDER_OBSERVATION' as const,
+            referenceId: providerReferenceId,
+            requestFingerprint: binding.requestFingerprint,
+            requestStatus: privyStatus,
+            transactionHash: txHash,
+            retrievedAt: nowIso,
+            digest: privyDigest,
+          }
+        : null,
       arc: arcEvidence,
     };
   }

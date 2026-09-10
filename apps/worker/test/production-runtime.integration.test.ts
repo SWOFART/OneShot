@@ -75,6 +75,13 @@ describePostgres('production worker API to adapter path', () => {
             name: 'EndToEndSettlementAdapter',
             contractVersion: '1.0.0',
             network: 'eip155:5042002',
+            getSubmissionIdentity() {
+              return {
+                idempotencyKey: `0x${'b'.repeat(64)}`,
+                referenceId: 'provider-e2e-identity-1',
+                requestFingerprint: 'c'.repeat(64),
+              };
+            },
             async submit() {
               submissions += 1;
               return {
@@ -86,6 +93,7 @@ describePostgres('production worker API to adapter path', () => {
               };
             },
           },
+          recoveryService: { handle: async () => ({}) } as never,
         }),
     });
     let attemptCounter = 0;

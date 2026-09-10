@@ -85,16 +85,50 @@ describe('Worker composition and simulator profile (A04.4)', () => {
     const incompatiblePort = {
       ...new SimulatorSettlementPort(),
       contractVersion: '2.0.0-incompatible',
+      getSubmissionIdentity: () => ({
+        idempotencyKey: `0x${'a'.repeat(64)}`,
+        referenceId: 'provider-comp-incompatible',
+        requestFingerprint: 'b'.repeat(64),
+      }),
     };
 
     const composed = composeWorker(mockPool, mockLedger, {
       profile: 'production',
       settlementPort: incompatiblePort,
+      authorizationPort: new SimulatorAuthorizationPort(),
+      recoveryService: { handle: async () => ({}) } as never,
     });
 
     const readiness = await composed.checkReadiness();
     expect(readiness.ready).toBe(false);
     expect(readiness.reason).toContain('does not match expected');
+  });
+
+  it('fails closed when production dependencies are missing', () => {
+    const mockLedger = { ping: async () => {} } as unknown as IntentLedger;
+    const mockPool = {} as unknown as Pool;
+    const settlementPort = {
+      ...new SimulatorSettlementPort(),
+      getSubmissionIdentity: () => ({
+        idempotencyKey: `0x${'a'.repeat(64)}`,
+        referenceId: 'provider-comp-missing',
+        requestFingerprint: 'b'.repeat(64),
+      }),
+    };
+
+    expect(() =>
+      composeWorker(mockPool, mockLedger, {
+        profile: 'production',
+        settlementPort,
+      }),
+    ).toThrow('authorizationPort');
+    expect(() =>
+      composeWorker(mockPool, mockLedger, {
+        profile: 'production',
+        settlementPort,
+        authorizationPort: new SimulatorAuthorizationPort(),
+      }),
+    ).toThrow('recoveryService');
   });
 
   it('readiness check fails when adapter network is incompatible', async () => {
@@ -106,11 +140,18 @@ describe('Worker composition and simulator profile (A04.4)', () => {
     const wrongNetworkPort = {
       ...new SimulatorSettlementPort(),
       network: 'eip155:1', // Ethereum mainnet instead of Arc
+      getSubmissionIdentity: () => ({
+        idempotencyKey: `0x${'a'.repeat(64)}`,
+        referenceId: 'provider-comp-wrong-network',
+        requestFingerprint: 'b'.repeat(64),
+      }),
     };
 
     const composed = composeWorker(mockPool, mockLedger, {
       profile: 'production',
       settlementPort: wrongNetworkPort,
+      authorizationPort: new SimulatorAuthorizationPort(),
+      recoveryService: { handle: async () => ({}) } as never,
     });
 
     const readiness = await composed.checkReadiness();
