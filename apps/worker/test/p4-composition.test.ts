@@ -524,7 +524,7 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     expect(stored?.externalSubmissionCount).toBe(0);
   });
 
-  it('composes ProductionRecoveryService with LiveSubgraphMcpRecoveryPort and VertexAiRecoveryAdvisor, converging UNKNOWN intent to COMMITTED with zero external submissions', async () => {
+  it('composes hashless Graph candidate recovery with Arc verification and zero external submissions', async () => {
     let ledgerState: IntentResponse['state'] = 'UNKNOWN';
     let ledgerVersion = 3;
     let completedWith: SettlementResult | null = null;
@@ -645,7 +645,8 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
         receiptSource: {
           getReceipt: async () => realReceipt,
         },
-        defaultArcTxHash: realTxHash,
+        walletAddress: realSender,
+        chainId: 5042002,
       },
       subgraphMcp,
       advisor,

@@ -9,6 +9,7 @@ import {
   type RecoveryAdvisorPort,
   type RecoveryCommandStorePort,
 } from '../src/index.js';
+import { vi } from 'vitest';
 
 describe('C04 recovery service boundary', () => {
   it('composes all source simulators and emits a sanitized append-only command pack', async () => {
@@ -210,6 +211,56 @@ describe('C04 recovery service boundary', () => {
     expect(result.status).toBe('HELD');
     expect(result.issues).toContain('RAW_PROVIDER_PAYLOAD_REJECTED');
     expect(store.size).toBe(0);
+    expect(result.externalSubmissionCount).toBe(0);
+  });
+
+  it('holds UNKNOWN when multiple Graph candidates independently verify', async () => {
+    const composition = createRecoverySimulatorComposition({
+      withArcProof: false,
+      agentScenario: 'wait',
+      eventId: 'event-multiple-verified-candidates',
+    });
+    const authoritativeEvidence =
+      createRecoverySimulatorComposition().knownIdentityEvidence.evidence;
+    const subgraphMcp = {
+      lookup: async (
+        request: Parameters<typeof composition.subgraphMcp.lookup>[0],
+        policy: Parameters<typeof composition.subgraphMcp.lookup>[1],
+      ) => {
+        const outcome = await composition.subgraphMcp.lookup(request, policy);
+        const firstCandidate = outcome.view.candidates[0];
+        if (firstCandidate === undefined) throw new Error('Simulator did not provide a candidate');
+        return {
+          ...outcome,
+          view: {
+            ...outcome.view,
+            candidates: [
+              firstCandidate,
+              { ...firstCandidate, id: 'candidate-duplicate', evidenceId: 'candidate-duplicate' },
+            ],
+            candidateCount: 2,
+          },
+        };
+      },
+    };
+    const verifyCandidate = vi.fn().mockResolvedValue(authoritativeEvidence);
+    const service = new RecoveryService({
+      localState: composition.localState,
+      knownIdentityEvidence: composition.knownIdentityEvidence,
+      candidateEvidence: { verifyCandidate },
+      subgraphMcp,
+      advisor: composition.advisor,
+      commandStore: new InMemoryRecoveryCommandStore(),
+    });
+
+    const result = await service.handle(composition.job);
+
+    expect(verifyCandidate).toHaveBeenCalledTimes(2);
+    expect(result.status).toBe('PROCESSED');
+    expect(result.issues).toContain('CANDIDATE_EVIDENCE_AMBIGUOUS');
+    expect(result.pack?.reconciliationCommand.commandType).toBe('HOLD_UNKNOWN');
+    expect(result.pack?.reconciliationCommand.targetState).toBe('UNKNOWN');
+    expect(result.pack?.reconciliationCommand.settlementPermission).toBe('NEVER');
     expect(result.externalSubmissionCount).toBe(0);
   });
 

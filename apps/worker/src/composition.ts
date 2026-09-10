@@ -54,6 +54,7 @@ export function createProductionRecoveryService(
   return new RecoveryService({
     localState,
     knownIdentityEvidence,
+    candidateEvidence: knownIdentityEvidence,
     subgraphMcp,
     advisor: recoveryAdvisor,
     commandStore,

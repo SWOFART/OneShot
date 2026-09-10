@@ -13,6 +13,7 @@ import {
   RECOVERY_EVIDENCE_VERSION,
   type EvidenceBinding,
   type IndexLookupRequest,
+  type IndexedCandidate,
   type KnownIdentityEvidencePort,
   type KnownIdentityRecoveryEvidence,
   type LocalRecoverySnapshot,
@@ -24,6 +25,7 @@ import {
 } from '@oneshot/reconciliation';
 import {
   TRANSFER_EVENT_TOPIC,
+  verifyReceipt,
   type EvidenceResult,
   type ReceiptSource,
   type TransactionReceipt,
@@ -278,6 +280,8 @@ export class IntentLedgerRecoveryCommandStore implements RecoveryCommandStorePor
 export interface PrivyArcEvidenceBridgeOptions {
   readonly evidencePort?: LaneBEvidencePort;
   readonly receiptSource?: ReceiptSource;
+  readonly walletAddress?: string;
+  readonly chainId?: number;
   readonly defaultArcTxHash?: string;
   readonly defaultReceipt?: TransactionReceipt;
   readonly localStatePort?: LocalRecoveryStatePort;
@@ -288,6 +292,76 @@ export interface PrivyArcEvidenceBridgeOptions {
  */
 export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
   constructor(private readonly options: PrivyArcEvidenceBridgeOptions = {}) {}
+
+  async verifyCandidate(
+    binding: EvidenceBinding,
+    candidate: IndexedCandidate,
+  ): Promise<KnownIdentityRecoveryEvidence | null> {
+    if (!this.options.receiptSource || !this.options.walletAddress) return null;
+    if (candidate.network !== binding.network) return null;
+    if (candidate.tokenContract.toLowerCase() !== binding.tokenContract.toLowerCase()) return null;
+    if (candidate.recipient.toLowerCase() !== binding.recipient.toLowerCase()) return null;
+    if (candidate.amountAtomic !== binding.amountAtomic) return null;
+    if (candidate.sender.toLowerCase() !== this.options.walletAddress.toLowerCase()) return null;
+
+    const receipt = await this.options.receiptSource.getReceipt(candidate.transactionHash);
+    if (!receipt) return null;
+    if (receipt.transactionHash.toLowerCase() !== candidate.transactionHash.toLowerCase()) {
+      return null;
+    }
+    if (receipt.blockNumber.toString() !== candidate.blockNumber) return null;
+    if (receipt.blockHash.toLowerCase() !== candidate.blockHash.toLowerCase()) return null;
+
+    const verdict = verifyReceipt(receipt, {
+      chainId: this.options.chainId ?? 5042002,
+      walletAddress: this.options.walletAddress,
+      tokenContract: binding.tokenContract,
+      recipient: binding.recipient,
+      amountAtomic: BigInt(binding.amountAtomic),
+    });
+    if (verdict.result !== 'CONFIRMED') return null;
+    if (String(verdict.transferLogIndex) !== candidate.logIndex) return null;
+
+    const transferLog = receipt.logs.find((log) => log.logIndex === verdict.transferLogIndex);
+    const fromTopic = transferLog?.topics[1];
+    const toTopic = transferLog?.topics[2];
+    if (!transferLog || !fromTopic || !toTopic) return null;
+
+    const nowIso = new Date().toISOString();
+    const base = await this.read(binding);
+    const transfer = {
+      tokenContract: transferLog.address,
+      sender: `0x${fromTopic.slice(-40)}`.toLowerCase(),
+      recipient: `0x${toTopic.slice(-40)}`.toLowerCase(),
+      amountAtomic: BigInt(transferLog.data).toString(),
+      logIndex: String(verdict.transferLogIndex),
+    };
+    const arc = {
+      authority: 'AUTHORITATIVE_CHAIN_EVIDENCE' as const,
+      network: binding.network,
+      transactionHash: receipt.transactionHash,
+      submissionReference: base.local.submissionReference,
+      receiptStatus: 'SUCCESS' as const,
+      finality: 'FINAL' as const,
+      blockNumber: receipt.blockNumber.toString(),
+      blockHash: receipt.blockHash,
+      blockTimestamp: nowIso,
+      transfer,
+      retrievedAt: nowIso,
+      digest: sha256Hex(
+        JSON.stringify({
+          transactionHash: receipt.transactionHash,
+          blockNumber: receipt.blockNumber.toString(),
+          blockHash: receipt.blockHash,
+          sender: receipt.from,
+          status: receipt.status,
+          transfer,
+        }),
+      ),
+    };
+
+    return { ...base, privy: null, arc };
+  }
 
   async read(binding: EvidenceBinding): Promise<KnownIdentityRecoveryEvidence> {
     const nowIso = new Date().toISOString();
