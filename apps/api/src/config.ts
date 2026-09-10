@@ -14,11 +14,17 @@ export interface ApiRuntimeConfig {
   readonly serviceBearerToken: string;
   readonly database: PoolConfig;
   readonly submissionsDisabled: boolean;
+  readonly workspaceId?: string;
   readonly rateLimit: {
     readonly maxRequests: number;
     readonly windowMs: number;
   };
   readonly privyAuth?: PrivyAuthRuntimeConfig;
+  readonly walletActivity?: {
+    readonly endpoint: string;
+    readonly wallet: string;
+    readonly apiKey?: string;
+  };
 }
 
 function required(environment: NodeJS.ProcessEnv, name: string, minimumLength = 1): string {
@@ -131,16 +137,44 @@ export function loadApiRuntimeConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): ApiRuntimeConfig {
   const privyAuth = privyAuthConfig(environment);
+  const activityEndpoint = environment.ONESHOT_GRAPH_QUERY_URL?.trim();
+  const activityWallet = environment.ONESHOT_ACTIVITY_WALLET_ADDRESS?.trim();
+  if ((activityEndpoint && !activityWallet) || (!activityEndpoint && activityWallet)) {
+    throw new Error(
+      'ONESHOT_GRAPH_QUERY_URL and ONESHOT_ACTIVITY_WALLET_ADDRESS must be configured together',
+    );
+  }
+  if (activityEndpoint) {
+    const url = new URL(activityEndpoint);
+    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
+      throw new Error('ONESHOT_GRAPH_QUERY_URL must be a credential-free HTTPS URL');
+    }
+  }
   return {
     host: environment.HOST?.trim() || '0.0.0.0',
     port: integer(environment, 'PORT', 3000, 1, 65_535),
     serviceBearerToken: required(environment, 'SERVICE_BEARER_TOKEN', 16),
     database: databaseConfig(environment),
     submissionsDisabled: environment.ONESHOT_SUBMISSIONS_DISABLED === 'true',
+    // One fixed workspace is safer than accepting a caller-selected tenant.
+    // Deployments should configure this explicit value; the default keeps local
+    // development and existing single-workspace installations closed to one scope.
+    workspaceId: environment.ONESHOT_WORKSPACE_ID?.trim() || 'default-workspace',
     rateLimit: {
       maxRequests: integer(environment, 'ONESHOT_API_RATE_LIMIT_MAX_REQUESTS', 60, 1, 10_000),
       windowMs: integer(environment, 'ONESHOT_API_RATE_LIMIT_WINDOW_MS', 60_000, 1_000, 3_600_000),
     },
     ...(privyAuth ? { privyAuth } : {}),
+    ...(activityEndpoint && activityWallet
+      ? {
+          walletActivity: {
+            endpoint: activityEndpoint,
+            wallet: activityWallet,
+            ...(environment.ONESHOT_GRAPH_API_KEY?.trim()
+              ? { apiKey: environment.ONESHOT_GRAPH_API_KEY.trim() }
+              : {}),
+          },
+        }
+      : {}),
   };
 }

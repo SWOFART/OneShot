@@ -58,9 +58,15 @@ importers:
       '@oneshot/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@oneshot/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@oneshot/storage-postgres':
         specifier: workspace:*
         version: link:../../packages/storage-postgres
+      '@oneshot/supplier-adapter':
+        specifier: workspace:*
+        version: link:../../packages/supplier-adapter
       fastify:
         specifier: 5.12.3
         version: 5.12.3
@@ -153,6 +159,9 @@ importers:
       '@oneshot/storage-postgres':
         specifier: workspace:*
         version: link:../../packages/storage-postgres
+      '@oneshot/supplier-adapter':
+        specifier: workspace:*
+        version: link:../../packages/supplier-adapter
       '@privy-io/node':
         specifier: 0.34.0
         version: 0.34.0(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
@@ -321,6 +330,15 @@ importers:
       '@testcontainers/postgresql':
         specifier: 12.1.0
         version: 12.1.0(supports-color@10.2.2)
+
+  packages/supplier-adapter:
+    dependencies:
+      '@oneshot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@oneshot/domain':
+        specifier: workspace:*
+        version: link:../domain
 
   packages/testkit-domain:
     dependencies:

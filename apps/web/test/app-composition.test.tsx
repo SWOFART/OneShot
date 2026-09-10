@@ -14,6 +14,36 @@ import { signedInSession } from './support/fake-session.js';
 afterEach(cleanup);
 
 describe('Gate P5 shell composition', () => {
+  it('separates the public landing page from the authenticated cabinet route', () => {
+    const landing = render(<App route="/" />);
+    expect(screen.getByRole('heading', { name: /Resume the job, not the payment/u })).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: /Open workspace/u })[0]?.getAttribute('href')).toBe(
+      '/app',
+    );
+    landing.unmount();
+
+    render(
+      <App
+        route="/app"
+        useOperatorSession={() => signedInSession()}
+        apiClient={
+          new OneShotApiClient({
+            fetchFn: async () =>
+              new Response(JSON.stringify({ status: 'ok' }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+              }),
+          })
+        }
+        settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
+        recoveryClient={createInMemoryRecoveryClient('lagging')}
+      />,
+    );
+    expect(screen.getByRole('tab', { name: 'Tools' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Jobs' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Recovery & activity' })).toBeTruthy();
+  });
+
   it('mounts A05, B05, and C05 without a settlement bypass', async () => {
     const settlementIntent = Object.values(SETTLEMENT_SCENARIO_INTENTS)[0];
     if (!settlementIntent) throw new Error('Settlement fixture missing');

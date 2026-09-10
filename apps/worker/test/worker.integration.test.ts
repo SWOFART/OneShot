@@ -39,7 +39,7 @@ describePostgres('Atomic at-most-once worker (A03)', () => {
 
   afterEach(async () => {
     await pool.query(
-      'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, business_intents RESTART IDENTITY',
+      'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, resumable_jobs, business_intents RESTART IDENTITY',
     );
     attemptCounter = 0;
   });

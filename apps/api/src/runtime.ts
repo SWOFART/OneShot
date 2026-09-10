@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { IntentLedger, migrate } from '@oneshot/storage-postgres';
+import { IntentLedger, JobLedger, migrate } from '@oneshot/storage-postgres';
+import { TeamReportSupplier } from '@oneshot/supplier-adapter';
 import { Pool } from 'pg';
 import { buildApi } from './app.js';
+import { StudioWalletActivityPort } from './wallet-activity.js';
 import {
   compositeAuthenticator,
   staticBearerAuthenticator,
@@ -44,8 +46,14 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
       now: () => new Date(),
       nextAttemptId: randomUUID,
     });
+    const jobs = new JobLedger(pool, { now: () => new Date(), nextAttemptId: randomUUID });
     const app = buildApi({
       ledger,
+      jobs,
+      supplier: new TeamReportSupplier(),
+      ...(config.walletActivity
+        ? { walletActivity: new StudioWalletActivityPort(config.walletActivity) }
+        : {}),
       authenticator: buildApiAuthenticator(config),
       rateLimiter: new PostgresRateLimiter(pool, config.rateLimit),
       config: {
@@ -53,6 +61,7 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
         chainId: '5042002',
         network: 'eip155:5042002',
         contractVersion: '1.0.0',
+        ...(config.workspaceId ? { workspaceId: config.workspaceId } : {}),
       },
     });
     const address = await app.listen({ host: config.host, port: config.port });

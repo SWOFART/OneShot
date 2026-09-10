@@ -7,11 +7,11 @@ settlements through retries, crashes, lost responses, queue redelivery,
 parallel workers, and multiple agent instances.
 
 Product direction: **resumable paid tools for business agents** — resume the
-job, not the payment. The existing settlement engine is the foundation. A
-supplier order/result connector, separate delivery tracking, and a public
-landing page plus user cabinet are planned in the [current roadmap](plan.md),
-not yet delivered. Resumable external work requires supplier support; this is
-not a guarantee of exactly-once execution for arbitrary tools.
+job, not the payment. The settlement engine includes one team-operated testnet
+report supplier, task-bound order/result delivery, and separate public (`/`)
+and authenticated cabinet (`/app`) routes. Resumable external work requires
+supplier support; this is not a guarantee of exactly-once execution for
+arbitrary tools.
 
 The cardinality it protects is:
 
@@ -125,10 +125,10 @@ These are enforced in code and tests, not by convention:
 
 ## Integrations
 
-| System        | Role                                                                                        |
-| ------------- | ------------------------------------------------------------------------------------------- |
-| **Privy**     | Corporate wallet, scoped authorization, and spending policy                                 |
-| **Arc**       | USDC settlement rail (Arc Testnet, chain `5042002`)                                         |
+| System        | Role                                                                                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Privy**     | Corporate wallet, scoped authorization, and spending policy                                                                                                   |
+| **Arc**       | USDC settlement rail (Arc Testnet, chain `5042002`)                                                                                                           |
 | **The Graph** | Arc USDC Subgraph discovery through the admitted Studio GraphQL path (optional MCP for Network-served deployments); evidence only, never settlement authority |
 
 Privy authorizes and constrains the wallet action. It is not the duplicate
@@ -140,6 +140,7 @@ lock: OneShot's durable state is.
 apps/api                      HTTP seam
 apps/web                      composed operator UI (intent, settlement, recovery)
 apps/worker                   settlement and reconciliation workers
+packages/supplier-adapter     idempotent team-operated testnet report connector
 packages/contracts            frozen v1 contract pack, OpenAPI, fixtures
 packages/domain               intent, attempt, and settlement state
 packages/storage-postgres     durable ledger and migrations
@@ -227,6 +228,13 @@ Cloudflare Workers Build checkout.
 | `GET`  | `/v1/intents/{id}`               | Authoritative intent, attempts, settlement, evidence          |
 | `POST` | `/v1/intents/{id}/reconcile`     | Trigger read-only reconciliation; never submits               |
 | `GET`  | `/v1/intents/{id}/recovery-view` | Local authority plus labelled provider observations           |
+| `POST` | `/v1/jobs`                       | Start/replay one workspace-scoped team report task            |
+| `GET`  | `/v1/jobs`                       | List workspace jobs and delivery state                        |
+| `GET`  | `/v1/jobs/{jobId}`               | Read a workspace-owned job                                    |
+| `POST` | `/v1/jobs/{jobId}/resume`        | Resume original supplier delivery; never submits payment      |
+| `GET`  | `/v1/jobs/{jobId}/result`        | Retrieve an existing supplier result; never submits payment   |
+| `GET`  | `/v1/activity`                   | Last bounded Graph activity observation and local comparison  |
+| `POST` | `/v1/activity/refresh`           | Manually refresh Graph activity; no settlement action         |
 | `GET`  | `/v1/metrics`                    | Operational metrics                                           |
 | `GET`  | `/health/live`                   | Process liveness                                              |
 | `GET`  | `/health/ready`                  | Configuration and Arc identity readiness                      |
@@ -243,7 +251,8 @@ Under active development. **Testnet only.**
 | Settlement adapters and error taxonomy | Implemented; simulator-tested and live-verified on Arc Testnet through Privy                   |
 | Recovery evidence and safety core      | Live Graph/Vertex path implemented; deterministic core remains authoritative                   |
 | Graph discovery and LLM recovery agent | Studio GraphQL path implemented; fresh sponsor trace pending; deterministic core remains final |
-| Operator frontend                      | Gate P5 candidate composes A05/B05/C05 against the frozen API with APG and browser coverage    |
+| Resumable team report job              | Local code: task/order/intent binding, separate delivery and result retrieval                  |
+| Public landing and cabinet             | Local code at `/` and `/app`; live R4 demonstration evidence remains pending                   |
 
 **One live testnet settlement has been executed.** A Privy-controlled execution
 wallet and scoped policy authorized one 1.00 USDC Arc Testnet transfer; live

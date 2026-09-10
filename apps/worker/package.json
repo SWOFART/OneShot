@@ -28,6 +28,7 @@
     "@oneshot/privy-adapter": "workspace:*",
     "@oneshot/reconciliation": "workspace:*",
     "@oneshot/storage-postgres": "workspace:*",
+    "@oneshot/supplier-adapter": "workspace:*",
     "@privy-io/node": "0.34.0",
     "google-auth-library": "11.0.2",
     "graphile-worker": "0.17.3",
