@@ -95,9 +95,11 @@ test.describe('resumable job workspace', () => {
     await page.getByLabel('Stable task key').fill('report-browser-acme');
     await page.getByLabel('Report subject').fill('Browser Acme');
     await page.getByRole('button', { name: 'Approve and start job' }).click();
-    await expect(page.getByRole('status')).toContainText(
-      'approved for the quoted 2.50 USDC testnet purchase',
-    );
+    await expect(page.getByRole('status')).toContainText('Payment authorization is queued');
+    await expect(page.getByRole('heading', { name: 'Supplier quote' })).toBeVisible();
+    await expect(page.getByText('2.500000 USDC')).toBeVisible();
+    await expect(page.getByText('team_report_order_browser')).toBeVisible();
+    await page.getByRole('tab', { name: 'Jobs' }).click();
     await page.getByRole('button', { name: 'Resume delivery (never pays)' }).click();
     await expect(page.getByText('Recovered original supplier report.')).toBeVisible();
   });

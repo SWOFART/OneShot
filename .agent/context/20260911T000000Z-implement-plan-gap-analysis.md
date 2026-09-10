@@ -48,6 +48,7 @@ Compare our updated plan.md against the current codebase to identify all unimple
 - `TEST_POSTGRES=1 pnpm --filter @oneshot/storage-postgres test:integration` - blocked: this workspace has no working Testcontainers container runtime. The new real-PostgreSQL concurrent task-binding test is present but not executable here.
 - CI follow-up after draft PR #72: the PostgreSQL rollback test incorrectly reused migration version 006 after this increment introduced that migration, so it now uses synthetic version 007. Legacy browser acceptance was opening the new public landing at `/` while expecting the retired operator console; it now exercises the public landing and authenticated `/app` cabinet/job/recovery flow. `pnpm --filter @oneshot/web test:browser` passes locally (4 Chromium tests), alongside the full local validation stack and 984 unit tests.
 - CI follow-up after commit `0cccf6d`: storage and API PostgreSQL integration suites passed, but worker and restart-recovery cleanup failed because their `afterEach` TRUNCATE lists omitted `resumable_jobs`, the migration-006 child table referencing `business_intents`. Adding that table to both cleanup lists prevents cascading dirty-state failures; format, lint, typecheck, build, and 984 unit tests pass locally.
+- Frontend follow-up: the authenticated cabinet now gives Tools responsibility for starting a report and Jobs responsibility for listing results, retrying delivery, and opening payment evidence. The supplier quote returned by the API (amount, recipient, network, and order reference) is rendered instead of hardcoded UI text; the wallet panel identifies Arc Testnet and the server-configured Privy execution boundary without exposing an address or secret. Composition and browser coverage now assert the split and exercise the Jobs resume path. Web unit tests and all 4 Chromium tests pass locally.
 
 ## External-doc findings
 
@@ -61,17 +62,17 @@ Compare our updated plan.md against the current codebase to identify all unimple
 
 - Branch: `feat/implement-plan-gap-analysis`
 - Base: `develop` at `f1298fa26b17b8a074bf4786dd714c57108eece3`
-- Commit: uncommitted; no PR requested or created
-- PR: not created
-- CI: not run
+- Commit: pending fresh Gate A for the frontend follow-up
+- PR: #72 remains draft; frontend follow-up is not pushed yet
+- CI: not run for the frontend follow-up
 
 ## Review gates
 
-- Gate A: FAIL on initial candidate tree `35805c7d54fba585f36979b66701778040c9daed`; findings repaired, fresh review required on the new staged tree.
-- Gate B: NOT RUN
+- Gate A: prior implementation and CI fixes passed; fresh Gate A required for the frontend follow-up tree before commit/push.
+- Gate B: prior PR head passed; rerun after the frontend follow-up is pushed.
 
 ## Handoff/next steps
 
 1. Run PostgreSQL integration tests in an environment with a supported container runtime.
-2. Stage the repaired tree, obtain fresh Gate A before any commit/push, then follow the required CI/Gate B process if a PR is requested.
+2. Stage the frontend follow-up tree, obtain fresh Gate A before any commit/push, then follow the required CI/Gate B process for PR #72.
 3. Perform the human-authorized R4 live demo and R5 release evidence separately; do not treat local fixtures as proof.
