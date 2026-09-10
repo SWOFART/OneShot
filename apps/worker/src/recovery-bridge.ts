@@ -62,6 +62,7 @@ export interface IntentLedgerLocalRecoveryStatePortOptions {
   readonly correlationSender: string;
   readonly fromBlock: string;
   readonly toBlock: string;
+  readonly getToBlock?: () => Promise<string>;
   readonly mcpPolicy: SubgraphMcpPolicy;
 }
 
@@ -91,6 +92,9 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
 
     const durableState = mapState(intent.state);
     const nowIso = new Date().toISOString();
+    const toBlock = this.options.getToBlock
+      ? await this.options.getToBlock()
+      : this.options.toBlock;
 
     const indexRequest: IndexLookupRequest = {
       binding,
@@ -98,7 +102,7 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
         strategy: 'TRANSFER_TUPLE_WINDOW',
         sender: this.options.correlationSender,
         fromBlock: this.options.fromBlock,
-        toBlock: this.options.toBlock,
+        toBlock,
       },
     };
 

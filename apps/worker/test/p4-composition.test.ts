@@ -201,6 +201,27 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     expect(snapshot.mcpPolicy).toEqual(recoveryLocalState.mcpPolicy);
   });
 
+  it('uses the current Arc head as the recovery upper block when available', async () => {
+    const mockLedger = {
+      getIntent: async () => ({
+        ...sampleRequest,
+        payload_fingerprint: requestFingerprint,
+        state: 'UNKNOWN',
+        version: 2,
+        attempts: [],
+        evidence: [],
+      }),
+    } as unknown as IntentLedger;
+    const port = new IntentLedgerLocalRecoveryStatePort(mockLedger, {
+      ...recoveryLocalState,
+      getToBlock: async () => '1000000',
+    });
+
+    const snapshot = await port.read('intent-p4-1');
+
+    expect(snapshot.indexRequest.correlation.toBlock).toBe('1000000');
+  });
+
   it('rejects placeholder recovery lookup identity before an MCP call', async () => {
     const mockLedger = {
       getIntent: async () => ({

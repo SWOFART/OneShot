@@ -30,10 +30,10 @@ and database configuration before accepting work. It performs startup recovery,
 immediately drains durable outbox work, continues polling without overlapping
 cycles, and waits for an in-flight cycle during SIGTERM/SIGINT shutdown.
 
-Production requires `ONESHOT_SUBGRAPH_MCP_ENDPOINT` to identify the admitted
-remote MCP server. The production composition rejects an omitted MCP port;
-direct The Graph Gateway access remains available only to lower-level client
-tests and non-production tooling.
+Set `ONESHOT_SUBGRAPH_MCP_ENDPOINT` only when a remote MCP server is deployed;
+otherwise the recovery client uses `ONESHOT_SUBGRAPH_QUERY_URL` for a Studio
+deployment. One of these endpoints is required. Direct Studio GraphQL restores
+read-only recovery for Arc but is not evidence of an official MCP call.
 
 The HTTP listener exposes `GET /health/live` and `GET /health/ready`. Readiness
 requires a reachable database, compatible adapter identities, and a running
