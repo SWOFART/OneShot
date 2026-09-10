@@ -247,6 +247,9 @@ importers:
 
   packages/recovery-ui:
     dependencies:
+      '@oneshot/brand':
+        specifier: workspace:*
+        version: link:../brand
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -293,6 +296,9 @@ importers:
 
   packages/settlement-ui:
     dependencies:
+      '@oneshot/brand':
+        specifier: workspace:*
+        version: link:../brand
       '@oneshot/contracts':
         specifier: workspace:*
         version: link:../contracts

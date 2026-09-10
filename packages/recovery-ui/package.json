@@ -32,6 +32,7 @@
     "verify": "pnpm run format && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build"
   },
   "dependencies": {
+    "@oneshot/brand": "workspace:*",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

@@ -41,11 +41,40 @@ async function readCss(): Promise<string> {
   return readFile(join(packageRoot, 'src', 'styles.css'), 'utf8');
 }
 
+async function readBrandCss(): Promise<string> {
+  return readFile(join(packageRoot, '..', 'brand', 'src', 'tokens.css'), 'utf8');
+}
+
+/**
+ * Resolves a declaration value to a literal hex.
+ *
+ * The slice palette is expressed in `--os-*` brand tokens now, so a value may
+ * be a `var()` reference, possibly nested. Follow the chain into the brand
+ * stylesheet, preferring the dark theme — the default the console ships with.
+ */
+function resolveColour(value: string, brandCss: string, depth = 0): string | undefined {
+  if (depth > 4) return undefined;
+  const literal = /^#[0-9a-f]{6}$/iu.exec(value.trim())?.[0];
+  if (literal !== undefined) return literal.toLowerCase();
+
+  const reference = /var\(\s*(--[a-z0-9-]+)/iu.exec(value)?.[1];
+  if (reference === undefined) return undefined;
+
+  const dark = /:root\[data-theme='dark'\]\s*\{([^}]*)\}/u.exec(brandCss)?.[1];
+  const light = /:root\s*\{([^}]*)\}/u.exec(brandCss)?.[1];
+  for (const block of [dark, light]) {
+    if (block === undefined) continue;
+    const found = new RegExp(`${reference}:\\s*([^;]+);`, 'u').exec(block)?.[1];
+    if (found !== undefined) return resolveColour(found, brandCss, depth + 1);
+  }
+  return undefined;
+}
+
 function readTokens(css: string): Readonly<Record<string, string>> {
   const tokens: Record<string, string> = {};
-  for (const match of css.matchAll(/--([a-z-]+):\s*(#[0-9a-f]{6})/giu)) {
+  for (const match of css.matchAll(/--([a-z-]+):\s*([^;]+);/giu)) {
     const [, name, value] = match;
-    if (name !== undefined && value !== undefined) tokens[name] = value;
+    if (name !== undefined && value !== undefined) tokens[name] = value.trim();
   }
   return tokens;
 }
@@ -60,7 +89,7 @@ function readTokens(css: string): Readonly<Record<string, string>> {
 function readDeclaration(css: string, selector: string, property: string): string | undefined {
   const block = new RegExp(`${selector}\\s*\\{([^}]*)\\}`, 'u').exec(css)?.[1];
   if (block === undefined) return undefined;
-  return new RegExp(`(?:^|;|\\n)\\s*${property}:\\s*(#[0-9a-f]{6})`, 'iu').exec(block)?.[1];
+  return new RegExp(`(?:^|;|\\n)\\s*${property}:\\s*([^;]+);`, 'iu').exec(block)?.[1]?.trim();
 }
 
 describe('palette contrast', () => {
@@ -73,16 +102,20 @@ describe('palette contrast', () => {
 
   it('meets WCAG AA for normal text on both surfaces', async () => {
     const css = await readCss();
+    const brand = await readBrandCss();
     const tokens = readTokens(css);
-    const panel = tokens['panel'];
-    const page = readDeclaration(css, '\\.settlement-details,\\s*\\.route-state', 'background');
+    const panel = resolveColour(tokens['panel'] ?? '', brand);
+    const page = resolveColour(
+      readDeclaration(css, '\\.settlement-details,\\s*\\.route-state', 'background') ?? '',
+      brand,
+    );
     expect(panel, 'missing --panel token').toBeDefined();
     expect(page, 'page background is no longer a literal in the base rule').toBeDefined();
     if (panel === undefined || page === undefined) return;
 
     const failures: string[] = [];
     for (const name of ['ink', 'muted', 'green', 'amber', 'red', 'cyan']) {
-      const colour = tokens[name];
+      const colour = resolveColour(tokens[name] ?? '', brand);
       if (colour === undefined) continue;
       for (const [surfaceName, surface] of [
         ['panel', panel],
@@ -99,21 +132,31 @@ describe('palette contrast', () => {
 
   it('routes every text colour through an audited surface', async () => {
     const css = await readCss();
+    const brand = await readBrandCss();
     const tokens = readTokens(css);
-    const ink = tokens['ink'];
+    const ink = resolveColour(tokens['ink'] ?? '', brand);
     expect(ink).toBeDefined();
     if (ink === undefined) return;
 
     // Surfaces that carry text but are literals rather than tokens. Each one is
     // audited explicitly so a new panel colour cannot slip in under AA.
-    const noteBackground = readDeclaration(css, '\\.panel-note', 'background');
+    const noteBackground = resolveColour(
+      readDeclaration(css, '\\.panel-note', 'background') ?? '',
+      brand,
+    );
     expect(noteBackground, 'panel note background missing').toBeDefined();
     if (noteBackground !== undefined) {
       expect(contrastRatio(ink, noteBackground)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
     }
 
-    const selectBackground = readDeclaration(css, '\\.demo-scenarios select', 'background');
-    const selectColour = readDeclaration(css, '\\.demo-scenarios select', 'color');
+    const selectBackground = resolveColour(
+      readDeclaration(css, '\\.demo-scenarios select', 'background') ?? '',
+      brand,
+    );
+    const selectColour = resolveColour(
+      readDeclaration(css, '\\.demo-scenarios select', 'color') ?? '',
+      brand,
+    );
     expect(selectBackground, 'scenario select background missing').toBeDefined();
     expect(selectColour, 'scenario select colour missing').toBeDefined();
     if (selectBackground !== undefined && selectColour !== undefined) {
@@ -123,8 +166,12 @@ describe('palette contrast', () => {
 
   it('meets WCAG AA for the fixture-viewer banner', async () => {
     const css = await readCss();
-    const foreground = readDeclaration(css, '\\.demo-bar', 'color');
-    const background = readDeclaration(css, '\\.demo-bar', 'background');
+    const brand = await readBrandCss();
+    const foreground = resolveColour(readDeclaration(css, '\\.demo-bar', 'color') ?? '', brand);
+    const background = resolveColour(
+      readDeclaration(css, '\\.demo-bar', 'background') ?? '',
+      brand,
+    );
     expect(foreground, 'demo bar colour missing').toBeDefined();
     expect(background, 'demo bar background missing').toBeDefined();
     if (foreground === undefined || background === undefined) return;
