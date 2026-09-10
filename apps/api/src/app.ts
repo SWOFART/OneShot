@@ -2,19 +2,24 @@ import { randomUUID } from 'node:crypto';
 import {
   asCorrelationId,
   ContractValidationError,
+  parseCreateJobRequest,
+  type SupplierPort,
   type ErrorCode,
   type ErrorResponse,
 } from '@oneshot/contracts';
-import type { IntentLedger } from '@oneshot/storage-postgres';
+import { derivedJobId } from '@oneshot/domain';
+import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { ServiceAuthenticator } from './auth.js';
 import { allowAllRateLimiter, type RateLimiter } from './rate-limit.js';
+import { UnavailableWalletActivityPort, type WalletActivityPort } from './wallet-activity.js';
 
 export interface ServiceConfig {
   readonly submissionsDisabled?: boolean;
   readonly chainId?: string;
   readonly network?: string;
   readonly contractVersion?: string;
+  readonly workspaceId?: string;
 }
 
 export interface SanitizedApiError {
@@ -34,6 +39,12 @@ export interface ApiDependencies {
     | 'getSystemMetrics'
     | 'ping'
   >;
+  readonly jobs?: Pick<
+    JobLedger,
+    'createOrReplay' | 'get' | 'list' | 'resumeDelivery' | 'recordActivityObservation' | 'activity'
+  >;
+  readonly supplier?: SupplierPort;
+  readonly walletActivity?: WalletActivityPort;
   readonly authenticator: ServiceAuthenticator;
   readonly rateLimiter?: RateLimiter;
   readonly nextCorrelationId?: () => string;
@@ -57,6 +68,17 @@ const createIntentBodySchema = {
   },
 } as const;
 
+const createJobBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['task_key', 'tool_id', 'report_subject'],
+  properties: {
+    task_key: { type: 'string', minLength: 1, maxLength: 128 },
+    tool_id: { type: 'string', const: 'team-report-v1' },
+    report_subject: { type: 'string', minLength: 1, maxLength: 256 },
+  },
+} as const;
+
 function sendError(
   reply: FastifyReply,
   status: number,
@@ -73,6 +95,16 @@ export function buildApi(dependencies: ApiDependencies) {
   const correlations = new WeakMap<FastifyRequest, string>();
   const nextCorrelationId = dependencies.nextCorrelationId ?? randomUUID;
   const rateLimiter = dependencies.rateLimiter ?? allowAllRateLimiter;
+  const workspaceId = dependencies.config?.workspaceId ?? 'local-test-workspace';
+  const walletActivity = dependencies.walletActivity ?? new UnavailableWalletActivityPort();
+  const jobsUnavailable = (reply: FastifyReply, request: FastifyRequest): void =>
+    sendError(
+      reply,
+      503,
+      'NOT_READY',
+      'Resumable jobs are not configured',
+      correlationFor(request),
+    );
   const onError =
     dependencies.onError ??
     ((error: SanitizedApiError) => {
@@ -149,6 +181,134 @@ export function buildApi(dependencies: ApiDependencies) {
       return;
     }
     return reply.code(result.kind === 'ACCEPTED' ? 202 : 200).send(result.intent);
+  });
+
+  app.post('/v1/jobs', { schema: { body: createJobBodySchema } }, async (request, reply) => {
+    if (!dependencies.jobs || !dependencies.supplier) {
+      jobsUnavailable(reply, request);
+      return;
+    }
+    const parsed = parseCreateJobRequest(request.body);
+    // Supplier creation is non-chargeable and uses the same durable task scope
+    // as its idempotency key. The database transaction binds that order and the
+    // settlement intent before the worker can observe payment work.
+    const jobId = derivedJobId(workspaceId, parsed);
+    const order = await dependencies.supplier.createOrder(parsed, jobId);
+    const result = await dependencies.jobs.createOrReplay({
+      workspaceId,
+      request: parsed,
+      supplierOrder: order,
+      correlationId: correlationFor(request),
+    });
+    if (result.kind === 'TASK_PAYLOAD_CONFLICT') {
+      sendError(
+        reply,
+        409,
+        'INTENT_PAYLOAD_CONFLICT',
+        'Task key already has a different immutable payload',
+        correlationFor(request),
+      );
+      return;
+    }
+    return reply.code(result.kind === 'ACCEPTED' ? 202 : 200).send(result.job);
+  });
+
+  app.get('/v1/jobs', async (request, reply) => {
+    if (!dependencies.jobs) {
+      jobsUnavailable(reply, request);
+      return;
+    }
+    return { jobs: await dependencies.jobs.list(workspaceId) };
+  });
+
+  app.get<{ Params: { jobId: string } }>('/v1/jobs/:jobId', async (request, reply) => {
+    if (!dependencies.jobs) {
+      jobsUnavailable(reply, request);
+      return;
+    }
+    const job = await dependencies.jobs.get(workspaceId, request.params.jobId);
+    if (!job) {
+      sendError(
+        reply,
+        404,
+        'INTENT_NOT_FOUND',
+        'Job was not found in this workspace',
+        correlationFor(request),
+      );
+      return;
+    }
+    return job;
+  });
+
+  app.post<{ Params: { jobId: string } }>('/v1/jobs/:jobId/resume', async (request, reply) => {
+    if (!dependencies.jobs) {
+      jobsUnavailable(reply, request);
+      return;
+    }
+    const job = await dependencies.jobs.resumeDelivery(workspaceId, request.params.jobId);
+    if (!job) {
+      sendError(
+        reply,
+        404,
+        'INTENT_NOT_FOUND',
+        'Job was not found in this workspace',
+        correlationFor(request),
+      );
+      return;
+    }
+    return reply.code(202).send(job);
+  });
+
+  app.get<{ Params: { jobId: string } }>('/v1/jobs/:jobId/result', async (request, reply) => {
+    if (!dependencies.jobs) {
+      jobsUnavailable(reply, request);
+      return;
+    }
+    const job = await dependencies.jobs.get(workspaceId, request.params.jobId);
+    if (!job) {
+      sendError(
+        reply,
+        404,
+        'INTENT_NOT_FOUND',
+        'Job was not found in this workspace',
+        correlationFor(request),
+      );
+      return;
+    }
+    if (!job.result) {
+      sendError(
+        reply,
+        409,
+        'RECONCILIATION_NOT_ALLOWED',
+        'Result is not available; this endpoint never submits payment',
+        correlationFor(request),
+      );
+      return;
+    }
+    return job.result;
+  });
+
+  app.get('/v1/activity', async (request, reply) => {
+    if (!dependencies.jobs) {
+      jobsUnavailable(reply, request);
+      return;
+    }
+    return dependencies.jobs.activity(workspaceId);
+  });
+
+  app.post('/v1/activity/refresh', async (request, reply) => {
+    if (!dependencies.jobs) {
+      jobsUnavailable(reply, request);
+      return;
+    }
+    const observation = await walletActivity.refresh();
+    await dependencies.jobs.recordActivityObservation({
+      workspaceId,
+      freshness: observation.freshness,
+      coverageNote: observation.coverageNote,
+      payload: observation.payload,
+    });
+    return reply.code(202).send(await dependencies.jobs.activity(workspaceId));
   });
 
   app.get<{ Params: { id: string } }>('/v1/intents/:id', async (request, reply) => {

@@ -10,13 +10,13 @@ shape. Rollback means deploying the prior application and restoring the backup
 or applying a separately reviewed forward repair; migration files are never
 silently edited or automatically reversed.
 
-## Storage V1 Schema Digest
+## Current schema digest
 
-The frozen `storage-v1` migration set (`001_core_ledger.sql`, `002_query_indexes.sql`, `003_worker_jobs.sql`, `004_operational_metrics.sql`)
+The append-only ledger plus resumable-jobs migration set (`001` through `006`)
 has SHA-256 digest:
 
 ```text
-9af3339865c54f19e351f00b4ca552d352d34d23e3ec9e0fa2e23230ce4f8fde
+daedb728b6cd496dc1c35c7313909c662fd2186debe85c9bbf1981ffafcbd7f9
 ```
 
 ## Containerized Testing Command

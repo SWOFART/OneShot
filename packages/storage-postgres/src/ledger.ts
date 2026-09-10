@@ -850,6 +850,34 @@ export class IntentLedger {
           'COMMITTED',
           attemptId,
         ]);
+        // A job delivery is a separate, non-financial state machine. Scheduling
+        // fulfillment in this same transaction preserves the committed payment
+        // even when the supplier is unavailable, and never grants another pay.
+        const delivery = await client.query<{
+          job_id: string;
+          supplier_order_reference: string;
+          delivery_attempt: number;
+        }>(
+          `UPDATE resumable_jobs
+           SET delivery_state = 'PENDING', delivery_attempt = delivery_attempt + 1, updated_at = $1
+           WHERE business_intent_id = $2 AND delivery_state = 'NOT_REQUESTED'
+           RETURNING job_id, supplier_order_reference, delivery_attempt`,
+          [now, id],
+        );
+        for (const job of delivery.rows) {
+          await client.query(
+            `INSERT INTO outbox_jobs (
+               business_intent_id, job_key, task_identifier, payload, available_at, created_at
+             ) VALUES ($1, $2, 'fulfill_supplier_order', $3::jsonb, $4, $4)
+             ON CONFLICT (job_key) DO NOTHING`,
+            [
+              id,
+              `fulfill:${job.job_id}:${job.supplier_order_reference}:${job.delivery_attempt}`,
+              JSON.stringify({ job_id: job.job_id, delivery_attempt: job.delivery_attempt }),
+              now,
+            ],
+          );
+        }
         await client.query('COMMIT');
         return { completed: true, state: 'COMMITTED', version: newVersion };
       }

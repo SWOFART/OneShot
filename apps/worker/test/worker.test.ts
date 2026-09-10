@@ -12,10 +12,12 @@ import type {
   CreateIntentResult,
   IntentLedger,
 } from '@oneshot/storage-postgres';
+import type { JobLedger } from '@oneshot/storage-postgres';
 import {
   createTaskList,
   drainOutboxJobs,
   executeAuthorizeIntent,
+  executeFulfillSupplierOrder,
   executeSubmitSettlement,
 } from '../src/index.js';
 
@@ -91,6 +93,7 @@ describe('Worker Unit Logic', () => {
     });
     expect(Object.keys(tasks).sort()).toEqual([
       'authorize_intent',
+      'fulfill_supplier_order',
       'reconcile_intent',
       'submit_settlement',
     ]);
@@ -272,6 +275,68 @@ describe('Worker Unit Logic', () => {
     });
 
     expect(completedKind).toBe('POSSIBLY_SUBMITTED');
+  });
+
+  it('retries only the original committed supplier order after a delivery failure', async () => {
+    let deliveryState: 'PENDING' | 'RETRIEVAL_FAILED' | 'AVAILABLE' = 'PENDING';
+    let supplierCalls = 0;
+    let settlementCalls = 0;
+    const events: string[] = [];
+    const jobLedger = {
+      async deliveryWork(jobId: string, attempt: number) {
+        events.push(`work:${jobId}:${attempt}`);
+        return deliveryState === 'PENDING'
+          ? { orderReference: 'team_report_order_unit' }
+          : undefined;
+      },
+      async completeDelivery(_jobId: string, attempt: number) {
+        events.push(`complete:${attempt}`);
+        deliveryState = 'AVAILABLE';
+      },
+      async failDelivery(_jobId: string, attempt: number) {
+        events.push(`fail:${attempt}`);
+        deliveryState = 'RETRIEVAL_FAILED';
+      },
+    } as unknown as JobLedger;
+    const options = {
+      pool: {} as never,
+      ledger: createMockLedger(),
+      jobLedger,
+      supplier: {
+        async getResult() {
+          return null;
+        },
+        async fulfillOrder() {
+          supplierCalls += 1;
+          if (supplierCalls === 1) throw new Error('supplier unavailable after payment');
+          return {
+            order_reference: 'team_report_order_unit',
+            result_reference: 'team_report_result_unit',
+            report: 'retrieved original report',
+          };
+        },
+        async createOrder() {
+          throw new Error('delivery never creates a replacement order');
+        },
+      },
+      settlementPort: {
+        async submit() {
+          settlementCalls += 1;
+          throw new Error('delivery must never settle');
+        },
+      },
+    };
+
+    await executeFulfillSupplierOrder('job-unit', 1, options);
+    expect(deliveryState).toBe('RETRIEVAL_FAILED');
+
+    // Simulates JobLedger.resumeDelivery claiming a new fenced delivery attempt.
+    deliveryState = 'PENDING';
+    await executeFulfillSupplierOrder('job-unit', 2, options);
+
+    expect(deliveryState).toBe('AVAILABLE');
+    expect(events).toEqual(['work:job-unit:1', 'fail:1', 'work:job-unit:2', 'complete:2']);
+    expect(settlementCalls).toBe(0);
   });
 
   it('rolls back the outbox claim when a handler fails before delivery', async () => {

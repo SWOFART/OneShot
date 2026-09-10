@@ -172,6 +172,27 @@ export async function executeReconcileIntent(
   }
 }
 
+/** Supplier fulfillment is deliberately reachable only from a committed job.
+ * It cannot change payment state or construct a replacement settlement. */
+export async function executeFulfillSupplierOrder(
+  jobId: string,
+  deliveryAttempt: number,
+  options: WorkerOptions,
+): Promise<void> {
+  if (!options.jobLedger || !options.supplier) return;
+  const work = await options.jobLedger.deliveryWork(jobId, deliveryAttempt);
+  if (!work) return;
+  try {
+    const existing = await options.supplier.getResult(work.orderReference);
+    const result = existing ?? (await options.supplier.fulfillOrder(work.orderReference));
+    await options.jobLedger.completeDelivery(jobId, deliveryAttempt, result);
+  } catch {
+    // Preserve COMMITTED and make recovery explicit. A later resume may only
+    // retrieve/fulfill this original supplier order, never pay again.
+    await options.jobLedger.failDelivery(jobId, deliveryAttempt);
+  }
+}
+
 export function createTaskList(options: WorkerOptions): TaskList {
   return {
     authorize_intent: async (payload) => {
@@ -193,6 +214,20 @@ export function createTaskList(options: WorkerOptions): TaskList {
       };
       if (business_intent_id) {
         await executeReconcileIntent(business_intent_id, options, event_id);
+      }
+    },
+    fulfill_supplier_order: async (payload) => {
+      const { job_id, delivery_attempt } = payload as {
+        job_id?: string;
+        delivery_attempt?: number;
+      };
+      if (
+        job_id &&
+        typeof delivery_attempt === 'number' &&
+        Number.isSafeInteger(delivery_attempt) &&
+        delivery_attempt > 0
+      ) {
+        await executeFulfillSupplierOrder(job_id, delivery_attempt, options);
       }
     },
   };
@@ -240,6 +275,19 @@ export async function drainOutboxJobs(options: WorkerOptions, maxJobs = 100): Pr
         await executeSubmitSettlement(job.business_intent_id, options);
       } else if (job.task_identifier === 'reconcile_intent') {
         await executeReconcileIntent(job.business_intent_id, options);
+      } else if (job.task_identifier === 'fulfill_supplier_order') {
+        const payload = await client.query<{
+          payload: { job_id?: string; delivery_attempt?: number };
+        }>('SELECT payload FROM outbox_jobs WHERE outbox_job_id = $1', [job.outbox_job_id]);
+        const { job_id: jobId, delivery_attempt: deliveryAttempt } = payload.rows[0]?.payload ?? {};
+        if (
+          jobId &&
+          typeof deliveryAttempt === 'number' &&
+          Number.isSafeInteger(deliveryAttempt) &&
+          deliveryAttempt > 0
+        ) {
+          await executeFulfillSupplierOrder(jobId, deliveryAttempt, options);
+        }
       } else {
         throw new Error(`Unsupported outbox task: ${job.task_identifier}`);
       }

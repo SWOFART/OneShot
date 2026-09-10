@@ -4,6 +4,8 @@ import type {
   SettlementResult,
 } from '@oneshot/contracts';
 import type { IntentLedger } from '@oneshot/storage-postgres';
+import type { JobLedger } from '@oneshot/storage-postgres';
+import type { SupplierPort } from '@oneshot/contracts';
 import type { Pool } from 'pg';
 
 import type { RecoveryService } from '@oneshot/reconciliation';
@@ -44,6 +46,8 @@ export interface WorkerOptions {
   readonly authorizationPort?: AuthorizationPort | undefined;
   readonly settlementPort: SettlementPort;
   readonly recoveryService?: RecoveryService | undefined;
+  readonly jobLedger?: JobLedger | undefined;
+  readonly supplier?: SupplierPort | undefined;
   readonly concurrency?: number | undefined;
   readonly config?: WorkerConfig | undefined;
 }
