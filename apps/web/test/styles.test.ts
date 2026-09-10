@@ -26,10 +26,14 @@ describe('web stylesheet', () => {
     expect(literals).toEqual([]);
   });
 
-  it('imports the brand fonts and tokens, fonts first', async () => {
+  it('imports the brand fonts and tokens as the first two statements, in order, with nothing between them', async () => {
     const css = await readFile(stylesheet, 'utf8');
-    expect(css.indexOf("@import '@oneshot/brand/fonts.css';")).toBe(0);
-    expect(css).toContain("@import '@oneshot/brand/tokens.css';");
+    // Anchored at the start of the file and joined by only whitespace, so a
+    // rule sneaking in between the two imports (which CSS silently ignores,
+    // disabling the token layer) fails this assertion.
+    expect(css).toMatch(
+      /^@import '@oneshot\/brand\/fonts\.css';\s*@import '@oneshot\/brand\/tokens\.css';/u,
+    );
   });
 
   it('sets the page ground and primary type from tokens', async () => {

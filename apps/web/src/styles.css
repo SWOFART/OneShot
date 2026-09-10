@@ -70,7 +70,7 @@ button:disabled {
 }
 
 button.secondary {
-  color: var(--os-ink);
+  color: inherit;
   background: transparent;
   border: 1px solid var(--os-line-strong);
 }
@@ -592,6 +592,15 @@ a:hover {
   user-select: none;
 }
 
+/* .machine-token also renders inside .operator-identity (page surface, not a
+   panel) — see LoginGate. The overrides below re-point its ink at the page
+   tokens there. They must sit before :hover below: both selectors tie on
+   specificity, so source order decides, and :hover needs to win while
+   hovering in either context. */
+.operator-identity .machine-token summary {
+  color: var(--os-ink-muted);
+}
+
 .machine-token summary:hover {
   color: var(--os-signal);
 }
@@ -619,6 +628,18 @@ a:hover {
   margin-top: 0.4rem;
   color: var(--os-panel-ink-muted);
   font-size: 0.75rem;
+}
+
+.operator-identity .machine-token {
+  color: var(--os-ink-muted);
+}
+
+.operator-identity .machine-token label {
+  color: var(--os-ink);
+}
+
+.operator-identity .machine-token small {
+  color: var(--os-ink-muted);
 }
 
 /* ==========================================================================
@@ -776,6 +797,15 @@ a:hover {
   gap: 0.35rem;
 }
 
+/* Non-<label> stand-in for a form label (IntentForm's read-only Settlement
+   profile field). Only usage today sits in .panel form, so it takes the
+   same treatment as .form label above: plain panel ink, not muted. */
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--os-panel-ink);
+}
+
 .notice {
   padding: 1rem 1.25rem;
   border-radius: var(--os-radius-lg);
@@ -848,6 +878,10 @@ a:hover {
   color: var(--os-state-committed);
 }
 
+.state-failed_safe strong {
+  color: var(--os-state-failed);
+}
+
 .state-unknown strong {
   color: var(--os-state-unknown);
 }
@@ -890,6 +924,13 @@ a:hover {
   color: var(--os-panel-ink-muted);
 }
 
+/* Only usage today (IntentStatusView's "No execution attempts yet.") sits in
+   .panel status-view, so it takes the panel muted ink, matching .attempts
+   and .facts dt above. */
+.muted {
+  color: var(--os-panel-ink-muted);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -910,7 +951,7 @@ a:hover {
   min-height: 180px;
   align-content: center;
   text-align: center;
-  color: var(--os-ink-muted);
+  color: var(--os-panel-ink-muted);
 }
 
 .composed-surface {
