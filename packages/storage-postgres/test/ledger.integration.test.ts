@@ -29,7 +29,7 @@ describePostgres('PostgreSQL intent ledger', () => {
 
   afterEach(async () => {
     await pool.query(
-      'TRUNCATE outbox_jobs, evidence_observations, settlements, attempts, business_intents RESTART IDENTITY',
+      'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, business_intents RESTART IDENTITY',
     );
     nextAttempt = 0;
   });
@@ -49,7 +49,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const versions = await pool.query<{ version: number }>(
       'SELECT version FROM schema_versions ORDER BY version',
     );
-    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3]);
+    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4]);
     expect(await migrationDigest()).toMatch(/^[0-9a-f]{64}$/u);
   });
 
@@ -106,6 +106,61 @@ describePostgres('PostgreSQL intent ledger', () => {
         (SELECT count(*) FROM settlements)::text AS settlements
     `);
     expect(counts.rows[0]).toEqual({ attempts: '1', jobs: '1', settlements: '0' });
+  });
+
+  it('reports durable operational counters without changing ledger authority', async () => {
+    const ledger = newLedger();
+    await ledger.createOrReplay(request, 'correlation-metrics-first');
+    await ledger.createOrReplay(request, 'correlation-metrics-replay');
+    await ledger.createOrReplay(
+      { ...request, amount_atomic: '1250001' },
+      'correlation-metrics-conflict',
+    );
+
+    const casRequest = { ...request, business_intent_id: 'intent-metrics-cas' };
+    await ledger.createOrReplay(casRequest, 'correlation-metrics-cas-create');
+    await ledger.completeAuthorization(casRequest.business_intent_id, 1, { kind: 'AUTHORIZED' });
+    const casClaim = await ledger.claimSubmission(casRequest.business_intent_id);
+    expect(casClaim.claimed).toBe(true);
+    await expect(ledger.claimSubmission(casRequest.business_intent_id)).resolves.toMatchObject({
+      claimed: false,
+      reason: 'NOT_READY',
+    });
+
+    const providerRequest = { ...request, business_intent_id: 'intent-metrics-provider' };
+    await ledger.createOrReplay(providerRequest, 'correlation-metrics-provider-create');
+    await ledger.completeAuthorization(providerRequest.business_intent_id, 1, {
+      kind: 'AUTHORIZED',
+    });
+    const providerClaim = await ledger.claimSubmission(providerRequest.business_intent_id);
+    expect(providerClaim.claimed).toBe(true);
+    if (providerClaim.claimed) {
+      await ledger.completeSubmission(providerRequest.business_intent_id, providerClaim.attemptId, {
+        kind: 'POSSIBLY_SUBMITTED',
+        reason: 'provider timeout',
+      });
+    }
+
+    const policyRequest = { ...request, business_intent_id: 'intent-metrics-policy' };
+    await ledger.createOrReplay(policyRequest, 'correlation-metrics-policy-create');
+    await ledger.completeAuthorization(policyRequest.business_intent_id, 1, {
+      kind: 'DENIED',
+      reason: 'recipient denied by policy',
+    });
+
+    const recoveryRequest = { ...request, business_intent_id: 'intent-metrics-recovery' };
+    await ledger.createOrReplay(recoveryRequest, 'correlation-metrics-recovery-create');
+    await ledger.recordRecoveryEvent(recoveryRequest.business_intent_id, 'metrics-event', {
+      reconciliationCommand: { targetState: 'COMMITTED' },
+    });
+
+    await expect(ledger.getSystemMetrics()).resolves.toMatchObject({
+      duplicateCount: 2,
+      casConflictsCount: 1,
+      providerErrorCount: 1,
+      policyDenialCount: 1,
+      reconciliationOutcomeCounts: { COMMITTED: 1 },
+    });
   });
 
   it('persists and reloads provider request identity on the owned attempt', async () => {

@@ -56,6 +56,10 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
   requires explicit opt-in for wildcard operator access (including mixed
   allowlists), and rejects verified access tokens whose subject is not a Privy
   DID.
+- Milestone 8 adds an append-only operational metric event table and records
+  duplicate requests, CAS conflicts, policy denials, ambiguous provider
+  outcomes, and reconciliation target states without including sensitive
+  payloads or changing settlement authority.
 
 ## Commands/checks
 
@@ -81,6 +85,9 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 - Milestone 7 focused checks passed: API tests 46; API typecheck and lint
   passed. The bearer minimum, wildcard opt-in, and Privy subject-shape checks
   are now enforced at runtime.
+- Milestone 8 storage checks passed: unit tests 8; storage typecheck and lint
+  passed. PostgreSQL integration could not start because this machine has no
+  working container runtime; the integration scenario is present for CI.
 
 ## External-doc findings
 
@@ -95,7 +102,7 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 
 - Branch: `milestone/recovery-hardening`
 - Base: `develop` at `cd7439058f94f1128bae70fac4017039a45d3d68`
-- Commit: `608a9ce` (Parts 1-4 pushed); Part 7 is currently staged
+- Commit: `d553ae4` (Parts 1-4 and Part 7 pushed); Part 8 is currently unstaged
 - PR: not created
 - CI: not applicable yet
 
@@ -113,11 +120,13 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
   mixed allowlists containing `*` bypassed the opt-in. Fixed with a regression
   test; fresh review required for candidate tree
   `ee31a6d1cd660a14b61e72266455c2974a4c3f79`.
+- Gate A: Part 7 PASS on reviewed tree `f104e10a92c557e6d4a821fcd53ba0da28dbcb35`;
+  committed as `d553ae4` and pushed.
 - Gate B: NOT RUN
 
 ## Handoff/next steps
 
-1. Stage the Part 7 changes and record the final candidate tree.
-2. Run a fresh Gate A review for the updated tree; commit and push only after explicit PASS.
-3. Implement Part 8 operational metrics after Part 7 is pushed, then repeat
-   local validation, Gate A, commit, and push.
+1. Finish Part 8 local validation and stage only its files.
+2. Run a fresh Gate A review for the Part 8 tree; commit and push only after
+   explicit PASS.
+3. Run the final requested validation and PR workflow after Part 8.

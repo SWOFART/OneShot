@@ -14,6 +14,7 @@ describe('Storage bootstrap and demo reset (A06.1)', () => {
     expect(DEMO_RESETTABLE_TABLES).toContain('settlements');
     expect(DEMO_RESETTABLE_TABLES).toContain('outbox_jobs');
     expect(DEMO_RESETTABLE_TABLES).toContain('evidence_observations');
+    expect(DEMO_RESETTABLE_TABLES).toContain('operational_metric_events');
 
     expect(DEMO_PRESERVED_TABLES).toContain('schema_versions');
     expect(DEMO_RESETTABLE_TABLES).not.toContain('schema_versions');
@@ -86,7 +87,7 @@ describe('Storage bootstrap and demo reset (A06.1)', () => {
     const mockClient = {
       query: vi.fn(async (sql: string) => {
         if (sql.includes('SELECT count(*)::text AS count FROM schema_versions')) {
-          return { rows: [{ count: '3' }] };
+          return { rows: [{ count: '4' }] };
         }
         return { rows: [] };
       }),
@@ -100,7 +101,7 @@ describe('Storage bootstrap and demo reset (A06.1)', () => {
 
     const result = await bootstrapDatabase(mockPool);
     expect(result.databaseReady).toBe(true);
-    expect(result.versionCount).toBe(3);
+    expect(result.versionCount).toBe(4);
     expect(result.schemaDigest).toBeDefined();
   });
 });

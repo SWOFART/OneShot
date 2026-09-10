@@ -277,6 +277,19 @@ function boundedLimit(value: number | undefined): number {
   return value;
 }
 
+type MetricEventType =
+  | 'DUPLICATE_REQUEST'
+  | 'CAS_CONFLICT'
+  | 'POLICY_DENIAL'
+  | 'PROVIDER_ERROR'
+  | 'RECONCILIATION_OUTCOME';
+
+function reconciliationOutcome(payload: unknown): 'COMMITTED' | 'FAILED_SAFE' | 'UNKNOWN' {
+  const command = object(object(payload)?.['reconciliationCommand']);
+  const targetState = command?.['targetState'];
+  return targetState === 'COMMITTED' || targetState === 'FAILED_SAFE' ? targetState : 'UNKNOWN';
+}
+
 export class IntentLedger {
   readonly #pool: Pool;
   readonly #dependencies: LedgerDependencies;
@@ -284,6 +297,41 @@ export class IntentLedger {
   constructor(pool: Pool, dependencies: LedgerDependencies) {
     this.#pool = pool;
     this.#dependencies = dependencies;
+  }
+
+  async #recordMetricEvent(
+    businessIntentId: BusinessIntentId,
+    eventType: MetricEventType,
+    outcome?: string,
+  ): Promise<void> {
+    try {
+      await this.#pool.query(
+        `INSERT INTO operational_metric_events (
+          business_intent_id, event_type, outcome, created_at
+        ) VALUES ($1, $2, $3, $4)`,
+        [businessIntentId, eventType, outcome ?? null, this.#dependencies.now()],
+      );
+    } catch {
+      // Metrics are operational evidence only and must never change ledger behavior.
+    }
+  }
+
+  async #recordMetricEventOnClient(
+    client: PoolClient,
+    businessIntentId: BusinessIntentId,
+    eventType: MetricEventType,
+    outcome?: string,
+  ): Promise<void> {
+    try {
+      await client.query(
+        `INSERT INTO operational_metric_events (
+          business_intent_id, event_type, outcome, created_at
+        ) VALUES ($1, $2, $3, $4)`,
+        [businessIntentId, eventType, outcome ?? null, this.#dependencies.now()],
+      );
+    } catch {
+      // Metrics are operational evidence only and must never change ledger behavior.
+    }
   }
 
   async ping(): Promise<void> {
@@ -359,10 +407,11 @@ export class IntentLedger {
             ? 'REPLAY_IDENTICAL'
             : 'INTENT_PAYLOAD_CONFLICT';
       }
-      const intent = await this.#readIntent(
-        client,
-        asBusinessIntentId(fingerprinted.request.business_intent_id),
-      );
+      const businessIntentId = asBusinessIntentId(fingerprinted.request.business_intent_id);
+      const intent = await this.#readIntent(client, businessIntentId);
+      if (kind !== 'ACCEPTED') {
+        await this.#recordMetricEventOnClient(client, businessIntentId, 'DUPLICATE_REQUEST', kind);
+      }
       await client.query('COMMIT');
       return { kind, intent } as CreateIntentResult;
     } catch (error) {
@@ -517,6 +566,7 @@ export class IntentLedger {
           'UPDATE attempts SET stage = $1, sanitized_error = $2 WHERE business_intent_id = $3 AND attempt_sequence = 1',
           ['REJECTED', result.reason, id],
         );
+        await this.#recordMetricEventOnClient(client, id, 'POLICY_DENIAL', 'AUTHORIZATION');
         await client.query('COMMIT');
         return { completed: true, state: 'REJECTED', version: newVersion };
       }
@@ -555,7 +605,8 @@ export class IntentLedger {
         return { claimed: false, reason: 'NOT_FOUND' };
       }
       if (row.state !== 'READY') {
-        await client.query('ROLLBACK');
+        await this.#recordMetricEventOnClient(client, id, 'CAS_CONFLICT', row.state);
+        await client.query('COMMIT');
         return {
           claimed: false,
           reason: 'NOT_READY',
@@ -764,6 +815,7 @@ export class IntentLedger {
           ON CONFLICT (job_key) DO NOTHING`,
           [id, `reconcile:${id}:${newVersion}`, JSON.stringify({ business_intent_id: id }), now],
         );
+        await this.#recordMetricEventOnClient(client, id, 'PROVIDER_ERROR', 'POSSIBLY_SUBMITTED');
         await client.query('COMMIT');
         return { completed: true, state: 'UNKNOWN', version: newVersion };
       }
@@ -952,25 +1004,43 @@ export class IntentLedger {
         FROM outbox_jobs WHERE status = 'PENDING' AND available_at <= now()`,
       );
 
-      const duplicateResult = await client.query<{ duplicates: string }>(
-        `SELECT count(*)::text AS duplicates FROM attempts WHERE attempt_sequence > 1`,
+      const metricEventsResult = await client.query<{
+        event_type: MetricEventType;
+        outcome: string | null;
+        count: string;
+      }>(
+        `SELECT event_type, outcome, count(*)::text AS count
+         FROM operational_metric_events
+         GROUP BY event_type, outcome`,
       );
-
-      const policyDenialsResult = await client.query<{ denials: string }>(
-        `SELECT count(*)::text AS denials FROM attempts WHERE stage = 'REJECTED' OR sanitized_error LIKE '%policy%' OR sanitized_error LIKE '%denied%'`,
-      );
+      let casConflictsCount = 0;
+      let duplicateCount = 0;
+      let policyDenialCount = 0;
+      let providerErrorCount = 0;
+      const reconciliationOutcomeCounts: Record<string, number> = {};
+      for (const row of metricEventsResult.rows) {
+        const count = Number(row.count);
+        if (row.event_type === 'CAS_CONFLICT') casConflictsCount += count;
+        if (row.event_type === 'DUPLICATE_REQUEST') duplicateCount += count;
+        if (row.event_type === 'POLICY_DENIAL') policyDenialCount += count;
+        if (row.event_type === 'PROVIDER_ERROR') providerErrorCount += count;
+        if (row.event_type === 'RECONCILIATION_OUTCOME' && row.outcome) {
+          reconciliationOutcomeCounts[row.outcome] =
+            (reconciliationOutcomeCounts[row.outcome] ?? 0) + count;
+        }
+      }
 
       return {
         timestamp: new Date().toISOString(),
         stateCounts,
         unknownCount: Number(unknownMetrics.rows[0]?.count ?? '0'),
         oldestUnknownAgeMs: Number(unknownMetrics.rows[0]?.oldest_age_ms ?? '0'),
-        casConflictsCount: 0,
+        casConflictsCount,
         queueLagMs: Number(queueLagResult.rows[0]?.queue_lag_ms ?? '0'),
-        duplicateCount: Number(duplicateResult.rows[0]?.duplicates ?? '0'),
-        policyDenialCount: Number(policyDenialsResult.rows[0]?.denials ?? '0'),
-        providerErrorCount: 0,
-        reconciliationOutcomeCounts: {},
+        duplicateCount,
+        policyDenialCount,
+        providerErrorCount,
+        reconciliationOutcomeCounts,
       };
     } finally {
       client.release();
@@ -993,7 +1063,11 @@ export class IntentLedger {
       RETURNING outbox_job_id`,
       [id, `recovery-event:${eventId}`, JSON.stringify(payload), now],
     );
-    return { inserted: (result.rowCount ?? 0) === 1 };
+    const inserted = (result.rowCount ?? 0) === 1;
+    if (inserted) {
+      await this.#recordMetricEvent(id, 'RECONCILIATION_OUTCOME', reconciliationOutcome(payload));
+    }
+    return { inserted };
   }
 
   async getRecoveryEventPayload(eventId: string): Promise<unknown | undefined> {
