@@ -72,15 +72,16 @@ tracked separately and does not authorize settlement. Gate P4 remains PASS.
 
 ## In Progress
 
-### Gate P5 frontend acceptance
+### Gate P5 frontend acceptance (implementation complete)
 
-The Gate P5 candidate composes A05/B05/C05 against the frozen API and adds
+The current Gate P5 candidate composes A05/B05/C05 against the frozen API and adds
 Playwright coverage for create, replay, conflict, denial, committed, `UNKNOWN`,
 Graph discovery/degradation, service-unavailable, keyboard, responsive,
 memory-only token, and no-force-pay behavior. The recovery API now returns the
 persisted Recovery Agent and deterministic-core decision instead of a hard-coded
-action. Exact-tree review, CI, and human merge remain before the project gate is
-closed.
+action. Automated implementation evidence is complete; manual desktop/mobile
+click-through, fresh exact-tree review, CI, and human merge remain before the
+project gate is closed.
 
 ### Gate P6 release candidate
 

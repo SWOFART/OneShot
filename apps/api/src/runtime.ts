@@ -9,6 +9,7 @@ import {
 } from './auth.js';
 import { loadApiRuntimeConfig, type ApiRuntimeConfig } from './config.js';
 import { createPrivyAccessTokenAuthenticator, isJwtCredential } from './privy-auth.js';
+import { PostgresRateLimiter } from './rate-limit.js';
 
 export interface ApiRuntime {
   readonly address: string;
@@ -46,6 +47,7 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
     const app = buildApi({
       ledger,
       authenticator: buildApiAuthenticator(config),
+      rateLimiter: new PostgresRateLimiter(pool, config.rateLimit),
       config: {
         submissionsDisabled: config.submissionsDisabled,
         chainId: '5042002',

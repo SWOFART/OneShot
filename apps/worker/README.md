@@ -17,10 +17,13 @@ Atomic at-most-once execution worker for OneShot Business Intents.
 
 ## Architecture and Dispatch
 
-The worker supports dual execution modes:
+The worker exports two scheduling interfaces:
 
-1. **Graphile Worker TaskList (`createTaskList`)**: Exposes standard typed job handlers conforming to Graphile Worker `TaskList` specification for production multi-worker runner pools.
-2. **Transactional Outbox Poller (`drainOutboxJobs`)**: Embedded transactional worker engine using PostgreSQL `FOR UPDATE SKIP LOCKED` for atomic job delivery without external message broker dependencies.
+1. **Graphile Worker TaskList (`createTaskList`)**: Exposes standard typed job handlers conforming to Graphile Worker `TaskList` for host integrations and tests.
+2. **Transactional Outbox Poller (`drainOutboxJobs`)**: The scheduler used by the executable `RestartRunner`, with PostgreSQL `FOR UPDATE SKIP LOCKED` for atomic job delivery without an external message broker.
+
+The production process does not start a Graphile Worker runner; `createTaskList`
+is an integration seam, while `RestartRunner` is the current runtime scheduler.
 
 ## Production process
 

@@ -21,8 +21,8 @@ const sampleRequest = {
 };
 
 describePostgres('Startup recovery and restart safety (A04.1, A04.2)', () => {
-  let container: StartedPostgreSqlContainer;
-  let pool: Pool;
+  let container!: StartedPostgreSqlContainer;
+  let pool!: Pool;
   let attemptCounter = 0;
 
   beforeAll(async () => {
@@ -39,8 +39,8 @@ describePostgres('Startup recovery and restart safety (A04.1, A04.2)', () => {
   });
 
   afterAll(async () => {
-    await pool.end();
-    await container.stop();
+    if (typeof pool !== 'undefined') await pool.end();
+    if (typeof container !== 'undefined') await container.stop();
   });
 
   const newLedger = () =>

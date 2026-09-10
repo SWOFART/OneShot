@@ -27,8 +27,8 @@ const sampleRequest = {
 };
 
 describePostgres('Atomic at-most-once worker (A03)', () => {
-  let container: StartedPostgreSqlContainer;
-  let pool: Pool;
+  let container!: StartedPostgreSqlContainer;
+  let pool!: Pool;
   let attemptCounter = 0;
 
   beforeAll(async () => {
@@ -45,8 +45,8 @@ describePostgres('Atomic at-most-once worker (A03)', () => {
   });
 
   afterAll(async () => {
-    await pool.end();
-    await container.stop();
+    if (typeof pool !== 'undefined') await pool.end();
+    if (typeof container !== 'undefined') await container.stop();
   });
 
   const newLedger = () =>

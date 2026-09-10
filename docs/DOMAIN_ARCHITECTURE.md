@@ -125,7 +125,7 @@ none may reinterpret the state machine.
 | Domain package                     | State transitions, submission ownership, result classification                               | Network calls or UI                                      |
 | PostgreSQL storage                 | Durable uniqueness, versions, attempts, settlement and evidence records                      | Business decisions outside domain commands               |
 | Transactional outbox               | Atomic creation of work with domain state                                                    | Duplicate-payment prevention by itself                   |
-| Graphile Worker                    | Deliver execution and reconciliation jobs                                                    | Authority to pay because a job was redelivered           |
+| RestartRunner / transactional outbox | Deliver execution and reconciliation jobs through PostgreSQL polling and row locks          | Authority to pay because a job was redelivered           |
 | Privy adapter                      | Wallet authorization, policy checks, provider request identity                               | Durable Business Intent authority                        |
 | Arc adapter                        | Transaction construction, submission, receipt and Transfer verification                      | Deciding whether another attempt is allowed              |
 | The Graph Subgraph                 | Indexed transfer discovery, deployment identity, freshness, and health after passing C01     | Proof that an absent payment never happened              |

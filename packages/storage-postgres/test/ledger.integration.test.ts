@@ -17,8 +17,8 @@ const request = {
 };
 
 describePostgres('PostgreSQL intent ledger', () => {
-  let container: StartedPostgreSqlContainer;
-  let pool: Pool;
+  let container!: StartedPostgreSqlContainer;
+  let pool!: Pool;
   let nextAttempt = 0;
 
   beforeAll(async () => {
@@ -28,6 +28,7 @@ describePostgres('PostgreSQL intent ledger', () => {
   });
 
   afterEach(async () => {
+    if (typeof pool === 'undefined') return;
     await pool.query(
       'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, business_intents RESTART IDENTITY',
     );
@@ -35,8 +36,8 @@ describePostgres('PostgreSQL intent ledger', () => {
   });
 
   afterAll(async () => {
-    await pool.end();
-    await container.stop();
+    if (typeof pool !== 'undefined') await pool.end();
+    if (typeof container !== 'undefined') await container.stop();
   });
 
   const newLedger = (targetPool = pool) =>
@@ -49,7 +50,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const versions = await pool.query<{ version: number }>(
       'SELECT version FROM schema_versions ORDER BY version',
     );
-    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4]);
+    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4, 5]);
     expect(await migrationDigest()).toMatch(/^[0-9a-f]{64}$/u);
   });
 
@@ -57,7 +58,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const directory = await mkdtemp(join(tmpdir(), 'oneshot-migration-'));
     try {
       await writeFile(
-        join(directory, '005_broken.sql'),
+        join(directory, '006_broken.sql'),
         'CREATE TABLE must_rollback (id integer); SELECT missing_function();',
         'utf8',
       );
@@ -66,7 +67,7 @@ describePostgres('PostgreSQL intent ledger', () => {
         "SELECT to_regclass('public.must_rollback')::text AS name",
       );
       expect(table.rows[0]?.name).toBeNull();
-      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 5');
+      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 6');
       expect(version.rowCount).toBe(0);
     } finally {
       await rm(directory, { recursive: true, force: true });

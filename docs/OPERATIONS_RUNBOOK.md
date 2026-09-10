@@ -35,16 +35,18 @@ One job. Many retries. One settlement.
 
 ### Environment variables classification
 
-| Variable                       | Classification  | Purpose                             | Default / Requirement  |
-| :----------------------------- | :-------------- | :---------------------------------- | :--------------------- |
-| `DATABASE_URL`                 | Secret / Config | PostgreSQL TCP connection string    | Required for local/CI  |
-| `INSTANCE_CONNECTION_NAME`     | Config          | Google Cloud SQL connection name    | Used on Cloud Run      |
-| `DB_USER` / `DB_PASS`          | Secret          | Cloud SQL credentials               | Required for Cloud SQL |
-| `DB_NAME`                      | Config          | PostgreSQL database name            | Default: `oneshot`     |
-| `SERVICE_BEARER_TOKEN`         | Secret          | Shared bearer token for Fastify API | Required, min 16 chars |
-| `ONESHOT_ARC_PROFILE`          | Public          | Deployment profile identifier       | `arc-testnet`          |
-| `ONESHOT_ARC_RPC_URL`          | Public          | RPC endpoint URL for Arc            | Validated on startup   |
-| `ONESHOT_SUBMISSIONS_DISABLED` | Public          | Safe disable configuration switch   | `false`                |
+| Variable                              | Classification  | Purpose                                           | Default / Requirement  |
+| :------------------------------------ | :-------------- | :------------------------------------------------ | :--------------------- |
+| `DATABASE_URL`                        | Secret / Config | PostgreSQL TCP connection string                  | Required for local/CI  |
+| `INSTANCE_CONNECTION_NAME`            | Config          | Google Cloud SQL connection name                  | Used on Cloud Run      |
+| `DB_USER` / `DB_PASS`                 | Secret          | Cloud SQL credentials                             | Required for Cloud SQL |
+| `DB_NAME`                             | Config          | PostgreSQL database name                          | Default: `oneshot`     |
+| `SERVICE_BEARER_TOKEN`                | Secret          | Shared bearer token for Fastify API               | Required, min 16 chars |
+| `ONESHOT_ARC_PROFILE`                 | Public          | Deployment profile identifier                     | `arc-testnet`          |
+| `ONESHOT_ARC_RPC_URL`                 | Public          | RPC endpoint URL for Arc                          | Validated on startup   |
+| `ONESHOT_SUBMISSIONS_DISABLED`        | Public          | Safe disable configuration switch                 | `false`                |
+| `ONESHOT_API_RATE_LIMIT_MAX_REQUESTS` | Public          | Maximum POST requests per client and route window | `60`                   |
+| `ONESHOT_API_RATE_LIMIT_WINDOW_MS`    | Public          | Shared API rate-limit window in milliseconds      | `60000`                |
 
 Secrets must be provided via Google Secret Manager in Cloud Run or local `.env`
 files. Secrets are **never** logged, checked into version control, or passed to
