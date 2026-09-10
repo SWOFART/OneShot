@@ -61,7 +61,8 @@ visibly marked as order-ambiguous.
   transfer-log proof bound to the intent.
 - **Provider observation**: sanitized Privy status. It is evidence, not final
   authority.
-- **Candidate discovery**: The Graph result retrieved through Subgraph MCP. It
+- **Candidate discovery**: The Graph result retrieved through the configured
+  Studio GraphQL or Subgraph MCP path. It
   can find candidates but cannot authorize settlement.
 - **LLM recommendation**: one of `WAIT`, `RECONCILE`, `ESCALATE`, or
   `RETURN_EXISTING_RESULT`. It remains advisory.

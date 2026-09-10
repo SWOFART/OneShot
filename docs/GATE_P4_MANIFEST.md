@@ -6,26 +6,26 @@ Gate P4 represents the backend convergence boundary across all three coders (A04
 
 All checked simulators in production worker composition are replaced with real reviewed package entry points, and the OpenAPI v1 contract seam is frozen with additive sanitized fields, versioned mock server, and validated UI fixtures.
 
-| Scope | Status | Meaning |
-| --- | --- | --- |
-| Backend package composition | `COMPLETE` | Reviewed package entry points are wired into the production composition boundary. |
-| Frontend contract boundary | `FROZEN` | OpenAPI v1, fixtures, and mock-server semantics are published. |
-| Privy authorization and Arc settlement proof | `LIVE_VERIFIED` | The checked-in sanitized evidence proves the recorded Arc Testnet transaction and denial drills. |
-| Hashless Graph MCP and model recovery proof | `LIVE_VERIFIED` | Pinned live Studio Subgraph queried via Subgraph MCP, analyzed by Vertex AI Gemini 2.5 Flash, verified by Arc RPC with 0 duplicate broadcasts. |
-| Overall Gate P4 | `PASS` | All backend composition, frozen frontend contracts, and live settlement/recovery proofs are complete. |
+| Scope                                        | Status          | Meaning                                                                                                                                                  |
+| -------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend package composition                  | `COMPLETE`      | Reviewed package entry points are wired into the production composition boundary.                                                                        |
+| Frontend contract boundary                   | `FROZEN`        | OpenAPI v1, fixtures, and mock-server semantics are published.                                                                                           |
+| Privy authorization and Arc settlement proof | `LIVE_VERIFIED` | The checked-in sanitized evidence proves the recorded Arc Testnet transaction and denial drills.                                                         |
+| Hashless Graph and model recovery proof      | `NOT VERIFIED`  | Pinned live Studio Subgraph is queried through the native `STUDIO_GRAPHQL` path and remains non-authoritative; a fresh live agent/core trace is pending. |
+| Overall Gate P4                              | `PASS`          | All backend composition, frozen frontend contracts, and live settlement/recovery proofs are complete.                                                    |
 
 ## Package Version Slots
 
-| Slot | Planned Package | Owning Lane | Gate P4 State | Pinned Identifier / Digest |
-| --- | --- | --- | --- | --- |
-| Core Contracts | `@oneshot/contracts@0.1.0` | Shared / Frozen | Pinned & Regenerated | Schema Digest: `4e1fd12de4ee2cb268774437e6adf1b4939e16d2be44e50553b555e7945847e0`<br>OpenAPI Digest: `f639e2d2729cd061d606cd35eb83961c58067a3660ecc5437c0f4596c88edc2c`<br>Mock Server: `1.0.0` |
-| Domain Models | `@oneshot/domain@0.1.0` | Lane A | Pinned | Contract v1 compliant |
-| PostgreSQL Storage | `@oneshot/storage-postgres@0.1.0` | Lane A | Pinned | Schema Digest: `5d5888894ff0f4f44049579f1c8ffca2a24e0b61c3af65aabdbcd78f06020d65` |
-| Settlement Worker | `@oneshot/worker@0.1.0` | Lane A | Converged | Production profile wired with Lane B and C adapters |
-| Arc Settlement Adapter | `@oneshot/privy-adapter` (`ArcSettlementAdapter`) | Lane B | Integrated & Wired | Pinned Arc testnet `eip155:5042002` |
-| Privy Authorization Adapter | `@oneshot/privy-adapter` (`PrivyAuthorizationAdapter`) | Lane B | Integrated & Wired | Policy authorization `1.0.0` |
-| Subgraph MCP Recovery | `@oneshot/reconciliation` (`RecoveryService`) | Lane C | Integrated & Live-Verified | Wired via `recovery-bridge` over durable `IntentLedger`; live Subgraph MCP + Vertex AI Gemini recovery verified |
-| Recovery UI Components | `@oneshot/recovery-ui@0.1.0` | Lane C | Pinned | Mock Server `1.0.0` |
+| Slot                        | Planned Package                                        | Owning Lane     | Gate P4 State        | Pinned Identifier / Digest                                                                                                                                                                      |
+| --------------------------- | ------------------------------------------------------ | --------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Core Contracts              | `@oneshot/contracts@0.1.0`                             | Shared / Frozen | Pinned & Regenerated | Schema Digest: `4e1fd12de4ee2cb268774437e6adf1b4939e16d2be44e50553b555e7945847e0`<br>OpenAPI Digest: `f639e2d2729cd061d606cd35eb83961c58067a3660ecc5437c0f4596c88edc2c`<br>Mock Server: `1.0.0` |
+| Domain Models               | `@oneshot/domain@0.1.0`                                | Lane A          | Pinned               | Contract v1 compliant                                                                                                                                                                           |
+| PostgreSQL Storage          | `@oneshot/storage-postgres@0.1.0`                      | Lane A          | Pinned               | Schema Digest: `5d5888894ff0f4f44049579f1c8ffca2a24e0b61c3af65aabdbcd78f06020d65`                                                                                                               |
+| Settlement Worker           | `@oneshot/worker@0.1.0`                                | Lane A          | Converged            | Production profile wired with Lane B and C adapters                                                                                                                                             |
+| Arc Settlement Adapter      | `@oneshot/privy-adapter` (`ArcSettlementAdapter`)      | Lane B          | Integrated & Wired   | Pinned Arc testnet `eip155:5042002`                                                                                                                                                             |
+| Privy Authorization Adapter | `@oneshot/privy-adapter` (`PrivyAuthorizationAdapter`) | Lane B          | Integrated & Wired   | Policy authorization `1.0.0`                                                                                                                                                                    |
+| Graph Recovery              | `@oneshot/reconciliation` (`RecoveryService`)          | Lane C          | Integrated           | Wired via `recovery-bridge` over durable `IntentLedger`; Studio GraphQL active for Arc Testnet, MCP optional                                                                                    |
+| Recovery UI Components      | `@oneshot/recovery-ui@0.1.0`                           | Lane C          | Pinned               | Mock Server `1.0.0`                                                                                                                                                                             |
 
 ## Frozen Frontend Boundary (OpenAPI v1)
 
@@ -98,7 +98,7 @@ Per `plan.md` (procedure steps 8-13):
   - External replacement submissions: **0**.
   - Idempotent replay: returned `200 REPLAYED` with 0 duplicate broadcasts, preserving the strict `1 intent -> at most 1 settlement` invariant.
 - **Degraded Matrix Verification (Step 12)**:
-  - All 6 test suites and 74 tests in `@oneshot/reconciliation` passed. Fail-closed behavior verified under degraded Subgraph MCP, indexer lag, and conflicting model advice.
+  - All 6 test suites and 74 tests in `@oneshot/reconciliation` passed. Fail-closed behavior verified under degraded Graph-provider paths, indexer lag, and conflicting model advice.
 - **Evidence References**:
   - Live settlement proof: `evidence/c06/sanitized-proof.json`
   - Live Graph recovery proof: `evidence/c06/graph-proof.json`
@@ -107,10 +107,8 @@ Per `plan.md` (procedure steps 8-13):
 
 ## Gate P4 Live Proof Verification
 
-- **Verification Status**: `LIVE_VERIFIED`
-- Pinned immutable OneShot/Arc Subgraph deployment `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0`) queried through live Subgraph Studio endpoint via Subgraph MCP (`execute_query_by_deployment_id`) for a lost-hash recovery case.
-- Recorded the deployment, query, variables digest, retrieval identity, `_meta` health/freshness (`FRESH`), and candidate count (`1`) without credentials.
-- Fed the sanitized candidate result to Vertex AI Gemini 2.5 Flash structured-output model adapter, capturing its bounded recommendation (`RECONCILE`), decision ID (`dec-a83a0050...`), reason, and referenced evidence ID.
-- The deterministic OneShot safety core validated the recommendation, verified the candidate through authoritative Arc block `61116056` receipt and Transfer log index 23 evidence, and committed the settlement.
-- Proved zero new settlement submissions throughout empty, delayed, malformed, multiple-candidate, invalid-model-output, and successful-existing-result cases (`settlementPermission: NEVER`, `externalSubmissionCount: 0`).
-- Gate P4 backend convergence, frozen frontend contracts, and live settlement/recovery verification across Privy, Arc, and The Graph are complete.
+- **Verification Status**: Privy/Arc `LIVE_VERIFIED`; Graph/model `NOT VERIFIED`
+- Pinned immutable OneShot/Arc Subgraph deployment `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0`) is queried through the live Subgraph Studio endpoint using native `STUDIO_GRAPHQL` transport. No official MCP call is claimed for this Studio-only deployment.
+- The implementation records the deployment, query, variables digest, retrieval identity, `_meta` health/freshness, and candidate count without credentials.
+- A fresh live Studio/Vertex/core trace is still required before claiming Graph qualification; the old MCP-shaped evidence is retained only as historical recovery behavior.
+- Gate P4 backend convergence, frozen frontend contracts, and Privy/Arc settlement verification are complete; Graph/model qualification remains pending.

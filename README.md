@@ -57,19 +57,22 @@ flowchart TB
     AuthPort --> PrivyAdapter[packages/privy-adapter]
     SettlementPort --> PrivyAdapter
     EvidencePort --> ArcAdapter[packages/arc-adapter]
-    IndexPort -.-> MCPAdapter[Subgraph MCP adapter]
+    IndexPort -.-> GraphAdapter[Graph recovery adapter]
     AdvisorPort -.-> RecoveryAgent[LLM recovery agent]
 
     PrivyAdapter --> Privy[Privy wallet and policy]
     ArcAdapter --> Arc[Arc USDC and RPC]
-    MCPAdapter -.-> MCP[Subgraph MCP]
-    MCP -.-> GraphIndex[OneShot Arc Subgraph]
+    GraphAdapter -.-> Studio[Subgraph Studio GraphQL]
+    GraphAdapter -.-> MCP[Optional Subgraph MCP]
+    Studio -.-> GraphIndex[OneShot Arc Subgraph]
+    MCP -.-> GraphIndex
 ```
 
 Solid edges are implemented. Dashed runtime edges are bounded production paths:
-the Subgraph MCP boundary must be explicitly admitted and configured, while the
-recovery agent remains advisory. Neither external index evidence nor model advice
-can authorize settlement.
+the active Arc Testnet profile uses authenticated, pinned Subgraph Studio
+GraphQL; Subgraph MCP remains an optional fail-closed adapter for deployments
+served by The Graph Network. The recovery agent remains advisory. Neither
+external index evidence nor model advice can authorize settlement.
 
 ### The state machine
 
@@ -119,7 +122,7 @@ These are enforced in code and tests, not by convention:
 | ------------- | ------------------------------------------------------------------------------------------- |
 | **Privy**     | Corporate wallet, scoped authorization, and spending policy                                 |
 | **Arc**       | USDC settlement rail (Arc Testnet, chain `5042002`)                                         |
-| **The Graph** | Arc USDC Subgraph discovery through admitted MCP; evidence only, never settlement authority |
+| **The Graph** | Arc USDC Subgraph discovery through the admitted Studio GraphQL path (optional MCP for Network-served deployments); evidence only, never settlement authority |
 
 Privy authorizes and constrains the wallet action. It is not the duplicate
 lock: OneShot's durable state is.
@@ -227,13 +230,13 @@ The contract is defined in `packages/contracts/openapi/openapi.v1.json`.
 
 Under active development. **Testnet only.**
 
-| Area                                          | Status                                                                                      |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Durable intent ledger, API, worker            | Implemented                                                                                 |
-| Settlement adapters and error taxonomy        | Implemented; simulator-tested and live-verified on Arc Testnet through Privy                |
-| Recovery evidence and safety core             | Live Graph/Vertex path implemented; deterministic core remains authoritative                |
-| Subgraph MCP discovery and LLM recovery agent | Live Subgraph MCP and Vertex AI path verified; deterministic core remains final             |
-| Operator frontend                             | Gate P5 candidate composes A05/B05/C05 against the frozen API with APG and browser coverage |
+| Area                                   | Status                                                                                         |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Durable intent ledger, API, worker     | Implemented                                                                                    |
+| Settlement adapters and error taxonomy | Implemented; simulator-tested and live-verified on Arc Testnet through Privy                   |
+| Recovery evidence and safety core      | Live Graph/Vertex path implemented; deterministic core remains authoritative                   |
+| Graph discovery and LLM recovery agent | Studio GraphQL path implemented; fresh sponsor trace pending; deterministic core remains final |
+| Operator frontend                      | Gate P5 candidate composes A05/B05/C05 against the frozen API with APG and browser coverage    |
 
 **One live testnet settlement has been executed.** A Privy-controlled execution
 wallet and scoped policy authorized one 1.00 USDC Arc Testnet transfer; live
@@ -242,7 +245,9 @@ drill entered `UNKNOWN` and reconciled to that original settlement without a
 replacement payment. Privy and Arc are `QUALIFIED` for the documented testnet
 claim; see `docs/settlement/LIVE_EVIDENCE.md` and
 `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`. The Graph live
-Subgraph MCP and recovery-agent path is also `QUALIFIED` by the latter report.
+The Graph recovery path is currently `NOT VERIFIED` for sponsor qualification:
+Studio GraphQL is implemented, but a fresh live trace showing its material
+effect on the model and deterministic core is still required.
 
 Arc Mainnet is not configured. Its profile carries no chain ID, RPC, explorer,
 or token value by design, and enabling it requires published official values

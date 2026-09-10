@@ -1,4 +1,4 @@
-# C01 live Subgraph MCP value gate
+# C01 live Graph provider value gate
 
 ## Current decision
 
@@ -7,13 +7,14 @@
 The Arc Testnet USDC Subgraph source is present and a Studio deployment was
 reported on 2026-09-08. However, no canonical immutable deployment identity
 with an active Indexer allocation, approved Gateway/MCP connection, or sanitized
-live model-to-core trace exists in the repository. The production MCP/model
-adapters are therefore not admitted. This is a safe capability fallback, not
+live model-to-core trace exists in the repository. The live sponsor/model
+promotion is therefore not admitted. This is a safe capability fallback, not
 evidence that The Graph failed technically.
 
 Known-identity Privy/Arc recovery remains available. Automatic hashless
-discovery through Subgraph MCP is unavailable, and The Graph qualification is
-`NOT VERIFIED`.
+discovery through the live Studio GraphQL path is available in the
+implementation, but The Graph qualification is `NOT VERIFIED` until a fresh
+model-to-core trace is captured.
 
 B01/B02 define v1 settlement as a direct USDC ERC-20 `transfer`. The live query
 must bind sender, token, recipient, amount, and a bounded block window. It must
@@ -21,10 +22,12 @@ not rely on `memo_id`, because the approved settlement path does not emit one.
 
 ## Promotion protocol
 
-Change the decision to `SELECT_SUBGRAPH_MCP` only when one sanitized trace binds:
+Change the decision to `SELECT_GRAPH_PROVIDER` only when one sanitized trace
+binds (Studio GraphQL is the active Arc path; Subgraph MCP remains optional):
 
 1. immutable deployment ID and `_meta.deployment` manifest CID;
-2. MCP server/version, `execute_query_by_deployment_id`, query digest, variables, call ID, and retrieval time;
+2. Retrieval path and pinned endpoint, plus query digest, variables, call ID
+   when applicable, and retrieval time;
 3. candidate data plus `_meta` indexed block/time, Arc RPC chain head, computed lag, health, and candidate count;
 4. an LLM recommendation that references only evidence/candidate IDs and uses one frozen action;
 5. deterministic-core disposition plus proof of zero new settlement calls;

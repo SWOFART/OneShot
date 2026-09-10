@@ -29,7 +29,8 @@ describe('production worker configuration', () => {
   it('loads all effect and recovery identities without exposing secret defaults', () => {
     const config = loadWorkerRuntimeConfig(environment());
     expect(config.settlement.profile.chainId).toBe(5042002);
-    expect(config.recovery.policy.serverName).toBe('subgraph-mcp');
+    expect(config.recovery.policy.retrieval).toBe('STUDIO_GRAPHQL');
+    expect(config.recovery.policy.queryUrl).toBe('https://api.studio.thegraph.com/query/example');
     expect(config.recovery.graphQueryUrl).toBe('https://api.studio.thegraph.com/query/example');
     expect(config.recovery.vertexModel).toBe('gemini-2.5-flash');
     expect(config.pollIntervalMs).toBe(1000);
@@ -43,7 +44,7 @@ describe('production worker configuration', () => {
   it('fails closed without a configured recovery query source', () => {
     const env = environment();
     delete env.ONESHOT_SUBGRAPH_QUERY_URL;
-    expect(() => loadWorkerRuntimeConfig(env)).toThrow('Recovery requires');
+    expect(() => loadWorkerRuntimeConfig(env)).toThrow('SUBGRAPH_MCP recovery requires');
   });
 
   it('fails closed when the Privy secret is absent', () => {

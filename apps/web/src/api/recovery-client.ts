@@ -53,10 +53,11 @@ function graphSummary(view: RecoveryView): GraphObservationSummary | null {
   if (view.graph_observation) {
     const graph = view.graph_observation;
     return {
-      retrievalPath: 'SUBGRAPH_MCP',
-      serverName: graph.server_name,
-      serverVersion: graph.server_version,
-      toolName: graph.tool_name,
+      retrievalPath: graph.retrieval_path,
+      endpointUrl: graph.endpoint_url,
+      serverName: graph.server_name ?? null,
+      serverVersion: graph.server_version ?? null,
+      toolName: graph.tool_name ?? null,
       deploymentId: graph.deployment_id,
       manifestCid: graph.manifest_cid,
       observedThroughBlock: graph.observed_through_block ?? null,
@@ -92,10 +93,11 @@ function graphSummary(view: RecoveryView): GraphObservationSummary | null {
     ...(observations.length > 1 ? ['MULTIPLE_CANDIDATES'] : []),
   ];
   return {
-    retrievalPath: 'SUBGRAPH_MCP',
-    serverName: 'Identity not exposed by frozen API',
-    serverVersion: 'Not exposed',
-    toolName: 'execute_query_by_deployment_id',
+    retrievalPath: 'UNKNOWN',
+    endpointUrl: 'Identity not exposed by frozen API',
+    serverName: null,
+    serverVersion: null,
+    toolName: null,
     deploymentId: 'Not exposed by frozen API',
     manifestCid: 'Not exposed by frozen API',
     observedThroughBlock: maxBlock(observations),

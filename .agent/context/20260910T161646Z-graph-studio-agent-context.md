@@ -6,9 +6,9 @@
 
 ## User goal
 
-Replace the unavailable Arc Testnet Subgraph MCP path with qualifying direct
-Subgraph Studio queries, pass validated data to the recovery agent, and leave an
-exact implementation plan for the next context window.
+Implement the Graph Studio recovery plan: use truthful direct Studio GraphQL
+transport for Arc Testnet, pass validated data to the recovery agent, preserve
+the deterministic safety boundary, and keep optional MCP metadata truthful.
 
 ## Original prompt/request
 
@@ -44,8 +44,11 @@ and, if so, create a new-branch fix plan before context ends.
 
 ## Files/components touched
 
-- `docs/GRAPH_STUDIO_AGENT_RECOVERY_PLAN.md`: proposed implementation and gate plan.
-- `.agent/context/20260910T161646Z-graph-studio-agent-context.md`: durable handoff.
+- `docs/GRAPH_STUDIO_AGENT_RECOVERY_PLAN.md`: implementation plan and gate plan.
+- `.agent/context/20260910T161646Z-graph-studio-agent-context.md`: durable context.
+- Runtime, reconciliation, API, generated contracts, storage projection, UI,
+  tests, runbooks, and qualification documents listed by the implementation
+  plan were updated on the implementation branch.
 
 ## Commands/checks
 
@@ -71,6 +74,19 @@ and, if so, create a new-branch fix plan before context ends.
 - Persisted recovery view - still stale, showing prior Graph unavailable and
   Vertex HTTP 403; fresh job consumption not yet proven.
 
+## Implementation checks
+
+- `@oneshot/contracts` generated-contract check - PASS.
+- `@oneshot/reconciliation` build - PASS.
+- Reconciliation, API, worker runtime-config, and web recovery tests - PASS
+  after updating the worker test expectation for explicit source selection.
+- Workspace typecheck - PASS.
+- Full repository format/lint/test and demo E2E - PASS; browser acceptance 7/7
+  - PASS; PostgreSQL integration suites ran with all 25 cases skipped because
+  `TEST_POSTGRES` is not enabled; live acceptance remains pending.
+- The branch was merged with current `origin/develop` at
+  `dd79e71be187a86671fd127613732dd99f0e1529` (PR #67) before final validation.
+
 ## External-doc findings
 
 - ETHGlobal qualification says an agent may use Subgraphs, Subgraph MCP, or
@@ -91,20 +107,22 @@ and, if so, create a new-branch fix plan before context ends.
 
 ## Git and PR state
 
-- Branch: `plan/graph-studio-agent-context`
-- Base: `origin/develop` at `c1c720a128f9f76aff1f5e2b715684c24f4c47d4` (incorporates PR #66)
-- Commit: uncommitted plan files
+- Branch: `plan/graph-studio-agent-recovery`
+- Base lineage: remote plan branch includes `develop` at
+  `c1c720a128f9f76aff1f5e2b715684c24f4c47d4` (incorporates PR #66)
+- Commit: uncommitted implementation and documentation changes
 - PR: not created for this plan branch; prerequisite PR #66 is merged
 
 ## Review gates
 
-- Gate A: NOT RUN for this plan branch. PR #66 Gate A passed independently.
-- Gate B: NOT RUN for this plan branch. PR #66 Gate B passed independently.
+- Gate A: NOT RUN for this implementation tree. PR #66 Gate A passed independently.
+- Gate B: NOT RUN for this implementation tree. PR #66 Gate B passed independently.
 
 ## Handoff/next steps
 
-1. Commit this plan on `plan/graph-studio-agent-context` and push to origin.
-2. Create implementation branch (e.g. `feat/graph-studio-agent-recovery`) from merged `develop` (`c1c720a`).
-3. Implement truthful Studio source metadata (`STUDIO_GRAPHQL` vs `SUBGRAPH_MCP`) and bounded agent context.
-4. Run the live acceptance gate with nonce unchanged, then update qualification
-   docs and complete mandatory Gate A/CI/Gate B.
+1. Run the remaining repository checks and inspect the exact candidate tree.
+2. Run Gate A, then commit/push and open a draft PR only when authorized by the
+   implementation workflow.
+3. Require CI and Gate B on the identical head before human review.
+4. Run the live acceptance gate with nonce unchanged before any qualification
+   claim; keep the Graph verdict `NOT VERIFIED` until that trace exists.

@@ -350,6 +350,41 @@ describe('OpenAPI contract endpoints', () => {
     await app.close();
   });
 
+  it('classifies an empty JSON reconcile body as a client error and logs only safe identity', async () => {
+    const errors: Array<Record<string, string>> = [];
+    const app = buildApi({
+      ledger: createMockLedger(),
+      authenticator: staticBearerAuthenticator('test-token'),
+      nextCorrelationId: () => 'correlation-empty-body',
+      onError: (error) => errors.push(error),
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/intents/intent-api-1/reconcile?token=must-not-log',
+      headers: {
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+      },
+      payload: '',
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      code: 'INVALID_REQUEST',
+      correlation_id: 'correlation-empty-body',
+    });
+    expect(errors).toEqual([
+      {
+        correlationId: 'correlation-empty-body',
+        method: 'POST',
+        path: '/v1/intents/intent-api-1/reconcile',
+        code: 'FST_ERR_CTP_EMPTY_JSON_BODY',
+      },
+    ]);
+    await app.close();
+  });
+
   it('GET /health/live and /health/ready reflect status without authentication', async () => {
     let pingHealthy = true;
     const app = buildApi({

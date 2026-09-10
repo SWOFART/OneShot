@@ -177,9 +177,7 @@
       "additionalProperties": false,
       "required": [
         "retrievalPath",
-        "serverName",
-        "serverVersion",
-        "toolName",
+        "endpointUrl",
         "deploymentId",
         "manifestCid",
         "observedThroughBlock",
@@ -193,7 +191,8 @@
         "candidates"
       ],
       "properties": {
-        "retrievalPath": { "const": "SUBGRAPH_MCP" },
+        "retrievalPath": { "enum": ["STUDIO_GRAPHQL", "SUBGRAPH_MCP", "UNKNOWN"] },
+        "endpointUrl": { "type": "string", "minLength": 1, "maxLength": 512 },
         "serverName": { "type": "string", "minLength": 1, "maxLength": 128 },
         "serverVersion": { "type": "string", "minLength": 1, "maxLength": 64 },
         "toolName": { "type": "string", "minLength": 1, "maxLength": 128 },

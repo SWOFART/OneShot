@@ -21,11 +21,11 @@ does not send a transaction, change external chain history, or require secrets.
    shows zero broadcasts and zero settlements.
 3. **Lost response and recovery (1:30–2:30).** Run the lost-response fixture.
    The intent becomes `UNKNOWN`; the recovery view shows the pinned Subgraph
-   MCP candidate and Gemini recommendation. OneShot verifies the matching Arc
+   Studio GraphQL candidate and Gemini recommendation. OneShot verifies the matching Arc
    receipt and commits the existing settlement. Replacement submissions remain
    zero.
 4. **Safety and release posture (2:30–3:00).** Show `settlementPermission:
-   NEVER`, the disabled/fail-closed Arc Mainnet profile, and the safe-disable
+NEVER`, the disabled/fail-closed Arc Mainnet profile, and the safe-disable
    runbook. Explain that Graph data is candidate discovery only; PostgreSQL and
    Arc receipt verification retain financial authority.
 
@@ -34,6 +34,7 @@ does not send a transaction, change external chain history, or require secrets.
 - Arc Testnet + USDC: working testnet evidence; no mainnet transaction is
   claimed.
 - Privy: authorization and spending policy boundary with zero-effect denials.
-- The Graph: live Subgraph MCP + Gemini hashless recovery evidence, with
-  deterministic Arc verification.
+- The Graph: live Subgraph Studio GraphQL + Gemini hashless recovery evidence,
+  with deterministic Arc verification. MCP is optional and not claimed for the
+  Studio-only Arc deployment.
 - Circle Agent Stack: intentionally out of scope and not claimed.

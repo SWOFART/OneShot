@@ -21,7 +21,9 @@ All ports conform to frozen definitions in `@oneshot/contracts`:
 
 3. **Reconciliation / Recovery Port (`RecoveryPort`)**:
    - Contract Version: `c01-simulator-v1`
-   - Discovers candidate settlements via Subgraph MCP queries without granting autonomous settlement permission to AI models.
+   - Discovers candidate settlements through the configured Graph provider
+     (Studio GraphQL for Arc Testnet; optional Subgraph MCP) without granting
+     autonomous settlement permission to AI models.
 
 ## Composition Profiles
 
@@ -36,7 +38,8 @@ All ports conform to frozen definitions in `@oneshot/contracts`:
 
 - **Settlement**: `ArcSettlementAdapter` (`@oneshot/privy-adapter`, owned by Coder B)
 - **Authorization**: `PrivyAuthorizationAdapter` (`@oneshot/privy-adapter`, owned by Coder B)
-- **Reconciliation**: `RecoveryService` with a Subgraph MCP adapter (`@oneshot/reconciliation`, owned by Coder C)
+- **Reconciliation**: `RecoveryService` with the provider-neutral Graph adapter
+  (`@oneshot/reconciliation`, Studio GraphQL active for Arc Testnet; MCP optional)
 
 ## Environment Configuration
 

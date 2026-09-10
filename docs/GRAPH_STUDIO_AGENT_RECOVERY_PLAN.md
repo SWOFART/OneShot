@@ -1,6 +1,7 @@
 # Graph Studio Agent Recovery Plan
 
-Status: proposed fix plan; implementation not started
+Status: implemented on `plan/graph-studio-agent-recovery`; live acceptance and
+release gates remain pending
 
 ## Decision
 
@@ -55,8 +56,8 @@ retry a payment, create an Attempt, or grant settlement permission.
   IAM change.
 - The Cloud Run worker has always-allocated CPU confirmed (`run.googleapis.com/cpu-throttling: false`,
   `minScale: 1`).
-- Direct Studio observations are currently labeled with MCP server/tool fields.
-  That metadata and all sponsor wording must truthfully identify `STUDIO_GRAPHQL`.
+- Direct Studio observations now identify `STUDIO_GRAPHQL` and the pinned
+  endpoint; MCP server/tool fields are emitted only for the optional MCP path.
 
 ## Implementation tasks
 

@@ -74,6 +74,7 @@ function graphFixture(options: ScenarioOptions): GraphObservationSummary | null 
         ];
   return {
     retrievalPath: 'SUBGRAPH_MCP',
+    endpointUrl: 'https://mcp.example.invalid',
     serverName: 'graph-mcp',
     serverVersion: '1.4.0',
     toolName: 'execute_query_by_deployment_id',

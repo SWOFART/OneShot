@@ -25,8 +25,8 @@ exist.
   links the public repository and evidence.
 - Use [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) for the judge-facing walkthrough;
   no recorded video artifact is included in this candidate.
-- Do not include a The Graph qualification claim unless its live MCP and model
-  evidence is complete.
+- Do not include a The Graph qualification claim unless fresh live Studio
+  GraphQL and model evidence is complete.
 
 The repository contains demo runbooks, evidence, and a repeatable offline demo;
 the recorded submission artifact remains intentionally absent.
@@ -59,16 +59,16 @@ does not serve this Arc deployment.
 - Direct Studio GraphQL returns `_meta` health and real transfer candidates.
 - Vertex AI Gemini 2.5 Flash advised `RECONCILE` referencing candidate transaction `0x72ab1e93...`.
 - Deterministic OneShot safety core validated Arc receipt in block `61116056` (log index 23) and committed the settlement with 0 duplicate broadcasts.
-- Existing evidence remains useful for recovery behavior, but official Subgraph
-  MCP qualification is `NOT VERIFIED` until a genuine MCP tool call can query
-  this Arc deployment.
+- Existing evidence remains useful for recovery behavior, but The Graph
+  qualification is `NOT VERIFIED` until a fresh Studio trace shows the data
+  materially affecting the model decision and deterministic disposition.
 
 ### Gate P4 integrated proof
 
 All backend composition pieces and the live Privy/Arc allowed, denied, and
 lost-response drills are complete. Studio candidate discovery plus Vertex AI
-and deterministic Arc verification are implemented; official MCP qualification
-is tracked separately and does not authorize settlement. Gate P4 remains PASS.
+and deterministic Arc verification are implemented; sponsor qualification is
+tracked separately and does not authorize settlement. Gate P4 remains PASS.
 
 ## In Progress
 

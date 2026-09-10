@@ -105,9 +105,11 @@ export interface RecoveryCandidateView {
 }
 
 export interface RecoveryGraphObservationView {
-  readonly server_name: string;
-  readonly server_version: string;
-  readonly tool_name: string;
+  readonly retrieval_path: 'STUDIO_GRAPHQL' | 'SUBGRAPH_MCP' | 'UNKNOWN';
+  readonly endpoint_url: string;
+  readonly server_name?: string;
+  readonly server_version?: string;
+  readonly tool_name?: string;
   readonly deployment_id: string;
   readonly manifest_cid: string;
   readonly observed_through_block?: string;

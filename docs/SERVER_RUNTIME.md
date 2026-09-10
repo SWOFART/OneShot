@@ -49,5 +49,5 @@ domain.
 ## Frontend gate
 
 This server does not unlock A05, B05, or C05. Those milestones remain blocked until
-Gate P4 composes the reviewed Arc, Privy, and Subgraph MCP packages, revalidates the
+Gate P4 composes the reviewed Arc, Privy, and Graph recovery packages, revalidates the
 OpenAPI and recovery semantics, and publishes the frozen mock server.

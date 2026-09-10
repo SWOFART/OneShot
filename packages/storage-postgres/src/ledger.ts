@@ -154,7 +154,7 @@ function persistedRecovery(payload: unknown): {
   const graphRecord = records.find(
     (record) => record['recordType'] === 'OBSERVATION' && record['source'] === 'THE_GRAPH',
   );
-  const mcp = object(graphRecord?.['provenance']);
+  const graph = object(graphRecord?.['provenance']);
   const candidates = Array.isArray(view['indexedCandidates'])
     ? view['indexedCandidates'].flatMap((value) => {
         const candidate = object(value);
@@ -191,11 +191,18 @@ function persistedRecovery(payload: unknown): {
     view['indexHealth'] === 'UNKNOWN_FRESHNESS'
       ? view['indexHealth']
       : null;
-  const serverName = text(mcp?.['serverName'], 128);
-  const serverVersion = text(mcp?.['serverVersion'], 128);
-  const toolName = text(mcp?.['toolName'], 128);
-  const deploymentId = text(mcp?.['deploymentId'], 128);
-  const manifestCid = text(mcp?.['manifestCid'], 128);
+  const serverName = text(graph?.['serverName'], 128);
+  const serverVersion = text(graph?.['serverVersion'], 128);
+  const toolName = text(graph?.['toolName'], 128);
+  const deploymentId = text(graph?.['deploymentId'], 128);
+  const manifestCid = text(graph?.['manifestCid'], 128);
+  const endpointUrl = text(graph?.['endpointUrl'], 512) ?? 'not-exposed-by-legacy-record';
+  const retrievalPath =
+    graph?.['retrieval'] === 'STUDIO_GRAPHQL' || graph?.['retrieval'] === 'SUBGRAPH_MCP'
+      ? graph['retrieval']
+      : graph?.['kind'] === 'MCP'
+        ? 'SUBGRAPH_MCP'
+        : 'UNKNOWN';
   const observedThroughBlock = text(graphRecord?.['blockNumber'], 78);
   const observedThroughTime = text(graphRecord?.['retrievedAt'], 128);
 
@@ -236,12 +243,14 @@ function persistedRecovery(payload: unknown): {
           },
         }
       : {}),
-    ...(health && serverName && serverVersion && toolName && deploymentId && manifestCid
+    ...(health && deploymentId && manifestCid
       ? {
           graph_observation: {
-            server_name: serverName,
-            server_version: serverVersion,
-            tool_name: toolName,
+            retrieval_path: retrievalPath,
+            endpoint_url: endpointUrl,
+            ...(serverName ? { server_name: serverName } : {}),
+            ...(serverVersion ? { server_version: serverVersion } : {}),
+            ...(toolName ? { tool_name: toolName } : {}),
             deployment_id: deploymentId,
             manifest_cid: manifestCid,
             ...(observedThroughBlock ? { observed_through_block: observedThroughBlock } : {}),
