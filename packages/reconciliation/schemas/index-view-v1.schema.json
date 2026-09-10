@@ -9,7 +9,7 @@
     "source",
     "binding",
     "correlation",
-    "mcp",
+    "graph",
     "observedThrough",
     "chainHead",
     "lagBlocks",
@@ -25,30 +25,34 @@
   "properties": {
     "schemaVersion": { "const": "index-view-v1" },
     "source": {
-      "const": {
-        "provider": "THE_GRAPH",
-        "retrieval": "SUBGRAPH_MCP",
-        "authority": "NON_AUTHORITATIVE_CANDIDATE_DISCOVERY"
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "retrieval", "authority"],
+      "properties": {
+        "provider": { "const": "THE_GRAPH" },
+        "retrieval": { "enum": ["STUDIO_GRAPHQL", "SUBGRAPH_MCP"] },
+        "authority": { "const": "NON_AUTHORITATIVE_CANDIDATE_DISCOVERY" }
       }
     },
     "binding": { "$ref": "#/$defs/binding" },
     "correlation": { "$ref": "#/$defs/correlation" },
-    "mcp": {
+    "graph": {
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "retrieval",
         "callId",
-        "serverName",
-        "serverVersion",
-        "toolName",
+        "endpointUrl",
         "deploymentId",
         "manifestCid",
         "queryName",
         "queryDigest"
       ],
       "properties": {
+        "retrieval": { "enum": ["STUDIO_GRAPHQL", "SUBGRAPH_MCP"] },
         "callId": { "$ref": "#/$defs/id" },
-        "serverName": { "const": "subgraph-mcp" },
+        "endpointUrl": { "type": "string", "maxLength": 512 },
+        "serverName": { "type": "string", "maxLength": 128 },
         "serverVersion": { "type": "string", "maxLength": 32 },
         "toolName": { "const": "execute_query_by_deployment_id" },
         "deploymentId": { "$ref": "#/$defs/hash" },

@@ -21,15 +21,17 @@ signatures, credentials, model chain of thought, and private wallet data are for
 - [ ] Sender, recipient, and integer amount match the Business Intent.
 - [ ] Settlement identity survives restart and downstream failure.
 
-## The Graph through Subgraph MCP
+## The Graph through Studio GraphQL
 
 - [ ] Reviewed immutable deployment ID and manifest CID.
-- [ ] MCP server/version and tool `execute_query_by_deployment_id`.
+- [ ] Pinned Studio endpoint and API-key authentication are configured outside
+      the evidence bundle; MCP server/version/tool fields are recorded only when
+      the optional MCP transport is actually used.
 - [ ] Frozen query digest and sanitized variables binding sender, token,
       recipient, amount, and bounded block window.
 - [ ] Call ID/retrieval time plus `_meta.deployment`, indexed block/hash/time,
       indexing-error state, independent Arc head, lag, health, and candidate count.
-- [ ] Hashless candidate discovery materially depends on this live MCP result.
+- [ ] Hashless candidate discovery materially depends on this live Studio GraphQL result.
 
 ## Model, core, and degradation
 

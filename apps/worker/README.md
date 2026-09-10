@@ -25,15 +25,18 @@ The worker supports dual execution modes:
 ## Production process
 
 Build the workspace and run `pnpm --filter @oneshot/worker start`, or build
-`Dockerfile.worker`. The process validates all Privy, Arc, Subgraph MCP, Vertex,
+`Dockerfile.worker`. The process validates all Privy, Arc, Graph, Vertex,
 and database configuration before accepting work. It performs startup recovery,
 immediately drains durable outbox work, continues polling without overlapping
 cycles, and waits for an in-flight cycle during SIGTERM/SIGINT shutdown.
 
-Set `ONESHOT_SUBGRAPH_MCP_ENDPOINT` only when a remote MCP server is deployed;
-otherwise the recovery client uses `ONESHOT_SUBGRAPH_QUERY_URL` for a Studio
-deployment. One of these endpoints is required. Direct Studio GraphQL restores
-read-only recovery for Arc but is not evidence of an official MCP call.
+Set `ONESHOT_SUBGRAPH_SOURCE=STUDIO_GRAPHQL` and
+`ONESHOT_SUBGRAPH_QUERY_URL` for the active Arc Testnet profile. The URL is
+authenticated with `ONESHOT_GRAPH_API_KEY` from Secret Manager and is recorded
+only as a pinned source identity; the key never enters evidence or Vertex
+context. Set `ONESHOT_SUBGRAPH_SOURCE=SUBGRAPH_MCP` and the MCP endpoint only for
+a deployment served by The Graph Network. The adapter validates both
+paths fail-closed and never grants settlement permission.
 
 The HTTP listener exposes `GET /health/live` and `GET /health/ready`. Readiness
 requires a reachable database, compatible adapter identities, and a running

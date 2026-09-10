@@ -3,6 +3,7 @@ import {
   MCP_TOOL_NAME,
   type IndexLookupOutcome,
   type IndexLookupRequest,
+  type GraphRetrieval,
   type SubgraphMcpPolicy,
   type SubgraphMcpTrace,
 } from './types.js';
@@ -33,7 +34,18 @@ export class LiveSubgraphMcpRecoveryPort implements SubgraphMcpRecoveryPort {
     request: IndexLookupRequest,
     policy: SubgraphMcpPolicy,
   ): Promise<IndexLookupOutcome> {
-    const toolArgs = buildMcpToolArguments(request, policy);
+    const retrieval: GraphRetrieval = this.options.graphQueryUrl
+      ? 'STUDIO_GRAPHQL'
+      : (policy.retrieval ?? 'SUBGRAPH_MCP');
+    const effectivePolicy =
+      retrieval === 'STUDIO_GRAPHQL'
+        ? {
+            ...policy,
+            retrieval,
+            queryUrl: policy.queryUrl ?? this.options.graphQueryUrl,
+          }
+        : { ...policy, retrieval };
+    const toolArgs = buildMcpToolArguments(request, effectivePolicy);
     const retrievedAt = this.now();
 
     let chainHead: { blockNumber: string; observedAt: string } | null = null;
@@ -47,7 +59,7 @@ export class LiveSubgraphMcpRecoveryPort implements SubgraphMcpRecoveryPort {
 
     let rawResult: unknown;
 
-    if (this.options.mcpEndpoint) {
+    if (retrieval === 'SUBGRAPH_MCP' && this.options.mcpEndpoint) {
       // 1. Query via MCP JSON-RPC protocol
       const callId = `mcp-${this.now()}`;
       const rpcPayload = {
@@ -85,14 +97,10 @@ export class LiveSubgraphMcpRecoveryPort implements SubgraphMcpRecoveryPort {
       }
 
       rawResult = rpcResponse.result;
-    } else {
-      // 2. Query Gateway deployment or Studio endpoint directly, formatted as MCP result payload
-      const gatewayBase =
-        this.options.graphGatewayBaseUrl ?? 'https://gateway-arbitrum.network.thegraph.com/api';
-      const apiKeyPart = this.options.graphApiKey ? `/${this.options.graphApiKey}` : '';
-      const endpoint =
-        this.options.graphQueryUrl ??
-        `${gatewayBase}${apiKeyPart}/deployments/id/${policy.deploymentId}`;
+    } else if (retrieval === 'STUDIO_GRAPHQL' && this.options.graphQueryUrl) {
+      // Direct Studio GraphQL is intentionally kept as a native response. It
+      // must not be wrapped in an MCP envelope or reported as an MCP call.
+      const endpoint = this.options.graphQueryUrl;
 
       const queryBody = {
         query: toolArgs.query,
@@ -103,65 +111,60 @@ export class LiveSubgraphMcpRecoveryPort implements SubgraphMcpRecoveryPort {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(this.options.graphApiKey
+            ? { Authorization: `Bearer ${this.options.graphApiKey}` }
+            : {}),
         },
         body: JSON.stringify(queryBody),
       });
 
       if (!res.ok) {
-        throw new Error(`The Graph Gateway returned HTTP ${res.status}`);
+        throw new Error(`The Graph provider returned HTTP ${res.status}`);
       }
 
-      const gatewayResponse = (await res.json()) as {
-        data?: Record<string, unknown>;
-        errors?: unknown;
-      };
-
-      let normalizedPayload = gatewayResponse;
-      if (gatewayResponse.data && gatewayResponse.data._meta) {
-        const metaObj = (gatewayResponse.data._meta ?? {}) as Record<string, unknown>;
-        const blockObj = (metaObj.block ?? {}) as Record<string, unknown>;
-        const adaptedMeta = {
-          ...metaObj,
-          block: {
-            ...blockObj,
-            timestamp:
-              blockObj.timestamp !== null && blockObj.timestamp !== undefined
-                ? String(blockObj.timestamp)
-                : null,
-          },
-        };
-
-        normalizedPayload = {
-          ...gatewayResponse,
-          data: {
-            ...gatewayResponse.data,
-            _meta: adaptedMeta,
-          },
-        };
-      }
-
+      rawResult = await res.json();
+    } else if (retrieval === 'SUBGRAPH_MCP') {
+      const gatewayBase =
+        this.options.graphGatewayBaseUrl ?? 'https://gateway-arbitrum.network.thegraph.com/api';
+      const apiKeyPart = this.options.graphApiKey ? `/${this.options.graphApiKey}` : '';
+      const endpoint =
+        this.options.graphQueryUrl ??
+        `${gatewayBase}${apiKeyPart}/deployments/id/${effectivePolicy.deploymentId}`;
+      const queryBody = { query: toolArgs.query, variables: toolArgs.variables };
+      const res = await this.fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queryBody),
+      });
+      if (!res.ok) throw new Error(`The Graph Gateway returned HTTP ${res.status}`);
       rawResult = {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(normalizedPayload),
-          },
-        ],
+        content: [{ type: 'text', text: JSON.stringify(await res.json()) }],
         isError: false,
       };
+    } else {
+      throw new Error('Graph recovery transport is not configured for the selected source');
     }
 
     const trace: SubgraphMcpTrace = {
+      retrieval,
+      endpointUrl:
+        retrieval === 'STUDIO_GRAPHQL'
+          ? this.options.graphQueryUrl
+          : (this.options.mcpEndpoint ?? 'unavailable'),
       callId: `call-${retrievedAt}`,
-      serverName: policy.serverName,
-      serverVersion: policy.serverVersion,
-      toolName: MCP_TOOL_NAME,
+      ...(retrieval === 'SUBGRAPH_MCP'
+        ? {
+            serverName: effectivePolicy.serverName,
+            serverVersion: effectivePolicy.serverVersion,
+            toolName: MCP_TOOL_NAME,
+          }
+        : {}),
       arguments: toolArgs,
       result: rawResult,
       retrievedAt,
       chainHead,
     };
 
-    return normalizeSubgraphMcpTrace(request, policy, trace);
+    return normalizeSubgraphMcpTrace(request, effectivePolicy, trace);
   }
 }

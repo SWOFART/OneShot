@@ -10,16 +10,16 @@ ledger transition or grant settlement permission.
 
 ## Key Metrics
 
-| Metric Name | Type | Description |
-| --- | --- | --- |
-| `oneshot_intents_total` | Gauge | Number of Business Intents categorized by state (`AUTHORIZING`, `READY`, `SUBMITTING`, `COMMITTED`, `FAILED_SAFE`, `UNKNOWN`) |
-| `oneshot_unknown_count` | Gauge | Current count of intents in `UNKNOWN` state |
-| `oneshot_oldest_unknown_age_ms` | Gauge | Age in milliseconds of the oldest un-reconciled intent in `UNKNOWN` state |
-| `oneshot_cas_conflicts_total` | Counter | Total count of atomic CAS claim collisions |
-| `oneshot_outbox_queue_lag_ms` | Gauge | Maximum latency in milliseconds between `available_at` and current execution |
-| `oneshot_duplicate_requests_total` | Counter | Total count of duplicate replay requests received and durably recorded |
-| `oneshot_policy_denials_total` | Counter | Total count of intents rejected by authorization policy |
-| `oneshot_provider_errors_total` | Counter | Total count of ambiguous external submission failures durably recorded |
+| Metric Name                        | Type    | Description                                                                                                                   |
+| ---------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `oneshot_intents_total`            | Gauge   | Number of Business Intents categorized by state (`AUTHORIZING`, `READY`, `SUBMITTING`, `COMMITTED`, `FAILED_SAFE`, `UNKNOWN`) |
+| `oneshot_unknown_count`            | Gauge   | Current count of intents in `UNKNOWN` state                                                                                   |
+| `oneshot_oldest_unknown_age_ms`    | Gauge   | Age in milliseconds of the oldest un-reconciled intent in `UNKNOWN` state                                                     |
+| `oneshot_cas_conflicts_total`      | Counter | Total count of atomic CAS claim collisions                                                                                    |
+| `oneshot_outbox_queue_lag_ms`      | Gauge   | Maximum latency in milliseconds between `available_at` and current execution                                                  |
+| `oneshot_duplicate_requests_total` | Counter | Total count of duplicate replay requests received and durably recorded                                                        |
+| `oneshot_policy_denials_total`     | Counter | Total count of intents rejected by authorization policy                                                                       |
+| `oneshot_provider_errors_total`    | Counter | Total count of ambiguous external submission failures durably recorded                                                        |
 
 ## Alert Definitions
 
@@ -33,7 +33,9 @@ ledger transition or grant settlement permission.
 
 - **Condition**: `oneshot_oldest_unknown_age_ms > 300000` (5 minutes)
 - **Severity**: High
-- **Action**: Check Subgraph MCP recovery engine and indexer status. Intents must not linger in `UNKNOWN` indefinitely.
+- **Action**: Check the configured Graph recovery source (Studio GraphQL for
+  Arc Testnet, or the optional MCP/indexer path). Intents must not linger in
+  `UNKNOWN` indefinitely.
 
 ### 3. Elevated Outbox Queue Lag (`HIGH_QUEUE_LAG`)
 

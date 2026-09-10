@@ -81,7 +81,13 @@ function EvidenceCard({ evidence }: { readonly evidence: EvidenceSummary }) {
 }
 
 function observationCopy(graph: GraphObservationSummary): string {
-  if (!graph.available || graph.health === 'UNAVAILABLE') return 'Subgraph MCP unavailable.';
+  const sourceLabel =
+    graph.retrievalPath === 'STUDIO_GRAPHQL'
+      ? 'Subgraph Studio GraphQL'
+      : graph.retrievalPath === 'SUBGRAPH_MCP'
+        ? 'Subgraph MCP'
+        : 'The Graph provider';
+  if (!graph.available || graph.health === 'UNAVAILABLE') return `${sourceLabel} unavailable.`;
   if (graph.diagnostics.includes('MULTIPLE_CANDIDATES')) {
     return 'Multiple candidate observations require review. No candidate authorizes settlement.';
   }
@@ -96,12 +102,18 @@ function observationCopy(graph: GraphObservationSummary): string {
 }
 
 function GraphPanel({ graph }: { readonly graph: GraphObservationSummary }) {
+  const sourceLabel =
+    graph.retrievalPath === 'STUDIO_GRAPHQL'
+      ? 'Subgraph Studio GraphQL'
+      : graph.retrievalPath === 'SUBGRAPH_MCP'
+        ? 'Subgraph MCP'
+        : 'The Graph provider';
   return (
     <section className="panel graph-panel" aria-labelledby="graph-heading">
       <div className="section-heading">
         <div>
           <p className="eyebrow">Non-authoritative candidate discovery</p>
-          <h2 id="graph-heading">Subgraph MCP</h2>
+          <h2 id="graph-heading">{sourceLabel}</h2>
         </div>
         <span className={`health health-${graph.health.toLowerCase()}`}>{graph.health}</span>
       </div>
@@ -111,15 +123,23 @@ function GraphPanel({ graph }: { readonly graph: GraphObservationSummary }) {
           <dt>Retrieval path</dt>
           <dd>{graph.retrievalPath}</dd>
         </div>
+        {graph.toolName !== null && (
+          <div>
+            <dt>Tool</dt>
+            <dd>{graph.toolName}</dd>
+          </div>
+        )}
+        {graph.serverName !== null && (
+          <div>
+            <dt>Server</dt>
+            <dd>
+              {graph.serverName} {graph.serverVersion ? `· ${graph.serverVersion}` : ''}
+            </dd>
+          </div>
+        )}
         <div>
-          <dt>Tool</dt>
-          <dd>{graph.toolName}</dd>
-        </div>
-        <div>
-          <dt>Server</dt>
-          <dd>
-            {graph.serverName} · {graph.serverVersion}
-          </dd>
+          <dt>Endpoint</dt>
+          <dd>{graph.endpointUrl}</dd>
         </div>
         <div>
           <dt>Deployment</dt>
@@ -137,7 +157,7 @@ function GraphPanel({ graph }: { readonly graph: GraphObservationSummary }) {
         </div>
       </dl>
       {graph.diagnostics.length > 0 && (
-        <ul className="diagnostic-list" aria-label="Subgraph MCP diagnostics">
+        <ul className="diagnostic-list" aria-label={`${sourceLabel} diagnostics`}>
           {graph.diagnostics.map((diagnostic) => (
             <li key={diagnostic}>{diagnostic}</li>
           ))}

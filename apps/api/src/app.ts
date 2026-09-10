@@ -17,6 +17,13 @@ export interface ServiceConfig {
   readonly contractVersion?: string;
 }
 
+export interface SanitizedApiError {
+  readonly correlationId: string;
+  readonly method: string;
+  readonly path: string;
+  readonly code: string;
+}
+
 export interface ApiDependencies {
   readonly ledger: Pick<
     IntentLedger,
@@ -33,6 +40,7 @@ export interface ApiDependencies {
   readonly bodyLimitBytes?: number;
   readonly config?: ServiceConfig;
   readonly readinessCheck?: () => Promise<{ ready: boolean; reason?: string }>;
+  readonly onError?: (error: SanitizedApiError) => void;
 }
 
 const createIntentBodySchema = {
@@ -65,6 +73,11 @@ export function buildApi(dependencies: ApiDependencies) {
   const correlations = new WeakMap<FastifyRequest, string>();
   const nextCorrelationId = dependencies.nextCorrelationId ?? randomUUID;
   const rateLimiter = dependencies.rateLimiter ?? allowAllRateLimiter;
+  const onError =
+    dependencies.onError ??
+    ((error: SanitizedApiError) => {
+      process.stderr.write(`${JSON.stringify({ event: 'api_error', ...error })}\n`);
+    });
 
   const correlationFor = (request: FastifyRequest): string => {
     const existing = correlations.get(request);
@@ -259,10 +272,21 @@ export function buildApi(dependencies: ApiDependencies) {
   app.setErrorHandler((error, request, reply) => {
     const correlationId = correlationFor(request);
     const fastifyError = error as { readonly code?: string; readonly validation?: unknown };
+    const errorCode =
+      fastifyError.code ??
+      (error instanceof ContractValidationError ? 'CONTRACT_VALIDATION' : 'INTERNAL_ERROR');
+    const path = request.url.split('?')[0]?.slice(0, 256) ?? '/';
+    onError({
+      correlationId,
+      method: request.method,
+      path,
+      code: errorCode,
+    });
     if (
       error instanceof ContractValidationError ||
       fastifyError.validation ||
-      fastifyError.code === 'FST_ERR_CTP_BODY_TOO_LARGE'
+      fastifyError.code === 'FST_ERR_CTP_BODY_TOO_LARGE' ||
+      fastifyError.code === 'FST_ERR_CTP_EMPTY_JSON_BODY'
     ) {
       sendError(reply, 400, 'INVALID_REQUEST', 'Request failed validation', correlationId);
       return;

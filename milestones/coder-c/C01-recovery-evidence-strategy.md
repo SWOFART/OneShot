@@ -27,7 +27,7 @@ removes the Graph claim and selects the direct-recovery fallback.
 - Compare The Graph with no-index, direct Arc event search, and enhanced RPC by
   lost-hash discovery, freshness, testnet/mainnet support,
   operational dependency, reuse, and sponsor leverage.
-- Retain The Graph only if removing the live Subgraph MCP path breaks automatic
+- Retain The Graph only if removing the live Graph-provider path breaks automatic
   hashless recovery or a named LLM recovery-agent decision instead of merely
   removing a dashboard query.
 
@@ -51,7 +51,8 @@ removes the Graph claim and selects the direct-recovery fallback.
 
 ### C01.5 — Live MCP and AI-value spike
 
-- Query the intended live deployment through Subgraph MCP, not a direct
+- Query the intended live deployment through the approved Graph-provider path,
+  not an unpinned direct
   application GraphQL client, and capture a sanitized tool trace.
 - Feed the live candidate/freshness result to an LLM Recovery Agent and prove it
   materially affects candidate selection or explanation.

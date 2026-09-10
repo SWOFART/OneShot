@@ -18,7 +18,8 @@ function createSampleAgentInput() {
     binding: evidence.binding,
     source: {
       authority: 'NON_AUTHORITATIVE_CANDIDATE_DISCOVERY' as const,
-      system: 'THE_GRAPH' as const,
+      provider: 'THE_GRAPH' as const,
+      retrieval: 'STUDIO_GRAPHQL' as const,
     },
     retrievedAt: '2026-09-08T22:00:00.000Z',
     observedThrough: {
@@ -47,12 +48,11 @@ function createSampleAgentInput() {
         memoId: null,
       },
     ],
-    mcp: {
-      serverName: 'subgraph-mcp',
-      serverVersion: '1.0.0',
+    graph: {
+      retrieval: 'STUDIO_GRAPHQL' as const,
+      endpointUrl: 'https://api.studio.thegraph.com/query/example',
       deploymentId: '0x' + 'd'.repeat(64),
       manifestCid: 'Qm' + 'a'.repeat(44),
-      toolName: 'execute_query_by_deployment_id',
       queryName: 'OneShotRecoveryCandidatesV1',
       queryDigest: 'dig-1',
     },
@@ -112,6 +112,13 @@ describe('VertexAiRecoveryAdvisor', () => {
     expect(url).toContain('europe-west1-aiplatform.googleapis.com');
     expect(url).toContain('gemini-2.5-flash:generateContent');
     expect(requestInit.headers.Authorization).toBe('Bearer mock-bearer-token');
+    const requestBody = JSON.parse(requestInit.body as string) as {
+      contents: Array<{ parts: Array<{ text: string }> }>;
+    };
+    const promptContext = requestBody.contents[0]?.parts[0]?.text ?? '';
+    expect(promptContext).toContain('STUDIO_GRAPHQL');
+    expect(promptContext).toContain('https://api.studio.thegraph.com/query/example');
+    expect(promptContext).not.toContain('mock-bearer-token');
 
     expect(outcome.accepted).toBe(true);
     expect(outcome.issues).toEqual([]);

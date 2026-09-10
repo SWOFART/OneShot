@@ -10,6 +10,7 @@ import {
   type EvidenceAuthorityClass,
   type EvidenceBinding,
   type EvidenceSource,
+  type GraphRetrieval,
   type IndexLookupOutcome,
   type IndexLookupRequest,
   type IndexView,
@@ -101,6 +102,18 @@ export type RecoveryRecordProvenance =
       readonly kind: 'SOURCE';
       readonly source: Exclude<EvidenceSource, 'LLM' | 'THE_GRAPH'>;
       readonly sourceVersion: string;
+    }
+  | {
+      readonly kind: 'GRAPH';
+      readonly retrieval: GraphRetrieval;
+      readonly endpointUrl: string;
+      readonly deploymentId: string;
+      readonly manifestCid: string;
+      readonly queryName: string;
+      readonly queryDigest: string;
+      readonly serverName?: string | undefined;
+      readonly serverVersion?: string | undefined;
+      readonly toolName?: string | undefined;
     }
   | {
       readonly kind: 'MCP';
@@ -257,7 +270,7 @@ function held(...issues: RecoveryServiceIssueCode[]): RecoveryServiceResult {
 
 function sourceProvenance(record: BoundEvidenceRecord): RecoveryRecordProvenance {
   if (record.source === 'THE_GRAPH') {
-    throw new Error('The Graph records require explicit MCP provenance');
+    throw new Error('The Graph records require explicit provider provenance');
   }
   if (record.source === 'LLM') {
     throw new Error('LLM records require explicit model provenance');
@@ -310,10 +323,12 @@ function observationFromBoundRecord(
 }
 
 function graphObservation(businessIntentId: string, view: IndexView): RecoveryObservationRecord {
+  const retrievalLabel =
+    view.source.retrieval === 'STUDIO_GRAPHQL' ? 'Studio GraphQL' : 'Subgraph MCP';
   const reason = sanitizeText(
     view.diagnostics.length === 0
-      ? `Subgraph MCP observation accepted with ${view.candidateCount} candidate(s)`
-      : `Subgraph MCP diagnostics: ${view.diagnostics.join(', ')}`,
+      ? `${retrievalLabel} observation accepted with ${view.candidateCount} candidate(s)`
+      : `${retrievalLabel} diagnostics: ${view.diagnostics.join(', ')}`,
   );
   const evidenceReferences = view.candidates.map((candidate) => `thegraph:${candidate.id}`);
   const safe = {
@@ -324,7 +339,7 @@ function graphObservation(businessIntentId: string, view: IndexView): RecoveryOb
     blockNumber: view.observedThrough?.blockNumber ?? null,
     reason,
     evidenceReferences,
-    mcp: view.mcp,
+    graph: view.graph,
   };
   return {
     schemaVersion: RECOVERY_RECORD_VERSION,
@@ -339,16 +354,30 @@ function graphObservation(businessIntentId: string, view: IndexView): RecoveryOb
     reason,
     evidenceReferences,
     digest: stableDigest(safe),
-    provenance: {
-      kind: 'MCP',
-      serverName: view.mcp.serverName,
-      serverVersion: view.mcp.serverVersion,
-      deploymentId: view.mcp.deploymentId,
-      manifestCid: view.mcp.manifestCid,
-      toolName: view.mcp.toolName,
-      queryName: view.mcp.queryName,
-      queryDigest: view.mcp.queryDigest,
-    },
+    provenance:
+      view.graph.retrieval === 'SUBGRAPH_MCP'
+        ? {
+            kind: 'MCP',
+            serverName: view.graph.serverName ?? 'subgraph-mcp',
+            serverVersion: view.graph.serverVersion ?? 'unknown',
+            deploymentId: view.graph.deploymentId,
+            manifestCid: view.graph.manifestCid,
+            toolName: view.graph.toolName ?? 'execute_query_by_deployment_id',
+            queryName: view.graph.queryName,
+            queryDigest: view.graph.queryDigest,
+          }
+        : {
+            kind: 'GRAPH',
+            retrieval: view.graph.retrieval,
+            endpointUrl: view.graph.endpointUrl,
+            ...(view.graph.serverName ? { serverName: view.graph.serverName } : {}),
+            ...(view.graph.serverVersion ? { serverVersion: view.graph.serverVersion } : {}),
+            ...(view.graph.toolName ? { toolName: view.graph.toolName } : {}),
+            deploymentId: view.graph.deploymentId,
+            manifestCid: view.graph.manifestCid,
+            queryName: view.graph.queryName,
+            queryDigest: view.graph.queryDigest,
+          },
   };
 }
 

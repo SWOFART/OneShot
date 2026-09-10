@@ -234,9 +234,8 @@ const schemas = {
     type: 'object',
     additionalProperties: false,
     required: [
-      'server_name',
-      'server_version',
-      'tool_name',
+      'retrieval_path',
+      'endpoint_url',
       'deployment_id',
       'manifest_cid',
       'health',
@@ -246,6 +245,8 @@ const schemas = {
       'candidates',
     ],
     properties: {
+      retrieval_path: { type: 'string', enum: ['STUDIO_GRAPHQL', 'SUBGRAPH_MCP', 'UNKNOWN'] },
+      endpoint_url: boundedId,
       server_name: boundedId,
       server_version: boundedId,
       tool_name: boundedId,
@@ -551,9 +552,11 @@ export interface RecoveryCandidateView {
 }
 
 export interface RecoveryGraphObservationView {
-  readonly server_name: string;
-  readonly server_version: string;
-  readonly tool_name: string;
+  readonly retrieval_path: 'STUDIO_GRAPHQL' | 'SUBGRAPH_MCP' | 'UNKNOWN';
+  readonly endpoint_url: string;
+  readonly server_name?: string;
+  readonly server_version?: string;
+  readonly tool_name?: string;
   readonly deployment_id: string;
   readonly manifest_cid: string;
   readonly observed_through_block?: string;

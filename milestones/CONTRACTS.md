@@ -11,26 +11,26 @@ Change rule: expand-migrate-contract only
 - OneShot durable state grants submission ownership.
 - Privy authorizes and constrains the wallet action but is not the durable duplicate lock.
 - Arc receipt plus expected ERC-20 Transfer evidence establishes committed settlement.
-- Direct Privy/Arc evidence resolves known transaction identities. The selected v1 hashless path queries the live OneShot/Arc Subgraph through Subgraph MCP and lets an LLM Recovery Agent recommend a bounded action after C01; all indexed/model evidence remains non-authoritative.
+- Direct Privy/Arc evidence resolves known transaction identities. The selected v1 hashless path queries the live OneShot/Arc Subgraph through Studio GraphQL (with optional Subgraph MCP for Network-served deployments) and lets an LLM Recovery Agent recommend a bounded action after C01; all indexed/model evidence remains non-authoritative.
 - Subgraph MCP and the LLM expose no signing, settlement, retry, Attempt-creation, or submission-ownership capability.
 - Any possibly submitted but unconfirmed outcome is `UNKNOWN`; reconciliation precedes another submission.
 
 ## 2. Canonical identifiers and money
 
-| Field | Rule | Redaction |
-| --- | --- | --- |
-| `business_intent_id` | caller-supplied UUID/opaque stable string; length bounded | safe operational ID |
-| `attempt_id` | server-generated UUID; append-only attempt identity | safe operational ID |
-| `correlation_id` | validated inbound or generated; never grants idempotency | safe if non-secret |
-| `payload_fingerprint` | deterministic hash of normalized immutable payload | safe hash |
-| `amount_atomic` | canonical unsigned base-10 integer string, no sign/decimal/exponent/whitespace | safe business datum; do not over-log |
-| `asset` | exactly `USDC` | public |
-| `network` | exactly the enabled Arc deployment profile; v1 live proof uses `eip155:5042002`; mainnet remains disabled until official values are pinned and human-approved | public |
-| `token_contract` | exactly the enabled profile USDC interface; v1 testnet uses `0x3600000000000000000000000000000000000000`; no implicit mainnet default | public |
-| `recipient` | normalized EVM address; allowlist/policy checked | display only where required |
-| `privy_idempotency_key` | stable derivative of intent identity; same key requires same body | never log raw if classified sensitive |
-| `privy_reference_id` | stable lookup identity derived from intent | sanitized evidence only |
-| `memo_id` | optional `bytes32` hash of the Business Intent used only when the Arc Memo path passes B01 policy validation | public correlation hash |
+| Field                   | Rule                                                                                                                                                          | Redaction                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `business_intent_id`    | caller-supplied UUID/opaque stable string; length bounded                                                                                                     | safe operational ID                   |
+| `attempt_id`            | server-generated UUID; append-only attempt identity                                                                                                           | safe operational ID                   |
+| `correlation_id`        | validated inbound or generated; never grants idempotency                                                                                                      | safe if non-secret                    |
+| `payload_fingerprint`   | deterministic hash of normalized immutable payload                                                                                                            | safe hash                             |
+| `amount_atomic`         | canonical unsigned base-10 integer string, no sign/decimal/exponent/whitespace                                                                                | safe business datum; do not over-log  |
+| `asset`                 | exactly `USDC`                                                                                                                                                | public                                |
+| `network`               | exactly the enabled Arc deployment profile; v1 live proof uses `eip155:5042002`; mainnet remains disabled until official values are pinned and human-approved | public                                |
+| `token_contract`        | exactly the enabled profile USDC interface; v1 testnet uses `0x3600000000000000000000000000000000000000`; no implicit mainnet default                         | public                                |
+| `recipient`             | normalized EVM address; allowlist/policy checked                                                                                                              | display only where required           |
+| `privy_idempotency_key` | stable derivative of intent identity; same key requires same body                                                                                             | never log raw if classified sensitive |
+| `privy_reference_id`    | stable lookup identity derived from intent                                                                                                                    | sanitized evidence only               |
+| `memo_id`               | optional `bytes32` hash of the Business Intent used only when the Arc Memo path passes B01 policy validation                                                  | public correlation hash               |
 
 `purpose` is a bounded, non-secret display/audit string. It participates in the immutable payload fingerprint and is redacted from routine logs by default.
 
@@ -53,14 +53,14 @@ Identical ID and fingerprint is a replay. Identical ID with a different fingerpr
 
 ## 4. Public HTTP seam
 
-| Operation | Success behavior | Stable error families |
-| --- | --- | --- |
-| `POST /v1/intents` | `202` accepted; `200` identical replay | `400 INVALID_REQUEST`, `401/403 UNAUTHORIZED`, `409 INTENT_PAYLOAD_CONFLICT`, `429 RATE_LIMITED` |
-| `GET /v1/intents/{id}` | authoritative intent, attempts, settlement, sanitized evidence, version | `404 INTENT_NOT_FOUND` |
-| `POST /v1/intents/{id}/reconcile` | enqueue/read-trigger only; never submit | `404 INTENT_NOT_FOUND`, `409 RECONCILIATION_NOT_ALLOWED` |
-| `GET /v1/intents/{id}/recovery-view` | local authority plus labeled provider/index observations | `404 INTENT_NOT_FOUND`, `503 EVIDENCE_UNAVAILABLE` with local state retained |
-| `GET /health/live` | process liveness only | `503` when process cannot serve |
-| `GET /health/ready` | DB/config ready and Arc identity checks satisfied | `503 NOT_READY` with sanitized reason |
+| Operation                            | Success behavior                                                        | Stable error families                                                                            |
+| ------------------------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `POST /v1/intents`                   | `202` accepted; `200` identical replay                                  | `400 INVALID_REQUEST`, `401/403 UNAUTHORIZED`, `409 INTENT_PAYLOAD_CONFLICT`, `429 RATE_LIMITED` |
+| `GET /v1/intents/{id}`               | authoritative intent, attempts, settlement, sanitized evidence, version | `404 INTENT_NOT_FOUND`                                                                           |
+| `POST /v1/intents/{id}/reconcile`    | enqueue/read-trigger only; never submit                                 | `404 INTENT_NOT_FOUND`, `409 RECONCILIATION_NOT_ALLOWED`                                         |
+| `GET /v1/intents/{id}/recovery-view` | local authority plus labeled provider/index observations                | `404 INTENT_NOT_FOUND`, `503 EVIDENCE_UNAVAILABLE` with local state retained                     |
+| `GET /health/live`                   | process liveness only                                                   | `503` when process cannot serve                                                                  |
+| `GET /health/ready`                  | DB/config ready and Arc identity checks satisfied                       | `503 NOT_READY` with sanitized reason                                                            |
 
 Mutations require service authentication, schema validation, request-size limits, correlation IDs, rate limits, and sanitized stable errors.
 
@@ -138,18 +138,18 @@ ownership.
 
 ## 6. Durable state machine
 
-| Current | Trigger | Next | Submission permission |
-| --- | --- | --- | --- |
-| `NONE` | validated intent accepted | `AUTHORIZING` | No |
-| `AUTHORIZING` | policy authorizes | `READY` | No |
-| `AUTHORIZING` | policy denies | `REJECTED` | No; terminal |
-| `READY` | atomic owner grant persists request identity | `SUBMITTING` | Exactly one owner crosses boundary |
-| `SUBMITTING` | verified final receipt/Transfer | `COMMITTED` | No; terminal |
-| `SUBMITTING` | authoritative proof of no submission/final failure | `FAILED_SAFE` | Policy may schedule a new attempt |
-| `SUBMITTING` | possible submission, crash, timeout, doubt | `UNKNOWN` | No |
-| `UNKNOWN` | verified success | `COMMITTED` | No; terminal |
-| `UNKNOWN` | authoritative matching final revert/no-effect proof | `FAILED_SAFE` | Policy may schedule a new attempt |
-| `UNKNOWN` | pending/not found/unavailable/lag/error/contradiction | `UNKNOWN` | No; escalate by age |
+| Current       | Trigger                                               | Next          | Submission permission              |
+| ------------- | ----------------------------------------------------- | ------------- | ---------------------------------- |
+| `NONE`        | validated intent accepted                             | `AUTHORIZING` | No                                 |
+| `AUTHORIZING` | policy authorizes                                     | `READY`       | No                                 |
+| `AUTHORIZING` | policy denies                                         | `REJECTED`    | No; terminal                       |
+| `READY`       | atomic owner grant persists request identity          | `SUBMITTING`  | Exactly one owner crosses boundary |
+| `SUBMITTING`  | verified final receipt/Transfer                       | `COMMITTED`   | No; terminal                       |
+| `SUBMITTING`  | authoritative proof of no submission/final failure    | `FAILED_SAFE` | Policy may schedule a new attempt  |
+| `SUBMITTING`  | possible submission, crash, timeout, doubt            | `UNKNOWN`     | No                                 |
+| `UNKNOWN`     | verified success                                      | `COMMITTED`   | No; terminal                       |
+| `UNKNOWN`     | authoritative matching final revert/no-effect proof   | `FAILED_SAFE` | Policy may schedule a new attempt  |
+| `UNKNOWN`     | pending/not found/unavailable/lag/error/contradiction | `UNKNOWN`     | No; escalate by age                |
 
 All transitions are compare-and-set with monotonic versioning. No database transaction remains open during a provider/RPC call. Startup treats orphaned `SUBMITTING` work as reconciliation-required `UNKNOWN`, never as a new lease to submit.
 
@@ -168,32 +168,32 @@ All transitions are compare-and-set with monotonic versioning. No database trans
 
 The canonical fixture root is `packages/contracts/fixtures/v1/`. Every fixture has a JSON Schema validation test and explicit expected durable transition and external-submission count.
 
-| Fixture | Required expectation |
-| --- | --- |
-| `intent/accepted.json` | new intent, one queued execution, zero settlement at API boundary |
-| `intent/replay-identical.json` | same durable intent, no duplicate job/right |
-| `intent/replay-conflict.json` | `409`, explicit conflict, zero additional right |
-| `authorization/allowed.json` | exact scope authorized |
-| `authorization/denied-*.json` | wrong chain/token/method/recipient/value/amount denied, zero submission |
-| `settlement/confirmed.json` | matching final receipt and one Transfer |
-| `settlement/final-revert.json` | final failure, zero committed settlement |
-| `settlement/pending.json` | remain unresolved, no resubmission |
-| `settlement/lost-response.json` | `POSSIBLY_SUBMITTED` -> durable `UNKNOWN` |
-| `settlement/mismatched-transfer.json` | not confirmed, hold safely |
-| `evidence/not-found.json` | no permission change |
-| `index/candidate-one.json` | one bindable candidate still requires Arc verification |
-| `index/candidate-multiple.json` | remain `UNKNOWN`; no candidate selection by guess |
-| `index/empty.json` | labeled observation through observed block, no permission change |
-| `index/lagging.json` | `LAGGING`, no permission change |
-| `index/provider-error.json` | `UNHEALTHY`, no permission change |
-| `index/unavailable.json` | `UNAVAILABLE`, local authority still returned |
-| `mcp/malformed.json` | rejected before agent input; fail-closed `WAIT` |
-| `mcp/injected-content.json` | content remains untrusted evidence, never an instruction |
-| `agent/wait.json` | `WAIT` -> `HOLD_UNKNOWN`, zero external submissions |
-| `agent/reconcile.json` | `RECONCILE` -> read-only evidence cycle only |
-| `agent/escalate.json` | `ESCALATE` -> operator escalation only |
-| `agent/return-existing-result.json` | accepted only when authoritative evidence independently proves the result |
-| `agent/unsupported-action.json` | rejected; fail-closed `WAIT`, zero external submissions |
+| Fixture                               | Required expectation                                                      |
+| ------------------------------------- | ------------------------------------------------------------------------- |
+| `intent/accepted.json`                | new intent, one queued execution, zero settlement at API boundary         |
+| `intent/replay-identical.json`        | same durable intent, no duplicate job/right                               |
+| `intent/replay-conflict.json`         | `409`, explicit conflict, zero additional right                           |
+| `authorization/allowed.json`          | exact scope authorized                                                    |
+| `authorization/denied-*.json`         | wrong chain/token/method/recipient/value/amount denied, zero submission   |
+| `settlement/confirmed.json`           | matching final receipt and one Transfer                                   |
+| `settlement/final-revert.json`        | final failure, zero committed settlement                                  |
+| `settlement/pending.json`             | remain unresolved, no resubmission                                        |
+| `settlement/lost-response.json`       | `POSSIBLY_SUBMITTED` -> durable `UNKNOWN`                                 |
+| `settlement/mismatched-transfer.json` | not confirmed, hold safely                                                |
+| `evidence/not-found.json`             | no permission change                                                      |
+| `index/candidate-one.json`            | one bindable candidate still requires Arc verification                    |
+| `index/candidate-multiple.json`       | remain `UNKNOWN`; no candidate selection by guess                         |
+| `index/empty.json`                    | labeled observation through observed block, no permission change          |
+| `index/lagging.json`                  | `LAGGING`, no permission change                                           |
+| `index/provider-error.json`           | `UNHEALTHY`, no permission change                                         |
+| `index/unavailable.json`              | `UNAVAILABLE`, local authority still returned                             |
+| `mcp/malformed.json`                  | rejected before agent input; fail-closed `WAIT`                           |
+| `mcp/injected-content.json`           | content remains untrusted evidence, never an instruction                  |
+| `agent/wait.json`                     | `WAIT` -> `HOLD_UNKNOWN`, zero external submissions                       |
+| `agent/reconcile.json`                | `RECONCILE` -> read-only evidence cycle only                              |
+| `agent/escalate.json`                 | `ESCALATE` -> operator escalation only                                    |
+| `agent/return-existing-result.json`   | accepted only when authoritative evidence independently proves the result |
+| `agent/unsupported-action.json`       | rejected; fail-closed `WAIT`, zero external submissions                   |
 
 ## 9. Simulator behavior
 
@@ -211,7 +211,7 @@ The canonical fixture root is `packages/contracts/fixtures/v1/`. Every fixture h
 2. Worker task plus durable state and external-submission counter.
 3. Adapter ports plus official-response fixtures.
 4. Reconciliation command plus durable transition and evidence record.
-5. Subgraph MCP candidate query/tool result plus deployment-specific freshness and ambiguity classification after C01.
+5. Graph-provider candidate query result (or optional MCP tool result) plus deployment-specific freshness and ambiguity classification after C01.
 6. RecoveryAdvisorPort recommendation plus deterministic safety-core command and external-submission counter.
 7. Browser UI through frozen OpenAPI/mock server after Gate P4.
 

@@ -57,10 +57,11 @@ export interface IndexedCandidateSummary {
 }
 
 export interface GraphObservationSummary {
-  readonly retrievalPath: 'SUBGRAPH_MCP';
-  readonly serverName: string;
-  readonly serverVersion: string;
-  readonly toolName: string;
+  readonly retrievalPath: 'STUDIO_GRAPHQL' | 'SUBGRAPH_MCP' | 'UNKNOWN';
+  readonly endpointUrl: string;
+  readonly serverName: string | null;
+  readonly serverVersion: string | null;
+  readonly toolName: string | null;
   readonly deploymentId: string;
   readonly manifestCid: string;
   readonly observedThroughBlock: string | null;
@@ -306,10 +307,19 @@ function parseGraph(value: unknown, path: string): GraphObservationSummary | nul
     throw new Error(`Expected Graph arrays at ${path}`);
   }
   return {
-    retrievalPath: requireEnum(item.retrievalPath, ['SUBGRAPH_MCP'], `${path}.retrievalPath`),
-    serverName: requireString(item.serverName, `${path}.serverName`),
-    serverVersion: requireString(item.serverVersion, `${path}.serverVersion`),
-    toolName: requireString(item.toolName, `${path}.toolName`),
+    retrievalPath: requireEnum(
+      item.retrievalPath,
+      ['STUDIO_GRAPHQL', 'SUBGRAPH_MCP', 'UNKNOWN'],
+      `${path}.retrievalPath`,
+    ),
+    endpointUrl: requireString(item.endpointUrl, `${path}.endpointUrl`),
+    serverName:
+      item.serverName === undefined ? null : requireString(item.serverName, `${path}.serverName`),
+    serverVersion:
+      item.serverVersion === undefined
+        ? null
+        : requireString(item.serverVersion, `${path}.serverVersion`),
+    toolName: item.toolName === undefined ? null : requireString(item.toolName, `${path}.toolName`),
     deploymentId: requireString(item.deploymentId, `${path}.deploymentId`),
     manifestCid: requireString(item.manifestCid, `${path}.manifestCid`),
     observedThroughBlock: requireNullableString(

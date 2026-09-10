@@ -14,7 +14,7 @@ This directory turns `plan.md` into small, independently closable work packets f
 
 - [`coder-a/`](coder-a/README.md): domain, storage, API, worker, composition, intent/status UI, operations.
 - [`coder-b/`](coder-b/README.md): Privy, Arc, request/receipt safety, provider ambiguity, settlement UI, sponsor evidence.
-- [`coder-c/`](coder-c/README.md): The Graph candidate discovery through Subgraph MCP, LLM Recovery Agent, deterministic reconciliation, failure injection, recovery UI, qualification.
+- [`coder-c/`](coder-c/README.md): The Graph candidate discovery through the active Studio GraphQL path (with optional Subgraph MCP), LLM Recovery Agent, deterministic reconciliation, failure injection, recovery UI, qualification.
 
 Each lane has six ordered packets. A packet depends only on the frozen contract pack and the preceding packet in the same directory. A real package from another coder is never required for packet closure; use the checked simulator until project Gate P4.
 

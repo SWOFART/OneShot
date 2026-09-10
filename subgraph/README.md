@@ -27,7 +27,10 @@ graph auth <DEPLOY_KEY>
 pnpm --filter @oneshot/arc-subgraph deploy:studio
 ```
 
-After deployment, pin the immutable deployment ID in the OneShot runtime. Runtime queries use a separate Gateway API key through Subgraph MCP.
+After deployment, pin the immutable deployment ID in the OneShot runtime. The
+Arc Testnet demo queries the Studio GraphQL endpoint with an API key from the
+runtime secret store; the optional MCP path is reserved for Network-served
+deployments.
 
 ## Candidate query
 

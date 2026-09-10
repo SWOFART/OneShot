@@ -80,6 +80,8 @@ function recoveryView(id: string) {
       evidence_references: [],
     },
     graph_observation: {
+      retrieval_path: 'SUBGRAPH_MCP',
+      endpoint_url: 'https://mcp.example.invalid',
       server_name: 'subgraph-mcp',
       server_version: '1.0.0',
       tool_name: 'execute_query_by_deployment_id',

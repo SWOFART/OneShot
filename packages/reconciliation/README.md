@@ -1,7 +1,7 @@
 # `@oneshot/reconciliation`
 
 `index-view-v1` is C01's provider-neutral recovery evidence contract. It turns
-a deployment-pinned Subgraph MCP query result into a bounded, sanitized,
+a deployment-pinned Graph query result (Studio GraphQL or Subgraph MCP) into a bounded, sanitized,
 non-authoritative candidate view.
 
 B01/B02 establish direct USDC ERC-20 `transfer` as the v1 settlement shape.
