@@ -257,7 +257,12 @@ export class PrivyArcWalletProvider implements WalletProvider {
     }
 
     this.#getReceipt =
-      options.getTransactionReceipt ?? ((hash) => publicClient.getTransactionReceipt({ hash }));
+      options.getTransactionReceipt ??
+      ((hash) =>
+        publicClient.waitForTransactionReceipt({
+          hash,
+          timeout: options.rpcTimeoutMs ?? 15_000,
+        }));
     this.#getBlock = options.getBlockNumber ?? (() => publicClient.getBlockNumber());
     this.#getNativeBalance =
       options.getNativeBalance ?? ((address) => publicClient.getBalance({ address }));
@@ -343,7 +348,15 @@ export class PrivyArcWalletProvider implements WalletProvider {
         }),
       };
     } catch (error) {
-      if (error instanceof Error && error.name === 'TransactionReceiptNotFoundError') return null;
+      if (
+        error instanceof Error &&
+        (error.name === 'TransactionReceiptNotFoundError' ||
+          error.name === 'WaitForTransactionReceiptTimeoutError' ||
+          error.message.includes('could not be found') ||
+          error.message.includes('timed out'))
+      ) {
+        return null;
+      }
       throw error;
     }
   }
