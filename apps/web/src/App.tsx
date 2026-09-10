@@ -13,6 +13,7 @@ import {
   type UseOperatorSession,
 } from './auth/session.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
+import { Hero } from './components/Hero.js';
 import { IntentForm } from './components/IntentForm.js';
 import { IntentStatusView } from './components/IntentStatusView.js';
 import { LoginGate } from './components/LoginGate.js';
@@ -123,28 +124,27 @@ export function App(props: AppProps = {}) {
         </nav>
 
         <header className="app-header hero-section">
-          <p className="eyebrow">ONESHOT / ARC TESTNET</p>
-          <h1>One job. Many retries. One settlement.</h1>
-          <p className="hero-lead">
-            Deterministic payment lifecycle with pre-execution policy checks, idempotency
-            enforcement, and hashless recovery on Arc.
-          </p>
-          <p className="hero-sublead">
-            Create a stable payment intent and follow its authoritative state.
-          </p>
-          <div className="hero-actions">
-            <a href="#console" className="btn-hero-cta">
-              Open Operator Console ↓
-            </a>
-            <a
-              href="https://testnet.arcscan.app"
-              target="_blank"
-              rel="noreferrer"
-              className="btn-hero-secondary"
-            >
-              ArcScan Explorer ↗
-            </a>
-          </div>
+          <Hero>
+            <p className="eyebrow">ONESHOT / ARC TESTNET</p>
+            <h1>One job. Many retries. One settlement.</h1>
+            <p className="hero-lead">
+              Deterministic payment lifecycle with pre-execution policy checks, idempotency
+              enforcement, and hashless recovery on Arc.
+            </p>
+            <div className="hero-actions">
+              <a href="#console" className="btn-hero-cta">
+                Open Operator Console ↓
+              </a>
+              <a
+                href="https://testnet.arcscan.app"
+                target="_blank"
+                rel="noreferrer"
+                className="btn-hero-secondary"
+              >
+                ArcScan Explorer ↗
+              </a>
+            </div>
+          </Hero>
           <ReadinessBanner client={apiClient} />
         </header>
 
