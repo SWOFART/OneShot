@@ -46,8 +46,10 @@ export interface RpcProbe {
   /**
    * `eth_getCode` at an address. A real endpoint may answer `null` for an
    * address it knows nothing about, so the nullability is part of the contract.
-   */
+  */
   getCode(address: `0x${string}`): Promise<string | null>;
+  /** `decimals()` on the configured ERC-20 settlement token. */
+  getTokenDecimals(address: `0x${string}`): Promise<number>;
 }
 
 /** Privy identity format expectations. No credential is ever read here. */
@@ -127,6 +129,39 @@ export async function checkTokenBytecode(
     };
   }
   return { name, status: 'PASS', detail: 'Token address holds contract bytecode.' };
+}
+
+/**
+ * Check the live token interface, not only that an address has bytecode.
+ *
+ * Arc uses USDC for both native gas and ERC-20 settlement, but the units are
+ * different. A contract at the right-looking address with the wrong decimals
+ * would silently misprice every transfer, so it is a permanent mismatch.
+ */
+export async function checkTokenDecimals(
+  probe: RpcProbe,
+  tokenContract: `0x${string}`,
+  expectedDecimals: number,
+): Promise<CheckResult> {
+  const name = 'token.decimals';
+  let observed: number;
+  try {
+    observed = await probe.getTokenDecimals(tokenContract);
+  } catch (error) {
+    return {
+      name,
+      status: 'UNAVAILABLE',
+      detail: `Could not read token decimals: ${classifyError(error)}`,
+    };
+  }
+  if (!Number.isSafeInteger(observed) || observed !== expectedDecimals) {
+    return {
+      name,
+      status: 'MISMATCH',
+      detail: `Token reports ${observed} decimals; profile expects ${expectedDecimals}.`,
+    };
+  }
+  return { name, status: 'PASS', detail: `Token reports ${observed} decimals.` };
 }
 
 /**
@@ -211,6 +246,11 @@ export async function probeReadiness(
     checkIdentityFormat({ walletId: config.privyWalletId, policyId: config.privyPolicyId }),
     await checkChainId(probe, config.profile.chainId),
     await checkTokenBytecode(probe, config.profile.tokenContract),
+    await checkTokenDecimals(
+      probe,
+      config.profile.tokenContract,
+      config.profile.tokenDecimals,
+    ),
   ];
 
   return {

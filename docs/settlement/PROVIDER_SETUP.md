@@ -85,9 +85,10 @@ cd packages/arc-adapter && npm run probe
 ```
 
 This contacts the endpoint you configured, asks it which chain it is actually
-on, and checks that the configured USDC address holds contract bytecode. It is
-read-only: it cannot sign, send, or mutate anything, and it prints no
-credential. Exit code 0 means ready, 1 means not ready.
+on, checks that the configured USDC address holds contract bytecode, and reads
+the token's `decimals()` value. It is read-only: it cannot sign, send, or
+mutate anything, and it prints no credential. Exit code 0 means ready, 1 means
+not ready.
 
 Read the result carefully, because the two failure modes need opposite
 responses:
