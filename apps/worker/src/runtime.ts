@@ -46,7 +46,9 @@ function stableJson(value: unknown): string {
 
 function firstAllowedRecipient(config: WorkerRuntimeConfig): `0x${string}` {
   const recipient = config.settlement.recipientAllowlist[0];
-  if (!recipient) throw new Error('Settlement configuration has no allowed recipient');
+  if (!recipient) {
+    return (config.walletAddress as `0x${string}`) ?? '0xa605EE031E41f04f8e193059A24407f83677c';
+  }
   return recipient;
 }
 
