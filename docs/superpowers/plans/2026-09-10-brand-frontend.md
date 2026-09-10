@@ -42,7 +42,7 @@
 **Interfaces:**
 
 - Consumes: nothing.
-- Produces: the CSS custom properties every later task uses — `--os-ground`, `--os-surface`, `--os-panel`, `--os-panel-ink`, `--os-panel-ink-muted`, `--os-field`, `--os-signal`, `--os-on-signal`, `--os-attempt`, `--os-ink`, `--os-ink-muted`, `--os-line`, `--os-line-strong`, `--os-state-committed`, `--os-state-unknown`, `--os-state-failed`, `--os-radius`, `--os-radius-lg`, `--os-font-primary`, `--os-font-secondary`, `--os-font-mono`. Also the import specifiers `@oneshot/brand/tokens.css` and `@oneshot/brand/fonts.css`.
+- Produces: the CSS custom properties every later task uses — `--os-ground`, `--os-surface`, `--os-panel`, `--os-panel-ink`, `--os-panel-ink-muted`, `--os-field`, `--os-signal`, `--os-on-signal`, `--os-on-field`, `--os-attempt`, `--os-ink`, `--os-ink-muted`, `--os-line`, `--os-line-strong`, `--os-state-committed`, `--os-state-unknown`, `--os-state-failed`, `--os-radius`, `--os-radius-lg`, `--os-font-primary`, `--os-font-secondary`, `--os-font-mono`. Also the import specifiers `@oneshot/brand/tokens.css` and `@oneshot/brand/fonts.css`.
 
 - [ ] **Step 1: Create the package manifest and configs**
 
@@ -197,7 +197,9 @@ function readTheme(css: string, selector: string): Readonly<Record<string, strin
 /**
  * Every ink/surface pair the design actually renders. Signal green is a fill,
  * never body text on the page ground, so it is audited only where text sits on
- * it and where it sits on the panel.
+ * it and where it sits on the panel. The signal pill and the lime field are
+ * the same colour in both themes and carry their own fixed inks, so they are
+ * audited against those rather than against the theme's `--os-ink`.
  */
 const AUDITED_PAIRS: readonly (readonly [ink: string, surface: string])[] = [
   ['ink', 'ground'],
@@ -208,7 +210,7 @@ const AUDITED_PAIRS: readonly (readonly [ink: string, surface: string])[] = [
   ['panel-ink-muted', 'panel'],
   ['signal', 'panel'],
   ['on-signal', 'signal'],
-  ['ink', 'field'],
+  ['on-field', 'field'],
 ];
 
 describe('brand palette', () => {
@@ -234,6 +236,7 @@ describe('brand palette', () => {
         'field',
         'signal',
         'on-signal',
+        'on-field',
         'attempt',
         'ink',
         'ink-muted',
@@ -311,6 +314,11 @@ Expected: FAIL — `ENOENT` on `src/tokens.css`.
   --os-signal: #00dc5f;
   --os-on-signal: #06231c;
   --os-attempt: #4a7a60;
+
+  /* Fixed inks. The signal pill and the lime field are the same colour in both
+   * themes, so the text on them is too — it is a property of the surface, not
+   * of the theme, and neither is ever overridden below. */
+  --os-on-field: #0b332c;
 
   /* lines */
   --os-line: rgba(11, 51, 44, 0.14);
