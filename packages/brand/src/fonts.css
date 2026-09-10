@@ -1,0 +1,6 @@
+/**
+ * Rubik primary, Noto Sans secondary — the pairing the brand direction was
+ * chosen on. Weight 300 is the floor Google Fonts offers for Rubik and is what
+ * the whole product uses; 400 is loaded only for the rare bolder run of text.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400&family=Noto+Sans:wght@300;400&display=swap');

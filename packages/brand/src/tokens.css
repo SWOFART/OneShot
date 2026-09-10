@@ -1,0 +1,77 @@
+/**
+ * OneShot brand tokens.
+ *
+ * The single source of truth for the product's palette. Every value is sampled
+ * from the design canvas, not invented. Nothing else in the repository may
+ * introduce a literal colour: apps/web and both UI slices read these tokens.
+ *
+ * Hierarchy in the mark is carried by stroke weight, never opacity, so the
+ * one-ink cut of the logo is the same mark.
+ *
+ * Dark is the default theme. `data-theme` is stamped on <html> before first
+ * paint by the guard in apps/web/index.html.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* surfaces */
+  --os-ground: #f7f9f4;
+  --os-surface: #ffffff;
+  --os-panel: #0b332c;
+  --os-field: #e9ffbd;
+
+  /* ink */
+  --os-ink: #0b332c;
+  --os-ink-muted: #3f5c46;
+  --os-panel-ink: #eef7e6;
+  --os-panel-ink-muted: #a9c4b2;
+
+  /* brand */
+  --os-signal: #00dc5f;
+  --os-on-signal: #06231c;
+  --os-attempt: #4a7a60;
+
+  /* Fixed inks. The signal pill and the lime field are the same colour in both
+   * themes, so the text on them is too — it is a property of the surface, not
+   * of the theme, and neither is ever overridden below. */
+  --os-on-field: #0b332c;
+
+  /* lines */
+  --os-line: rgba(11, 51, 44, 0.14);
+  --os-line-strong: #7fa070;
+
+  /* ledger state — committed is the signal itself; the other two are the only
+   * hues outside the brand palette, kept because an operator must tell a
+   * blocked intent from a settled one at a glance. */
+  --os-state-committed: #00dc5f;
+  --os-state-unknown: #ffc65c;
+  --os-state-failed: #ff9a9a;
+
+  /* geometry */
+  --os-radius: 16px;
+  --os-radius-lg: 22px;
+
+  /* type — everything is weight 300, wordmark included */
+  --os-font-primary: Rubik, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --os-font-secondary: 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
+  --os-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/**
+ * Dark theme. The canvas's own dark board: the same composition with the page
+ * surface swapped to near-black and the ink flipped light. Panel, field, and
+ * signal are unchanged — they already read correctly on black.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --os-ground: #0a0a0a;
+  --os-surface: #12211c;
+
+  --os-ink: #eef7e6;
+  --os-ink-muted: #a9c4b2;
+
+  --os-line: rgba(238, 247, 230, 0.12);
+  --os-line-strong: #3f7059;
+}
