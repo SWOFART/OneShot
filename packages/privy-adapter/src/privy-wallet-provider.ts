@@ -243,9 +243,7 @@ export class PrivyArcWalletProvider implements WalletProvider {
           return await client.wallets().ethereum().sendTransaction(walletId, input);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          const status = (error as { status?: unknown }).status;
           if (
-            status === 401 ||
             message.includes('not authorized to transact on chain') ||
             message.includes('App is not authorized')
           ) {

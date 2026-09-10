@@ -17,8 +17,8 @@ const request = {
 };
 
 describePostgres('PostgreSQL intent ledger', () => {
-  let container: StartedPostgreSqlContainer;
-  let pool: Pool;
+  let container!: StartedPostgreSqlContainer;
+  let pool!: Pool;
   let nextAttempt = 0;
 
   beforeAll(async () => {
@@ -28,6 +28,7 @@ describePostgres('PostgreSQL intent ledger', () => {
   });
 
   afterEach(async () => {
+    if (typeof pool === 'undefined') return;
     await pool.query(
       'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, business_intents RESTART IDENTITY',
     );
@@ -35,8 +36,8 @@ describePostgres('PostgreSQL intent ledger', () => {
   });
 
   afterAll(async () => {
-    await pool.end();
-    await container.stop();
+    if (typeof pool !== 'undefined') await pool.end();
+    if (typeof container !== 'undefined') await container.stop();
   });
 
   const newLedger = (targetPool = pool) =>

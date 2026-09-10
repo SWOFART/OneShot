@@ -59,3 +59,19 @@ when the limiter store is unavailable. It keys admission by request IP and
 route; correlation IDs remain diagnostic only. Worker deployment documentation
 now lists the complete non-secret runtime contract and sends only the three
 secret values to Secret Manager.
+
+## Part 2 evidence
+
+- `pnpm.cmd --filter @oneshot/privy-adapter test`: PASS (9 files, 130 tests).
+- `pnpm.cmd --filter @oneshot/storage-postgres test`: PASS (2 files, 8 tests).
+- `pnpm.cmd --filter @oneshot/api test`: PASS (6 files, 50 tests).
+- `pnpm.cmd --filter @oneshot/worker test`: PASS (5 files, 39 tests).
+- `pnpm.cmd typecheck`: PASS.
+- `pnpm.cmd lint`: PASS.
+- `pnpm.cmd format:check`: PASS.
+- `pnpm.cmd test`: PASS (66 files, 977 tests).
+- The Privy regression suite now covers relay-boundary fallback, generic 401
+  rejection without fallback, and policy denial without raw broadcast.
+- All PostgreSQL Testcontainers suites guard cleanup when setup fails. Actual
+  container-backed integration remains unrun locally because no runtime is
+  available.
