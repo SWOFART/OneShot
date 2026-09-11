@@ -102,6 +102,8 @@ describePostgres('PostgreSQL intent ledger', () => {
       task_key: 'report-acme-2026',
       tool_id: 'team-report-v1' as const,
       report_subject: 'Acme',
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount_atomic: '2500000',
     };
     const order = {
       supplier_id: 'team-report-v1' as const,
@@ -140,6 +142,8 @@ describePostgres('PostgreSQL intent ledger', () => {
       task_key: 'report-recovery-2026',
       tool_id: 'team-report-v1' as const,
       report_subject: 'Recovery Acme',
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount_atomic: '2500000',
     };
     const order = {
       supplier_id: 'team-report-v1' as const,

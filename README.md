@@ -230,14 +230,13 @@ Cloudflare Workers Build checkout.
 ### Arc Testnet transfer demo
 
 The resumable job flow uses a deliberately labelled team-operated supplier
-until an external supplier is selected. Configure
-`ONESHOT_SUPPLIER_RECIPIENT` and `ONESHOT_SUPPLIER_AMOUNT_ATOMIC` on the API;
-the recipient must be the same second team-controlled testnet wallet included
-in the worker's `ONESHOT_RECIPIENT_ALLOWLIST`. If either value is absent, job
-routes fail closed with `503 NOT_READY` instead of quoting a placeholder wallet.
-The existing worker then authorizes and submits the exact quote through the
-Privy policy on Arc Testnet. A committed job's settlement and ArcScan evidence
-remain authoritative; delivery resume never submits a replacement payment.
+until an external supplier is selected. In Tools, enter the exact Arc Testnet
+recipient and USDC amount for the purchase. The recipient must be included in
+the worker's `ONESHOT_RECIPIENT_ALLOWLIST`, and the amount must be within the
+Privy policy cap. The existing worker authorizes and submits the exact quote
+through Privy on Arc Testnet. A committed job's settlement and ArcScan
+evidence remain authoritative; delivery resume never submits a replacement
+payment.
 
 `pnpm demo:r4` runs the response-loss drill offline by default. The live mode
 requires an explicit Arc Testnet confirmation and the reviewed worker hook;
@@ -249,11 +248,12 @@ For a safe rehearsal, use a small integer quote such as `10000` atomic USDC
 Arc Testnet wallet as the recipient. This proves the Privy/Arc settlement rail;
 it is not a claim of third-party supplier execution.
 
-The cabinet follows a two-step approval flow: enter a company/domain, request
-the live quote, review amount/recipient/network/expiry, then explicitly approve
-payment. The generated task key is shown for retries; users do not need to
-invent one. After settlement, the job list links directly to ArcScan and keeps
-the supplier result separate from payment evidence.
+The cabinet follows a two-step approval flow: enter a company/domain, recipient
+wallet and USDC amount, request the live quote, review amount/recipient/
+network/expiry, then explicitly approve payment. The generated task key is
+shown for retries; users do not need to invent one. After settlement, the job
+list links directly to ArcScan and keeps the supplier result separate from
+payment evidence.
 
 The Tools cabinet also documents a separate **Paid API purchase via Circle
 x402** mode. `pnpm demo:x402` uses the Privy wallet's EIP-712 signer against a

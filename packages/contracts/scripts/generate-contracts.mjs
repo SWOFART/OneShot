@@ -178,11 +178,13 @@ const schemas = {
   CreateJobRequest: {
     type: 'object',
     additionalProperties: false,
-    required: ['task_key', 'tool_id', 'report_subject'],
+    required: ['task_key', 'tool_id', 'report_subject', 'recipient', 'amount_atomic'],
     properties: {
       task_key: boundedId,
       tool_id: { type: 'string', const: 'team-report-v1' },
       report_subject: { type: 'string', minLength: 1, maxLength: 256 },
+      recipient: evmAddress,
+      amount_atomic: amountAtomic,
     },
   },
   SupplierQuote: {
@@ -748,6 +750,8 @@ export interface CreateJobRequest {
   readonly task_key: string;
   readonly tool_id: 'team-report-v1';
   readonly report_subject: string;
+  readonly recipient: string;
+  readonly amount_atomic: string;
 }
 
 export interface SupplierQuote {

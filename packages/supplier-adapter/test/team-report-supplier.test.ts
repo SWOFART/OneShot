@@ -8,6 +8,8 @@ describe('TeamReportSupplier', () => {
       task_key: 'report-acme',
       tool_id: 'team-report-v1' as const,
       report_subject: 'Acme',
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount_atomic: '2500000',
     };
 
     const first = await supplier.createOrder(request, 'job_idempotency_1');
@@ -19,13 +21,32 @@ describe('TeamReportSupplier', () => {
     await expect(supplier.fulfillOrder(first.order_reference)).resolves.toEqual(result);
   });
 
-  it('uses an explicit team-operated recipient and integer atomic quote', async () => {
-    const supplier = new TeamReportSupplier({
-      recipient: '0x2222222222222222222222222222222222222222',
-      amountAtomic: '10000',
-    });
+  it('rejects changed payment fields under the same task identity', async () => {
+    const supplier = new TeamReportSupplier();
+    const request = {
+      task_key: 'report-acme',
+      tool_id: 'team-report-v1' as const,
+      report_subject: 'Acme',
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount_atomic: '2500000',
+    };
+    await supplier.createOrder(request, 'job_idempotency_1');
+
+    await expect(
+      supplier.createOrder({ ...request, amount_atomic: '2500001' }, 'job_idempotency_1'),
+    ).rejects.toThrow('conflicts');
+  });
+
+  it('uses the requested recipient and integer atomic quote', async () => {
+    const supplier = new TeamReportSupplier();
     const order = await supplier.createOrder(
-      { task_key: 'arc-demo', tool_id: 'team-report-v1', report_subject: 'Arc demo' },
+      {
+        task_key: 'arc-demo',
+        tool_id: 'team-report-v1',
+        report_subject: 'Arc demo',
+        recipient: '0x2222222222222222222222222222222222222222',
+        amount_atomic: '10000',
+      },
       'job_arc_demo',
     );
 
@@ -33,16 +54,20 @@ describe('TeamReportSupplier', () => {
     expect(order.amount_atomic).toBe('10000');
   });
 
-  it('rejects an invalid or zero configured quote', () => {
-    expect(
-      () => new TeamReportSupplier({ recipient: 'not-an-address', amountAtomic: '10000' }),
-    ).toThrow('recipient');
-    expect(
-      () =>
-        new TeamReportSupplier({
-          recipient: '0x2222222222222222222222222222222222222222',
-          amountAtomic: '0',
-        }),
-    ).toThrow('greater than zero');
+  it('rejects an invalid or zero requested quote', async () => {
+    const supplier = new TeamReportSupplier();
+    const base = {
+      task_key: 'arc-demo',
+      tool_id: 'team-report-v1' as const,
+      report_subject: 'Arc demo',
+      recipient: '0x2222222222222222222222222222222222222222',
+      amount_atomic: '10000',
+    };
+    await expect(
+      supplier.createOrder({ ...base, recipient: 'not-an-address' }, 'invalid'),
+    ).rejects.toThrow('recipient');
+    await expect(supplier.createOrder({ ...base, amount_atomic: '0' }, 'zero')).rejects.toThrow(
+      'greater than zero',
+    );
   });
 });

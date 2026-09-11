@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { IntentResponse, JobView, RecoveryView, ReconcileResponse } from '@oneshot/contracts';
+import type {
+  CreateJobRequest,
+  IntentResponse,
+  JobView,
+  RecoveryView,
+  ReconcileResponse,
+} from '@oneshot/contracts';
 import type { CreateIntentResult, IntentLedger } from '@oneshot/storage-postgres';
 import { buildApi, staticBearerAuthenticator, type ApiDependencies } from '../src/index.js';
 
@@ -435,6 +441,7 @@ describe('resumable job API boundary', () => {
       updated_at: '2026-09-07T12:01:00.000Z',
     };
     const calls: Array<{ operation: string; workspaceId?: string }> = [];
+    let supplierRequest: unknown;
     let createMode: 'ACCEPTED' | 'TASK_PAYLOAD_CONFLICT' = 'ACCEPTED';
     const jobs = {
       async createOrReplay(params: { workspaceId: string }) {
@@ -474,7 +481,8 @@ describe('resumable job API boundary', () => {
       ledger: createMockLedger(),
       jobs,
       supplier: {
-        async createOrder() {
+        async createOrder(request: CreateJobRequest) {
+          supplierRequest = request;
           return {
             ...job.supplier,
             supplier_payload_fingerprint: 'e'.repeat(64),
@@ -497,11 +505,18 @@ describe('resumable job API boundary', () => {
       nextCorrelationId: () => 'correlation-job-api',
     });
     const headers = { authorization: 'Bearer test-token' };
-    const payload = { task_key: 'report-acme', tool_id: 'team-report-v1', report_subject: 'Acme' };
+    const payload = {
+      task_key: 'report-acme',
+      tool_id: 'team-report-v1',
+      report_subject: 'Acme',
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount_atomic: '2500000',
+    };
 
     const quote = await app.inject({ method: 'POST', url: '/v1/jobs/quote', headers, payload });
     expect(quote.statusCode).toBe(200);
     expect(quote.json()).toEqual(job.supplier);
+    expect(supplierRequest).toEqual(payload);
     expect(calls).toEqual([]);
 
     const created = await app.inject({ method: 'POST', url: '/v1/jobs', headers, payload });

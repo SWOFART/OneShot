@@ -2,6 +2,7 @@ import { formatAtomicUsdcWithAsset } from '@oneshot/settlement-ui';
 import { useEffect, useState } from 'react';
 import type { JobView, SupplierQuote } from '@oneshot/contracts';
 import type { JobApiClient } from '../api/job-client.js';
+import { usdcToAtomicUnits } from '../utils/money.js';
 
 function shortenAddress(value: string): string {
   return value.length > 14 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
@@ -73,6 +74,8 @@ export function JobWorkspace(props: {
   readonly onSelectIntent: (id: string) => void;
 }) {
   const [subject, setSubject] = useState('');
+  const [recipient, setRecipient] = useState('');
+  const [amount, setAmount] = useState('');
   const [customTaskKey, setCustomTaskKey] = useState('');
   const [runSuffix] = useState(() => crypto.randomUUID().slice(0, 8));
   const [quote, setQuote] = useState<SupplierQuote | null>(null);
@@ -82,6 +85,27 @@ export function JobWorkspace(props: {
   const generatedTaskKey = subject.trim() ? `report-${subjectSlug(subject)}-${runSuffix}` : '';
   const taskKey = customTaskKey.trim() || generatedTaskKey;
 
+  function amountAtomic(): string | null {
+    try {
+      const value = usdcToAtomicUnits(amount);
+      return value === '0' ? null : value;
+    } catch {
+      return null;
+    }
+  }
+
+  function request() {
+    const atomicAmount = amountAtomic();
+    if (!atomicAmount || !recipient.trim() || !taskKey.trim() || !subject.trim()) return null;
+    return {
+      task_key: taskKey,
+      tool_id: 'team-report-v1' as const,
+      report_subject: subject.trim(),
+      recipient: recipient.trim(),
+      amount_atomic: atomicAmount,
+    };
+  }
+
   function clearQuote(): void {
     setQuote(null);
     setApprovedJob(null);
@@ -89,14 +113,17 @@ export function JobWorkspace(props: {
   }
 
   async function loadQuote(): Promise<void> {
+    const jobRequest = request();
+    if (!jobRequest) {
+      setNotice('Enter a valid recipient wallet and a positive USDC amount.');
+      return;
+    }
     setQuoteLoading(true);
     setNotice('');
     try {
       setQuote(
         await props.client.quote({
-          task_key: taskKey,
-          tool_id: 'team-report-v1',
-          report_subject: subject,
+          ...jobRequest,
         }),
       );
     } catch {
@@ -109,12 +136,13 @@ export function JobWorkspace(props: {
 
   async function start(): Promise<void> {
     if (!quote) return;
+    const jobRequest = request();
+    if (!jobRequest) {
+      setNotice('Enter a valid recipient wallet and a positive USDC amount.');
+      return;
+    }
     try {
-      const job = await props.client.start({
-        task_key: taskKey,
-        tool_id: 'team-report-v1',
-        report_subject: subject,
-      });
+      const job = await props.client.start(jobRequest);
       setApprovedJob(job);
       setNotice(`Job ${job.job_id} is approved. Payment authorization is queued.`);
       props.onSelectIntent(job.business_intent_id);
@@ -142,6 +170,39 @@ export function JobWorkspace(props: {
         }}
         placeholder="acme.com"
       />
+      <label htmlFor="report-recipient">Recipient wallet</label>
+      <input
+        id="report-recipient"
+        value={recipient}
+        onChange={(event) => {
+          setRecipient(event.target.value);
+          clearQuote();
+        }}
+        placeholder="0x…"
+        inputMode="text"
+        autoComplete="off"
+        spellCheck={false}
+        aria-describedby="report-recipient-help"
+      />
+      <small id="report-recipient-help" className="field-help">
+        Use an Arc Testnet wallet allowed by the active Privy policy.
+      </small>
+      <label htmlFor="report-amount">Amount (USDC)</label>
+      <input
+        id="report-amount"
+        value={amount}
+        onChange={(event) => {
+          setAmount(event.target.value);
+          clearQuote();
+        }}
+        placeholder="0.01"
+        inputMode="decimal"
+        autoComplete="off"
+        aria-describedby="report-amount-help"
+      />
+      <small id="report-amount-help" className="field-help">
+        Up to 6 decimal places. The request is sent as integer USDC atomic units.
+      </small>
       <label htmlFor="generated-task-key">Task key for retries</label>
       <input
         id="generated-task-key"
@@ -169,7 +230,7 @@ export function JobWorkspace(props: {
       {!quote && (
         <button
           type="button"
-          disabled={quoteLoading || !taskKey.trim() || !subject.trim()}
+          disabled={quoteLoading || !request()}
           onClick={() => void loadQuote()}
         >
           {quoteLoading ? 'Loading live quote…' : 'Get live quote'}
@@ -179,8 +240,8 @@ export function JobWorkspace(props: {
         <>
           <SupplierQuotePanel heading="Review quote before approval" quote={quote} />
           <p className="field-help">
-            Nothing has been paid yet. Approval sends the quoted USDC from the server-configured
-            Privy wallet to the displayed Arc Testnet recipient.
+            Nothing has been paid yet. Approval sends the quoted USDC from the Privy wallet to the
+            recipient you entered, subject to the active wallet policy.
           </p>
           <button type="button" onClick={() => void start()}>
             Approve payment and start job

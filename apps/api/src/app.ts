@@ -72,11 +72,13 @@ const createIntentBodySchema = {
 const createJobBodySchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['task_key', 'tool_id', 'report_subject'],
+  required: ['task_key', 'tool_id', 'report_subject', 'recipient', 'amount_atomic'],
   properties: {
     task_key: { type: 'string', minLength: 1, maxLength: 128 },
     tool_id: { type: 'string', const: 'team-report-v1' },
     report_subject: { type: 'string', minLength: 1, maxLength: 256 },
+    recipient: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
+    amount_atomic: { type: 'string', pattern: '^(0|[1-9][0-9]*)$', maxLength: 78 },
   },
 } as const;
 

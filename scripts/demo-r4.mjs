@@ -157,6 +157,12 @@ async function liveRun() {
   const bearer = required('ONESHOT_R4_API_BEARER_TOKEN');
   const taskKey = required('ONESHOT_R4_TASK_KEY');
   const reportSubject = process.env.ONESHOT_R4_REPORT_SUBJECT?.trim() || 'R4 resumable report';
+  const recipient = required('ONESHOT_R4_RECIPIENT');
+  const amountAtomic = required('ONESHOT_R4_AMOUNT_ATOMIC');
+  if (!/^0x[0-9a-fA-F]{40}$/.test(recipient)) fail('ONESHOT_R4_RECIPIENT must be an EVM address');
+  if (!/^(0|[1-9][0-9]*)$/.test(amountAtomic) || BigInt(amountAtomic) === 0n) {
+    fail('ONESHOT_R4_AMOUNT_ATOMIC must be a positive canonical atomic amount');
+  }
   const pollMs = boundedInteger('ONESHOT_R4_POLL_MS', 500, 100, 10_000);
   const timeoutMs = boundedInteger('ONESHOT_R4_TIMEOUT_MS', 120_000, 10_000, 600_000);
   const maxAmount = atomic('ONESHOT_R4_MAX_AMOUNT_ATOMIC', '10000');
@@ -186,6 +192,8 @@ async function liveRun() {
       task_key: taskKey,
       tool_id: 'team-report-v1',
       report_subject: reportSubject,
+      recipient,
+      amount_atomic: amountAtomic,
     }),
   });
   if (
@@ -200,6 +208,12 @@ async function liveRun() {
   ) {
     fail('Supplier quote is not a bounded Arc Testnet USDC quote');
   }
+  if (
+    quote.recipient.toLowerCase() !== recipient.toLowerCase() ||
+    quote.amount_atomic !== amountAtomic
+  ) {
+    fail('Supplier quote does not match the requested recipient and amount');
+  }
 
   let job;
   try {
@@ -209,6 +223,8 @@ async function liveRun() {
         task_key: taskKey,
         tool_id: 'team-report-v1',
         report_subject: reportSubject,
+        recipient,
+        amount_atomic: amountAtomic,
       }),
     });
   } catch (error) {
