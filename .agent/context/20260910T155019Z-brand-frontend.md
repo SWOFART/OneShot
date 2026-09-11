@@ -103,10 +103,11 @@ frontend fully, so it follows our design"
   declared but not installed locally before this.
 - `git merge --ff-only origin/develop` - pass, `c140405` to `95709a8`.
 
-### Task 12 - whole-repository verification (2026-09-11, local machine, Node
-v22.16.0/pnpm 11.19.0; repo's `.node-version` pins 24.19.0, so pnpm printed an
-"Unsupported engine" warning on every command below - none of them failed
-because of it)
+### Task 12 - whole-repository verification
+
+2026-09-11, local machine, Node v22.16.0/pnpm 11.19.0. The repo's
+`.node-version` pins 24.19.0, so pnpm printed an "Unsupported engine" warning on
+every command below; none failed because of it.
 
 - `pnpm format:check` - **pass**. "All matched files use Prettier code style!"
 - `pnpm lint` (`eslint .`) - **pass**, no output, exit 0.
@@ -136,7 +137,8 @@ because of it)
   packages/settlement-ui/src packages/recovery-ui/src --include='*.css'
   --include='*.ts' --include='*.tsx'`) - **pass**, exactly the two expected
   lines, both the documented Privy config exception:
-  ```
+
+  ```text
   apps/web/src/auth/privy-session.tsx:58:          theme: '#0a0a0a',
   apps/web/src/auth/privy-session.tsx:59:          accentColor: '#00dc5f',
   ```
