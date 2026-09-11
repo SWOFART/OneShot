@@ -50,7 +50,7 @@ of per-agent wallets.
 - `pnpm --filter @oneshot/api test`, `pnpm --filter @oneshot/contracts test`, and
   `pnpm --filter @oneshot/web test` - PASS (55, 34 and 53 tests).
 - `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm check:generated`,
-  `pnpm build`, `pnpm test` - PASS (71 files / 997 tests).
+  `pnpm build`, `pnpm test` - PASS (76 files / 1,026 tests).
 - `pnpm --filter @oneshot/web test:browser` - PASS (4 Chromium tests).
 - `npx --yes markdownlint-cli2@0.18.1 "**/*.md" "#node_modules"` - PASS (149 files).
 - Local Node `22.23.2` emits the repository's existing `24.19.0` engine warning.
@@ -69,7 +69,8 @@ of per-agent wallets.
 
 - Branch: `feature/activity-audit`
 - Base: `origin/develop` at `236676293eed417b3e3bb6d40d6482b1519c8667`
-- Commit: `4a962ff6bb0946a07614dd71bfc86e17823ca3b2`
+- Commit: `98216805c50081f5556b6b8061f94cfde680018b`
+- Tree: `e90bb2550d7aeb7d82184b2a507c11efb91a3ccf`
 - PR: not created
 - CI: not run
 
