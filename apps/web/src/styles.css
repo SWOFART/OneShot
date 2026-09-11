@@ -115,6 +115,41 @@ a:hover {
   padding: 1.5rem 0 4rem;
 }
 
+.workspace-loading {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: var(--os-ground);
+  color: var(--os-ink);
+}
+
+.workspace-loading-card {
+  display: grid;
+  justify-items: center;
+  gap: 0.85rem;
+  width: min(100%, 22rem);
+  padding: 2.5rem 2rem;
+  border: 1px solid var(--os-line);
+  border-radius: var(--os-radius-lg);
+  background: var(--os-surface);
+  text-align: center;
+}
+
+.workspace-loading-eyebrow {
+  margin: 0;
+  color: var(--os-signal);
+  font-family: var(--os-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+}
+
+.workspace-loading-message {
+  margin: 0;
+  color: var(--os-ink-muted);
+  font-size: 1rem;
+}
+
 .top-nav {
   display: flex;
   align-items: center;

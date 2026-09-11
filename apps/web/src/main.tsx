@@ -1,6 +1,7 @@
 import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.js';
+import { WorkspaceLoading } from './components/WorkspaceLoading.js';
 
 const DEFAULT_PRIVY_APP_ID = 'cmtqbf5zo013w0cky3r0jqjca';
 const appId =
@@ -27,7 +28,7 @@ if (!container) {
 createRoot(container).render(
   <StrictMode>
     {appId ? (
-      <Suspense fallback={<p>Loading the console…</p>}>
+      <Suspense fallback={<WorkspaceLoading />}>
         <PrivyConsole />
       </Suspense>
     ) : (
