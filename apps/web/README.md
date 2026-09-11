@@ -33,3 +33,15 @@ pnpm --filter @oneshot/web test:browser
 
 See [`../../docs/GATE_P5_CHECKLIST.md`](../../docs/GATE_P5_CHECKLIST.md) for the
 covered states and safety boundary.
+
+## Brand
+
+The palette, the commit-ring mark, and the hero geometry come from
+`@oneshot/brand`. `packages/brand/src/tokens.css` is the only file in the
+repository allowed to hold a colour; `apps/web/test/styles.test.ts` fails the
+build if a literal appears in this app's stylesheet instead.
+
+The theme is `data-theme` on `<html>`, dark by default, stamped before first
+paint by the inline guard in `index.html`. That guard duplicates `src/theme.ts`
+deliberately — it has to run before the bundle does. Change one and change the
+other, or the page flashes the wrong palette on load.

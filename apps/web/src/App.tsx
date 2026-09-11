@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { createSettlementClient, type SettlementClient } from '@oneshot/settlement-ui';
 import type { RecoveryClient } from '@oneshot/recovery-ui';
+import { CommitRing } from '@oneshot/brand';
 import '@oneshot/recovery-ui/styles.css';
 import '@oneshot/settlement-ui/styles.css';
 
@@ -13,12 +14,14 @@ import {
   type UseOperatorSession,
 } from './auth/session.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
+import { Hero } from './components/Hero.js';
 import { IntentForm } from './components/IntentForm.js';
 import { IntentStatusView } from './components/IntentStatusView.js';
 import { LoginGate } from './components/LoginGate.js';
 import { ReadinessBanner } from './components/ReadinessBanner.js';
 import { CircleX402DemoPanel, JobList, JobWorkspace } from './components/JobWorkspace.js';
 import { RecoverySurface, SettlementSurface } from './components/FrontendSurfaces.js';
+import { applyTheme, readStoredTheme, type Theme } from './theme.js';
 import './styles.css';
 
 type Tab = 'create' | 'status' | 'settlement' | 'recovery';
@@ -40,34 +43,52 @@ export interface AppProps {
   readonly route?: string;
 }
 
-function LandingPage() {
+function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () => void }) {
   return (
     <main className="app-shell" aria-label="OneShot public landing page">
       <nav className="top-nav" aria-label="Public navigation">
-        <span className="brand-name">ONESHOT</span>
+        <div className="brand-group">
+          <CommitRing size={36} title="OneShot" />
+          <div className="brand-text">
+            <span className="brand-name">OneShot</span>
+            <span className="brand-tag">SETTLEMENT ENGINE</span>
+          </div>
+        </div>
+        <div className="nav-status-group">
+          <span className="status-badge network-badge">
+            <span className="status-dot" />
+            Arc Testnet (5042002)
+          </span>
+          <span className="status-badge token-badge">Native USDC</span>
+          <button type="button" className="theme-toggle" onClick={props.onToggleTheme}>
+            {props.theme === 'dark' ? 'Light theme' : 'Dark theme'}
+          </button>
+        </div>
         <a className="nav-console-link" href="/app">
           Open workspace
         </a>
       </nav>
       <header className="app-header hero-section">
-        <p className="eyebrow">RESUMABLE PAID TOOLS / ARC TESTNET</p>
-        <h1>Resume the job, not the payment.</h1>
-        <p className="hero-lead">
-          Approve one company-data report. If an agent restarts, the original task, payment evidence
-          and supplier result stay together.
-        </p>
-        <p className="hero-sublead">
-          One job. Many retries. At most one committed settlement. Team-operated testnet
-          integration.
-        </p>
-        <div className="hero-actions">
-          <a className="btn-hero-cta" href="/app">
-            Open workspace
-          </a>
-          <a className="btn-hero-secondary" href="#how-it-works">
-            How it works
-          </a>
-        </div>
+        <Hero>
+          <p className="eyebrow">RESUMABLE PAID TOOLS / ARC TESTNET</p>
+          <h1>Resume the job, not the payment.</h1>
+          <p className="hero-lead">
+            Approve one company-data report. If an agent restarts, the original task, payment evidence
+            and supplier result stay together.
+          </p>
+          <p className="hero-sublead">
+            One job. Many retries. At most one committed settlement. Team-operated testnet
+            integration.
+          </p>
+          <div className="hero-actions">
+            <a className="btn-hero-cta" href="/app">
+              Open workspace
+            </a>
+            <a className="btn-hero-secondary" href="#how-it-works">
+              How it works
+            </a>
+          </div>
+        </Hero>
       </header>
       <section id="how-it-works" className="invariants-section" aria-labelledby="how-heading">
         <div className="section-header">
@@ -109,6 +130,8 @@ function CabinetPage(props: {
   readonly jobClient: JobApiClient;
   readonly settlementClient: SettlementClient;
   readonly recoveryClient: RecoveryClient;
+  readonly theme: Theme;
+  readonly onToggleTheme: () => void;
 }) {
   const [section, setSection] = useState<
     'overview' | 'tools' | 'jobs' | 'recovery' | 'wallet' | 'developer'
@@ -126,22 +149,34 @@ function CabinetPage(props: {
   return (
     <main className="app-shell" aria-label="OneShot workspace cabinet">
       <nav className="top-nav" aria-label="Workspace navigation">
-        <a className="brand-name" href="/">
-          ONESHOT
+        <a className="brand-group" href="/">
+          <CommitRing size={36} title="OneShot" />
+          <span className="brand-name">OneShot</span>
         </a>
-        <span className="status-badge network-badge">Arc Testnet · USDC</span>
+        <div className="nav-status-group">
+          <span className="status-badge network-badge">
+            <span className="status-dot" />
+            Arc Testnet (5042002)
+          </span>
+          <span className="status-badge token-badge">Native USDC</span>
+          <button type="button" className="theme-toggle" onClick={props.onToggleTheme}>
+            {props.theme === 'dark' ? 'Light theme' : 'Dark theme'}
+          </button>
+        </div>
       </nav>
       <LoginGate
         session={props.session}
         machineToken={props.machineToken}
         onMachineTokenChange={props.setMachineToken}
       >
-        <header className="console-header">
-          <p className="eyebrow">WORKSPACE</p>
-          <h1>Jobs and results</h1>
-          <p className="console-subtitle">
-            Payments and delivery are separate. No action here can force a replacement payment.
-          </p>
+        <header className="app-header hero-section">
+          <Hero>
+            <p className="eyebrow">WORKSPACE</p>
+            <h1>Jobs and results</h1>
+            <p className="hero-lead">
+              Payments and delivery are separate. No action here can force a replacement payment.
+            </p>
+          </Hero>
         </header>
         <nav className="tabs" aria-label="Cabinet sections" role="tablist">
           {Object.entries(labels).map(([key, label]) => (
@@ -267,6 +302,13 @@ export function App(props: AppProps = {}) {
   const [activeTab, setActiveTab] = useState<Tab>('create');
   const [selectedIntentId, setSelectedIntentId] = useState('');
   const [machineToken, setMachineToken] = useState('');
+  const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
+
+  function toggleTheme(): void {
+    const next: Theme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    applyTheme(next);
+  }
   const credentialRef = useRef<string | null>(null);
   credentialRef.current = selectCredential(session, machineToken);
   const getAuthToken = useCallback(() => credentialRef.current, []);
@@ -294,7 +336,7 @@ export function App(props: AppProps = {}) {
     [apiBaseUrl, getAuthToken, props.jobClient],
   );
 
-  if (props.route === '/') return <LandingPage />;
+  if (props.route === '/') return <LandingPage theme={theme} onToggleTheme={toggleTheme} />;
   if (props.route?.startsWith('/app')) {
     return (
       <CabinetPage
@@ -305,6 +347,8 @@ export function App(props: AppProps = {}) {
         jobClient={jobClient}
         settlementClient={settlementClient}
         recoveryClient={recoveryClient}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
     );
   }
@@ -335,9 +379,9 @@ export function App(props: AppProps = {}) {
       <div className="app-shell">
         <nav className="top-nav" aria-label="Site Navigation">
           <div className="brand-group">
-            <img src="/logo.png" alt="OneShot Logo" className="brand-logo" width="36" height="36" />
+            <CommitRing size={36} title="OneShot" />
             <div className="brand-text">
-              <span className="brand-name">ONESHOT</span>
+              <span className="brand-name">OneShot</span>
               <span className="brand-tag">SETTLEMENT ENGINE</span>
             </div>
           </div>
@@ -348,6 +392,9 @@ export function App(props: AppProps = {}) {
               Arc Testnet (5042002)
             </span>
             <span className="status-badge token-badge">Native USDC</span>
+            <button type="button" className="theme-toggle" onClick={toggleTheme}>
+              {theme === 'dark' ? 'Light theme' : 'Dark theme'}
+            </button>
           </div>
 
           <a href="#console" className="nav-console-link">
@@ -356,28 +403,27 @@ export function App(props: AppProps = {}) {
         </nav>
 
         <header className="app-header hero-section">
-          <p className="eyebrow">ONESHOT / ARC TESTNET</p>
-          <h1>One job. Many retries. One settlement.</h1>
-          <p className="hero-lead">
-            At-most-once committed payment with pre-execution policy checks and safe recovery on
-            Arc.
-          </p>
-          <p className="hero-sublead">
-            Create a stable payment intent and follow its authoritative state.
-          </p>
-          <div className="hero-actions">
-            <a href="#console" className="btn-hero-cta">
-              Open Operator Console ↓
-            </a>
-            <a
-              href="https://testnet.arcscan.app"
-              target="_blank"
-              rel="noreferrer"
-              className="btn-hero-secondary"
-            >
-              ArcScan Explorer ↗
-            </a>
-          </div>
+          <Hero>
+            <p className="eyebrow">ONESHOT / ARC TESTNET</p>
+            <h1>One job. Many retries. One settlement.</h1>
+            <p className="hero-lead">
+              Deterministic payment lifecycle with pre-execution policy checks, idempotency
+              enforcement, and hashless recovery on Arc.
+            </p>
+            <div className="hero-actions">
+              <a href="#console" className="btn-hero-cta">
+                Open Operator Console ↓
+              </a>
+              <a
+                href="https://testnet.arcscan.app"
+                target="_blank"
+                rel="noreferrer"
+                className="btn-hero-secondary"
+              >
+                ArcScan Explorer ↗
+              </a>
+            </div>
+          </Hero>
           <ReadinessBanner client={apiClient} />
         </header>
 
@@ -497,14 +543,8 @@ export function App(props: AppProps = {}) {
           <div className="footer-top">
             <div className="footer-brand">
               <div className="brand-group">
-                <img
-                  src="/logo.png"
-                  alt="OneShot Logo"
-                  className="brand-logo"
-                  width="28"
-                  height="28"
-                />
-                <span className="brand-name">ONESHOT</span>
+                <CommitRing size={28} />
+                <span className="brand-name">OneShot</span>
               </div>
               <p className="footer-desc">
                 Stablecoin-native payment lifecycle engine with pre-flight policy gating and
