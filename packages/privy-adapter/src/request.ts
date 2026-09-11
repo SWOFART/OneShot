@@ -59,6 +59,8 @@ export class RequestError extends Error {
 
 /** `milestones/CONTRACTS.md`: the intent id is an opaque, length-bounded string. */
 const MAX_INTENT_ID_LENGTH = 128;
+const PRIVY_REFERENCE_ID_MAX_LENGTH = 64;
+const PRIVY_REFERENCE_PREFIX = 'oneshot-';
 
 /** uint256 ceiling. An amount at or above this cannot be encoded. */
 const MAX_UINT256 = (1n << 256n) - 1n;
@@ -123,6 +125,14 @@ export function buildCanonicalRequest(intent: SettlementIntent): CanonicalReques
 
   const canonicalBody = canonicalizeIntent(intent);
   const payloadFingerprint = keccak256(toHex(canonicalBody));
+  const readableReferenceId = `${PRIVY_REFERENCE_PREFIX}${intent.businessIntentId}`;
+  // Privy accepts reference_id values up to 64 characters. Keep short intent
+  // IDs readable, and use a deterministic fingerprint for longer IDs the
+  // public contract permits (for example, UUID/hash-based IDs).
+  const referenceId =
+    readableReferenceId.length <= PRIVY_REFERENCE_ID_MAX_LENGTH
+      ? readableReferenceId
+      : `${PRIVY_REFERENCE_PREFIX}${payloadFingerprint.slice(2, 58)}`;
 
   return {
     businessIntentId: intent.businessIntentId,
@@ -131,7 +141,7 @@ export function buildCanonicalRequest(intent: SettlementIntent): CanonicalReques
     // Derived from the fingerprint, so the same obligation always produces the
     // same provider key and a duplicate submission collapses at Privy too.
     idempotencyKey: payloadFingerprint,
-    referenceId: `oneshot-${intent.businessIntentId}`,
+    referenceId,
     chainId: transaction.chainId,
     to: transaction.to,
     value: transaction.value,

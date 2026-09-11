@@ -64,6 +64,15 @@ describe('determinism', () => {
       buildCanonicalRequest(INTENT).payloadFingerprint,
     );
   });
+
+  it('keeps long Privy reference IDs within the provider limit', () => {
+    const longIntent = { ...INTENT, businessIntentId: `intent_${'a'.repeat(64)}` };
+    const request = buildCanonicalRequest(longIntent);
+
+    expect(request.referenceId).toHaveLength(64);
+    expect(request.referenceId).toMatch(/^oneshot-[0-9a-f]{56}$/u);
+    expect(request.referenceId).toBe(buildCanonicalRequest(longIntent).referenceId);
+  });
 });
 
 describe('fingerprint sensitivity', () => {
