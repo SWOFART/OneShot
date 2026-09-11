@@ -1,16 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CIRCLE_BATCH_PROCESSED_TOPIC,
   TRANSFER_EVENT_TOPIC,
+  verifyCircleGatewayBatchReceipt,
   verifyReceipt,
   type ExpectedSettlement,
   type ReceiptLog,
   type TransactionReceipt,
 } from '../src/receipt.js';
+import { encodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters } from 'viem';
 
 const WALLET = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const RECIPIENT = '0x1111111111111111111111111111111111111111';
 const OTHER = '0x2222222222222222222222222222222222222222';
 const USDC = '0x3600000000000000000000000000000000000000';
+const GATEWAY = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9';
+const BATCH_SIGNER = '0x3333333333333333333333333333333333333333';
 
 const EXPECTED: ExpectedSettlement = {
   chainId: 5042002,
@@ -144,5 +149,82 @@ describe('success status is not confirmation', () => {
   it('does not confirm a log missing its indexed topics', () => {
     const truncated = receipt({ logs: [transferLog({ topics: [TRANSFER_EVENT_TOPIC] })] });
     expect(verifyReceipt(truncated, EXPECTED).result).toBe('NOT_CONFIRMED');
+  });
+});
+
+describe('Circle Gateway batching', () => {
+  const batchId = `0x${'e'.repeat(64)}`;
+  const batchInput = encodeFunctionData({
+    abi: parseAbi(['function submitBatch(bytes calldataBytes, bytes signature)']),
+    functionName: 'submitBatch',
+    args: [
+      encodeAbiParameters(
+        parseAbiParameters(
+          '(address depositor,int256 value)[] deltas, bytes32 batchId, uint32 domain, address tokenAddress, address gatewayWalletAddress',
+        ),
+        [
+          [
+            { depositor: WALLET, value: -1_250_000n },
+            { depositor: RECIPIENT, value: 1_250_000n },
+          ],
+          batchId,
+          26,
+          USDC,
+          GATEWAY,
+        ],
+      ),
+      '0x',
+    ],
+  });
+
+  it('confirms Circle balance deltas from submitBatch calldata', () => {
+    const gatewayReceipt = receipt({
+      from: BATCH_SIGNER,
+      to: GATEWAY,
+      logs: [
+        {
+          address: GATEWAY,
+          topics: [CIRCLE_BATCH_PROCESSED_TOPIC, batchId, topic(BATCH_SIGNER), topic(USDC)],
+          data: '0x',
+          logIndex: 12,
+        },
+      ],
+    });
+    expect(
+      verifyCircleGatewayBatchReceipt(gatewayReceipt, batchInput, {
+        chainId: 5042002,
+        gatewayWalletAddress: GATEWAY,
+        tokenContract: USDC,
+        payer: WALLET,
+        recipient: RECIPIENT,
+        amountAtomic: 1_250_000n,
+        gatewayDomain: 26,
+      }),
+    ).toEqual({ result: 'CONFIRMED', transferLogIndex: 12 });
+  });
+
+  it('rejects a batch with a different payer debit', () => {
+    const gatewayReceipt = receipt({
+      from: BATCH_SIGNER,
+      to: GATEWAY,
+      logs: [
+        {
+          address: GATEWAY,
+          topics: [CIRCLE_BATCH_PROCESSED_TOPIC, batchId, topic(BATCH_SIGNER), topic(USDC)],
+          data: '0x',
+          logIndex: 12,
+        },
+      ],
+    });
+    const verdict = verifyCircleGatewayBatchReceipt(gatewayReceipt, batchInput, {
+      chainId: 5042002,
+      gatewayWalletAddress: GATEWAY,
+      tokenContract: USDC,
+      payer: OTHER,
+      recipient: RECIPIENT,
+      amountAtomic: 1_250_000n,
+      gatewayDomain: 26,
+    });
+    expect(verdict.result).toBe('NOT_CONFIRMED');
   });
 });

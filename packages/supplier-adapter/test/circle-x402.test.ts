@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CircleX402AmbiguousError, CircleX402Client } from '../src/circle-x402.js';
+import {
+  CircleX402AmbiguousError,
+  CircleX402Client,
+  CircleX402PreSubmitError,
+} from '../src/circle-x402.js';
 
 const URL = 'https://x402.example.test/api/dataset';
 const PAY_TO = '0x1111111111111111111111111111111111111111';
 const VERIFYING_CONTRACT = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9';
 const TX = `0x${'a'.repeat(64)}`;
+const TRANSFER_ID = '66e4c182-6b84-42ad-95b9-94ffb73f5693';
 
 function encoded(value: unknown): string {
   return Buffer.from(JSON.stringify(value), 'utf8').toString('base64');
@@ -104,6 +109,35 @@ describe('Circle Gateway x402 client', () => {
     expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps Circle transfer identity when Gateway returns a UUID before batching', async () => {
+    const signTypedData = signer();
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(quoteResponse())
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ dataset: 'demo' }), {
+          status: 200,
+          headers: {
+            'PAYMENT-RESPONSE': encoded({
+              success: true,
+              transaction: TRANSFER_ID,
+              network: 'eip155:5042002',
+            }),
+          },
+        }),
+      );
+    const client = new CircleX402Client({ signer: signTypedData, fetchFn });
+    const quote = await client.quote(URL);
+    const result = await client.payOnce({
+      businessIntentId: 'intent-x402-transfer',
+      url: URL,
+      quote,
+    });
+
+    expect(result.settlement?.providerTransferId).toBe(TRANSFER_ID);
+    expect(result.settlement?.transactionHash).toBeUndefined();
+  });
+
   it('keeps an ambiguous paid request non-retryable in the client process', async () => {
     const signTypedData = signer();
     const fetchFn = vi
@@ -158,6 +192,19 @@ describe('Circle Gateway x402 client', () => {
     });
     expect(signTypedData.signTypedData).toHaveBeenCalledOnce();
     expect(fetchFn).toHaveBeenCalledTimes(3);
+  });
+
+  it('marks a signing refusal as definitely not submitted', async () => {
+    const refusedSigner = signer();
+    refusedSigner.signTypedData.mockRejectedValueOnce(new Error('policy_violation'));
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValueOnce(quoteResponse());
+    const client = new CircleX402Client({ signer: refusedSigner, fetchFn });
+    const quote = await client.quote(URL);
+
+    await expect(
+      client.payOnce({ businessIntentId: 'intent-x402-policy-denied', url: URL, quote }),
+    ).rejects.toBeInstanceOf(CircleX402PreSubmitError);
+    expect(fetchFn).toHaveBeenCalledOnce();
   });
 
   it('treats malformed settlement evidence as UNKNOWN', async () => {

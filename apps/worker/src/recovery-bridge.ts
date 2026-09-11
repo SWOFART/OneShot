@@ -29,7 +29,11 @@ import {
   type ReceiptSource,
   type TransactionReceipt,
 } from '@oneshot/arc-adapter';
-import { ARC_X402_GATEWAY_WALLET, verifyCircleX402Receipt } from '@oneshot/supplier-adapter';
+import {
+  ARC_X402_GATEWAY_WALLET,
+  verifyCircleX402Receipt,
+  type CircleX402Transfer,
+} from '@oneshot/supplier-adapter';
 import type { EvidencePort as LaneBEvidencePort } from '@oneshot/privy-adapter';
 import { createHash } from 'node:crypto';
 
@@ -136,6 +140,9 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
                 : {}),
               ...(providerIdentity.transactionHash
                 ? { transactionHash: providerIdentity.transactionHash }
+                : {}),
+              ...(providerIdentity.providerTransferId
+                ? { providerTransferId: providerIdentity.providerTransferId }
                 : {}),
             },
           }
@@ -284,6 +291,16 @@ export class IntentLedgerRecoveryCommandStore implements RecoveryCommandStorePor
         );
       }
       const providerRef = privyRef.slice(6);
+      const providerIdentity =
+        typeof this.ledger.getProviderRequestIdentity === 'function'
+          ? await this.ledger.getProviderRequestIdentity(pack.businessIntentId)
+          : null;
+      if (
+        providerIdentity?.providerKind === 'CIRCLE_X402' &&
+        typeof this.ledger.recordProviderTransaction === 'function'
+      ) {
+        await this.ledger.recordProviderTransaction(attemptId, txHash);
+      }
 
       const completion = await this.ledger.completeSubmission(pack.businessIntentId, attemptId, {
         kind: 'CONFIRMED',
@@ -331,6 +348,8 @@ export interface PrivyArcEvidenceBridgeOptions {
   readonly defaultArcTxHash?: string;
   readonly defaultReceipt?: TransactionReceipt;
   readonly localStatePort?: LocalRecoveryStatePort;
+  readonly circleTransferSource?: { getTransfer(id: string): Promise<CircleX402Transfer> };
+  readonly getTransactionInput?: (transactionHash: string) => Promise<string>;
 }
 
 /**
@@ -367,10 +386,8 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     }
     const base = await this.read(binding);
     if (!base.privy) return null;
-    const gatewayWallet = this.options.gatewayWalletAddress ?? ARC_X402_GATEWAY_WALLET;
-    const isCircleX402 = durableProviderKind === 'CIRCLE_X402';
-    const expectedSender = isCircleX402 ? gatewayWallet : this.options.walletAddress;
-    if (candidate.sender.toLowerCase() !== expectedSender.toLowerCase()) return null;
+    if (durableProviderKind === 'CIRCLE_X402') return null;
+    if (candidate.sender.toLowerCase() !== this.options.walletAddress.toLowerCase()) return null;
 
     const receipt = await this.options.receiptSource.getReceipt(candidate.transactionHash);
     if (!receipt) return null;
@@ -382,21 +399,13 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
 
     // Candidate discovery can never establish the provider identity. Without
     // the durable identity, an Arc receipt is not bound to this attempt.
-    const verdict = isCircleX402
-      ? verifyCircleX402Receipt(receipt, {
-          chainId: this.options.chainId ?? 5042002,
-          tokenContract: binding.tokenContract,
-          recipient: binding.recipient,
-          amountAtomic: BigInt(binding.amountAtomic),
-          gatewayWalletAddress: this.options.gatewayWalletAddress ?? ARC_X402_GATEWAY_WALLET,
-        })
-      : verifyReceipt(receipt, {
-          chainId: this.options.chainId ?? 5042002,
-          walletAddress: this.options.walletAddress,
-          tokenContract: binding.tokenContract,
-          recipient: binding.recipient,
-          amountAtomic: BigInt(binding.amountAtomic),
-        });
+    const verdict = verifyReceipt(receipt, {
+      chainId: this.options.chainId ?? 5042002,
+      walletAddress: this.options.walletAddress,
+      tokenContract: binding.tokenContract,
+      recipient: binding.recipient,
+      amountAtomic: BigInt(binding.amountAtomic),
+    });
     if (verdict.result !== 'CONFIRMED') return null;
     if (String(verdict.transferLogIndex) !== candidate.logIndex) return null;
 
@@ -404,15 +413,14 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     const fromTopic = transferLog?.topics[1];
     const toTopic = transferLog?.topics[2];
     if (!transferLog || !fromTopic || !toTopic) return null;
-
-    const nowIso = new Date().toISOString();
-    const transfer = {
+    const transferValue = {
       tokenContract: transferLog.address,
       sender: `0x${fromTopic.slice(-40)}`.toLowerCase(),
       recipient: `0x${toTopic.slice(-40)}`.toLowerCase(),
       amountAtomic: BigInt(transferLog.data).toString(),
       logIndex: String(verdict.transferLogIndex),
     };
+    const nowIso = new Date().toISOString();
     const arc = {
       authority: 'AUTHORITATIVE_CHAIN_EVIDENCE' as const,
       network: binding.network,
@@ -423,7 +431,7 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
       blockNumber: receipt.blockNumber.toString(),
       blockHash: receipt.blockHash,
       blockTimestamp: nowIso,
-      transfer,
+      transfer: transferValue,
       retrievedAt: nowIso,
       digest: sha256Hex(
         JSON.stringify({
@@ -432,7 +440,7 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
           blockHash: receipt.blockHash,
           sender: receipt.from,
           status: receipt.status,
-          transfer,
+          transfer: transferValue,
         }),
       ),
     };
@@ -447,6 +455,7 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     let providerReferenceId: string | undefined;
     let providerKind: 'DIRECT_ARC' | 'CIRCLE_X402' | undefined;
     let durableTransactionHash: string | undefined;
+    let providerTransferId: string | undefined;
     if (this.options.localStatePort) {
       try {
         const snapshot = await this.options.localStatePort.read(binding.businessIntentId);
@@ -455,14 +464,41 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
         providerReferenceId = snapshot.providerIdentity?.referenceId;
         providerKind = snapshot.providerIdentity?.providerKind;
         durableTransactionHash = snapshot.providerIdentity?.transactionHash;
+        providerTransferId = snapshot.providerIdentity?.providerTransferId;
       } catch {
         // Missing durable state is not permission to invent a provider identity.
       }
     }
-    const txHash = durableTransactionHash ?? this.options.defaultArcTxHash ?? null;
+    let txHash = durableTransactionHash ?? this.options.defaultArcTxHash ?? null;
 
     let laneBResult: EvidenceResult = 'UNAVAILABLE';
     let lookupError: string | undefined;
+    let circleTransferStatus: CircleX402Transfer['status'] | undefined;
+
+    if (
+      providerKind === 'CIRCLE_X402' &&
+      providerTransferId &&
+      this.options.circleTransferSource &&
+      this.options.walletAddress
+    ) {
+      try {
+        const transfer = await this.options.circleTransferSource.getTransfer(providerTransferId);
+        circleTransferStatus = transfer.status;
+        const matches =
+          transfer.sendingNetwork === binding.network &&
+          transfer.recipientNetwork === binding.network &&
+          transfer.fromAddress.toLowerCase() === this.options.walletAddress.toLowerCase() &&
+          transfer.toAddress.toLowerCase() === binding.recipient.toLowerCase() &&
+          transfer.amount === binding.amountAtomic;
+        if (!matches) {
+          lookupError = 'Circle x402 transfer identity does not match the Business Intent';
+        } else if (transfer.status === 'completed' && transfer.txHash) {
+          txHash = transfer.txHash;
+        }
+      } catch (err) {
+        lookupError = err instanceof Error ? err.message : 'Circle transfer lookup failed';
+      }
+    }
 
     if (this.options.evidencePort && providerKind !== 'CIRCLE_X402') {
       try {
@@ -481,19 +517,24 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     }
 
     let realReceipt: TransactionReceipt | null = this.options.defaultReceipt ?? null;
+    let transactionInput: string | undefined;
     if (!realReceipt && this.options.receiptSource && txHash) {
       try {
         realReceipt = await this.options.receiptSource.getReceipt(txHash);
+        if (realReceipt && providerKind === 'CIRCLE_X402' && this.options.getTransactionInput) {
+          transactionInput = await this.options.getTransactionInput(txHash);
+        }
       } catch (err) {
         lookupError = lookupError ?? (err instanceof Error ? err.message : 'Receipt lookup failed');
       }
     }
 
     const circleReceiptVerdict =
-      providerKind === 'CIRCLE_X402' && realReceipt
-        ? verifyCircleX402Receipt(realReceipt, {
+      providerKind === 'CIRCLE_X402' && realReceipt && this.options.walletAddress
+        ? verifyCircleX402Receipt(realReceipt, transactionInput, {
             chainId: this.options.chainId ?? 5042002,
             tokenContract: binding.tokenContract,
+            payer: this.options.walletAddress,
             recipient: binding.recipient,
             amountAtomic: BigInt(binding.amountAtomic),
             gatewayWalletAddress: this.options.gatewayWalletAddress ?? ARC_X402_GATEWAY_WALLET,
@@ -508,7 +549,10 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
       ? 'SUCCEEDED'
       : isRevert
         ? 'FAILED'
-        : laneBResult === 'PENDING'
+        : laneBResult === 'PENDING' ||
+            (circleTransferStatus !== undefined &&
+              circleTransferStatus !== 'completed' &&
+              circleTransferStatus !== 'failed')
           ? 'PENDING'
           : laneBResult === 'NOT_FOUND'
             ? 'NOT_FOUND'
@@ -546,10 +590,11 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
       const receiptMatchesHash =
         txHash === null || realReceipt.transactionHash.toLowerCase() === txHash.toLowerCase();
       const verdict =
-        receiptMatchesHash && providerKind === 'CIRCLE_X402'
-          ? verifyCircleX402Receipt(realReceipt, {
+        receiptMatchesHash && providerKind === 'CIRCLE_X402' && this.options.walletAddress
+          ? verifyCircleX402Receipt(realReceipt, transactionInput, {
               chainId: this.options.chainId ?? 5042002,
               tokenContract: binding.tokenContract,
+              payer: this.options.walletAddress,
               recipient: binding.recipient,
               amountAtomic: BigInt(binding.amountAtomic),
               gatewayWalletAddress: this.options.gatewayWalletAddress ?? ARC_X402_GATEWAY_WALLET,
@@ -572,19 +617,29 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
         logIndex: string;
       } | null = null;
       if (verdict?.result === 'CONFIRMED') {
-        const transferLog = realReceipt.logs.find(
-          (log) => log.logIndex === verdict.transferLogIndex,
-        );
-        const fromTopic = transferLog?.topics[1];
-        const toTopic = transferLog?.topics[2];
-        if (transferLog && fromTopic && toTopic) {
+        if (providerKind === 'CIRCLE_X402' && this.options.walletAddress) {
           transfer = {
-            tokenContract: transferLog.address,
-            sender: `0x${fromTopic.slice(-40)}`.toLowerCase(),
-            recipient: `0x${toTopic.slice(-40)}`.toLowerCase(),
-            amountAtomic: BigInt(transferLog.data).toString(),
+            tokenContract: binding.tokenContract,
+            sender: this.options.walletAddress.toLowerCase(),
+            recipient: binding.recipient.toLowerCase(),
+            amountAtomic: binding.amountAtomic,
             logIndex: String(verdict.transferLogIndex),
           };
+        } else {
+          const transferLog = realReceipt.logs.find(
+            (log) => log.logIndex === verdict.transferLogIndex,
+          );
+          const fromTopic = transferLog?.topics[1];
+          const toTopic = transferLog?.topics[2];
+          if (transferLog && fromTopic && toTopic) {
+            transfer = {
+              tokenContract: transferLog.address,
+              sender: `0x${fromTopic.slice(-40)}`.toLowerCase(),
+              recipient: `0x${toTopic.slice(-40)}`.toLowerCase(),
+              amountAtomic: BigInt(transferLog.data).toString(),
+              logIndex: String(verdict.transferLogIndex),
+            };
+          }
         }
       }
 

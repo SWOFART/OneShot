@@ -485,4 +485,49 @@ describe('Worker Unit Logic', () => {
     expect(queries).toContain('ROLLBACK');
     expect(queries.some((sql) => sql.includes("status = 'DELIVERED'"))).toBe(false);
   });
+
+  it('uses the unique outbox key as the reconciliation event id', async () => {
+    const eventIds: string[] = [];
+    const client = {
+      async query(sql: string) {
+        if (sql.includes('SELECT outbox_job_id')) {
+          return {
+            rows: [
+              {
+                outbox_job_id: '2',
+                business_intent_id: sampleRequest.business_intent_id,
+                job_key: 'reconcile:intent-worker-unit-1:3:2',
+                task_identifier: 'reconcile_intent',
+              },
+            ],
+          };
+        }
+        return { rows: [] };
+      },
+      release() {},
+    };
+    const ledger = createMockLedger({
+      async getIntent() {
+        return { ...sampleIntent, state: 'UNKNOWN' };
+      },
+    });
+
+    await expect(
+      drainOutboxJobs(
+        {
+          pool: { connect: async () => client } as never,
+          ledger,
+          settlementPort: {} as never,
+          recoveryService: {
+            async handle(job) {
+              eventIds.push(job.eventId);
+              return { status: 'APPENDED' } as never;
+            },
+          },
+        },
+        1,
+      ),
+    ).resolves.toBe(1);
+    expect(eventIds).toEqual(['reconcile:intent-worker-unit-1:3:2']);
+  });
 });

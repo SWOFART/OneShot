@@ -132,28 +132,35 @@ async function composeProduction(
         ? AbortSignal.any([init.signal, AbortSignal.timeout(config.settlement.rpcTimeoutMs)])
         : AbortSignal.timeout(config.settlement.rpcTimeoutMs),
     });
-  const paidApiSettlementPort = config.paidApi
-    ? new CircleX402SettlementPort({
-        client: new CircleX402Client({
-          signer: createPrivyX402Signer({
-            appId: config.settlement.privyAppId,
-            appSecret: config.privyAppSecret,
-            walletId: config.settlement.privyWalletId,
-            walletAddress: config.walletAddress,
-          }),
-          maxAmountAtomic: config.paidApi.maxAmountAtomic,
-          fetchFn: boundedFetch,
+  const circleX402Client = config.paidApi
+    ? new CircleX402Client({
+        signer: createPrivyX402Signer({
+          appId: config.settlement.privyAppId,
+          appSecret: config.privyAppSecret,
+          walletId: config.settlement.privyWalletId,
+          walletAddress: config.walletAddress,
         }),
-        allowedUrl: config.paidApi.url,
-        gatewayWalletAddress: ARC_X402_GATEWAY_WALLET,
-        getTarget: (businessIntentId) => ledger.getPaidApiTarget(businessIntentId),
-        getReceipt: (transactionHash) => provider.getReceipt(transactionHash),
-        recordProviderTransaction: (attemptId, transactionHash) =>
-          ledger.recordProviderTransaction(attemptId, transactionHash),
-        recordResponse: (businessIntentId, response, transactionHash) =>
-          ledger.recordPaidApiResponse(businessIntentId, response, transactionHash),
+        maxAmountAtomic: config.paidApi.maxAmountAtomic,
+        fetchFn: boundedFetch,
       })
     : undefined;
+  const paidApiSettlementPort =
+    config.paidApi && circleX402Client
+      ? new CircleX402SettlementPort({
+          client: circleX402Client,
+          allowedUrl: config.paidApi.url,
+          gatewayWalletAddress: ARC_X402_GATEWAY_WALLET,
+          getTarget: (businessIntentId) => ledger.getPaidApiTarget(businessIntentId),
+          getReceipt: (transactionHash) => provider.getReceipt(transactionHash),
+          getTransactionInput: (transactionHash) => provider.getTransactionInput(transactionHash),
+          recordProviderTransaction: (attemptId, transactionHash) =>
+            ledger.recordProviderTransaction(attemptId, transactionHash),
+          recordResponse: (businessIntentId, response, transactionHash) =>
+            ledger.recordPaidApiResponse(businessIntentId, response, transactionHash),
+          recordTransfer: (businessIntentId, response, providerTransferId) =>
+            ledger.recordPaidApiTransfer(businessIntentId, response, providerTransferId),
+        })
+      : undefined;
   const authorizationPort = {
     name: 'PrivyAuthorizationAdapter',
     contractVersion: '1.0.0',
@@ -238,6 +245,13 @@ async function composeProduction(
         walletAddress: config.walletAddress,
         gatewayWalletAddress: ARC_X402_GATEWAY_WALLET,
         chainId: config.settlement.profile.chainId,
+        ...(circleX402Client
+          ? {
+              circleTransferSource: circleX402Client,
+              getTransactionInput: (transactionHash: string) =>
+                provider.getTransactionInput(transactionHash),
+            }
+          : {}),
       },
       subgraphMcp,
       advisor,

@@ -9,6 +9,7 @@ import {
 } from '@oneshot/contracts';
 import {
   TRANSFER_EVENT_TOPIC,
+  verifyCircleGatewayBatchReceipt,
   type ReceiptSource,
   type TransactionReceipt,
 } from '@oneshot/arc-adapter';
@@ -17,10 +18,28 @@ import {
   ARC_X402_USDC,
   type CircleX402Client,
   CircleX402AmbiguousError,
+  CircleX402PreSubmitError,
   parseCircleX402Quote,
 } from './circle-x402.js';
 
 export const ARC_X402_GATEWAY_WALLET = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9';
+const X402_REFERENCE_PREFIX = 'circle-x402:';
+const X402_REFERENCE_SUFFIX_LENGTH = 52;
+
+function canonicalX402IntentPayload(request: CreateIntentRequest): string {
+  return canonicalIntentPayload({
+    business_intent_id: request.business_intent_id,
+    recipient: request.recipient,
+    amount_atomic: request.amount_atomic,
+    asset: request.asset,
+    network: request.network,
+    purpose: request.purpose,
+  });
+}
+
+function x402RequestFingerprint(request: CreateIntentRequest): string {
+  return createHash('sha256').update(canonicalX402IntentPayload(request), 'utf8').digest('hex');
+}
 
 interface SettlementContext {
   readonly attemptId: string;
@@ -39,6 +58,7 @@ export interface CircleX402SettlementPortOptions {
     | undefined
   >;
   readonly getReceipt: ReceiptSource['getReceipt'];
+  readonly getTransactionInput?: (transactionHash: string) => Promise<string>;
   readonly allowedUrl: string;
   readonly gatewayWalletAddress?: string;
   readonly recordProviderTransaction?: (
@@ -50,12 +70,19 @@ export interface CircleX402SettlementPortOptions {
     response: unknown,
     transactionHash: string,
   ) => Promise<void>;
+  readonly recordTransfer?: (
+    businessIntentId: string,
+    response: unknown,
+    providerTransferId: string,
+  ) => Promise<void>;
 }
 
 export function verifyCircleX402Receipt(
   receipt: TransactionReceipt,
+  transactionInput: string | undefined,
   expected: {
     readonly tokenContract: string;
+    readonly payer: string;
     readonly recipient: string;
     readonly amountAtomic: bigint;
     readonly chainId?: number;
@@ -77,6 +104,7 @@ export function verifyCircleX402Receipt(
   if (receipt.status === 0) {
     return { result: 'FINAL_REVERT', detail: 'x402 Gateway transaction reverted' };
   }
+
   const matches = receipt.logs.filter((log) => {
     if (
       log.address.toLowerCase() !== expected.tokenContract.toLowerCase() ||
@@ -85,19 +113,35 @@ export function verifyCircleX402Receipt(
       return false;
     }
     const toTopic = log.topics[2];
+    const fromTopic = log.topics[1];
     if (!toTopic || !/^0x[0-9a-fA-F]{64}$/.test(log.data)) return false;
     return (
+      fromTopic !== undefined &&
+      `0x${fromTopic.slice(-40)}`.toLowerCase() === expected.payer.toLowerCase() &&
       `0x${toTopic.slice(-40)}`.toLowerCase() === expected.recipient.toLowerCase() &&
       BigInt(log.data) === expected.amountAtomic
     );
   });
-  if (matches.length !== 1) {
-    return {
-      result: 'NOT_CONFIRMED',
-      detail: `x402 receipt contains ${matches.length} matching USDC Transfer logs; expected exactly one`,
-    };
+  if (matches.length === 1) {
+    return { result: 'CONFIRMED', transferLogIndex: matches[0]!.logIndex };
   }
-  return { result: 'CONFIRMED', transferLogIndex: matches[0]!.logIndex };
+
+  if (transactionInput) {
+    return verifyCircleGatewayBatchReceipt(receipt, transactionInput, {
+      chainId: expected.chainId ?? 5042002,
+      gatewayWalletAddress: expected.gatewayWalletAddress ?? ARC_X402_GATEWAY_WALLET,
+      tokenContract: expected.tokenContract,
+      payer: expected.payer,
+      recipient: expected.recipient,
+      amountAtomic: expected.amountAtomic,
+      gatewayDomain: 26,
+    });
+  }
+
+  return {
+    result: 'NOT_CONFIRMED',
+    detail: `x402 receipt contains ${matches.length} matching USDC Transfer logs; expected exactly one`,
+  };
 }
 
 function safeResponse(value: unknown): unknown {
@@ -142,12 +186,11 @@ export class CircleX402SettlementPort {
   }
 
   getSubmissionIdentity(request: CreateIntentRequest) {
-    const requestFingerprint = createHash('sha256')
-      .update(canonicalIntentPayload(request), 'utf8')
-      .digest('hex');
+    const requestFingerprint = x402RequestFingerprint(request);
+    const providerIdentity = `${X402_REFERENCE_PREFIX}${requestFingerprint.slice(0, X402_REFERENCE_SUFFIX_LENGTH)}`;
     return {
-      idempotencyKey: `circle-x402:${request.business_intent_id}`,
-      referenceId: `circle-x402:${request.business_intent_id}`,
+      idempotencyKey: providerIdentity,
+      referenceId: providerIdentity,
       requestFingerprint,
       providerKind: 'CIRCLE_X402' as const,
     };
@@ -178,30 +221,58 @@ export class CircleX402SettlementPort {
         method: target.method,
       });
     } catch (error) {
+      if (error instanceof CircleX402PreSubmitError) {
+        return { kind: 'DEFINITELY_NOT_SUBMITTED', reason: 'x402 authorization was refused' };
+      }
       if (error instanceof CircleX402AmbiguousError) {
         return { kind: 'POSSIBLY_SUBMITTED', reason: 'x402 request outcome is ambiguous' };
       }
       return { kind: 'POSSIBLY_SUBMITTED', reason: 'x402 request failed after payment boundary' };
     }
 
-    const transactionHash = result.settlement?.transaction;
-    if (!transactionHash) {
+    let transactionHash = result.settlement?.transactionHash;
+    const providerTransferId = result.settlement?.providerTransferId;
+    if (!transactionHash && !providerTransferId) {
       return {
         kind: 'POSSIBLY_SUBMITTED',
-        reason: 'x402 response omitted settlement transaction hash',
+        reason: 'x402 response omitted settlement identity',
       };
     }
     try {
-      await this.#options.recordProviderTransaction?.(context.attemptId, transactionHash);
-      await this.#options.recordResponse?.(
-        request.business_intent_id,
-        safeResponse(result.data),
-        transactionHash,
-      );
+      if (providerTransferId) {
+        await this.#options.recordTransfer?.(
+          request.business_intent_id,
+          safeResponse(result.data),
+          providerTransferId,
+        );
+        const transfer = await this.#options.client.getTransfer(providerTransferId);
+        if (
+          transfer.status !== 'completed' ||
+          !transfer.txHash ||
+          transfer.sendingNetwork !== ARC_X402_NETWORK ||
+          transfer.recipientNetwork !== ARC_X402_NETWORK ||
+          transfer.fromAddress.toLowerCase() !== this.#options.client.payerAddress.toLowerCase() ||
+          transfer.toAddress.toLowerCase() !== request.recipient.toLowerCase() ||
+          transfer.amount !== request.amount_atomic
+        ) {
+          return { kind: 'POSSIBLY_SUBMITTED', reason: 'Circle x402 transfer is still pending' };
+        }
+        transactionHash = transfer.txHash;
+      } else if (transactionHash) {
+        await this.#options.recordResponse?.(
+          request.business_intent_id,
+          safeResponse(result.data),
+          transactionHash,
+        );
+      }
+      await this.#options.recordProviderTransaction?.(context.attemptId, transactionHash!);
     } catch {
       return { kind: 'POSSIBLY_SUBMITTED', reason: 'x402 evidence could not be persisted' };
     }
 
+    if (!transactionHash) {
+      return { kind: 'POSSIBLY_SUBMITTED', reason: 'Circle x402 transfer has no Arc transaction' };
+    }
     const receipt = await this.#options.getReceipt(transactionHash);
     if (!receipt) {
       return { kind: 'POSSIBLY_SUBMITTED', reason: 'x402 Gateway transaction is not mined yet' };
@@ -212,8 +283,10 @@ export class CircleX402SettlementPort {
         reason: 'Arc returned evidence for a different transaction',
       };
     }
-    const verdict = verifyCircleX402Receipt(receipt, {
+    const transactionInput = await this.#options.getTransactionInput?.(transactionHash);
+    const verdict = verifyCircleX402Receipt(receipt, transactionInput, {
       tokenContract: ARC_X402_USDC,
+      payer: this.#options.client.payerAddress,
       recipient: request.recipient,
       amountAtomic: BigInt(request.amount_atomic),
       gatewayWalletAddress: this.#options.gatewayWalletAddress ?? ARC_X402_GATEWAY_WALLET,
@@ -226,7 +299,9 @@ export class CircleX402SettlementPort {
     }
     return {
       kind: 'CONFIRMED',
-      provider_reference_id: asProviderReferenceId(`circle-x402:${request.business_intent_id}`),
+      provider_reference_id: asProviderReferenceId(
+        `${X402_REFERENCE_PREFIX}${x402RequestFingerprint(request).slice(0, X402_REFERENCE_SUFFIX_LENGTH)}`,
+      ),
       transaction_hash: asTransactionHash(transactionHash),
       block_number: asBlockNumber(receipt.blockNumber.toString()),
       transfer_log_index: verdict.transferLogIndex,

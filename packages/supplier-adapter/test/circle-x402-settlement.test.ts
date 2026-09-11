@@ -9,6 +9,7 @@ import type { TransactionReceipt } from '@oneshot/arc-adapter';
 const URL = 'https://x402.example.test/api/dataset';
 const RECIPIENT = '0x1111111111111111111111111111111111111111';
 const TX = `0x${'a'.repeat(64)}`;
+const TRANSFER_ID = '66e4c182-6b84-42ad-95b9-94ffb73f5693';
 const BLOCK_HASH = `0x${'b'.repeat(64)}`;
 const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
@@ -77,6 +78,35 @@ function receipt(): TransactionReceipt {
 }
 
 describe('Circle Gateway x402 settlement port', () => {
+  it('derives a stable Privy-safe identity from the intent fingerprint', () => {
+    const port = new CircleX402SettlementPort({
+      client: new CircleX402Client({ signer: signer() }),
+      allowedUrl: URL,
+      getTarget: async () => undefined,
+      getReceipt: async () => null,
+    });
+    const request = {
+      business_intent_id: `intent-${'a'.repeat(120)}`,
+      recipient: RECIPIENT,
+      amount_atomic: '10000',
+      asset: 'USDC' as const,
+      network: 'eip155:5042002' as const,
+      purpose: 'paid api identity test',
+      state: 'READY' as const,
+      version: 2,
+      attempts: [],
+      evidence: [],
+    };
+
+    const first = port.getSubmissionIdentity(request);
+    const second = port.getSubmissionIdentity(request);
+
+    expect(first).toEqual(second);
+    expect(first.idempotencyKey).toBe(first.referenceId);
+    expect(first.idempotencyKey).toHaveLength(64);
+    expect(first.requestFingerprint).toMatch(/^[0-9a-f]{64}$/u);
+  });
+
   it('confirms only an exact Arc Gateway receipt and preserves its block/log proof', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
@@ -173,5 +203,106 @@ describe('Circle Gateway x402 settlement port', () => {
       ),
     ).resolves.toMatchObject({ kind: 'POSSIBLY_SUBMITTED' });
     expect(record).toHaveBeenCalledWith('attempt-2', TX);
+  });
+
+  it('persists Circle transfer identity and response before batch completion', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(quoteResponse())
+      .mockResolvedValueOnce(
+        new Response('{"dataset":"demo"}', {
+          status: 200,
+          headers: {
+            'PAYMENT-RESPONSE': encoded({
+              success: true,
+              transaction: TRANSFER_ID,
+              network: 'eip155:5042002',
+            }),
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: TRANSFER_ID,
+            status: 'received',
+            token: 'USDC',
+            sendingNetwork: 'eip155:5042002',
+            recipientNetwork: 'eip155:5042002',
+            fromAddress: '0x2222222222222222222222222222222222222222',
+            toAddress: RECIPIENT,
+            amount: '10000',
+          }),
+          { status: 200 },
+        ),
+      );
+    const client = new CircleX402Client({ signer: signer(), fetchFn });
+    const quote = await client.quote(URL);
+    const recordTransfer = vi.fn(async () => undefined);
+    const port = new CircleX402SettlementPort({
+      client,
+      allowedUrl: URL,
+      getTarget: async () => ({
+        businessIntentId: 'intent-x402-transfer-pending',
+        resourceUrl: '/api/dataset',
+        method: 'GET' as const,
+        quotePayload: quote,
+      }),
+      getReceipt: async () => null,
+      recordTransfer,
+    });
+
+    await expect(
+      port.submit(
+        {
+          business_intent_id: 'intent-x402-transfer-pending',
+          recipient: RECIPIENT,
+          amount_atomic: '10000',
+          asset: 'USDC',
+          network: 'eip155:5042002',
+          purpose: 'paid api test',
+        },
+        { attemptId: 'attempt-transfer', correlationId: 'corr-transfer' },
+      ),
+    ).resolves.toMatchObject({ kind: 'POSSIBLY_SUBMITTED' });
+    expect(recordTransfer).toHaveBeenCalledWith(
+      'intent-x402-transfer-pending',
+      { dataset: 'demo' },
+      TRANSFER_ID,
+    );
+  });
+
+  it('fails safely when Privy refuses the signature before the paid request', async () => {
+    const refusedSigner = signer();
+    refusedSigner.signTypedData.mockRejectedValueOnce(new Error('policy_violation'));
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValueOnce(quoteResponse());
+    const client = new CircleX402Client({ signer: refusedSigner, fetchFn });
+    const quote = await client.quote(URL);
+    const port = new CircleX402SettlementPort({
+      client,
+      allowedUrl: URL,
+      getTarget: async () => ({
+        businessIntentId: 'intent-x402-policy-denied',
+        resourceUrl: '/api/dataset',
+        method: 'GET' as const,
+        quotePayload: quote,
+      }),
+      getReceipt: async () => null,
+    });
+
+    await expect(
+      port.submit(
+        {
+          business_intent_id: 'intent-x402-policy-denied',
+          recipient: RECIPIENT,
+          amount_atomic: '10000',
+          asset: 'USDC',
+          network: 'eip155:5042002',
+          purpose: 'paid api test',
+        },
+        { attemptId: 'attempt-policy', correlationId: 'corr-policy' },
+      ),
+    ).resolves.toMatchObject({ kind: 'DEFINITELY_NOT_SUBMITTED' });
+    expect(fetchFn).toHaveBeenCalledOnce();
   });
 });
