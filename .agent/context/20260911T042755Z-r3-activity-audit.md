@@ -46,8 +46,14 @@ of per-agent wallets.
 
 ## Commands/checks
 
-- Focused storage, contract, API and web tests - PASS before final validation.
-- Full repository checks - pending.
+- `pnpm --filter @oneshot/storage-postgres test -- --run test/jobs.test.ts` - PASS (5 tests).
+- `pnpm --filter @oneshot/api test`, `pnpm --filter @oneshot/contracts test`, and
+  `pnpm --filter @oneshot/web test` - PASS (55, 34 and 53 tests).
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm check:generated`,
+  `pnpm build`, `pnpm test` - PASS (71 files / 997 tests).
+- `pnpm --filter @oneshot/web test:browser` - PASS (4 Chromium tests).
+- `npx --yes markdownlint-cli2@0.18.1 "**/*.md" "#node_modules"` - PASS (149 files).
+- Local Node `22.23.2` emits the repository's existing `24.19.0` engine warning.
 
 ## External-doc findings
 
@@ -62,8 +68,8 @@ of per-agent wallets.
 ## Git and PR state
 
 - Branch: `feature/activity-audit`
-- Base: `origin/develop` (current remote SHA recorded before implementation)
-- Commit: uncommitted
+- Base: `origin/develop` at `236676293eed417b3e3bb6d40d6482b1519c8667`
+- Commit: `4a962ff6bb0946a07614dd71bfc86e17823ca3b2`
 - PR: not created
 - CI: not run
 
