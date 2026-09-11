@@ -21,8 +21,7 @@
     "@oneshot/settlement-ui": "workspace:*",
     "@privy-io/react-auth": "3.6.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "viem": "2.56.3"
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

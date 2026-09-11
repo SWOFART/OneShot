@@ -1336,59 +1336,6 @@ a:hover {
   color: var(--os-panel-ink);
 }
 
-.wallet-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  max-width: 460px;
-}
-
-.wallet-search {
-  min-height: 42px;
-  padding: 0 16px;
-  border: 1px solid var(--os-line-strong);
-  border-radius: 999px;
-  color: var(--os-ink);
-  background: var(--os-surface);
-  font-family: var(--os-font-secondary);
-}
-
-.wallet-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 320px;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  list-style: none;
-}
-
-.wallet-option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--os-radius);
-  cursor: pointer;
-}
-
-.wallet-option:hover,
-.wallet-option[aria-selected='true'] {
-  background: var(--os-signal);
-  color: var(--os-on-signal);
-}
-
-.wallet-option small {
-  margin-left: auto;
-  font-size: 0.72rem;
-}
-
-.wallet-actions {
-  display: flex;
-  gap: 8px;
-}
-
 /* ==========================================================================
    Responsive Adaptations
    ========================================================================== */
