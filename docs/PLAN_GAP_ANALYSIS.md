@@ -18,9 +18,10 @@ Audited against `plan.md` revision 2026-09-10 on branch
   overview, tools, jobs, recovery/activity, wallet/permissions and developer
   access sections. Payment evidence remains advanced detail.
 - **R3 implementation seam:** Graph activity has a bounded manual refresh,
-  validates response structure, stores freshness/coverage metadata, and leaves
-  local payment state unchanged when Graph is unavailable. Configuration is
-  explicit and server-side.
+  validates response structure, stores freshness/coverage metadata, compares
+  indexed transfers with workspace-owned settlements, and surfaces unmatched
+  transfers without changing local payment state. Configuration is explicit
+  and server-side.
 
 ## Still external or human-gated
 

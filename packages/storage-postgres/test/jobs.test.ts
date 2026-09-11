@@ -28,6 +28,97 @@ const failedJob = {
 };
 
 describe('JobLedger delivery recovery', () => {
+  it('rejects malformed activity before writing an observation', async () => {
+    let writes = 0;
+    const ledger = new JobLedger(
+      {
+        query: async () => {
+          writes += 1;
+          return { rows: [] };
+        },
+      } as never,
+      { now: () => new Date('2026-09-07T12:01:00.000Z'), nextAttemptId: () => 'unused' },
+    );
+
+    await expect(
+      ledger.recordActivityObservation({
+        workspaceId: 'workspace-unit',
+        freshness: 'FRESH',
+        coverageNote: 'indexed',
+        payload: { transfers: [{ transaction_hash: 'not-a-hash' }] },
+      }),
+    ).rejects.toThrow('Stored Graph activity observation failed validation');
+    expect(writes).toBe(0);
+  });
+
+  it('matches indexed transfers to workspace settlements and surfaces unmatched activity', async () => {
+    const recordedHash = `0x${'a'.repeat(64)}`;
+    const unmatchedHash = `0x${'b'.repeat(64)}`;
+    const pool = {
+      async query(sql: string) {
+        if (sql.includes('FROM wallet_activity_observations')) {
+          return {
+            rows: [
+              {
+                freshness: 'FRESH',
+                coverage_note: 'indexed through block 100',
+                observed_at: new Date('2026-09-07T12:00:00.000Z'),
+                payload: {
+                  deployment: 'studio-deployment',
+                  transfers: [
+                    {
+                      transaction_hash: recordedHash,
+                      log_index: 2,
+                      recipient: failedJob.supplier_quote.recipient,
+                      amount_atomic: failedJob.supplier_quote.amount_atomic,
+                    },
+                    {
+                      transaction_hash: unmatchedHash,
+                      log_index: 4,
+                      recipient: failedJob.supplier_quote.recipient,
+                      amount_atomic: failedJob.supplier_quote.amount_atomic,
+                    },
+                  ],
+                },
+              },
+            ],
+          };
+        }
+        if (sql.includes('FROM settlements s')) {
+          return {
+            rows: [
+              { transaction_hash: recordedHash, transfer_log_index: 2, job_id: failedJob.job_id },
+            ],
+          };
+        }
+        if (sql.includes('SELECT count(*)::text AS count FROM resumable_jobs j JOIN settlements')) {
+          return { rows: [{ count: '1' }] };
+        }
+        if (sql.includes("i.state = 'UNKNOWN'")) return { rows: [{ count: '0' }] };
+        return { rows: [] };
+      },
+    };
+    const ledger = new JobLedger(pool as never, {
+      now: () => new Date('2026-09-07T12:01:00.000Z'),
+      nextAttemptId: () => 'unused',
+    });
+
+    await expect(ledger.activity('workspace-unit')).resolves.toMatchObject({
+      recorded_settlement_count: 1,
+      uncertain_job_count: 0,
+      unmatched_transfer_count: 1,
+      transfers: [
+        {
+          transaction_hash: recordedHash,
+          log_index: 2,
+          match: 'RECORDED_SETTLEMENT',
+          job_id: failedJob.job_id,
+        },
+        { transaction_hash: unmatchedHash, log_index: 4, match: 'UNMATCHED' },
+      ],
+    });
+  });
+
   it('projects committed settlement evidence with the Arc Testnet explorer link', async () => {
     const settledJob = {
       ...failedJob,

@@ -16,14 +16,15 @@ does not prove the new job workflow or current deployment health.
 | R0 | Supplier/task/ownership/delivery/binding/route contracts | Feasible supplier, scoped Privy execution, no guessed order association |
 | R1 | Durable job/order/result and one connector | Two agents share purchase; paid delivery failure never repays |
 | R2 | Separate landing and cabinet | Accessible job-centered UX over real APIs |
-| R3 | Bounded activity audit and job-aware triage | Live cited evidence; explicit coverage; ambiguous binding holds |
+| R3 | Live bounded activity audit and job-aware triage | Fresh live evidence; explicit coverage; ambiguous binding holds |
 | R4 | Live interrupted-job demonstration | Real payment, labelled fault, live Graph where needed, same supplier result |
 | R5 | Release and submission | Exact-head checks, FreePi A/B, public docs/video, correct pool, human review |
 
 ## Current limitations
 
-- Recovery already queries Graph; routine wallet audit is new work. More
-  queries alone do not establish AI value.
+- Recovery already queries Graph; the activity endpoint now compares indexed
+  transfers with workspace-owned settlements and reports unmatched rows.
+  More queries alone do not establish AI value.
 - Indexed memoId is null. Transfer tuples may collide. Order binding and
   cross-job transfer attribution must be proved in R0/R1.
 - Supplier delivery and job APIs are planned; preserve existing intent clients

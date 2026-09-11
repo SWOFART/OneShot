@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import type { ActivityResponse } from '@oneshot/contracts';
 import { createSettlementClient, type SettlementClient } from '@oneshot/settlement-ui';
 import type { RecoveryClient } from '@oneshot/recovery-ui';
 import { CommitRing } from '@oneshot/brand';
@@ -137,7 +138,8 @@ function CabinetPage(props: {
     'overview' | 'tools' | 'jobs' | 'recovery' | 'wallet' | 'developer'
   >('overview');
   const [intentId, setIntentId] = useState('');
-  const [activity, setActivity] = useState('No activity refresh yet.');
+  const [activity, setActivity] = useState<ActivityResponse | null>(null);
+  const [activityError, setActivityError] = useState<string | null>(null);
   const labels = {
     overview: 'Overview',
     tools: 'Tools',
@@ -218,24 +220,48 @@ function CabinetPage(props: {
             <button
               type="button"
               className="secondary"
-              onClick={() =>
+              onClick={() => {
+                setActivityError(null);
                 void props.jobClient
                   .refreshActivity()
-                  .then((view) =>
-                    setActivity(
-                      `${view.observation?.freshness ?? 'UNAVAILABLE'} — ${view.observation?.coverage_note ?? 'No indexed coverage available.'}`,
-                    ),
-                  )
-                  .catch(() =>
-                    setActivity(
+                  .then(setActivity)
+                  .catch(() => {
+                    setActivityError(
                       'Activity refresh is unavailable; payment records remain unchanged.',
-                    ),
-                  )
-              }
+                    );
+                  });
+              }}
             >
               Refresh activity
             </button>
-            <p role="status">{activity}</p>
+            <p role="status">
+              {activityError ??
+                (activity
+                  ? `${activity.observation?.freshness ?? 'UNAVAILABLE'} — ${activity.observation?.coverage_note ?? 'No indexed coverage available.'}`
+                  : 'No activity refresh yet.')}
+            </p>
+            {activity && (
+              <div className="activity-summary">
+                <p>
+                  {activity.recorded_settlement_count} recorded settlement(s),{' '}
+                  {activity.uncertain_job_count} uncertain job(s),{' '}
+                  {activity.unmatched_transfer_count ?? 0} unmatched indexed transfer(s).
+                </p>
+                {(activity.transfers ?? []).filter((transfer) => transfer.match === 'UNMATCHED')
+                  .length > 0 && (
+                  <ul aria-label="Unmatched indexed transfers">
+                    {(activity.transfers ?? [])
+                      .filter((transfer) => transfer.match === 'UNMATCHED')
+                      .map((transfer) => (
+                        <li key={`${transfer.transaction_hash}:${transfer.log_index}`}>
+                          {transfer.transaction_hash.slice(0, 10)}… · log {transfer.log_index} ·{' '}
+                          {transfer.amount_atomic} atomic USDC
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </div>
+            )}
             <label htmlFor="cabinet-intent">Selected job intent</label>
             <input
               id="cabinet-intent"

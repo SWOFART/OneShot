@@ -63,13 +63,20 @@ async function mockJobApi(page: Page): Promise<string[]> {
       return json(route, 202, current);
     }
     if (pathname === '/v1/activity' && request.method() === 'GET') {
-      return json(route, 200, { recorded_settlement_count: 1, uncertain_job_count: 0 });
+      return json(route, 200, {
+        recorded_settlement_count: 1,
+        uncertain_job_count: 0,
+        unmatched_transfer_count: 0,
+        transfers: [],
+      });
     }
     if (pathname === '/v1/activity/refresh' && request.method() === 'POST') {
       return json(route, 202, {
         observation: { freshness: 'FRESH', coverage_note: 'Indexed through block 99.' },
         recorded_settlement_count: 1,
         uncertain_job_count: 0,
+        unmatched_transfer_count: 0,
+        transfers: [],
       });
     }
     return json(route, 404, {});

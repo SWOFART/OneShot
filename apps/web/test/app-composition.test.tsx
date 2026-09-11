@@ -61,7 +61,12 @@ describe('Gate P5 shell composition', () => {
         return null;
       },
       async refreshActivity() {
-        return { recorded_settlement_count: 0, uncertain_job_count: 0 };
+        return {
+          recorded_settlement_count: 0,
+          uncertain_job_count: 0,
+          unmatched_transfer_count: 0,
+          transfers: [],
+        };
       },
     } as unknown as JobApiClient;
     render(

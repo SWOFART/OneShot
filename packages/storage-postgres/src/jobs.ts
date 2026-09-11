@@ -1,4 +1,9 @@
 import {
+  asAtomicAmount,
+  asEvmAddress,
+  asTransactionHash,
+  type ActivityResponse,
+  type ActivityTransferView,
   parseCreateJobRequest,
   validateSupplierOrder,
   type DeliveryState,
@@ -94,6 +99,47 @@ function asView(row: JobRow): JobView {
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
   };
+}
+
+interface ActivityTransferInput {
+  readonly transaction_hash: string;
+  readonly log_index: number;
+  readonly recipient: string;
+  readonly amount_atomic: string;
+}
+
+function parseActivityTransfers(payload: unknown): readonly ActivityTransferInput[] {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    throw new Error('Stored Graph activity observation failed validation');
+  }
+  const transfers = (payload as Record<string, unknown>).transfers;
+  if (!Array.isArray(transfers) || transfers.length > 100) {
+    throw new Error('Stored Graph activity observation failed validation');
+  }
+  try {
+    return transfers.map((entry) => {
+      if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+        throw new Error('invalid transfer');
+      }
+      const row = entry as Record<string, unknown>;
+      const logIndex = row.log_index;
+      if (typeof logIndex !== 'number' || !Number.isSafeInteger(logIndex) || logIndex < 0) {
+        throw new Error('invalid log index');
+      }
+      return {
+        transaction_hash: asTransactionHash(row.transaction_hash),
+        log_index: logIndex,
+        recipient: asEvmAddress(row.recipient),
+        amount_atomic: asAtomicAmount(row.amount_atomic),
+      };
+    });
+  } catch {
+    throw new Error('Stored Graph activity observation failed validation');
+  }
+}
+
+function activityTransferKey(transactionHash: string, logIndex: number): string {
+  return `${transactionHash.toLowerCase()}:${logIndex}`;
 }
 
 /**
@@ -363,6 +409,7 @@ export class JobLedger {
     readonly coverageNote: string;
     readonly payload: unknown;
   }): Promise<void> {
+    parseActivityTransfers(params.payload);
     await this.#pool.query(
       `INSERT INTO wallet_activity_observations (
         workspace_id, source, freshness, coverage_note, observed_at, payload
@@ -377,17 +424,8 @@ export class JobLedger {
     );
   }
 
-  async activity(workspaceId: string): Promise<{
-    readonly observation?: {
-      readonly freshness: string;
-      readonly coverage_note: string;
-      readonly observed_at: string;
-      readonly payload: unknown;
-    };
-    readonly recorded_settlement_count: number;
-    readonly uncertain_job_count: number;
-  }> {
-    const [observation, settlements, uncertain] = await Promise.all([
+  async activity(workspaceId: string): Promise<ActivityResponse> {
+    const [observation, settlements, uncertain, recordedTransfers] = await Promise.all([
       this.#pool.query<{
         freshness: string;
         coverage_note: string;
@@ -408,12 +446,43 @@ export class JobLedger {
          WHERE j.workspace_id = $1 AND i.state = 'UNKNOWN'`,
         [workspaceId],
       ),
+      this.#pool.query<{
+        transaction_hash: string;
+        transfer_log_index: number;
+        job_id: string;
+      }>(
+        `SELECT s.transaction_hash, s.transfer_log_index, j.job_id
+         FROM settlements s
+         JOIN resumable_jobs j ON j.business_intent_id = s.business_intent_id
+         WHERE j.workspace_id = $1`,
+        [workspaceId],
+      ),
     ]);
     const row = observation.rows[0];
+    const indexedTransfers = row ? parseActivityTransfers(row.payload) : [];
+    const recordedByTransfer = new Map(
+      recordedTransfers.rows.map((settlement) => [
+        activityTransferKey(settlement.transaction_hash, settlement.transfer_log_index),
+        settlement.job_id,
+      ]),
+    );
+    const transfers: readonly ActivityTransferView[] = indexedTransfers.map((transfer) => {
+      const jobId = recordedByTransfer.get(
+        activityTransferKey(transfer.transaction_hash, transfer.log_index),
+      );
+      return {
+        ...transfer,
+        match: jobId ? 'RECORDED_SETTLEMENT' : 'UNMATCHED',
+        ...(jobId ? { job_id: jobId } : {}),
+      };
+    });
     return {
       ...(row ? { observation: { ...row, observed_at: row.observed_at.toISOString() } } : {}),
       recorded_settlement_count: Number(settlements.rows[0]?.count ?? '0'),
       uncertain_job_count: Number(uncertain.rows[0]?.count ?? '0'),
+      unmatched_transfer_count: transfers.filter((transfer) => transfer.match === 'UNMATCHED')
+        .length,
+      transfers,
     };
   }
 

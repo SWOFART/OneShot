@@ -462,7 +462,12 @@ describe('resumable job API boundary', () => {
       },
       async activity(workspaceId: string) {
         calls.push({ operation: 'activity', workspaceId });
-        return { recorded_settlement_count: 1, uncertain_job_count: 0 };
+        return {
+          recorded_settlement_count: 1,
+          uncertain_job_count: 0,
+          unmatched_transfer_count: 0,
+          transfers: [],
+        };
       },
     } as unknown as ApiDependencies['jobs'];
     const app = buildApi({
@@ -539,6 +544,8 @@ describe('resumable job API boundary', () => {
     expect((await app.inject({ method: 'GET', url: '/v1/activity', headers })).json()).toEqual({
       recorded_settlement_count: 1,
       uncertain_job_count: 0,
+      unmatched_transfer_count: 0,
+      transfers: [],
     });
 
     createMode = 'TASK_PAYLOAD_CONFLICT';

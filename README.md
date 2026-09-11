@@ -173,6 +173,11 @@ frozen `recovery-view` API into the C05 timeline model, with labelled
 fail-closed fallbacks for legacy or unavailable evidence. The P5 browser
 acceptance suite runs with Playwright/Chromium in CI.
 
+Authenticated wallet activity is read-only: the API records bounded Graph
+observations, links indexed transfers to settlements in the configured
+workspace, and surfaces unmatched transfers. Graph absence or lag never changes
+payment authority.
+
 Integration tests need a database:
 
 ```bash
