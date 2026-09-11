@@ -7,6 +7,43 @@ import type { OperatorSession, OperatorSessionStatus } from './session.js';
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const ARC_TESTNET: `eip155:${number}` = 'eip155:5042002';
 
+/**
+ * Generous on purpose: both calls this guards (`eth_requestAccounts` and
+ * `personal_sign`) pop the wallet's own UI, and the operator is the one
+ * reading it — a connection prompt or a SIWE message to review, then a click
+ * to approve. Two minutes is long enough for a slow but honest human and
+ * still short enough that a provider that will never answer does not strand
+ * `WalletPicker` in its busy state indefinitely. Exported so the timeout test
+ * can advance fake timers by an exact, documented amount rather than a magic
+ * number.
+ */
+export const WALLET_REQUEST_TIMEOUT_MS = 120_000;
+
+/**
+ * Races a wallet RPC call against a timeout so an extension that never
+ * resolves (crashed, backgrounded, or simply broken) rejects instead of
+ * hanging forever. The timeout error carries a fixed, generic message only —
+ * no address, message, or signature — matching the same no-wallet-data
+ * contract `WalletPicker` already enforces for every thrown error.
+ */
+function withWalletTimeout<T>(promise: Promise<T>, ms = WALLET_REQUEST_TIMEOUT_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('The wallet did not respond in time.'));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 export function PrivyOperatorProvider(props: {
   readonly appId: string;
   readonly children: ReactNode;
@@ -58,16 +95,20 @@ export function usePrivyOperatorSession(): OperatorSession {
 
   const signInWithWallet = useCallback(
     async (wallet: DetectedWallet): Promise<void> => {
-      const accounts = await wallet.provider.request({ method: 'eth_requestAccounts' });
+      const accounts = await withWalletTimeout(
+        wallet.provider.request({ method: 'eth_requestAccounts' }),
+      );
       const address = Array.isArray(accounts) ? accounts[0] : undefined;
       if (typeof address !== 'string' || address.length === 0) {
         throw new Error('The wallet returned no account.');
       }
       const message = await generateSiweMessage({ address, chainId: ARC_TESTNET });
-      const signature = await wallet.provider.request({
-        method: 'personal_sign',
-        params: [message, address],
-      });
+      const signature = await withWalletTimeout(
+        wallet.provider.request({
+          method: 'personal_sign',
+          params: [message, address],
+        }),
+      );
       if (typeof signature !== 'string') {
         throw new Error('The wallet returned no signature.');
       }
