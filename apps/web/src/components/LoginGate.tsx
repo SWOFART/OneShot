@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
 import type { OperatorSession } from '../auth/session.js';
-import { WalletPicker } from './WalletPicker.js';
 
 export interface LoginGateProps {
   readonly session: OperatorSession;
@@ -57,12 +56,6 @@ export function LoginGate(props: LoginGateProps) {
             Privy login is not configured for this build. Set <code>VITE_PRIVY_APP_ID</code> to
             enable it.
           </p>
-        ) : props.session.signInWithWallet !== undefined ? (
-          <WalletPicker
-            signIn={props.session.signInWithWallet}
-            onOtherWallet={() => props.session.login()}
-            onEmail={() => props.session.login()}
-          />
         ) : (
           <div className="gate-action-box">
             <h2>Operator sign-in</h2>
