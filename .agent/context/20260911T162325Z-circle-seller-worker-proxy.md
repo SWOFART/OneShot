@@ -68,5 +68,9 @@ payment challenge.
   `redirect: 'manual'` returned HTTP 402 and reached Cloud Run.
 - Direct seller `/health/live` and `/health/ready`: HTTP 200.
 - Direct seller `/api/premium/dataset`: HTTP 402 with Arc Testnet challenge.
-- Gate A: pending for this candidate.
-- Gate B: pending for the exact PR head.
+- Gate A: PASS from `free-pi-cli` (`deepseek-v4-flash`) for the candidate tree,
+  with no blocking findings; exact identities are recorded in PR #86.
+- Gate B: PASS from a fresh `free-pi-cli` (`deepseek-v4-flash`) for the exact
+  PR #86 head and matching tree, with no blocking findings. Required CI was
+  green; the PR is ready for human review. Exact identities are recorded in
+  the PR description.
