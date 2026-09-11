@@ -37,7 +37,7 @@ flows, Circle x402 demo, and read-only recovery evidence.
 - Web unit/component suites pass.
 - Web typecheck/lint/build and browser Gate P5 pass.
 - Root format, lint, typecheck, test, build, and required FreePi Gates A/B are
-  run on the final staged tree before the draft PR is opened.
+  recorded against the final remote PR head.
 
 ## Local checks
 
@@ -48,12 +48,21 @@ flows, Circle x402 demo, and read-only recovery evidence.
 - `pnpm test` — PASS (76 files, 1,024 tests)
 - `pnpm --filter @oneshot/web test:browser` — PASS (4 tests)
 
-## Gate A candidate review
+## Gate A final candidate review
 
-- Candidate tree before the evidence update: `625c552731320f19b71cb4bf7f64c66dcef1fc1c`
-- FreePi Gate A: PASS; reviewer tool `free-pi-cli`, selected model
+- Candidate tree: `18b4574d0ce26f27d2c721c240dbbd2034ab722c`
+- FreePi Gate A: `VERDICT: PASS`; reviewer tool `free-pi-cli`, model
   `gpt-oss-120b-speed`, base `c89cbdeb708a49bf5b71e98e87b94d2d92007d3d`,
-  target staged workspace. The reviewer reported no blocking or non-blocking
-  findings and verified the requested brand, auth, job, and safety criteria.
-- A fresh Gate A review is required for the final tree after this context entry
-  is staged.
+  target staged workspace. No blocking or non-blocking findings.
+
+## Gate B final remote PR review
+
+- PR: [#77](https://github.com/SWOFART/OneShot/pull/77)
+- Remote head commit: `2baf7ff9b337d8f64ecc7374ec5bdfb9a6a76340`
+- Remote head tree: `18b4574d0ce26f27d2c721c240dbbd2034ab722c`
+- Gate A tree matches the remote head tree exactly.
+- FreePi Gate B: `VERDICT: PASS`; reviewer tool `free-pi-cli`, model
+  `gpt-oss-120b-speed`. No blocking or non-blocking findings.
+- Required CI checks passed: `repository-policy`, `Markdown and Mermaid`,
+  `ESLint and TypeScript`, `Frontend browser acceptance`, and `Workers Builds:
+  oneshot`.
