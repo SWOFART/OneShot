@@ -17,7 +17,7 @@ import { IntentForm } from './components/IntentForm.js';
 import { IntentStatusView } from './components/IntentStatusView.js';
 import { LoginGate } from './components/LoginGate.js';
 import { ReadinessBanner } from './components/ReadinessBanner.js';
-import { JobWorkspace } from './components/JobWorkspace.js';
+import { JobList, JobWorkspace } from './components/JobWorkspace.js';
 import { RecoverySurface, SettlementSurface } from './components/FrontendSurfaces.js';
 import './styles.css';
 
@@ -32,6 +32,7 @@ const TAB_LABELS: Readonly<Record<Tab, string>> = {
 
 export interface AppProps {
   readonly apiClient?: OneShotApiClient;
+  readonly jobClient?: JobApiClient;
   readonly settlementClient?: SettlementClient;
   readonly recoveryClient?: RecoveryClient;
   readonly useOperatorSession?: UseOperatorSession;
@@ -168,9 +169,7 @@ function CabinetPage(props: {
         {section === 'tools' && (
           <JobWorkspace client={props.jobClient} onSelectIntent={setIntentId} />
         )}
-        {section === 'jobs' && (
-          <JobWorkspace client={props.jobClient} onSelectIntent={setIntentId} />
-        )}
+        {section === 'jobs' && <JobList client={props.jobClient} onSelectIntent={setIntentId} />}
         {section === 'recovery' && (
           <section className="panel">
             <h2>Recovery & activity</h2>
@@ -216,6 +215,20 @@ function CabinetPage(props: {
               The execution wallet and Privy policy remain the authorization boundary. This cabinet
               has no policy-editing control because no enforced editing API exists.
             </p>
+            <dl className="facts">
+              <div>
+                <dt>Settlement network</dt>
+                <dd>Arc Testnet (eip155:5042002)</dd>
+              </div>
+              <div>
+                <dt>Execution wallet</dt>
+                <dd>Server-configured Privy wallet (address withheld from browser)</dd>
+              </div>
+              <div>
+                <dt>Payment control</dt>
+                <dd>One committed settlement per business intent</dd>
+              </div>
+            </dl>
             <ReadinessBanner client={props.apiClient} />
           </section>
         )}
@@ -230,10 +243,14 @@ function CabinetPage(props: {
           </section>
         )}
         {intentId && (
-          <details>
-            <summary>Advanced payment evidence</summary>
+          <section className="panel payment-evidence-panel" aria-label="Payment evidence">
+            <h2>Payment evidence</h2>
+            <p>
+              Read-only Arc and Privy evidence for the selected job. This view never creates or
+              retries a payment.
+            </p>
             <SettlementSurface businessIntentId={intentId} client={props.settlementClient} />
-          </details>
+          </section>
         )}
       </LoginGate>
     </main>
@@ -269,8 +286,8 @@ export function App(props: AppProps = {}) {
     [apiBaseUrl, getAuthToken, props.recoveryClient],
   );
   const jobClient = useMemo(
-    () => new JobApiClient({ baseUrl: apiBaseUrl, getAuthToken }),
-    [apiBaseUrl, getAuthToken],
+    () => props.jobClient ?? new JobApiClient({ baseUrl: apiBaseUrl, getAuthToken }),
+    [apiBaseUrl, getAuthToken, props.jobClient],
   );
 
   if (props.route === '/') return <LandingPage />;
