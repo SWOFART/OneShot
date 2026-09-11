@@ -83,7 +83,7 @@ export default {
           url.pathname + url.search,
           sellerBackendUrl(env.SELLER_BACKEND_URL),
         );
-        return await proxy(request, targetUrl, { stripCredentials: true, redirect: 'error' });
+        return await proxy(request, targetUrl, { stripCredentials: true, redirect: 'manual' });
       } catch {
         return unavailable('Circle seller backend is unavailable', 502);
       }

@@ -51,7 +51,7 @@ describe('Cloudflare public seller proxy', () => {
     expect(request).toBeInstanceOf(Request);
     const proxied = request as Request;
     expect(proxied.url).toBe('https://seller.example.test/api/premium/dataset?demo=1');
-    expect(proxied.redirect).toBe('error');
+    expect(proxied.redirect).toBe('manual');
     expect(proxied.headers.get('payment-signature')).toBe('signed-payment');
     expect(proxied.headers.get('authorization')).toBeNull();
     expect(proxied.headers.get('cookie')).toBeNull();
