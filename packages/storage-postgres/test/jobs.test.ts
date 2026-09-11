@@ -28,6 +28,35 @@ const failedJob = {
 };
 
 describe('JobLedger delivery recovery', () => {
+  it('projects committed settlement evidence with the Arc Testnet explorer link', async () => {
+    const settledJob = {
+      ...failedJob,
+      settlement_provider_reference_id: 'privy_provider_1',
+      settlement_transaction_hash: `0x${'c'.repeat(64)}`,
+      settlement_block_number: '99',
+      settlement_transfer_log_index: 0,
+    };
+    const client = {
+      async query(sql: string) {
+        if (sql.includes('WHERE j.workspace_id')) return { rows: [settledJob] };
+        return { rows: [] };
+      },
+      release() {},
+    };
+    const ledger = new JobLedger({ connect: async () => client } as never, {
+      now: () => new Date('2026-09-07T12:02:00.000Z'),
+      nextAttemptId: () => 'unused',
+    });
+
+    await expect(ledger.get('workspace-unit', failedJob.job_id)).resolves.toMatchObject({
+      settlement: {
+        provider_reference_id: 'privy_provider_1',
+        transaction_hash: `0x${'c'.repeat(64)}`,
+        explorer_url: `https://testnet.arcscan.app/tx/0x${'c'.repeat(64)}`,
+      },
+    });
+  });
+
   it('fences a resumed retrieval with a fresh outbox key and never creates payment work', async () => {
     const calls: Array<{ sql: string; values?: readonly unknown[] }> = [];
     const client = {

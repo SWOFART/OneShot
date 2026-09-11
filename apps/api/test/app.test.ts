@@ -494,6 +494,11 @@ describe('resumable job API boundary', () => {
     const headers = { authorization: 'Bearer test-token' };
     const payload = { task_key: 'report-acme', tool_id: 'team-report-v1', report_subject: 'Acme' };
 
+    const quote = await app.inject({ method: 'POST', url: '/v1/jobs/quote', headers, payload });
+    expect(quote.statusCode).toBe(200);
+    expect(quote.json()).toEqual(job.supplier);
+    expect(calls).toEqual([]);
+
     const created = await app.inject({ method: 'POST', url: '/v1/jobs', headers, payload });
     expect(created.statusCode).toBe(202);
     expect(created.json()).toMatchObject({ job_id: job.job_id, payment_state: 'COMMITTED' });

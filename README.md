@@ -222,6 +222,29 @@ Cloudflare Workers Build checkout.
 
 ## API
 
+### Arc Testnet transfer demo
+
+The resumable job flow uses a deliberately labelled team-operated supplier
+until an external supplier is selected. Configure
+`ONESHOT_SUPPLIER_RECIPIENT` and `ONESHOT_SUPPLIER_AMOUNT_ATOMIC` on the API;
+the recipient must be the same second team-controlled testnet wallet included
+in the worker's `ONESHOT_RECIPIENT_ALLOWLIST`. If either value is absent, job
+routes fail closed with `503 NOT_READY` instead of quoting a placeholder wallet.
+The existing worker then authorizes and submits the exact quote through the
+Privy policy on Arc Testnet. A committed job's settlement and ArcScan evidence
+remain authoritative; delivery resume never submits a replacement payment.
+
+For a safe rehearsal, use a small integer quote such as `10000` atomic USDC
+(`0.01 USDC`), fund only the Privy testnet wallet, and use a second team-owned
+Arc Testnet wallet as the recipient. This proves the Privy/Arc settlement rail;
+it is not a claim of third-party supplier execution.
+
+The cabinet follows a two-step approval flow: enter a company/domain, request
+the live quote, review amount/recipient/network/expiry, then explicitly approve
+payment. The generated task key is shown for retries; users do not need to
+invent one. After settlement, the job list links directly to ArcScan and keeps
+the supplier result separate from payment evidence.
+
 | Method | Path                             | Purpose                                                       |
 | ------ | -------------------------------- | ------------------------------------------------------------- |
 | `POST` | `/v1/intents`                    | Create an intent; an identical replay returns the same result |
@@ -229,6 +252,7 @@ Cloudflare Workers Build checkout.
 | `POST` | `/v1/intents/{id}/reconcile`     | Trigger read-only reconciliation; never submits               |
 | `GET`  | `/v1/intents/{id}/recovery-view` | Local authority plus labelled provider observations           |
 | `POST` | `/v1/jobs`                       | Start/replay one workspace-scoped team report task            |
+| `POST` | `/v1/jobs/quote`                 | Return a non-chargeable quote before explicit approval       |
 | `GET`  | `/v1/jobs`                       | List workspace jobs and delivery state                        |
 | `GET`  | `/v1/jobs/{jobId}`               | Read a workspace-owned job                                    |
 | `POST` | `/v1/jobs/{jobId}/resume`        | Resume original supplier delivery; never submits payment      |

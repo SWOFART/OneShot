@@ -112,6 +112,7 @@ export interface JobResponse {
   readonly supplier: SupplierQuote;
   readonly payment_state: IntentState;
   readonly delivery_state: DeliveryState;
+  readonly settlement?: SettlementView;
   readonly result?: SupplierResult;
   readonly created_at: string;
   readonly updated_at: string;

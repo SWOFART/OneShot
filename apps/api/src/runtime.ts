@@ -50,7 +50,7 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
     const app = buildApi({
       ledger,
       jobs,
-      supplier: new TeamReportSupplier(),
+      ...(config.supplier ? { supplier: new TeamReportSupplier(config.supplier) } : {}),
       ...(config.walletActivity
         ? { walletActivity: new StudioWalletActivityPort(config.walletActivity) }
         : {}),

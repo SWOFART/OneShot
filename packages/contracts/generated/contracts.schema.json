@@ -548,6 +548,9 @@
             "RETRIEVAL_FAILED"
           ]
         },
+        "settlement": {
+          "$ref": "#/$defs/Settlement"
+        },
         "result": {
           "$ref": "#/$defs/SupplierResult"
         },

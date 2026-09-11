@@ -3,6 +3,7 @@ import {
   validateSupplierOrder,
   type DeliveryState,
   type JobView,
+  type SettlementView,
   type SupplierOrder,
   type SupplierResult,
 } from '@oneshot/contracts';
@@ -39,6 +40,10 @@ interface JobRow {
   readonly created_at: Date;
   readonly updated_at: Date;
   readonly payment_state: JobView['payment_state'];
+  readonly settlement_provider_reference_id?: string | null;
+  readonly settlement_transaction_hash?: string | null;
+  readonly settlement_block_number?: string | null;
+  readonly settlement_transfer_log_index?: number | null;
 }
 
 function quoteForView(order: SupplierOrder) {
@@ -53,7 +58,27 @@ function quoteForView(order: SupplierOrder) {
   };
 }
 
+function settlementForView(row: JobRow): SettlementView | undefined {
+  if (
+    !row.settlement_provider_reference_id ||
+    !row.settlement_transaction_hash ||
+    !row.settlement_block_number ||
+    row.settlement_transfer_log_index === null ||
+    row.settlement_transfer_log_index === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    provider_reference_id: row.settlement_provider_reference_id,
+    transaction_hash: row.settlement_transaction_hash,
+    block_number: row.settlement_block_number,
+    transfer_log_index: row.settlement_transfer_log_index,
+    explorer_url: `https://testnet.arcscan.app/tx/${row.settlement_transaction_hash}`,
+  };
+}
+
 function asView(row: JobRow): JobView {
+  const settlement = settlementForView(row);
   return {
     job_id: row.job_id,
     task_key: row.task_key,
@@ -62,6 +87,7 @@ function asView(row: JobRow): JobView {
     supplier: quoteForView(row.supplier_quote),
     payment_state: row.payment_state,
     delivery_state: row.delivery_state,
+    ...(settlement ? { settlement } : {}),
     ...(row.delivery_state === 'AVAILABLE' && row.result_payload
       ? { result: row.result_payload }
       : {}),
@@ -394,8 +420,14 @@ export class JobLedger {
   #selectJob(): string {
     return `SELECT j.job_id, j.request_fingerprint, j.task_key, j.tool_id, j.business_intent_id,
       j.supplier_order_reference, j.supplier_quote, j.delivery_state, j.delivery_attempt,
-      j.result_reference, j.result_payload, j.created_at, j.updated_at, i.state AS payment_state
-      FROM resumable_jobs j JOIN business_intents i ON i.business_intent_id = j.business_intent_id`;
+      j.result_reference, j.result_payload, j.created_at, j.updated_at, i.state AS payment_state,
+      s.provider_reference_id AS settlement_provider_reference_id,
+      s.transaction_hash AS settlement_transaction_hash,
+      s.block_number AS settlement_block_number,
+      s.transfer_log_index AS settlement_transfer_log_index
+      FROM resumable_jobs j
+      JOIN business_intents i ON i.business_intent_id = j.business_intent_id
+      LEFT JOIN settlements s ON s.business_intent_id = j.business_intent_id`;
   }
 
   async #readJob(

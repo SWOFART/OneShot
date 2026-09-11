@@ -236,10 +236,11 @@ function CabinetPage(props: {
           <section className="panel">
             <h2>Developer access</h2>
             <p>
-              Send a stable task key with every start or resume request. Keep it outside URLs and
-              browser storage. No API keys are issued in this workspace.
+              Tools generates a stable task key for each run. Request a quote first, then approve
+              the exact recipient and amount. Keep the key outside URLs and browser storage when
+              automating retries. No API keys are issued in this workspace.
             </p>
-            <code>{'POST /v1/jobs { task_key, tool_id: "team-report-v1", report_subject }'}</code>
+            <code>{'POST /v1/jobs/quote → POST /v1/jobs (explicit approval)'}</code>
           </section>
         )}
         {intentId && (
