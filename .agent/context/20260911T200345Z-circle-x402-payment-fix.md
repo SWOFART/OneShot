@@ -73,9 +73,9 @@ The Circle x402 workspace action remains `AUTHORIZING`/`FAILED_SAFE` and does no
 
 - Branch: `fix/circle-x402-payment`
 - Base: `develop` at `4d28073` (PR #91 is merged)
-- Commit: uncommitted implementation changes
-- PR: not created
-- CI: not run
+- Commit: `e7d2dac` (`fix(x402): reconcile Circle transfer UUIDs`)
+- PR: [#92](https://github.com/SWOFART/OneShot/pull/92), open against `develop`
+- CI: GitHub checks queued/in progress; local checks pass
 
 ## Review gates
 
@@ -84,6 +84,6 @@ The Circle x402 workspace action remains `AUTHORIZING`/`FAILED_SAFE` and does no
 
 ## Handoff/next steps
 
-1. Review/stage only intended source, migration, docs, tests, and this context file; leave user-owned `cloudbuild-worker.yaml`, `.gcloudignore`, and `cloudbuild-api.yaml` untouched/un-staged.
-2. Commit and push `fix/circle-x402-payment`.
-3. Open the PR against `develop`; Gates A/B remain skipped by explicit user authorization.
+1. Review PR #92 and its queued GitHub checks.
+2. Leave user-owned `cloudbuild-worker.yaml`, `.gcloudignore`, and `cloudbuild-api.yaml` untouched/un-staged.
+3. Gates A/B remain skipped by explicit user authorization.
