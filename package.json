@@ -24,6 +24,7 @@
     "lint": "eslint .",
     "scenarios:invariants": "pnpm build && node scripts/run-invariant-scenarios.mjs",
     "demo:e2e": "pnpm build && node scripts/demo-e2e.mjs",
+    "demo:r4": "pnpm build && node scripts/demo-r4.mjs",
     "demo:x402": "pnpm build && node scripts/demo-circle-x402.mjs",
     "test": "pnpm build && vitest run --exclude apps/web/browser/**",
     "test:browser": "pnpm --filter @oneshot/web test:browser",

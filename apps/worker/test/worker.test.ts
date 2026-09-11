@@ -20,6 +20,7 @@ import {
   executeFulfillSupplierOrder,
   executeSubmitSettlement,
 } from '../src/index.js';
+import { withResponseLossAfterBroadcast } from '../src/failure-injection.js';
 
 const sampleRequest: CreateIntentRequest = {
   business_intent_id: 'intent-worker-unit-1',
@@ -262,6 +263,7 @@ describe('Worker Unit Logic', () => {
         completedKind = result.kind;
         return { completed: true, state: 'UNKNOWN', version: 3 };
       },
+      async persistProviderRequestIdentity() {},
     });
 
     await executeSubmitSettlement('intent-worker-unit-1', {
@@ -275,6 +277,66 @@ describe('Worker Unit Logic', () => {
     });
 
     expect(completedKind).toBe('POSSIBLY_SUBMITTED');
+  });
+
+  it('records a labelled post-broadcast response loss and never submits a second time', async () => {
+    let providerCalls = 0;
+    let claimCalls = 0;
+    let completedKind: string | undefined;
+    const ledger = createMockLedger({
+      async claimSubmission(): Promise<ClaimSubmissionResult> {
+        claimCalls += 1;
+        return claimCalls === 1
+          ? {
+              claimed: true,
+              intent: { ...sampleIntent, state: 'READY' },
+              attemptId: 'attempt-loss-1',
+              correlationId: 'corr-loss-1',
+              version: 2,
+            }
+          : { claimed: false, reason: 'NOT_READY', currentState: 'UNKNOWN' };
+      },
+      async completeSubmission(_id, _attemptId, result: SettlementResult) {
+        completedKind = result.kind;
+        return { completed: true, state: 'UNKNOWN', version: 3 };
+      },
+      async persistProviderRequestIdentity() {},
+    });
+    const settlementPort = withResponseLossAfterBroadcast(
+      {
+        getSubmissionIdentity: () => ({
+          idempotencyKey: '0x' + '5'.repeat(64),
+          referenceId: 'oneshot-intent-worker-unit-1',
+          requestFingerprint: '0x' + '6'.repeat(64),
+        }),
+        async submit() {
+          providerCalls += 1;
+          return {
+            kind: 'CONFIRMED',
+            provider_reference_id: 'ref-response-loss',
+            transaction_hash: `0x${'d'.repeat(64)}`,
+            block_number: '600',
+            transfer_log_index: 0,
+          };
+        },
+      },
+      true,
+    );
+
+    await executeSubmitSettlement('intent-worker-unit-1', {
+      pool: {} as never,
+      ledger,
+      settlementPort,
+    });
+    await executeSubmitSettlement('intent-worker-unit-1', {
+      pool: {} as never,
+      ledger,
+      settlementPort,
+    });
+
+    expect(completedKind).toBe('POSSIBLY_SUBMITTED');
+    expect(providerCalls).toBe(1);
+    expect(claimCalls).toBe(2);
   });
 
   it('retries only the original committed supplier order after a delivery failure', async () => {

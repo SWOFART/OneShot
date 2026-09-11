@@ -14,6 +14,7 @@ import {
 import { lookupEvidence } from '@oneshot/arc-adapter';
 import { LiveSubgraphMcpRecoveryPort, VertexAiRecoveryAdvisor } from '@oneshot/reconciliation';
 import { composeWorker, type ComposedWorker } from './composition.js';
+import { withResponseLossAfterBroadcast } from './failure-injection.js';
 import { RestartRunner } from './restart-runner.js';
 import { loadWorkerRuntimeConfig, type WorkerRuntimeConfig } from './runtime-config.js';
 
@@ -114,7 +115,10 @@ async function composeProduction(
     nativeDecimals: config.settlement.profile.nativeDecimals,
     rpcTimeoutMs: config.settlement.rpcTimeoutMs,
   });
-  const settlementPort = new ArcSettlementAdapter(config.settlement, provider);
+  const settlementPort = withResponseLossAfterBroadcast(
+    new ArcSettlementAdapter(config.settlement, provider),
+    config.demoResponseLossAfterBroadcast,
+  );
   const authorizationPort = {
     name: 'PrivyAuthorizationAdapter',
     contractVersion: '1.0.0',

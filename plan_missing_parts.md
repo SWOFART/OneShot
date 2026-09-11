@@ -9,15 +9,15 @@ Durable intents/outbox, worker, Privy/Arc adapters, Studio recovery, advisor,
 operator authentication and four-tab UI are reused. Historical P4/P5 evidence
 does not prove the new job workflow or current deployment health.
 
-## New increment: all gates not started
+## New increment: R0–R3 delivered; R4/R5 remain evidence-gated
 
 | Gate | Missing work | Acceptance boundary |
 | --- | --- | --- |
-| R0 | Supplier/task/ownership/delivery/binding/route contracts | Feasible supplier, scoped Privy execution, no guessed order association |
-| R1 | Durable job/order/result and one connector | Two agents share purchase; paid delivery failure never repays |
-| R2 | Separate landing and cabinet | Accessible job-centered UX over real APIs |
-| R3 | Live bounded activity audit and job-aware triage | Fresh live evidence; explicit coverage; ambiguous binding holds |
-| R4 | Live interrupted-job demonstration | Real payment, labelled fault, live Graph where needed, same supplier result |
+| R0 | Supplier/task/ownership/delivery/binding/route contracts | Delivered in the R0–R3 foundation; keep one supported supplier and scoped Privy execution |
+| R1 | Durable job/order/result and one connector | Delivered; two-agent/concurrency/restart tests share one intent/payment and delivery never repays |
+| R2 | Separate landing and cabinet | Delivered at `/` and `/app`; accessible job-centered UX over authenticated APIs |
+| R3 | Live bounded activity audit and job-aware triage | Delivered seam; fresh Studio evidence and ambiguous transfer binding remain runtime evidence |
+| R4 | Live interrupted-job demonstration | Reviewed testnet-only response-loss hook and sanitized runner; real payment, Studio capture and supplier result still require authorization |
 | R5 | Release and submission | Exact-head checks, FreePi A/B, public docs/video, correct pool, human review |
 
 ## Current limitations
@@ -27,12 +27,10 @@ does not prove the new job workflow or current deployment health.
   More queries alone do not establish AI value.
 - Indexed memoId is null. Transfer tuples may collide. Order binding and
   cross-job transfer attribution must be proved in R0/R1.
-- Supplier delivery and job APIs are planned; preserve existing intent clients
-  through additive contracts.
-- Landing and console currently share a page. Raw intent/hash views become
-  advanced details, not the default task.
 - The existing demo:e2e command is offline rehearsal, not fresh live evidence.
-  No recorded submission video is included.
+- `demo:r4` is offline by default. Live R4 needs an explicitly authorized Arc
+  Testnet run, a fresh Studio response, and a real supplier result; no recorded
+  submission video is included.
 - New job/result endpoints require server-side workspace access controls.
   Authentication alone does not isolate records.
 
@@ -44,6 +42,6 @@ payroll and arbitrary supplier integrations remain out of scope.
 
 ## Next action
 
-After this planning PR is reviewed, implement R0 on a separate branch. Select
-and prove one supplier's idempotency/retrieval semantics before production
-job implementation or UX integration.
+Next: run the opt-in R4 drill with a stable task key, then capture exact
+sanitized evidence before opening the R5 release/submission PR. Do not claim a
+live sponsor qualification from the offline rehearsal.

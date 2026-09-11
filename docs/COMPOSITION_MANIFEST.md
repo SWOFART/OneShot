@@ -52,6 +52,8 @@ configuration; it does not select the simulator through an environment default.
 | `ONESHOT_ARC_PROFILE`          | required         | Enabled, pinned Arc profile; `arc-testnet` is the current supported profile |
 | `ONESHOT_ARC_RPC_URL`          | required         | HTTPS JSON-RPC endpoint for the selected Arc profile       |
 | `ONESHOT_SUBMISSIONS_DISABLED` | `false`          | Safe disable switch pausing new submission ownership       |
+| `ONESHOT_DEMO_RESPONSE_LOSS_AFTER_BROADCAST` | `false` | R4 testnet-only one-shot post-broadcast response-loss hook |
+| `ONESHOT_DEMO_CONFIRM_TESTNET` | required for hook | Explicit confirmation for the reviewed testnet drill |
 | `ONESHOT_SUBMISSION_LEASE_MS`  | `30000`          | Lease duration before orphaned `SUBMITTING` intents expire |
 | `ONESHOT_SUBGRAPH_SOURCE`      | source-dependent | `STUDIO_GRAPHQL` or `SUBGRAPH_MCP` recovery source         |
 | `ONESHOT_SUBGRAPH_QUERY_URL` / `ONESHOT_SUBGRAPH_MCP_ENDPOINT` | source-dependent | Required endpoint for the selected source |

@@ -239,6 +239,11 @@ The existing worker then authorizes and submits the exact quote through the
 Privy policy on Arc Testnet. A committed job's settlement and ArcScan evidence
 remain authoritative; delivery resume never submits a replacement payment.
 
+`pnpm demo:r4` runs the response-loss drill offline by default. The live mode
+requires an explicit Arc Testnet confirmation and the reviewed worker hook;
+it emits a sanitized trace and stops at `HOLD`/`INCOMPLETE` when settlement,
+Studio evidence or the supplier result cannot be proven.
+
 For a safe rehearsal, use a small integer quote such as `10000` atomic USDC
 (`0.01 USDC`), fund only the Privy testnet wallet, and use a second team-owned
 Arc Testnet wallet as the recipient. This proves the Privy/Arc settlement rail;
