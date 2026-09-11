@@ -112,12 +112,11 @@ export function usePrivyOperatorSession(): OperatorSession {
       if (typeof signature !== 'string') {
         throw new Error('The wallet returned no signature.');
       }
-      await loginWithSiwe({
-        signature,
-        message,
-        walletClientType: wallet.rdns,
-        connectorType: 'injected',
-      });
+      // EIP-6963 `rdns` values (for example, `io.metamask`) are provider
+      // identifiers, not Privy's walletClientType values (for example,
+      // `metamask`). Both fields are optional for SIWE login, so omit them
+      // rather than sending metadata Privy cannot interpret.
+      await loginWithSiwe({ signature, message });
     },
     [generateSiweMessage, loginWithSiwe],
   );

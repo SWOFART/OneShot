@@ -32,9 +32,10 @@ vi.mock('@privy-io/react-auth', () => ({
   }),
 }));
 
-const { usePrivyOperatorSession, WALLET_REQUEST_TIMEOUT_MS } = await import(
-  '../src/auth/privy-session.js'
-);
+const { usePrivyOperatorSession, WALLET_REQUEST_TIMEOUT_MS } =
+  await import('../src/auth/privy-session.js');
+
+const METAMASK_ADDRESS = '0x52908400098527886E0F7030069857D2E4169EE7';
 
 function neverRespondingWallet(): DetectedWallet {
   return {
@@ -51,6 +52,7 @@ function neverRespondingWallet(): DetectedWallet {
 describe('usePrivyOperatorSession — wallet request timeout', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -98,5 +100,35 @@ describe('usePrivyOperatorSession — wallet request timeout', () => {
     expect(message).not.toContain(wallet.rdns);
     expect(message).not.toContain(wallet.name);
     expect(message).not.toContain(wallet.uuid);
+  });
+
+  it('logs in with a detected MetaMask provider without forwarding its RDNS as Privy metadata', async () => {
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce([METAMASK_ADDRESS])
+      .mockResolvedValueOnce('0xsignature');
+    const wallet: DetectedWallet = {
+      uuid: 'metamask-uuid',
+      name: 'MetaMask',
+      rdns: 'io.metamask',
+      provider: { request },
+    };
+
+    const { result } = renderHook(() => usePrivyOperatorSession());
+    await result.current.signInWithWallet(wallet);
+
+    expect(mocks.generateSiweMessage).toHaveBeenCalledWith({
+      address: METAMASK_ADDRESS,
+      chainId: 'eip155:5042002',
+    });
+    expect(request).toHaveBeenNthCalledWith(1, { method: 'eth_requestAccounts' });
+    expect(request).toHaveBeenNthCalledWith(2, {
+      method: 'personal_sign',
+      params: ['siwe-message', METAMASK_ADDRESS],
+    });
+    expect(mocks.loginWithSiwe).toHaveBeenCalledWith({
+      signature: '0xsignature',
+      message: 'siwe-message',
+    });
   });
 });
