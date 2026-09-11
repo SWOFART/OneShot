@@ -11,6 +11,21 @@ function quoteAmount(quote: SupplierQuote): string {
   return formatAtomicUsdcWithAsset(quote.amount_atomic, quote.asset) ?? 'Unavailable';
 }
 
+function subjectSlug(value: string): string {
+  const slug = value
+    .normalize('NFKD')
+    .replace(/[^a-zA-Z0-9]+/gu, '-')
+    .replace(/^-+|-+$/gu, '')
+    .toLowerCase();
+  return slug.slice(0, 48) || 'company';
+}
+
+function explorerHref(transactionHash: string | undefined): string | undefined {
+  return transactionHash && /^0x[0-9a-f]{64}$/u.test(transactionHash)
+    ? `https://testnet.arcscan.app/tx/${transactionHash}`
+    : undefined;
+}
+
 export function SupplierQuotePanel({
   quote,
   heading = 'Supplier quote',
@@ -44,6 +59,10 @@ export function SupplierQuotePanel({
           <dt>Order reference</dt>
           <dd className="mono break-all">{quote.order_reference}</dd>
         </div>
+        <div>
+          <dt>Quote expires</dt>
+          <dd>{new Date(quote.expires_at).toLocaleString()}</dd>
+        </div>
       </dl>
     </section>
   );
@@ -53,12 +72,43 @@ export function JobWorkspace(props: {
   readonly client: JobApiClient;
   readonly onSelectIntent: (id: string) => void;
 }) {
-  const [taskKey, setTaskKey] = useState('');
   const [subject, setSubject] = useState('');
+  const [customTaskKey, setCustomTaskKey] = useState('');
+  const [runSuffix] = useState(() => crypto.randomUUID().slice(0, 8));
+  const [quote, setQuote] = useState<SupplierQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const [approvedJob, setApprovedJob] = useState<JobView | null>(null);
   const [notice, setNotice] = useState('');
+  const generatedTaskKey = subject.trim() ? `report-${subjectSlug(subject)}-${runSuffix}` : '';
+  const taskKey = customTaskKey.trim() || generatedTaskKey;
+
+  function clearQuote(): void {
+    setQuote(null);
+    setApprovedJob(null);
+    setNotice('');
+  }
+
+  async function loadQuote(): Promise<void> {
+    setQuoteLoading(true);
+    setNotice('');
+    try {
+      setQuote(
+        await props.client.quote({
+          task_key: taskKey,
+          tool_id: 'team-report-v1',
+          report_subject: subject,
+        }),
+      );
+    } catch {
+      setQuote(null);
+      setNotice('A live quote is not available. Check API readiness and try again.');
+    } finally {
+      setQuoteLoading(false);
+    }
+  }
 
   async function start(): Promise<void> {
+    if (!quote) return;
     try {
       const job = await props.client.start({
         task_key: taskKey,
@@ -74,41 +124,77 @@ export function JobWorkspace(props: {
   }
 
   return (
-    <section className="panel" aria-label="Start a company-data report">
+    <section className="panel job-workspace" aria-label="Start a company-data report">
       <header>
         <h2>Start a company-data report</h2>
         <p>
-          Enter a stable task key and subject. The API creates the supplier order and returns the
-          exact recipient, amount, network, and order reference before payment authorization.
+          Enter a company or domain. OneShot creates a stable task key for this run and fetches a
+          live team-operated Arc Testnet invoice before any payment authorization is requested.
         </p>
       </header>
-      <label htmlFor="task-key">Stable task key</label>
-      <input
-        id="task-key"
-        value={taskKey}
-        onChange={(event) => setTaskKey(event.target.value)}
-        placeholder="Keep this key for every retry"
-      />
-      <label htmlFor="report-subject">Report subject</label>
+      <label htmlFor="report-subject">Company or domain</label>
       <input
         id="report-subject"
         value={subject}
-        onChange={(event) => setSubject(event.target.value)}
-        placeholder="Company or domain"
+        onChange={(event) => {
+          setSubject(event.target.value);
+          clearQuote();
+        }}
+        placeholder="acme.com"
       />
-      <button
-        type="button"
-        disabled={!taskKey.trim() || !subject.trim()}
-        onClick={() => void start()}
-      >
-        Approve and start job
-      </button>
+      <label htmlFor="generated-task-key">Task key for retries</label>
+      <input
+        id="generated-task-key"
+        value={generatedTaskKey}
+        readOnly
+        placeholder="Generated after entering a subject"
+      />
+      <small className="field-help">
+        Keep this generated key if the request needs to be retried. It prevents a second payment for
+        the same run.
+      </small>
+      <details className="advanced-fields">
+        <summary>Use a custom task key (advanced)</summary>
+        <label htmlFor="custom-task-key">Custom stable task key</label>
+        <input
+          id="custom-task-key"
+          value={customTaskKey}
+          onChange={(event) => {
+            setCustomTaskKey(event.target.value);
+            clearQuote();
+          }}
+          placeholder="acme-report-2026-09-11"
+        />
+      </details>
+      {!quote && (
+        <button
+          type="button"
+          disabled={quoteLoading || !taskKey.trim() || !subject.trim()}
+          onClick={() => void loadQuote()}
+        >
+          {quoteLoading ? 'Loading live quote…' : 'Get live quote'}
+        </button>
+      )}
+      {quote && !approvedJob && (
+        <>
+          <SupplierQuotePanel heading="Review quote before approval" quote={quote} />
+          <p className="field-help">
+            Nothing has been paid yet. Approval sends the quoted USDC from the server-configured
+            Privy wallet to the displayed Arc Testnet recipient.
+          </p>
+          <button type="button" onClick={() => void start()}>
+            Approve payment and start job
+          </button>
+        </>
+      )}
       {notice && (
         <p role="status" className="notice">
           {notice}
         </p>
       )}
-      {approvedJob && <SupplierQuotePanel quote={approvedJob.supplier} />}
+      {approvedJob && (
+        <SupplierQuotePanel heading="Approved payment" quote={approvedJob.supplier} />
+      )}
     </section>
   );
 }
@@ -181,6 +267,22 @@ export function JobList(props: {
                   {shortenAddress(job.supplier.recipient)}
                 </span>
               </p>
+              {job.settlement && (
+                <p className="job-settlement-summary">
+                  <strong>Payment confirmed:</strong>{' '}
+                  {explorerHref(job.settlement.transaction_hash) ? (
+                    <a
+                      href={explorerHref(job.settlement.transaction_hash)}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      View the ArcScan transaction
+                    </a>
+                  ) : (
+                    <span className="mono">{job.settlement.transaction_hash}</span>
+                  )}
+                </p>
+              )}
               {job.result ? (
                 <p>
                   <strong>Result ready:</strong> {job.result.report}

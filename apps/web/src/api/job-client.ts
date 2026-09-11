@@ -2,6 +2,7 @@ import type {
   CreateJobRequest,
   JobListResponse,
   JobView,
+  SupplierQuote,
   SupplierResult,
 } from '@oneshot/contracts';
 import type { ApiClientConfig } from './client.js';
@@ -47,6 +48,17 @@ export class JobApiClient {
     });
     const body = await responseJson<JobView>(response);
     if (!response.ok || !body) throw new Error('Could not start the approved job');
+    return body;
+  }
+
+  async quote(request: CreateJobRequest): Promise<SupplierQuote> {
+    const response = await this.#fetch(`${this.#baseUrl}/v1/jobs/quote`, {
+      method: 'POST',
+      headers: this.#headers(),
+      body: JSON.stringify(request),
+    });
+    const body = await responseJson<SupplierQuote>(response);
+    if (!response.ok || !body) throw new Error('Could not load a live supplier quote');
     return body;
   }
 

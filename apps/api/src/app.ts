@@ -6,6 +6,7 @@ import {
   type SupplierPort,
   type ErrorCode,
   type ErrorResponse,
+  type SupplierQuote,
 } from '@oneshot/contracts';
 import { derivedJobId } from '@oneshot/domain';
 import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
@@ -211,6 +212,28 @@ export function buildApi(dependencies: ApiDependencies) {
       return;
     }
     return reply.code(result.kind === 'ACCEPTED' ? 202 : 200).send(result.job);
+  });
+
+  app.post('/v1/jobs/quote', { schema: { body: createJobBodySchema } }, async (request, reply) => {
+    if (!dependencies.supplier) {
+      jobsUnavailable(reply, request);
+      return;
+    }
+    const parsed = parseCreateJobRequest(request.body);
+    // Quoting is deliberately non-chargeable: no intent, attempt, settlement,
+    // or outbox row is created until the caller explicitly approves via POST /v1/jobs.
+    const jobId = derivedJobId(workspaceId, parsed);
+    const order = await dependencies.supplier.createOrder(parsed, jobId);
+    const quote: SupplierQuote = {
+      supplier_id: order.supplier_id,
+      order_reference: order.order_reference,
+      recipient: order.recipient,
+      amount_atomic: order.amount_atomic,
+      asset: order.asset,
+      network: order.network,
+      expires_at: order.expires_at,
+    };
+    return reply.code(200).send(quote);
   });
 
   app.get('/v1/jobs', async (request, reply) => {

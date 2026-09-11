@@ -4,6 +4,14 @@ Status: target walkthrough for plan gates R4/R5, not a completed live demo.
 The supplier/job/cabinet increment must pass R0–R3 first. The existing payment
 baseline and its checked-in evidence remain useful but do not prove this flow.
 
+For the first Arc transfer rehearsal, configure the API's
+`ONESHOT_SUPPLIER_RECIPIENT` and `ONESHOT_SUPPLIER_AMOUNT_ATOMIC` to a small
+testnet invoice (for example `10000` atomic USDC / `0.01 USDC`) and configure
+the same recipient in the worker's `ONESHOT_RECIPIENT_ALLOWLIST`. Use a second
+team-controlled Arc Testnet wallet. The transfer is a real Privy-authorized
+settlement, but the result remains labelled as a team-operated demo until an
+external supplier is integrated.
+
 ## Existing offline rehearsal
 
 Run `pnpm demo:e2e` to build, run invariant scenarios and validate sanitized
@@ -29,10 +37,12 @@ Do not present fixture playback as a live Graph/model demonstration.
 ## Four-minute target walkthrough
 
 1. **Purpose and permission (0:00–0:35).** Show the public landing page, then
-   sign in to the cabinet. Select the report tool and explain the approved
-   supplier/amount. State the scope: at-most-once payment, supplier-supported
-   resumable delivery, not exactly-once execution of arbitrary tools.
-2. **Start and interrupt (0:35–1:15).** Agent A starts one job. A real testnet
+   sign in to the cabinet. Enter a company/domain and show the generated task
+   key. Request the live quote, inspect amount, recipient, network and expiry,
+   then explicitly approve payment. State the scope: at-most-once payment,
+   supplier-supported resumable delivery, not exactly-once execution of
+   arbitrary tools.
+2. **Start and interrupt (0:35–1:15).** Agent A approves one job. A real testnet
    payment broadcasts. Show the labelled response-loss fault and durable
    Payment uncertain status. Keep the original task/order identity visible.
 3. **Resume and investigate (1:15–2:30).** Agent B resumes the same task.

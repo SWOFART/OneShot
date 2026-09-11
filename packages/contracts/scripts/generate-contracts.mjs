@@ -239,6 +239,7 @@ const schemas = {
       supplier: { $ref: '#/$defs/SupplierQuote' },
       payment_state: { type: 'string', enum: intentStates },
       delivery_state: { type: 'string', enum: deliveryStates },
+      settlement: { $ref: '#/$defs/Settlement' },
       result: { $ref: '#/$defs/SupplierResult' },
       created_at: { type: 'string', format: 'date-time' },
       updated_at: { type: 'string', format: 'date-time' },
@@ -517,6 +518,21 @@ const openapi = {
         },
       },
     },
+    '/v1/jobs/quote': {
+      post: {
+        operationId: 'quoteJob',
+        summary: 'Return a non-chargeable supplier quote before approval',
+        security: serviceSecurity,
+        requestBody: { required: true, content: jsonContent('CreateJobRequest') },
+        responses: {
+          200: response('Live supplier quote.', 'SupplierQuote'),
+          400: errorResponse('INVALID_REQUEST'),
+          401: errorResponse('UNAUTHORIZED'),
+          403: errorResponse('FORBIDDEN'),
+          503: errorResponse('NOT_READY'),
+        },
+      },
+    },
     '/v1/jobs/{jobId}': {
       get: {
         operationId: 'getJob',
@@ -738,6 +754,7 @@ export interface JobResponse {
   readonly supplier: SupplierQuote;
   readonly payment_state: IntentState;
   readonly delivery_state: DeliveryState;
+  readonly settlement?: SettlementView;
   readonly result?: SupplierResult;
   readonly created_at: string;
   readonly updated_at: string;

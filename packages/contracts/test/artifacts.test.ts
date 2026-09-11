@@ -32,6 +32,7 @@ describe('generated contract artifacts', () => {
       '/v1/intents/{id}/reconcile',
       '/v1/intents/{id}/recovery-view',
       '/v1/jobs',
+      '/v1/jobs/quote',
       '/v1/jobs/{jobId}',
       '/v1/jobs/{jobId}/result',
       '/v1/jobs/{jobId}/resume',

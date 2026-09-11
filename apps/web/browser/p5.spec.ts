@@ -20,6 +20,13 @@ function job(deliveryState: 'RETRIEVAL_FAILED' | 'AVAILABLE' = 'RETRIEVAL_FAILED
     },
     payment_state: 'COMMITTED',
     delivery_state: deliveryState,
+    settlement: {
+      provider_reference_id: 'provider_browser',
+      transaction_hash: `0x${'c'.repeat(64)}`,
+      block_number: '99',
+      transfer_log_index: 0,
+      explorer_url: `https://testnet.arcscan.app/tx/0x${'c'.repeat(64)}`,
+    },
     ...(deliveryState === 'AVAILABLE'
       ? {
           result: {
@@ -38,14 +45,18 @@ async function json(route: Route, status: number, body: unknown): Promise<void> 
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function mockJobApi(page: Page): Promise<void> {
+async function mockJobApi(page: Page): Promise<string[]> {
+  const calls: string[] = [];
   let current = job();
   await page.route('**/health/ready', (route) => json(route, 200, { status: 'ok' }));
   await page.route('**/v1/**', async (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
+    calls.push(`${request.method()} ${pathname}`);
     if (pathname === '/v1/jobs' && request.method() === 'GET')
       return json(route, 200, { jobs: [current] });
+    if (pathname === '/v1/jobs/quote' && request.method() === 'POST')
+      return json(route, 200, current.supplier);
     if (pathname === '/v1/jobs' && request.method() === 'POST') return json(route, 202, current);
     if (pathname === `/v1/jobs/${JOB_ID}/resume` && request.method() === 'POST') {
       current = job('AVAILABLE');
@@ -63,6 +74,7 @@ async function mockJobApi(page: Page): Promise<void> {
     }
     return json(route, 404, {});
   });
+  return calls;
 }
 
 async function unlockWorkspace(page: Page): Promise<void> {
@@ -88,18 +100,30 @@ test.describe('resumable job workspace', () => {
   });
 
   test('starts one job and resumes only its original supplier delivery', async ({ page }) => {
-    await mockJobApi(page);
+    const calls = await mockJobApi(page);
     await page.goto('/app');
     await unlockWorkspace(page);
     await page.getByRole('tab', { name: 'Tools' }).click();
-    await page.getByLabel('Stable task key').fill('report-browser-acme');
-    await page.getByLabel('Report subject').fill('Browser Acme');
-    await page.getByRole('button', { name: 'Approve and start job' }).click();
+    await page.getByLabel('Company or domain').fill('acme.com');
+    await expect(page.getByLabel('Task key for retries')).toHaveValue(/report-acme-com-/u);
+    await page.getByRole('button', { name: 'Get live quote' }).click();
+    await expect.poll(() => calls.filter((call) => call === 'POST /v1/jobs/quote')).toHaveLength(1);
+    expect(calls).not.toContain('POST /v1/jobs');
+    await expect(page.getByRole('heading', { name: 'Review quote before approval' })).toBeVisible();
+    await expect(page.getByText('Nothing has been paid yet.')).toBeVisible();
+    await page.getByRole('button', { name: 'Approve payment and start job' }).click();
+    await expect.poll(() => calls.filter((call) => call === 'POST /v1/jobs')).toHaveLength(1);
     await expect(page.getByRole('status')).toContainText('Payment authorization is queued');
-    await expect(page.getByRole('heading', { name: 'Supplier quote' })).toBeVisible();
-    await expect(page.getByText('2.500000 USDC')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Approved payment' })).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'Approved payment' }).getByText('2.500000 USDC'),
+    ).toBeVisible();
     await expect(page.getByText('team_report_order_browser')).toBeVisible();
     await page.getByRole('tab', { name: 'Jobs' }).click();
+    await expect(page.getByRole('link', { name: 'View the ArcScan transaction' })).toHaveAttribute(
+      'href',
+      `https://testnet.arcscan.app/tx/0x${'c'.repeat(64)}`,
+    );
     await page.getByRole('button', { name: 'Resume delivery (never pays)' }).click();
     await expect(page.getByText('Recovered original supplier report.')).toBeVisible();
   });

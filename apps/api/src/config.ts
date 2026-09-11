@@ -1,4 +1,5 @@
 import { createPublicKey } from 'node:crypto';
+import { asAtomicAmount, asEvmAddress, type EvmAddress } from '@oneshot/contracts';
 import type { PoolConfig } from 'pg';
 import { PRIVY_ALLOW_ALL, PRIVY_DID_PREFIX } from './privy-auth.js';
 
@@ -8,12 +9,19 @@ export interface PrivyAuthRuntimeConfig {
   readonly allowedSubjects: readonly string[];
 }
 
+export interface SupplierRuntimeConfig {
+  readonly recipient: EvmAddress;
+  readonly amountAtomic: string;
+}
+
 export interface ApiRuntimeConfig {
   readonly host: string;
   readonly port: number;
   readonly serviceBearerToken: string;
   readonly database: PoolConfig;
   readonly submissionsDisabled: boolean;
+  /** When absent, job routes stay unavailable instead of quoting a sentinel wallet. */
+  readonly supplier?: SupplierRuntimeConfig;
   readonly workspaceId?: string;
   readonly rateLimit: {
     readonly maxRequests: number;
@@ -133,10 +141,33 @@ function privyAuthConfig(environment: NodeJS.ProcessEnv): PrivyAuthRuntimeConfig
   return { appId, verificationKey: normalizeVerificationKey(rawKey), allowedSubjects };
 }
 
+function supplierConfig(environment: NodeJS.ProcessEnv): SupplierRuntimeConfig | undefined {
+  const rawRecipient = environment.ONESHOT_SUPPLIER_RECIPIENT?.trim() ?? '';
+  const rawAmount = environment.ONESHOT_SUPPLIER_AMOUNT_ATOMIC?.trim() ?? '';
+  if (rawRecipient.length === 0 && rawAmount.length === 0) return undefined;
+  if (rawRecipient.length === 0 || rawAmount.length === 0) {
+    throw new Error(
+      'ONESHOT_SUPPLIER_RECIPIENT and ONESHOT_SUPPLIER_AMOUNT_ATOMIC must be configured together',
+    );
+  }
+  try {
+    const recipient = asEvmAddress(rawRecipient);
+    const amountAtomic = asAtomicAmount(rawAmount);
+    if (amountAtomic === '0') throw new Error('amount must be greater than zero');
+    return { recipient, amountAtomic };
+  } catch (cause) {
+    throw new Error(
+      `Invalid supplier quote configuration: ${cause instanceof Error ? cause.message : 'unknown error'}`,
+      { cause },
+    );
+  }
+}
+
 export function loadApiRuntimeConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): ApiRuntimeConfig {
   const privyAuth = privyAuthConfig(environment);
+  const supplier = supplierConfig(environment);
   const activityEndpoint = environment.ONESHOT_GRAPH_QUERY_URL?.trim();
   const activityWallet = environment.ONESHOT_ACTIVITY_WALLET_ADDRESS?.trim();
   if ((activityEndpoint && !activityWallet) || (!activityEndpoint && activityWallet)) {
@@ -156,6 +187,7 @@ export function loadApiRuntimeConfig(
     serviceBearerToken: required(environment, 'SERVICE_BEARER_TOKEN', 16),
     database: databaseConfig(environment),
     submissionsDisabled: environment.ONESHOT_SUBMISSIONS_DISABLED === 'true',
+    ...(supplier ? { supplier } : {}),
     // One fixed workspace is safer than accepting a caller-selected tenant.
     // Deployments should configure this explicit value; the default keeps local
     // development and existing single-workspace installations closed to one scope.
