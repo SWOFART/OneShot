@@ -18,7 +18,7 @@ does not prove the new job workflow or current deployment health.
 | R2 | Separate landing and cabinet | Delivered at `/` and `/app`; accessible job-centered UX over authenticated APIs |
 | R3 | Live bounded activity audit and job-aware triage | Delivered seam; fresh Studio evidence and ambiguous transfer binding remain runtime evidence |
 | R4 | Live interrupted-job demonstration | Reviewed testnet-only response-loss hook and sanitized runner; real payment, Studio capture and supplier result still require authorization |
-| R5 | Release and submission | Exact-head checks, FreePi A/B, public docs/video, correct pool, human review |
+| R5 | Release and submission | `release:check` and checklist are delivered; exact-head FreePi A/B, fresh live evidence, optional video, correct pool, and human review remain |
 
 ## Current limitations
 
@@ -43,5 +43,5 @@ payroll and arbitrary supplier integrations remain out of scope.
 ## Next action
 
 Next: run the opt-in R4 drill with a stable task key, then capture exact
-sanitized evidence before opening the R5 release/submission PR. Do not claim a
-live sponsor qualification from the offline rehearsal.
+sanitized evidence before final submission. The R5 release preflight is
+offline-only; do not claim live sponsor qualification from rehearsal output.

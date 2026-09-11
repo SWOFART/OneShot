@@ -321,6 +321,7 @@ plus explicit human authorization.
 | [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md)                     | Frozen v1 contract pack                                  |
 | [`docs/settlement/`](docs/settlement/)                                   | Settlement config, provider setup, live evidence         |
 | [`packages/reconciliation/docs/c06/`](packages/reconciliation/docs/c06/) | C06 demo and qualification evidence index                |
+| [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md)                 | R5 release evidence and submission checklist             |
 | [`AGENTS.md`](AGENTS.md)                                                 | Contribution policy and review gates                     |
 
 ## License

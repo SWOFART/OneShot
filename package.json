@@ -26,6 +26,7 @@
     "demo:e2e": "pnpm build && node scripts/demo-e2e.mjs",
     "demo:r4": "pnpm build && node scripts/demo-r4.mjs",
     "demo:x402": "pnpm build && node scripts/demo-circle-x402.mjs",
+    "release:check": "node scripts/release-check.mjs",
     "test": "pnpm build && vitest run --exclude apps/web/browser/**",
     "test:browser": "pnpm --filter @oneshot/web test:browser",
     "test:integration": "pnpm --filter @oneshot/storage-postgres test:integration && pnpm --filter @oneshot/api test:integration && pnpm --filter @oneshot/worker test:integration",

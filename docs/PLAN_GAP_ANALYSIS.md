@@ -29,9 +29,11 @@ Audited against `plan.md` revision 2026-09-10 on branch
   purchase, controlled response-loss fault, fresh Studio capture, receipt/log
   verification and a real supplier-result capture. No local test or fixture is
   presented as this evidence.
-- **R5 release:** requires exact-head CI, fresh FreePi Gate A and Gate B,
-  public deployment/docs/video, prize-pool verification and human review. This
-  branch makes no qualification or release claim.
+- **R5 release:** this branch adds the offline `release:check` preflight and
+  public [release checklist](RELEASE_CHECKLIST.md). Exact-head CI, fresh FreePi
+  Gate A and Gate B, live sponsor evidence, prize-pool verification, optional
+  video, and human review remain required. No qualification or release claim is
+  made here.
 
 ## Validation boundary
 
