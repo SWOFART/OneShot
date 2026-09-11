@@ -6,4 +6,5 @@ export * from './hardening.js';
 export * from './ports.js';
 export * from './adapters.js';
 export * from './privy-wallet-provider.js';
+export * from './privy-x402-signer.js';
 export type { AuthorizationPortConformance, SettlementPortConformance } from './p4-conformance.js';

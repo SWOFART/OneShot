@@ -19,6 +19,8 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "@circle-fin/x402-batching": "3.4.0",
+    "@x402/core": "2.25.0",
     "@oneshot/contracts": "workspace:*",
     "@oneshot/domain": "workspace:*"
   }
