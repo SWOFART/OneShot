@@ -66,7 +66,9 @@ function parseAnnouncement(detail: unknown): DetectedWallet | null {
 /**
  * Each call registers a permanent `window` listener that is never removed.
  * Callers must invoke this once per app session (memoise the result) rather
- * than once per render or per component mount.
+ * than once per render or per component mount. Production code should call
+ * `getWalletStore()` instead, which enforces that contract; call this
+ * directly only from tests that want an isolated store.
  */
 export function detectWallets(): WalletStore {
   const found = new Map<string, DetectedWallet>();
@@ -92,4 +94,22 @@ export function detectWallets(): WalletStore {
       };
     },
   };
+}
+
+let singleton: WalletStore | undefined;
+
+/**
+ * The module-level, once-per-session wallet store. `detectWallets()` itself
+ * registers a permanent `window` listener with no removal path, so calling it
+ * more than once per browser session leaks a listener per call. This lazily
+ * creates the store on first call and returns that same instance to every
+ * later caller, so a component that mounts and unmounts repeatedly (for
+ * example `WalletPicker` inside `LoginGate`, across sign-out/sign-in cycles)
+ * never registers more than one listener for the lifetime of the page.
+ */
+export function getWalletStore(): WalletStore {
+  if (singleton === undefined) {
+    singleton = detectWallets();
+  }
+  return singleton;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 
-import { detectWallets, type DetectedWallet, type WalletStore } from '../auth/eip6963.js';
+import { getWalletStore, type DetectedWallet, type WalletStore } from '../auth/eip6963.js';
 import { WALLET_CATALOGUE } from '../auth/wallet-catalogue.js';
 
 /**
@@ -29,7 +29,7 @@ export interface WalletPickerProps {
 }
 
 export function WalletPicker(props: WalletPickerProps) {
-  const store = useMemo(() => props.store ?? detectWallets(), [props.store]);
+  const store = useMemo(() => props.store ?? getWalletStore(), [props.store]);
   const [detected, setDetected] = useState<readonly DetectedWallet[]>(() => store.wallets);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(-1);

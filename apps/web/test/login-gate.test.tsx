@@ -103,4 +103,38 @@ describe('LoginGate', () => {
     expect(screen.queryByText(CONSOLE_TEXT)).toBeNull();
     expect(screen.getByText(/Checking your session/i)).toBeTruthy();
   });
+
+  it('offers the searchable picker when the session can sign in with a wallet', () => {
+    const session = {
+      status: 'SIGNED_OUT' as const,
+      subject: null,
+      accessToken: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      signInWithWallet: vi.fn(async () => undefined),
+    };
+    render(
+      <LoginGate session={session} machineToken="" onMachineTokenChange={() => undefined}>
+        <p>console</p>
+      </LoginGate>,
+    );
+    expect(screen.getByRole('searchbox', { name: /search wallets/iu })).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sign in with Privy' })).toBeNull();
+  });
+
+  it('keeps the plain Privy button when the session cannot', () => {
+    const session = {
+      status: 'SIGNED_OUT' as const,
+      subject: null,
+      accessToken: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+    };
+    render(
+      <LoginGate session={session} machineToken="" onMachineTokenChange={() => undefined}>
+        <p>console</p>
+      </LoginGate>,
+    );
+    expect(screen.getByRole('button', { name: 'Sign in with Privy' })).not.toBeNull();
+  });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { detectWallets, type Eip1193Provider } from '../src/auth/eip6963.js';
+import { detectWallets, getWalletStore, type Eip1193Provider } from '../src/auth/eip6963.js';
 import { WALLET_CATALOGUE } from '../src/auth/wallet-catalogue.js';
 
 const provider: Eip1193Provider = { request: vi.fn() };
@@ -129,6 +129,14 @@ describe('detectWallets', () => {
     store.subscribe(listener)();
     announce('c', 'Another Wallet', 'io.another');
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe('getWalletStore', () => {
+  it('returns the same instance on every call, registering only one listener per session', () => {
+    const first = getWalletStore();
+    const second = getWalletStore();
+    expect(second).toBe(first);
   });
 });
 
