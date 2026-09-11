@@ -35,6 +35,9 @@
       "path": "./apps/api"
     },
     {
+      "path": "./apps/seller"
+    },
+    {
       "path": "./apps/worker"
     },
     {
