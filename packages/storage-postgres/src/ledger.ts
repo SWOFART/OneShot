@@ -46,6 +46,7 @@ export interface ProviderRequestIdentity {
   readonly policyId?: string | undefined;
   readonly providerKind?: 'DIRECT_ARC' | 'CIRCLE_X402' | undefined;
   readonly transactionHash?: string | undefined;
+  readonly providerTransferId?: string | undefined;
 }
 
 export interface PaidApiQuoteSnapshot {
@@ -183,6 +184,7 @@ interface PaidApiRow {
   readonly quote_payload: unknown;
   readonly response_payload: unknown;
   readonly provider_transaction_hash: string | null;
+  readonly provider_transfer_id: string | null;
   readonly created_at: Date;
   readonly updated_at: Date;
   readonly payment_state: IntentState;
@@ -828,6 +830,36 @@ export class IntentLedger {
     }
   }
 
+  async recordPaidApiTransfer(
+    businessIntentIdValue: unknown,
+    response: unknown,
+    providerTransferIdValue: unknown,
+  ): Promise<void> {
+    const businessIntentId = asBusinessIntentId(businessIntentIdValue);
+    const providerTransferId = String(providerTransferIdValue);
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+        providerTransferId,
+      )
+    ) {
+      throw new ContractValidationError('Circle x402 transfer ID is malformed');
+    }
+    const result = await this.#pool.query(
+      `UPDATE paid_api_requests
+       SET response_payload = $1::jsonb, provider_transfer_id = $2, updated_at = $3
+       WHERE business_intent_id = $4`,
+      [
+        jsonPayload(response, 'paid API response'),
+        providerTransferId,
+        this.#dependencies.now(),
+        businessIntentId,
+      ],
+    );
+    if (result.rowCount !== 1) {
+      throw new Error(`Cannot persist Circle transfer for intent ${businessIntentId}`);
+    }
+  }
+
   async getIntent(
     idValue: unknown,
     limits: { readonly attempts?: number; readonly evidence?: number } = {},
@@ -1148,12 +1180,15 @@ export class IntentLedger {
       policy_id: string | null;
       provider_kind: 'DIRECT_ARC' | 'CIRCLE_X402';
       provider_transaction_hash: string | null;
+      provider_transfer_id: string | null;
     }>(
-      `SELECT privy_idempotency_key, privy_reference_id, request_body_fingerprint,
-              wallet_id, policy_id, provider_kind, provider_transaction_hash
-       FROM attempts
-       WHERE business_intent_id = $1
-       ORDER BY attempt_sequence DESC
+      `SELECT a.privy_idempotency_key, a.privy_reference_id, a.request_body_fingerprint,
+              a.wallet_id, a.policy_id, a.provider_kind, a.provider_transaction_hash,
+              p.provider_transfer_id
+       FROM attempts a
+       LEFT JOIN paid_api_requests p ON p.business_intent_id = a.business_intent_id
+       WHERE a.business_intent_id = $1
+       ORDER BY a.attempt_sequence DESC
        LIMIT 1`,
       [id],
     );
@@ -1167,6 +1202,7 @@ export class IntentLedger {
       ...(row.policy_id ? { policyId: row.policy_id } : {}),
       ...(row.provider_kind === 'CIRCLE_X402' ? { providerKind: row.provider_kind } : {}),
       ...(row.provider_transaction_hash ? { transactionHash: row.provider_transaction_hash } : {}),
+      ...(row.provider_transfer_id ? { providerTransferId: row.provider_transfer_id } : {}),
     };
   }
 
@@ -1439,7 +1475,7 @@ export class IntentLedger {
       `SELECT p.business_intent_id, p.task_key, p.tool_id, p.resource_url,
           p.quote_recipient, p.quote_amount_atomic, p.quote_x402_version,
           p.quote_max_timeout_seconds, p.quote_payload, p.response_payload,
-          p.provider_transaction_hash, p.created_at, p.updated_at,
+          p.provider_transaction_hash, p.provider_transfer_id, p.created_at, p.updated_at,
           i.state AS payment_state,
           s.provider_reference_id AS settlement_provider_reference_id,
           s.transaction_hash AS settlement_transaction_hash,

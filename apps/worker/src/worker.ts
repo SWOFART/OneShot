@@ -255,9 +255,10 @@ export async function drainOutboxJobs(options: WorkerOptions, maxJobs = 100): Pr
       const result = await client.query<{
         outbox_job_id: string;
         business_intent_id: string;
+        job_key: string;
         task_identifier: string;
       }>(
-        `SELECT outbox_job_id, business_intent_id, task_identifier
+        `SELECT outbox_job_id, business_intent_id, job_key, task_identifier
         FROM outbox_jobs
         WHERE status = 'PENDING' AND available_at <= now()
         ORDER BY available_at ASC, outbox_job_id ASC
@@ -287,7 +288,7 @@ export async function drainOutboxJobs(options: WorkerOptions, maxJobs = 100): Pr
       } else if (job.task_identifier === 'submit_settlement') {
         await executeSubmitSettlement(job.business_intent_id, options);
       } else if (job.task_identifier === 'reconcile_intent') {
-        await executeReconcileIntent(job.business_intent_id, options);
+        await executeReconcileIntent(job.business_intent_id, options, job.job_key);
       } else if (job.task_identifier === 'fulfill_supplier_order') {
         const payload = await client.query<{
           payload: { job_id?: string; delivery_attempt?: number };
