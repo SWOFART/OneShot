@@ -1,3 +1,5 @@
+import type { DetectedWallet } from './eip6963.js';
+
 export type OperatorSessionStatus = 'UNCONFIGURED' | 'LOADING' | 'SIGNED_OUT' | 'SIGNED_IN';
 
 /**
@@ -11,6 +13,11 @@ export interface OperatorSession {
   readonly accessToken: string | null;
   login(): void;
   logout(): void;
+  /**
+   * Present when the environment can sign a wallet in without Privy's modal.
+   * Absent in the unconfigured session, which has no Privy client at all.
+   */
+  readonly signInWithWallet?: (wallet: DetectedWallet) => Promise<void>;
 }
 
 export type UseOperatorSession = () => OperatorSession;

@@ -6,8 +6,7 @@
     "outDir": "dist",
     "rootDir": ".",
     "tsBuildInfoFile": "dist/.tsbuildinfo",
-    "types": ["node", "vitest/globals"]
+    "types": ["node"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "vite.config.ts"],
-  "references": [{ "path": "../brand" }]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "test/**/*.tsx"]
 }

@@ -8,6 +8,15 @@ export default defineConfig({
       '@oneshot/contracts': fileURLToPath(
         new URL('../../packages/contracts/src/index.ts', import.meta.url),
       ),
+      '@oneshot/brand/tokens.css': fileURLToPath(
+        new URL('../../packages/brand/src/tokens.css', import.meta.url),
+      ),
+      '@oneshot/brand/fonts.css': fileURLToPath(
+        new URL('../../packages/brand/src/fonts.css', import.meta.url),
+      ),
+      '@oneshot/brand': fileURLToPath(
+        new URL('../../packages/brand/src/index.ts', import.meta.url),
+      ),
       '@oneshot/recovery-ui/styles.css': fileURLToPath(
         new URL('../../packages/recovery-ui/src/styles.css', import.meta.url),
       ),

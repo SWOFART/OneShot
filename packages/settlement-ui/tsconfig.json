@@ -9,5 +9,5 @@
     "types": ["node", "vitest/globals"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "test/**/*.ts", "vite.config.ts"],
-  "references": [{ "path": "../contracts" }]
+  "references": [{ "path": "../brand" }, { "path": "../contracts" }]
 }

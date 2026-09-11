@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { OperatorSession } from '../auth/session.js';
+import { WalletPicker } from './WalletPicker.js';
 
 export interface LoginGateProps {
   readonly session: OperatorSession;
@@ -35,7 +36,7 @@ export function LoginGate(props: LoginGateProps) {
   const [copied, setCopied] = useState(false);
   const machineTokenPresent = props.machineToken.trim().length > 0;
   const unlocked = props.session.status === 'SIGNED_IN' || machineTokenPresent;
-  const showMachineToken = props.showMachineToken ?? (import.meta.env.MODE === 'test');
+  const showMachineToken = props.showMachineToken ?? import.meta.env.MODE === 'test';
 
   async function copySubject(subject: string): Promise<void> {
     try {
@@ -56,6 +57,12 @@ export function LoginGate(props: LoginGateProps) {
             Privy login is not configured for this build. Set <code>VITE_PRIVY_APP_ID</code> to
             enable it.
           </p>
+        ) : props.session.signInWithWallet !== undefined ? (
+          <WalletPicker
+            signIn={props.session.signInWithWallet}
+            onOtherWallet={() => props.session.login()}
+            onEmail={() => props.session.login()}
+          />
         ) : (
           <div className="gate-action-box">
             <h2>Operator sign-in</h2>

@@ -1,32 +1,21 @@
-:root {
-  --bg-base: #06090e;
-  --bg-surface: rgba(13, 23, 38, 0.65);
-  --bg-surface-elevated: rgba(18, 30, 49, 0.8);
-  --bg-input: rgba(10, 17, 29, 0.85);
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-active: rgba(126, 230, 242, 0.35);
-  --border-focus: #7ee6f2;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --cyan-accent: #7ee6f2;
-  --cyan-glow: rgba(126, 230, 242, 0.15);
-  --blue-accent: #2056c9;
-  --blue-light: #3b82f6;
-  --success-bg: rgba(16, 185, 129, 0.12);
-  --success-border: rgba(16, 185, 129, 0.3);
-  --success-text: #34d399;
-  --warning-bg: rgba(245, 158, 11, 0.12);
-  --warning-border: rgba(245, 158, 11, 0.3);
-  --warning-text: #fbbf24;
-  --error-bg: rgba(239, 68, 68, 0.12);
-  --error-border: rgba(239, 68, 68, 0.3);
-  --error-text: #f87171;
+@import '@oneshot/brand/fonts.css';
+@import '@oneshot/brand/tokens.css';
 
-  color: var(--text-primary);
-  background-color: var(--bg-base);
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, Helvetica, Arial, sans-serif;
+/**
+ * The operator console shell.
+ *
+ * Every colour here comes from @oneshot/brand. The guard in
+ * test/styles.test.ts fails the build if a literal creeps back in.
+ *
+ * The diagonal cut belongs to the hero alone; every other surface below is a
+ * plain rounded rectangle.
+ */
+
+:root {
+  color: var(--os-ink);
+  background-color: var(--os-ground);
+  font-family: var(--os-font-primary);
+  font-weight: 300;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -40,14 +29,10 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: var(--bg-base);
-  background-image:
-    radial-gradient(circle at 50% -5%, rgba(126, 230, 242, 0.12), transparent 50%),
-    radial-gradient(circle at 10% 30%, rgba(32, 86, 201, 0.09), transparent 45%),
-    radial-gradient(circle at 90% 65%, rgba(126, 230, 242, 0.06), transparent 50%),
-    linear-gradient(180deg, rgba(6, 9, 14, 0.6) 0%, rgba(6, 9, 14, 1) 100%);
-  background-attachment: fixed;
-  color: var(--text-primary);
+  background: var(--os-ground);
+  color: var(--os-ink);
+  font-family: var(--os-font-primary);
+  font-weight: 300;
 }
 
 button,
@@ -64,50 +49,30 @@ button {
   gap: 0.5rem;
   min-height: 42px;
   padding: 0.65rem 1.25rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: 0.6rem;
-  color: #ffffff;
-  background: linear-gradient(180deg, rgba(32, 86, 201, 0.85) 0%, rgba(22, 60, 150, 0.9) 100%);
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  border: 0;
+  border-radius: 999px;
+  color: var(--os-on-signal);
+  background: var(--os-signal);
+  font-family: var(--os-font-primary);
+  font-weight: 300;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.15s ease;
 }
 
 button:hover:not(:disabled) {
-  background: linear-gradient(180deg, rgba(42, 102, 230, 0.95) 0%, rgba(28, 75, 180, 0.95) 100%);
-  border-color: rgba(126, 230, 242, 0.4);
-  box-shadow:
-    0 6px 20px rgba(32, 86, 201, 0.35),
-    0 0 12px rgba(126, 230, 242, 0.2);
-  transform: translateY(-1px);
-}
-
-button:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  opacity: 0.86;
 }
 
 button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
-  filter: grayscale(0.5);
 }
 
 button.secondary {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-subtle);
-  box-shadow: none;
-}
-
-button.secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--os-line-strong);
 }
 
 button.compact {
@@ -119,7 +84,7 @@ button.compact {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--border-focus);
+  outline: 2px solid var(--os-signal);
   outline-offset: 2px;
 }
 
@@ -131,13 +96,12 @@ p {
 }
 
 a {
-  color: var(--cyan-accent);
+  color: var(--os-signal);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 a:hover {
-  color: #a5f3fc;
   text-decoration: underline;
 }
 
@@ -158,12 +122,10 @@ a:hover {
   gap: 1rem;
   padding: 0.85rem 1.25rem;
   margin-bottom: 3.5rem;
-  background: rgba(13, 23, 38, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-subtle);
-  border-radius: 9999px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  background: var(--os-surface);
+  border: 1px solid var(--os-line);
+  border-radius: var(--os-radius-lg);
+  color: var(--os-ink);
 }
 
 .brand-group {
@@ -174,7 +136,6 @@ a:hover {
 
 .brand-logo {
   border-radius: 50%;
-  filter: drop-shadow(0 0 10px rgba(126, 230, 242, 0.35));
 }
 
 .brand-text {
@@ -185,17 +146,17 @@ a:hover {
 
 .brand-name {
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 300;
   letter-spacing: 0.1em;
-  color: #ffffff;
+  color: var(--os-ink);
 }
 
 .brand-tag {
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 300;
   letter-spacing: 0.12em;
-  color: var(--cyan-accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--os-signal);
+  font-family: var(--os-font-mono);
 }
 
 .nav-status-group {
@@ -209,48 +170,46 @@ a:hover {
   align-items: center;
   gap: 0.45rem;
   padding: 0.3rem 0.75rem;
-  border-radius: 9999px;
+  border-radius: 999px;
   font-size: 0.75rem;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
+  font-weight: 300;
+  background: transparent;
+  border: 1px solid var(--os-line);
+  color: var(--os-ink-muted);
 }
 
 .status-badge.network-badge {
-  color: #e2e8f0;
+  color: var(--os-ink);
 }
 
 .status-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background-color: #10b981;
-  box-shadow: 0 0 8px #10b981;
+  background-color: var(--os-state-committed);
 }
 
 .status-badge.token-badge {
-  border-color: rgba(126, 230, 242, 0.25);
-  color: var(--cyan-accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  border-color: var(--os-signal);
+  color: var(--os-signal);
+  font-family: var(--os-font-mono);
 }
 
 .nav-console-link {
   display: inline-flex;
   align-items: center;
   padding: 0.45rem 1rem;
-  border-radius: 9999px;
+  border-radius: 999px;
   font-size: 0.8rem;
-  font-weight: 600;
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid var(--border-subtle);
-  transition: all 0.2s ease;
+  font-weight: 300;
+  color: var(--os-ink);
+  background: transparent;
+  border: 1px solid var(--os-line);
+  transition: opacity 0.2s ease;
 }
 
 .nav-console-link:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(126, 230, 242, 0.35);
+  opacity: 0.86;
   text-decoration: none;
 }
 
@@ -267,11 +226,11 @@ a:hover {
 
 .eyebrow {
   margin-bottom: 1rem;
-  color: var(--cyan-accent);
+  color: var(--os-signal);
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 300;
   letter-spacing: 0.2em;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--os-font-mono);
   text-transform: uppercase;
 }
 
@@ -279,24 +238,22 @@ a:hover {
   margin-bottom: 1.25rem;
   font-size: clamp(2.4rem, 5.5vw, 3.8rem);
   line-height: 1.08;
-  font-weight: 800;
+  font-weight: 300;
   letter-spacing: -0.02em;
-  background: linear-gradient(180deg, #ffffff 15%, #cbd5e1 90%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--os-ink);
 }
 
 .hero-lead {
   font-size: clamp(1.05rem, 2vw, 1.25rem);
   line-height: 1.6;
-  color: #cbd5e1;
+  color: var(--os-ink-muted);
   max-width: 680px;
   margin: 0 auto 0.75rem;
 }
 
 .hero-sublead {
   font-size: 0.95rem;
-  color: var(--text-secondary);
+  color: var(--os-ink-muted);
   margin-bottom: 2rem;
 }
 
@@ -314,24 +271,17 @@ a:hover {
   gap: 0.5rem;
   min-height: 48px;
   padding: 0.75rem 1.75rem;
-  border-radius: 9999px;
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-  border: 1px solid rgba(126, 230, 242, 0.4);
-  color: #ffffff;
-  font-weight: 700;
+  border-radius: 999px;
+  background: var(--os-signal);
+  border: 0;
+  color: var(--os-on-signal);
+  font-weight: 300;
   font-size: 0.95rem;
-  box-shadow:
-    0 8px 24px rgba(37, 99, 235, 0.35),
-    0 0 16px rgba(126, 230, 242, 0.2);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.2s ease;
 }
 
 .btn-hero-cta:hover {
-  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
-  box-shadow:
-    0 10px 30px rgba(37, 99, 235, 0.45),
-    0 0 24px rgba(126, 230, 242, 0.3);
-  transform: translateY(-2px);
+  opacity: 0.86;
   text-decoration: none;
 }
 
@@ -340,21 +290,18 @@ a:hover {
   align-items: center;
   min-height: 48px;
   padding: 0.75rem 1.5rem;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  font-weight: 600;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--os-line-strong);
+  color: var(--os-ink);
+  font-weight: 300;
   font-size: 0.95rem;
-  backdrop-filter: blur(10px);
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .btn-hero-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  opacity: 0.86;
   text-decoration: none;
-  transform: translateY(-2px);
 }
 
 /* ==========================================================================
@@ -366,25 +313,24 @@ a:hover {
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 1.2rem;
-  border-radius: 9999px;
+  border-radius: 999px;
   font-size: 0.82rem;
-  font-weight: 600;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  backdrop-filter: blur(16px);
-  color: var(--text-secondary);
+  font-weight: 300;
+  background: var(--os-surface);
+  border: 1px solid var(--os-line);
+  color: var(--os-ink-muted);
 }
 
 .readiness.success {
-  border-color: var(--success-border);
-  color: var(--success-text);
-  background: var(--success-bg);
+  border-color: var(--os-line);
+  color: var(--os-state-committed);
+  background: var(--os-surface);
 }
 
 .readiness.warning {
-  border-color: var(--warning-border);
-  color: var(--warning-text);
-  background: var(--warning-bg);
+  border-color: var(--os-line);
+  color: var(--os-state-unknown);
+  background: var(--os-surface);
 }
 
 /* ==========================================================================
@@ -404,17 +350,17 @@ a:hover {
   display: block;
   margin-bottom: 0.5rem;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 300;
   letter-spacing: 0.16em;
-  color: var(--cyan-accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--os-signal);
+  font-family: var(--os-font-mono);
 }
 
 .section-header h2 {
   font-size: clamp(1.6rem, 3.5vw, 2.2rem);
-  font-weight: 800;
+  font-weight: 300;
   letter-spacing: -0.01em;
-  color: #ffffff;
+  color: var(--os-ink);
 }
 
 .invariants-grid {
@@ -427,36 +373,29 @@ a:hover {
   display: flex;
   flex-direction: column;
   padding: 1.6rem 1.4rem;
-  background: var(--bg-surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-subtle);
-  border-radius: 1rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: var(--os-radius-lg);
+  background: var(--os-panel);
+  color: var(--os-panel-ink);
+  transition: transform 0.25s ease;
 }
 
 .invariant-card:hover {
-  border-color: var(--border-active);
-  box-shadow:
-    0 14px 40px rgba(0, 0, 0, 0.45),
-    0 0 20px var(--cyan-glow);
   transform: translateY(-3px);
 }
 
 .invariant-index {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--os-font-mono);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 300;
   letter-spacing: 0.14em;
-  color: var(--cyan-accent);
+  color: var(--os-signal);
   margin-bottom: 0.9rem;
 }
 
 .invariant-card h3 {
   font-size: 1.15rem;
-  font-weight: 700;
-  color: #ffffff;
+  font-weight: 300;
+  color: var(--os-panel-ink);
   margin-bottom: 0.6rem;
   line-height: 1.25;
 }
@@ -464,7 +403,7 @@ a:hover {
 .invariant-card p {
   font-size: 0.88rem;
   line-height: 1.55;
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
   margin-bottom: 0;
 }
 
@@ -475,31 +414,26 @@ a:hover {
 .console-container {
   margin: 3rem 0;
   padding: 2rem;
-  background: rgba(10, 16, 26, 0.75);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.25rem;
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-radius: var(--os-radius-lg);
+  background: var(--os-panel);
+  color: var(--os-panel-ink);
 }
 
 .console-header {
   margin-bottom: 1.75rem;
   padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--os-panel-line);
 }
 
 .console-header h2 {
   font-size: 1.6rem;
-  font-weight: 800;
-  color: #ffffff;
+  font-weight: 300;
+  color: var(--os-panel-ink);
   margin-bottom: 0.4rem;
 }
 
 .console-subtitle {
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
   font-size: 0.92rem;
   line-height: 1.5;
   margin-bottom: 0;
@@ -513,11 +447,10 @@ a:hover {
   display: grid;
   gap: 1.25rem;
   padding: 2rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 1rem;
+  border-radius: var(--os-radius-lg);
+  background: var(--os-panel);
+  color: var(--os-panel-ink);
   margin: 1rem 0;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
 }
 
 .gate-action-box {
@@ -527,13 +460,13 @@ a:hover {
 
 .gate-action-box h2 {
   font-size: 1.35rem;
-  font-weight: 800;
-  color: #ffffff;
+  font-weight: 300;
+  color: var(--os-panel-ink);
   margin-bottom: 0.25rem;
 }
 
 .gate-subtitle {
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
   font-size: 0.95rem;
   margin-bottom: 0.5rem;
 }
@@ -543,43 +476,37 @@ a:hover {
   min-height: 46px;
   padding: 0.75rem 1.75rem;
   font-size: 0.95rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-  border: 1px solid rgba(126, 230, 242, 0.4);
-  box-shadow:
-    0 6px 20px rgba(37, 99, 235, 0.35),
-    0 0 14px rgba(126, 230, 242, 0.25);
+  border-radius: 999px;
+  background: var(--os-signal);
+  border: 0;
+  color: var(--os-on-signal);
 }
 
 .btn-privy:hover {
-  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
-  box-shadow:
-    0 8px 24px rgba(37, 99, 235, 0.45),
-    0 0 20px rgba(126, 230, 242, 0.35);
+  opacity: 0.86;
 }
 
 .gate-unconfigured {
   padding: 1rem 1.25rem;
-  border-radius: 0.75rem;
-  background: var(--warning-bg);
-  border: 1px solid var(--warning-border);
-  color: var(--warning-text);
+  border-radius: var(--os-radius-lg);
+  background: var(--os-panel);
+  color: var(--os-state-unknown);
   font-size: 0.9rem;
   line-height: 1.5;
   margin: 0;
 }
 
 .gate-unconfigured code {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--os-surface);
   padding: 0.2rem 0.4rem;
-  border-radius: 0.3rem;
-  color: #ffffff;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  border-radius: 999px;
+  color: var(--os-ink);
+  font-family: var(--os-font-mono);
 }
 
 .loading-text {
-  color: var(--cyan-accent);
-  font-weight: 600;
+  color: var(--os-signal);
+  font-weight: 300;
 }
 
 .operator-identity {
@@ -589,34 +516,34 @@ a:hover {
   gap: 0.75rem;
   padding: 1rem 1.25rem;
   margin-bottom: 1.5rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 0.85rem;
-  backdrop-filter: blur(16px);
+  background: var(--os-surface);
+  border: 1px solid var(--os-line);
+  border-radius: var(--os-radius-lg);
+  color: var(--os-ink);
 }
 
 .operator-badge {
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.65rem;
-  border-radius: 9999px;
+  border-radius: 999px;
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 300;
   letter-spacing: 0.1em;
-  background: rgba(126, 230, 242, 0.15);
-  border: 1px solid rgba(126, 230, 242, 0.3);
-  color: var(--cyan-accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: var(--os-signal);
+  border: 0;
+  color: var(--os-on-signal);
+  font-family: var(--os-font-mono);
 }
 
 .operator-did {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--os-font-mono);
   font-size: 0.82rem;
-  color: #ffffff;
-  background: rgba(0, 0, 0, 0.4);
+  color: var(--os-ink);
+  background: var(--os-surface);
   padding: 0.3rem 0.65rem;
-  border-radius: 0.45rem;
-  border: 1px solid var(--border-subtle);
+  border-radius: var(--os-radius-lg);
+  border: 1px solid var(--os-line);
   overflow-wrap: anywhere;
 }
 
@@ -624,76 +551,95 @@ a:hover {
   min-height: 32px;
   padding: 0.3rem 0.75rem;
   font-size: 0.78rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--border-subtle);
-  color: #ffffff;
+  background: transparent;
+  border: 1px solid var(--os-line-strong);
+  color: var(--os-ink);
 }
 
 .btn-signout {
   min-height: 32px;
   padding: 0.3rem 0.75rem;
   font-size: 0.78rem;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
+  background: transparent;
+  border: 1px solid var(--os-state-failed);
+  color: var(--os-state-failed);
   margin-left: auto;
 }
 
 .btn-signout:hover {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.5);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+  opacity: 0.86;
 }
 
 .operator-note {
   display: block;
   width: 100%;
-  color: var(--text-muted);
+  color: var(--os-ink-muted);
   font-size: 0.75rem;
   margin-top: 0.25rem;
 }
 
 .machine-token {
   padding-top: 0.5rem;
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
 }
 
 .machine-token summary {
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 300;
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
   transition: color 0.2s ease;
   user-select: none;
 }
 
+/* .machine-token also renders inside .operator-identity (page surface, not a
+   panel) — see LoginGate. The overrides below re-point its ink at the page
+   tokens there. They must sit before :hover below: both selectors tie on
+   specificity, so source order decides, and :hover needs to win while
+   hovering in either context. */
+.operator-identity .machine-token summary {
+  color: var(--os-ink-muted);
+}
+
 .machine-token summary:hover {
-  color: var(--cyan-accent);
+  color: var(--os-signal);
 }
 
 .machine-token label {
   display: block;
   margin: 0.75rem 0 0.35rem;
   font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 300;
+  color: var(--os-panel-ink);
 }
 
 .machine-token input {
   width: 100%;
   min-height: 40px;
   padding: 0.55rem 0.75rem;
-  background: var(--bg-input);
-  border: 1px solid var(--border-subtle);
-  border-radius: 0.5rem;
-  color: #ffffff;
+  background: var(--os-surface);
+  border: 1px solid var(--os-line);
+  border-radius: 999px;
+  color: var(--os-ink);
 }
 
 .machine-token small {
   display: block;
   margin-top: 0.4rem;
-  color: var(--text-muted);
+  color: var(--os-panel-ink-muted);
   font-size: 0.75rem;
+}
+
+.operator-identity .machine-token {
+  color: var(--os-ink-muted);
+}
+
+.operator-identity .machine-token label {
+  color: var(--os-ink);
+}
+
+.operator-identity .machine-token small {
+  color: var(--os-ink-muted);
 }
 
 /* ==========================================================================
@@ -707,16 +653,16 @@ a:hover {
   gap: 1rem;
   margin: 1.25rem 0;
   padding: 0.85rem 1.25rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 0.85rem;
-  backdrop-filter: blur(16px);
+  background: var(--os-surface);
+  border: 1px solid var(--os-line);
+  border-radius: var(--os-radius-lg);
+  color: var(--os-ink);
 }
 
 .intent-context label {
   font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-weight: 300;
+  color: var(--os-ink);
   white-space: nowrap;
 }
 
@@ -724,20 +670,17 @@ a:hover {
   width: 100%;
   min-height: 42px;
   padding: 0.65rem 0.9rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: 0.6rem;
-  background: var(--bg-input);
-  color: #ffffff;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  border: 1px solid var(--os-line);
+  border-radius: 999px;
+  background: var(--os-surface);
+  color: var(--os-ink);
+  font-family: var(--os-font-mono);
   font-size: 0.9rem;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: border-color 0.2s ease;
 }
 
 .intent-context input:focus {
-  border-color: var(--border-focus);
-  box-shadow: 0 0 12px var(--cyan-glow);
+  border-color: var(--os-signal);
 }
 
 /* ==========================================================================
@@ -747,39 +690,21 @@ a:hover {
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 1.5rem 0 1.25rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 8px;
+  margin-bottom: 18px;
 }
 
 .tabs button {
-  flex: 0 0 auto;
-  border-radius: 0.65rem;
-  padding: 0.55rem 1.1rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-subtle);
-  box-shadow: none;
-}
-
-.tabs button:hover:not(:disabled) {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: none;
-  transform: none;
+  min-height: 38px;
+  color: var(--os-panel-ink);
+  background: transparent;
+  border: 1px solid var(--os-line-strong);
 }
 
 .tabs button[aria-selected='true'] {
-  color: #ffffff;
-  background: rgba(32, 86, 201, 0.35);
-  border-color: var(--border-active);
-  box-shadow:
-    0 0 14px var(--cyan-glow),
-    inset 0 1px 0 rgba(126, 230, 242, 0.3);
+  color: var(--os-on-signal);
+  background: var(--os-signal);
+  border-color: var(--os-signal);
 }
 
 /* ==========================================================================
@@ -788,21 +713,20 @@ a:hover {
 
 .panel {
   padding: clamp(1.25rem, 3vw, 2rem);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 1rem;
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+  border-radius: var(--os-radius-lg);
+  background: var(--os-panel);
+  color: var(--os-panel-ink);
 }
 
 .panel header h2 {
   font-size: 1.35rem;
-  font-weight: 800;
-  color: #ffffff;
+  font-weight: 300;
+  color: var(--os-panel-ink);
   margin-bottom: 0.3rem;
 }
 
 .panel header p {
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
   font-size: 0.9rem;
   margin-bottom: 1.5rem;
 }
@@ -815,8 +739,8 @@ a:hover {
 .form label,
 .lookup label {
   font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-weight: 300;
+  color: var(--os-panel-ink);
 }
 
 .form input,
@@ -824,16 +748,16 @@ a:hover {
   width: 100%;
   min-height: 42px;
   padding: 0.65rem 0.85rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: 0.6rem;
-  color: #ffffff;
-  background: var(--bg-input);
+  border: 1px solid var(--os-line);
+  border-radius: 999px;
+  color: var(--os-ink);
+  background: var(--os-surface);
   transition: border-color 0.2s ease;
 }
 
 .form input:focus,
 .lookup input:focus {
-  border-color: var(--border-focus);
+  border-color: var(--os-signal);
 }
 
 .form output {
@@ -842,11 +766,11 @@ a:hover {
   min-height: 42px;
   padding: 0.65rem 0.85rem;
   margin-top: 0.35rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: 0.6rem;
-  background: rgba(0, 0, 0, 0.4);
-  color: var(--cyan-accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  border: 1px solid var(--os-line);
+  border-radius: 999px;
+  background: var(--os-surface);
+  color: var(--os-signal);
+  font-family: var(--os-font-mono);
   font-size: 0.85rem;
 }
 
@@ -873,11 +797,20 @@ a:hover {
   gap: 0.35rem;
 }
 
+/* Non-<label> stand-in for a form label (IntentForm's read-only Settlement
+   profile field). Only usage today sits in .panel form, so it takes the
+   same treatment as .form label above: plain panel ink, not muted. */
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--os-panel-ink);
+}
+
 .notice {
   padding: 1rem 1.25rem;
-  border-radius: 0.75rem;
-  background: var(--bg-surface-elevated);
-  border: 1px solid var(--border-subtle);
+  border-radius: var(--os-radius-lg);
+  background: var(--os-panel);
+  color: var(--os-panel-ink);
   margin-top: 1rem;
 }
 
@@ -887,22 +820,16 @@ a:hover {
 
 .notice.accepted,
 .notice.replayed {
-  border-color: var(--success-border);
-  color: var(--success-text);
-  background: var(--success-bg);
+  color: var(--os-state-committed);
 }
 
 .notice.warning,
 .notice.conflict {
-  border-color: var(--warning-border);
-  color: var(--warning-text);
-  background: var(--warning-bg);
+  color: var(--os-state-unknown);
 }
 
 .notice.error {
-  border-color: var(--error-border);
-  color: var(--error-text);
-  background: var(--error-bg);
+  color: var(--os-state-failed);
 }
 
 .lookup {
@@ -915,8 +842,8 @@ a:hover {
 }
 
 .polling {
-  color: var(--cyan-accent);
-  font-weight: 700;
+  color: var(--os-signal);
+  font-weight: 300;
 }
 
 .intent-details {
@@ -925,58 +852,42 @@ a:hover {
 }
 
 .state-card {
-  justify-content: space-between;
-  padding: 1.25rem;
-  border-radius: 0.85rem;
-  background: rgba(32, 86, 201, 0.15);
-  border: 1px solid rgba(32, 86, 201, 0.35);
-}
-
-.state-card div {
   display: grid;
-  gap: 0.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 18px;
+  padding: 20px 24px;
+  border-radius: var(--os-radius);
+  background: var(--os-panel);
+  color: var(--os-panel-ink);
 }
 
 .state-card small {
-  color: var(--text-secondary);
-  font-size: 0.78rem;
+  display: block;
+  color: var(--os-panel-ink-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .state-card strong {
-  font-size: 1.25rem;
-  color: #ffffff;
-}
-
-.state-committed {
-  border-color: var(--success-border);
-  background: var(--success-bg);
+  font-weight: 300;
+  font-size: 1.4rem;
 }
 
 .state-committed strong {
-  color: var(--success-text);
+  color: var(--os-state-committed);
 }
 
-.state-unknown {
-  border-color: var(--warning-border);
-  background: var(--warning-bg);
+.state-failed_safe strong {
+  color: var(--os-state-failed);
 }
 
 .state-unknown strong {
-  color: var(--warning-text);
+  color: var(--os-state-unknown);
 }
 
-.state-failed_safe,
-.state-rejected {
-  border-color: var(--error-border);
-  background: var(--error-bg);
-}
-
-.state-failed_safe strong,
 .state-rejected strong {
-  color: var(--error-text);
+  color: var(--os-state-failed);
 }
 
 .facts {
@@ -988,21 +899,21 @@ a:hover {
   grid-template-columns: minmax(140px, 0.35fr) 1fr;
   gap: 1rem;
   padding: 0.75rem 0;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--os-panel-line);
 }
 
 .facts dt {
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 300;
 }
 
 .facts dd {
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
-  color: #ffffff;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--os-panel-ink);
+  font-family: var(--os-font-mono);
   font-size: 0.85rem;
 }
 
@@ -1010,7 +921,14 @@ a:hover {
   display: grid;
   gap: 0.5rem;
   padding-left: 1.25rem;
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
+}
+
+/* Only usage today (IntentStatusView's "No execution attempts yet.") sits in
+   .panel status-view, so it takes the panel muted ink, matching .attempts
+   and .facts dt above. */
+.muted {
+  color: var(--os-panel-ink-muted);
 }
 
 .job-list {
@@ -1023,9 +941,9 @@ a:hover {
   display: grid;
   gap: 0.65rem;
   padding: 1rem;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--os-line);
   border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--os-surface);
 }
 
 .job-list p {
@@ -1040,13 +958,13 @@ a:hover {
 }
 
 .job-quote-summary {
-  color: var(--text-secondary);
+  color: var(--os-ink-muted);
   font-size: 0.85rem;
 }
 
 .quote-panel {
   margin-top: 1.25rem;
-  background: rgba(32, 86, 201, 0.08);
+  background: var(--os-field);
 }
 
 .quote-panel .panel-lede {
@@ -1064,7 +982,7 @@ a:hover {
 
 .job-workspace > label,
 .advanced-fields label {
-  color: var(--text-primary);
+  color: var(--os-panel-ink);
   font-size: 0.85rem;
   font-weight: 700;
 }
@@ -1074,20 +992,20 @@ a:hover {
   width: 100%;
   min-height: 42px;
   padding: 0.65rem 0.85rem;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--os-panel-line);
   border-radius: 0.6rem;
-  color: #ffffff;
-  background: var(--bg-input);
+  color: var(--os-panel-ink);
+  background: var(--os-surface);
 }
 
 .job-workspace > input[readonly] {
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
   border-style: dashed;
 }
 
 .field-help {
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
   font-size: 0.8rem;
   line-height: 1.45;
 }
@@ -1096,13 +1014,13 @@ a:hover {
   display: grid;
   gap: 0.65rem;
   padding: 0.75rem;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--os-panel-line);
   border-radius: 0.65rem;
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--os-surface);
 }
 
 .advanced-fields summary {
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 600;
@@ -1110,10 +1028,10 @@ a:hover {
 
 .job-settlement-summary {
   padding: 0.65rem 0.75rem;
-  border: 1px solid var(--success-border);
+  border: 1px solid var(--os-state-committed);
   border-radius: 0.6rem;
-  color: var(--success-text);
-  background: var(--success-bg);
+  color: var(--os-state-committed);
+  background: var(--os-panel);
 }
 
 .payment-evidence-panel {
@@ -1140,15 +1058,14 @@ a:hover {
   min-height: 180px;
   align-content: center;
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--os-panel-ink-muted);
 }
 
 .composed-surface {
   overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: 1rem;
-  background: #07101d;
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--os-line);
+  border-radius: var(--os-radius-lg);
+  background: var(--os-ground);
 }
 
 .fixture-toolbar {
@@ -1157,10 +1074,9 @@ a:hover {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.85rem 1.25rem;
-  border-bottom: 1px solid rgba(240, 195, 106, 0.25);
-  background: rgba(36, 27, 13, 0.8);
-  color: #f8e7bd;
-  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--os-panel-line);
+  background: var(--os-panel);
+  color: var(--os-panel-ink);
 }
 
 .fixture-toolbar > div {
@@ -1170,28 +1086,28 @@ a:hover {
 
 .fixture-toolbar .eyebrow {
   margin-bottom: 0;
-  color: #ffd47a;
+  color: var(--os-state-unknown);
 }
 
 .fixture-toolbar span {
-  color: #dfcfa8;
+  color: var(--os-panel-ink-muted);
   font-size: 0.85rem;
 }
 
 .fixture-toolbar label {
   display: grid;
   gap: 0.25rem;
-  color: #ffd47a;
-  font-weight: 700;
+  color: var(--os-state-unknown);
+  font-weight: 300;
 }
 
 .fixture-toolbar select {
   min-width: 190px;
   padding: 0.45rem 0.65rem;
-  border: 1px solid rgba(240, 195, 106, 0.35);
-  border-radius: 0.45rem;
-  color: #f8fafc;
-  background: #0d1724;
+  border: 1px solid var(--os-line);
+  border-radius: 999px;
+  color: var(--os-ink);
+  background: var(--os-surface);
   font: inherit;
 }
 
@@ -1202,8 +1118,8 @@ a:hover {
 .app-footer {
   margin-top: 5rem;
   padding: 3rem 1.5rem 1.5rem;
-  border-top: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
+  border-top: 1px solid var(--os-line);
+  color: var(--os-ink-muted);
   font-size: 0.85rem;
 }
 
@@ -1223,7 +1139,7 @@ a:hover {
 
 .footer-desc {
   line-height: 1.6;
-  color: var(--text-muted);
+  color: var(--os-ink-muted);
   margin-bottom: 0;
 }
 
@@ -1240,24 +1156,24 @@ a:hover {
 
 .meta-label {
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 300;
   letter-spacing: 0.12em;
-  color: var(--text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--os-ink-muted);
+  font-family: var(--os-font-mono);
 }
 
 .meta-value {
-  color: #ffffff;
-  font-weight: 600;
+  color: var(--os-ink);
+  font-weight: 300;
 }
 
 .meta-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: var(--cyan-accent);
-  background: rgba(0, 0, 0, 0.4);
+  font-family: var(--os-font-mono);
+  color: var(--os-signal);
+  background: var(--os-surface);
   padding: 0.2rem 0.4rem;
-  border-radius: 0.3rem;
-  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  border: 1px solid var(--os-line);
 }
 
 .footer-bottom {
@@ -1266,9 +1182,9 @@ a:hover {
   justify-content: space-between;
   gap: 1rem;
   padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--os-line);
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: var(--os-ink-muted);
 }
 
 .footer-links {
@@ -1277,11 +1193,131 @@ a:hover {
 }
 
 .footer-links a {
-  color: var(--text-secondary);
+  color: var(--os-ink-muted);
 }
 
 .footer-links a:hover {
-  color: var(--cyan-accent);
+  color: var(--os-signal);
+}
+
+/* ==========================================================================
+   Theme Toggle, Hero Cut & Wallet Picker
+   ========================================================================== */
+
+.theme-toggle {
+  min-height: 34px;
+  padding: 0.3rem 0.9rem;
+  color: var(--os-ink);
+  background: transparent;
+  border: 1px solid var(--os-line-strong);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hero-cut {
+  position: relative;
+}
+
+.hero-figure,
+.hero-panel {
+  position: absolute;
+  inset: 0;
+}
+
+.hero-figure {
+  background: linear-gradient(
+    155deg,
+    var(--os-field) 0%,
+    var(--os-signal) 34%,
+    var(--os-panel) 78%,
+    var(--os-ground) 100%
+  );
+}
+
+.hero-figure::after {
+  content: '';
+  position: absolute;
+  inset: -22%;
+  background: repeating-linear-gradient(104deg, var(--os-field) 0 26px, var(--os-panel) 26px 78px);
+  filter: blur(17px);
+  opacity: 0.55;
+}
+
+.hero-panel {
+  background: var(--os-panel);
+}
+
+.hero-copy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  width: 50%;
+  padding: 26px 28px;
+  color: var(--os-panel-ink);
+}
+
+.hero-plain {
+  padding: 32px;
+  border-radius: var(--os-radius-lg);
+  background: var(--os-panel);
+  color: var(--os-panel-ink);
+}
+
+.wallet-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 460px;
+}
+
+.wallet-search {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--os-line-strong);
+  border-radius: 999px;
+  color: var(--os-ink);
+  background: var(--os-surface);
+  font-family: var(--os-font-secondary);
+}
+
+.wallet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.wallet-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--os-radius);
+  cursor: pointer;
+}
+
+.wallet-option:hover,
+.wallet-option[aria-selected='true'] {
+  background: var(--os-signal);
+  color: var(--os-on-signal);
+}
+
+.wallet-option small {
+  margin-left: auto;
+  font-size: 0.72rem;
+}
+
+.wallet-actions {
+  display: flex;
+  gap: 8px;
 }
 
 /* ==========================================================================
@@ -1297,7 +1333,7 @@ a:hover {
   .top-nav {
     flex-direction: column;
     align-items: stretch;
-    border-radius: 1rem;
+    border-radius: var(--os-radius-lg);
     gap: 0.75rem;
     padding: 1rem;
   }

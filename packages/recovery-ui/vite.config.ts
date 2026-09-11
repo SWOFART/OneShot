@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 
@@ -25,6 +27,13 @@ function recoveryMockPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [react(), recoveryMockPlugin()],
+  resolve: {
+    alias: {
+      '@oneshot/brand/tokens.css': fileURLToPath(
+        new URL('../brand/src/tokens.css', import.meta.url),
+      ),
+    },
+  },
   build: {
     emptyOutDir: false,
     lib: {
