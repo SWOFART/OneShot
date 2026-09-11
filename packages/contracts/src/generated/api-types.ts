@@ -86,6 +86,8 @@ export interface CreateJobRequest {
   readonly task_key: string;
   readonly tool_id: 'team-report-v1';
   readonly report_subject: string;
+  readonly recipient: string;
+  readonly amount_atomic: string;
 }
 
 export interface SupplierQuote {

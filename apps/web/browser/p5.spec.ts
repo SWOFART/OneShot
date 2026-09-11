@@ -112,6 +112,8 @@ test.describe('resumable job workspace', () => {
     await unlockWorkspace(page);
     await page.getByRole('tab', { name: 'Tools' }).click();
     await page.getByLabel('Company or domain').fill('acme.com');
+    await page.getByLabel('Recipient wallet').fill('0x1111111111111111111111111111111111111111');
+    await page.getByLabel('Amount (USDC)').fill('2.5');
     await expect(page.getByLabel('Task key for retries')).toHaveValue(/report-acme-com-/u);
     await page.getByRole('button', { name: 'Get live quote' }).click();
     await expect.poll(() => calls.filter((call) => call === 'POST /v1/jobs/quote')).toHaveLength(1);

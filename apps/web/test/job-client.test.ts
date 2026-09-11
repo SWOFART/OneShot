@@ -7,6 +7,8 @@ const request = {
   task_key: 'report-acme-demo',
   tool_id: 'team-report-v1' as const,
   report_subject: 'acme.com',
+  recipient: '0x1111111111111111111111111111111111111111',
+  amount_atomic: '10000',
 };
 
 const quote: SupplierQuote = {

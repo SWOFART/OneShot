@@ -6,6 +6,8 @@ import {
   asEvmAddress,
   atomicAmountFromBigInt,
   atomicAmountToBigInt,
+  canonicalJobPayload,
+  parseCreateJobRequest,
   parseAuthorizationResult,
   parseEvidenceResultKind,
   parseIndexHealth,
@@ -35,6 +37,36 @@ describe('canonical contract values', () => {
     );
     expect(() => asBusinessIntentId(' intent-1')).toThrow();
     expect(() => asEvmAddress('0x1234')).toThrow();
+  });
+});
+
+describe('resumable job request contract', () => {
+  const request = {
+    task_key: 'report-acme',
+    tool_id: 'team-report-v1' as const,
+    report_subject: 'Acme',
+    recipient: '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    amount_atomic: '10000',
+  };
+
+  it('normalizes and fingerprints the requested payment fields', () => {
+    expect(parseCreateJobRequest(request)).toMatchObject({
+      recipient: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      amount_atomic: '10000',
+    });
+    expect(canonicalJobPayload(request)).toContain(
+      '"recipient":"0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"',
+    );
+    expect(canonicalJobPayload({ ...request, amount_atomic: '10001' })).not.toBe(
+      canonicalJobPayload(request),
+    );
+  });
+
+  it.each([
+    { ...request, amount_atomic: '0' },
+    { ...request, recipient: 'not-an-address' },
+  ])('rejects an unsafe requested payment %j', (value) => {
+    expect(() => parseCreateJobRequest(value)).toThrow();
   });
 });
 

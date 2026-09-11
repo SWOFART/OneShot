@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import {
   asAtomicAmount,
   asEvmAddress,
+  ContractValidationError,
   parseCreateJobRequest,
   type CreateJobRequest,
   type SupplierOrder,
@@ -9,16 +10,6 @@ import {
   type SupplierResult,
 } from '@oneshot/contracts';
 import { jobFingerprint } from '@oneshot/domain';
-
-const DEFAULT_REPORT_RECIPIENT = '0x1111111111111111111111111111111111111111';
-const DEFAULT_REPORT_PRICE_ATOMIC = '2500000';
-
-export interface TeamReportSupplierOptions {
-  /** Destination must also be present in the worker Privy recipient allowlist. */
-  readonly recipient?: string;
-  /** USDC atomic units; never use a decimal or floating-point value here. */
-  readonly amountAtomic?: string;
-}
 
 function reference(prefix: string, value: string): string {
   return `${prefix}_${createHash('sha256').update(value, 'utf8').digest('hex').slice(0, 48)}`;
@@ -32,31 +23,28 @@ function reference(prefix: string, value: string): string {
  */
 export class TeamReportSupplier implements SupplierPort {
   readonly name = 'TeamReportSupplier';
-  readonly #recipient: string;
-  readonly #amountAtomic: string;
   #orders = new Map<
     string,
     { request: CreateJobRequest; order: SupplierOrder; result?: SupplierResult }
   >();
 
-  constructor(options: TeamReportSupplierOptions = {}) {
-    this.#recipient = asEvmAddress(options.recipient ?? DEFAULT_REPORT_RECIPIENT);
-    this.#amountAtomic = asAtomicAmount(options.amountAtomic ?? DEFAULT_REPORT_PRICE_ATOMIC);
-    if (this.#amountAtomic === '0') {
-      throw new Error('Team report supplier amount must be greater than zero');
-    }
-  }
-
   async createOrder(value: CreateJobRequest, idempotencyKey: string): Promise<SupplierOrder> {
     const request = parseCreateJobRequest(value);
     const existing = this.#orders.get(idempotencyKey);
-    if (existing) return existing.order;
+    if (existing) {
+      if (existing.order.supplier_payload_fingerprint !== jobFingerprint(request)) {
+        throw new ContractValidationError(
+          'Supplier task payload conflicts with the existing order',
+        );
+      }
+      return existing.order;
+    }
     const orderReference = reference('team_report_order', idempotencyKey);
     const order: SupplierOrder = {
       supplier_id: 'team-report-v1',
       order_reference: orderReference,
-      recipient: this.#recipient,
-      amount_atomic: this.#amountAtomic,
+      recipient: asEvmAddress(request.recipient),
+      amount_atomic: asAtomicAmount(request.amount_atomic),
       asset: 'USDC',
       network: 'eip155:5042002',
       expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),

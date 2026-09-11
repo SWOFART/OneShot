@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { OneShotApiClient } from '../src/api/client.js';
 import { IntentForm } from '../src/components/IntentForm.js';
 import { IntentStatusView } from '../src/components/IntentStatusView.js';
+import { JobWorkspace } from '../src/components/JobWorkspace.js';
 
 afterEach(cleanup);
 
@@ -138,5 +139,43 @@ describe('IntentStatusView', () => {
     expect(screen.queryByRole('button', { name: /pay|retry settlement/iu })).toBeNull();
     await user.click(reconcile);
     expect(await screen.findByText(/job enqueued/u)).toBeTruthy();
+  });
+});
+
+describe('JobWorkspace payment inputs', () => {
+  it('sends the entered recipient and integer atomic amount to the quote boundary', async () => {
+    const user = userEvent.setup();
+    let quotedRequest: unknown;
+    const client = {
+      async quote(request: unknown) {
+        quotedRequest = request;
+        return {
+          supplier_id: 'team-report-v1' as const,
+          order_reference: 'team_report_order_ui',
+          recipient: '0x2222222222222222222222222222222222222222',
+          amount_atomic: '1250000',
+          asset: 'USDC' as const,
+          network: 'eip155:5042002' as const,
+          expires_at: '2026-09-11T12:15:00.000Z',
+        };
+      },
+    };
+    render(<JobWorkspace client={client as never} onSelectIntent={() => undefined} />);
+
+    await user.type(screen.getByLabelText('Company or domain'), 'acme.com');
+    await user.type(
+      screen.getByLabelText('Recipient wallet'),
+      '0x2222222222222222222222222222222222222222',
+    );
+    await user.type(screen.getByLabelText('Amount (USDC)'), '1.25');
+    await user.click(screen.getByRole('button', { name: 'Get live quote' }));
+
+    await waitFor(() => expect(quotedRequest).toEqual({
+      task_key: expect.stringMatching(/^report-acme-com-/u),
+      tool_id: 'team-report-v1',
+      report_subject: 'acme.com',
+      recipient: '0x2222222222222222222222222222222222222222',
+      amount_atomic: '1250000',
+    }));
   });
 });

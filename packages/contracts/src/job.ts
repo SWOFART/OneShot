@@ -48,13 +48,21 @@ function boundedText(value: unknown, field: string, maximum: number): string {
   return value.normalize('NFC');
 }
 
+function positiveAtomicAmount(value: unknown): string {
+  const amount = asAtomicAmount(value);
+  if (amount === '0') {
+    throw new ContractValidationError('amount_atomic must be greater than zero');
+  }
+  return amount;
+}
+
 export function parseCreateJobRequest(value: unknown): CreateJobRequest {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new ContractValidationError('job request must be an object');
   }
   const candidate = value as Record<string, unknown>;
   const keys = Object.keys(candidate).sort();
-  const expected = ['report_subject', 'task_key', 'tool_id'];
+  const expected = ['amount_atomic', 'recipient', 'report_subject', 'task_key', 'tool_id'];
   if (keys.length !== expected.length || keys.some((key, index) => key !== expected[index])) {
     throw new ContractValidationError('job request has missing or unexpected fields');
   }
@@ -65,6 +73,8 @@ export function parseCreateJobRequest(value: unknown): CreateJobRequest {
     task_key: boundedText(candidate.task_key, 'task_key', 128),
     tool_id: 'team-report-v1',
     report_subject: boundedText(candidate.report_subject, 'report_subject', 256),
+    recipient: asEvmAddress(candidate.recipient),
+    amount_atomic: positiveAtomicAmount(candidate.amount_atomic),
   };
 }
 
@@ -74,6 +84,8 @@ export function canonicalJobPayload(request: CreateJobRequest): string {
     task_key: parsed.task_key,
     tool_id: parsed.tool_id,
     report_subject: parsed.report_subject,
+    recipient: parsed.recipient,
+    amount_atomic: parsed.amount_atomic,
   });
 }
 

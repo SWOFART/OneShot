@@ -171,17 +171,6 @@ export class JobLedger {
     const jobId = derivedJobId(params.workspaceId, request);
     const businessIntentId = derivedBusinessIntentId(params.workspaceId, request);
     const requestFingerprint = jobFingerprint(request);
-    if (supplierOrder.supplier_payload_fingerprint !== requestFingerprint) {
-      throw new Error('Supplier order payload does not bind the approved task');
-    }
-    const intent = fingerprintIntent({
-      business_intent_id: businessIntentId,
-      recipient: supplierOrder.recipient,
-      amount_atomic: supplierOrder.amount_atomic,
-      asset: supplierOrder.asset,
-      network: supplierOrder.network,
-      purpose: `Team report: ${request.report_subject}`,
-    });
     const now = this.#dependencies.now();
     const client = await this.#pool.connect();
     try {
@@ -197,6 +186,19 @@ export class JobLedger {
           job: asView(existing),
         };
       }
+
+      if (supplierOrder.supplier_payload_fingerprint !== requestFingerprint) {
+        throw new Error('Supplier order payload does not bind the approved task');
+      }
+
+      const intent = fingerprintIntent({
+        business_intent_id: businessIntentId,
+        recipient: supplierOrder.recipient,
+        amount_atomic: supplierOrder.amount_atomic,
+        asset: supplierOrder.asset,
+        network: supplierOrder.network,
+        purpose: `Team report: ${request.report_subject}`,
+      });
 
       const insertedIntent = await client.query(
         `INSERT INTO business_intents (

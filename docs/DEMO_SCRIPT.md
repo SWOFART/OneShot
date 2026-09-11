@@ -4,11 +4,10 @@ Status: target walkthrough for plan gates R4/R5, not a completed live demo.
 The supplier/job/cabinet increment must pass R0–R3 first. The existing payment
 baseline and its checked-in evidence remain useful but do not prove this flow.
 
-For the first Arc transfer rehearsal, configure the API's
-`ONESHOT_SUPPLIER_RECIPIENT` and `ONESHOT_SUPPLIER_AMOUNT_ATOMIC` to a small
-testnet invoice (for example `10000` atomic USDC / `0.01 USDC`) and configure
-the same recipient in the worker's `ONESHOT_RECIPIENT_ALLOWLIST`. Use a second
-team-controlled Arc Testnet wallet. The transfer is a real Privy-authorized
+For the first Arc transfer rehearsal, enter a small testnet invoice in the
+cabinet (for example `10000` atomic USDC / `0.01 USDC`) and use a second
+team-controlled Arc Testnet wallet that is present in the worker's
+`ONESHOT_RECIPIENT_ALLOWLIST`. The transfer is a real Privy-authorized
 settlement, but the result remains labelled as a team-operated demo until an
 external supplier is integrated.
 
@@ -50,6 +49,8 @@ ONESHOT_DEMO_CONFIRM_TESTNET=true
 ONESHOT_R4_API_URL=https://<api-host>
 ONESHOT_R4_API_BEARER_TOKEN=<runtime-secret>
 ONESHOT_R4_TASK_KEY=<stable-demo-task-key>
+ONESHOT_R4_RECIPIENT=<allowlisted-team-testnet-wallet>
+ONESHOT_R4_AMOUNT_ATOMIC=10000
 pnpm demo:r4
 ```
 
