@@ -1250,6 +1250,7 @@ a:hover {
 
 .hero-cut {
   position: relative;
+  overflow: hidden;
 }
 
 .hero-figure,

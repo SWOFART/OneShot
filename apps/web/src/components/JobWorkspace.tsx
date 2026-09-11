@@ -335,7 +335,7 @@ export function CircleX402DemoPanel(props: {
         the payment through Arc Testnet. Repeating the same task key replays the stored Business
         Intent and cannot create a second settlement.
       </p>
-      <label htmlFor="paid-api-task-key">Stable task key for retries</label>
+      <label htmlFor="paid-api-task-key">Paid API task key</label>
       <input
         id="paid-api-task-key"
         value={taskKey}
