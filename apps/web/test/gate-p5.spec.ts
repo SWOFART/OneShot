@@ -23,10 +23,17 @@ test('cabinet activity refresh is authenticated, read-only, and does not persist
         observation: { freshness: 'LAGGING', coverage_note: 'Newest 100 indexed transfers only.' },
         recorded_settlement_count: 1,
         uncertain_job_count: 0,
+        unmatched_transfer_count: 0,
+        transfers: [],
       });
     }
     if (pathname === '/v1/activity') {
-      return json(route, 200, { recorded_settlement_count: 1, uncertain_job_count: 0 });
+      return json(route, 200, {
+        recorded_settlement_count: 1,
+        uncertain_job_count: 0,
+        unmatched_transfer_count: 0,
+        transfers: [],
+      });
     }
     return json(route, 200, { jobs: [] });
   });

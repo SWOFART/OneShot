@@ -45,6 +45,8 @@ One job. Many retries. One settlement.
 | `ONESHOT_ARC_PROFILE`                 | Public          | Deployment profile identifier                     | `arc-testnet`          |
 | `ONESHOT_ARC_RPC_URL`                 | Public          | RPC endpoint URL for Arc                          | Validated on startup   |
 | `ONESHOT_SUBMISSIONS_DISABLED`        | Public          | Safe disable configuration switch                 | `false`                |
+| `ONESHOT_DEMO_RESPONSE_LOSS_AFTER_BROADCAST` | Public/demo | One-shot R4 post-broadcast response-loss hook | `false`; Arc Testnet only |
+| `ONESHOT_DEMO_CONFIRM_TESTNET`        | Human-only      | Confirms the reviewed testnet fault drill         | Required when hook is true |
 | `ONESHOT_API_RATE_LIMIT_MAX_REQUESTS` | Public          | Maximum POST requests per client and route window | `60`                   |
 | `ONESHOT_API_RATE_LIMIT_WINDOW_MS`    | Public          | Shared API rate-limit window in milliseconds      | `60000`                |
 

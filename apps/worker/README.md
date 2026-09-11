@@ -46,3 +46,19 @@ requires a reachable database, compatible adapter identities, and a running
 outbox runner with no unresolved cycle error. Google Vertex authentication uses
 Application Default Credentials; Privy and Graph secrets must come from the
 deployment secret store. See `.env.example` for the full variable contract.
+
+## R4 response-loss drill
+
+The reviewed `ONESHOT_DEMO_RESPONSE_LOSS_AFTER_BROADCAST=true` hook drops one
+confirmed settlement response after the provider call and before the confirmed
+result is persisted. It is accepted only with
+`ONESHOT_DEMO_CONFIRM_TESTNET=true` and an Arc Testnet profile; normal operation
+leaves it disabled. The worker records `UNKNOWN` and queues reconciliation, so
+the hook never grants a replacement settlement.
+
+Run the safe offline rehearsal with `pnpm demo:r4`. A live run additionally
+requires the explicit testnet confirmation, the API URL/bearer token, a stable
+`ONESHOT_R4_TASK_KEY`, and the worker hook. The runner emits only sanitized
+state, Graph freshness/deployment, and result-availability fields. A missing
+Studio capture or unresolved payment is reported as `HOLD`/`INCOMPLETE`, never
+as a successful sponsor claim.

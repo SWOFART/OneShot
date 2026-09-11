@@ -34,6 +34,7 @@ describe('production worker configuration', () => {
     expect(config.recovery.graphQueryUrl).toBe('https://api.studio.thegraph.com/query/example');
     expect(config.recovery.vertexModel).toBe('gemini-2.5-flash');
     expect(config.pollIntervalMs).toBe(1000);
+    expect(config.demoResponseLossAfterBroadcast).toBe(false);
   });
 
   it('uses the Studio query URL when no MCP server is available for Arc', () => {
@@ -64,5 +65,22 @@ describe('production worker configuration', () => {
     const env = environment();
     env.DB_POOL_MAX = '1';
     expect(() => loadWorkerRuntimeConfig(env)).toThrow('DB_POOL_MAX');
+  });
+
+  it('requires an explicit testnet confirmation for the response-loss demo hook', () => {
+    const env = environment();
+    env.ONESHOT_DEMO_RESPONSE_LOSS_AFTER_BROADCAST = 'true';
+    expect(() => loadWorkerRuntimeConfig(env)).toThrow('ONESHOT_DEMO_CONFIRM_TESTNET');
+
+    env.ONESHOT_DEMO_CONFIRM_TESTNET = 'true';
+    expect(loadWorkerRuntimeConfig(env).demoResponseLossAfterBroadcast).toBe(true);
+  });
+
+  it('rejects an invalid response-loss demo flag', () => {
+    const env = environment();
+    env.ONESHOT_DEMO_RESPONSE_LOSS_AFTER_BROADCAST = 'yes';
+    expect(() => loadWorkerRuntimeConfig(env)).toThrow(
+      'ONESHOT_DEMO_RESPONSE_LOSS_AFTER_BROADCAST',
+    );
   });
 });

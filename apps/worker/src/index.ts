@@ -1,5 +1,6 @@
 export * from './concurrency-runner.js';
 export * from './composition.js';
+export * from './failure-injection.js';
 export * from './invariant-scenarios.js';
 export * from './recovery-bridge.js';
 export * from './restart-runner.js';

@@ -18,9 +18,10 @@ Audited against `plan.md` revision 2026-09-10 on branch
   overview, tools, jobs, recovery/activity, wallet/permissions and developer
   access sections. Payment evidence remains advanced detail.
 - **R3 implementation seam:** Graph activity has a bounded manual refresh,
-  validates response structure, stores freshness/coverage metadata, and leaves
-  local payment state unchanged when Graph is unavailable. Configuration is
-  explicit and server-side.
+  validates response structure, stores freshness/coverage metadata, compares
+  indexed transfers with workspace-owned settlements, and surfaces unmatched
+  transfers without changing local payment state. Configuration is explicit
+  and server-side.
 
 ## Still external or human-gated
 
@@ -28,9 +29,11 @@ Audited against `plan.md` revision 2026-09-10 on branch
   purchase, controlled response-loss fault, fresh Studio capture, receipt/log
   verification and a real supplier-result capture. No local test or fixture is
   presented as this evidence.
-- **R5 release:** requires exact-head CI, fresh FreePi Gate A and Gate B,
-  public deployment/docs/video, prize-pool verification and human review. This
-  branch makes no qualification or release claim.
+- **R5 release:** this branch adds the offline `release:check` preflight and
+  public [release checklist](RELEASE_CHECKLIST.md). Exact-head CI, fresh FreePi
+  Gate A and Gate B, live sponsor evidence, prize-pool verification, optional
+  video, and human review remain required. No qualification or release claim is
+  made here.
 
 ## Validation boundary
 

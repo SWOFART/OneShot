@@ -122,10 +122,21 @@ export interface JobListResponse {
   readonly jobs: readonly JobResponse[];
 }
 
+export interface ActivityTransferView {
+  readonly transaction_hash: string;
+  readonly log_index: number;
+  readonly recipient: string;
+  readonly amount_atomic: string;
+  readonly match: 'RECORDED_SETTLEMENT' | 'UNMATCHED';
+  readonly job_id?: string;
+}
+
 export interface ActivityResponse {
   readonly observation?: Record<string, unknown>;
   readonly recorded_settlement_count: number;
   readonly uncertain_job_count: number;
+  readonly unmatched_transfer_count: number;
+  readonly transfers: readonly ActivityTransferView[];
 }
 
 export interface RecoveryAgentDecisionView {

@@ -173,6 +173,11 @@ frozen `recovery-view` API into the C05 timeline model, with labelled
 fail-closed fallbacks for legacy or unavailable evidence. The P5 browser
 acceptance suite runs with Playwright/Chromium in CI.
 
+Authenticated wallet activity is read-only: the API records bounded Graph
+observations, links indexed transfers to settlements in the configured
+workspace, and surfaces unmatched transfers. Graph absence or lag never changes
+payment authority.
+
 Integration tests need a database:
 
 ```bash
@@ -233,6 +238,11 @@ routes fail closed with `503 NOT_READY` instead of quoting a placeholder wallet.
 The existing worker then authorizes and submits the exact quote through the
 Privy policy on Arc Testnet. A committed job's settlement and ArcScan evidence
 remain authoritative; delivery resume never submits a replacement payment.
+
+`pnpm demo:r4` runs the response-loss drill offline by default. The live mode
+requires an explicit Arc Testnet confirmation and the reviewed worker hook;
+it emits a sanitized trace and stops at `HOLD`/`INCOMPLETE` when settlement,
+Studio evidence or the supplier result cannot be proven.
 
 For a safe rehearsal, use a small integer quote such as `10000` atomic USDC
 (`0.01 USDC`), fund only the Privy testnet wallet, and use a second team-owned
@@ -311,6 +321,7 @@ plus explicit human authorization.
 | [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md)                     | Frozen v1 contract pack                                  |
 | [`docs/settlement/`](docs/settlement/)                                   | Settlement config, provider setup, live evidence         |
 | [`packages/reconciliation/docs/c06/`](packages/reconciliation/docs/c06/) | C06 demo and qualification evidence index                |
+| [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md)                 | R5 release evidence and submission checklist             |
 | [`AGENTS.md`](AGENTS.md)                                                 | Contribution policy and review gates                     |
 
 ## License

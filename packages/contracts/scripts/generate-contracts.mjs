@@ -251,13 +251,33 @@ const schemas = {
     required: ['jobs'],
     properties: { jobs: { type: 'array', maxItems: 100, items: { $ref: '#/$defs/JobResponse' } } },
   },
+  ActivityTransfer: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['transaction_hash', 'log_index', 'recipient', 'amount_atomic', 'match'],
+    properties: {
+      transaction_hash: { type: 'string', pattern: '^0x[0-9a-fA-F]{64}$' },
+      log_index: { type: 'integer', minimum: 0 },
+      recipient: evmAddress,
+      amount_atomic: amountAtomic,
+      match: { type: 'string', enum: ['RECORDED_SETTLEMENT', 'UNMATCHED'] },
+      job_id: boundedId,
+    },
+  },
   ActivityResponse: {
     type: 'object',
     additionalProperties: false,
-    required: ['recorded_settlement_count', 'uncertain_job_count'],
+    required: [
+      'recorded_settlement_count',
+      'uncertain_job_count',
+      'unmatched_transfer_count',
+      'transfers',
+    ],
     properties: {
       recorded_settlement_count: { type: 'integer', minimum: 0 },
       uncertain_job_count: { type: 'integer', minimum: 0 },
+      unmatched_transfer_count: { type: 'integer', minimum: 0 },
+      transfers: { type: 'array', maxItems: 100, items: { $ref: '#/$defs/ActivityTransfer' } },
       observation: { type: 'object', additionalProperties: true },
     },
   },
@@ -764,10 +784,21 @@ export interface JobListResponse {
   readonly jobs: readonly JobResponse[];
 }
 
+export interface ActivityTransferView {
+  readonly transaction_hash: string;
+  readonly log_index: number;
+  readonly recipient: string;
+  readonly amount_atomic: string;
+  readonly match: 'RECORDED_SETTLEMENT' | 'UNMATCHED';
+  readonly job_id?: string;
+}
+
 export interface ActivityResponse {
   readonly observation?: Record<string, unknown>;
   readonly recorded_settlement_count: number;
   readonly uncertain_job_count: number;
+  readonly unmatched_transfer_count: number;
+  readonly transfers: readonly ActivityTransferView[];
 }
 
 export interface RecoveryAgentDecisionView {

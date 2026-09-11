@@ -25,6 +25,7 @@ export interface WorkerRuntimeConfig {
   readonly submissionLeaseMs: number;
   readonly maxJobsPerCycle: number;
   readonly submissionsDisabled: boolean;
+  readonly demoResponseLossAfterBroadcast: boolean;
 }
 
 function required(environment: NodeJS.ProcessEnv, name: string): string {
@@ -183,6 +184,26 @@ export function loadWorkerRuntimeConfig(
     throw new Error('Invalid environment variable: ONESHOT_VERTEX_MODEL');
   }
 
+  const demoResponseLoss = environment.ONESHOT_DEMO_RESPONSE_LOSS_AFTER_BROADCAST?.trim();
+  if (
+    demoResponseLoss !== undefined &&
+    demoResponseLoss !== '' &&
+    !['true', 'false'].includes(demoResponseLoss)
+  ) {
+    throw new Error('ONESHOT_DEMO_RESPONSE_LOSS_AFTER_BROADCAST must be true or false');
+  }
+  const demoResponseLossAfterBroadcast = demoResponseLoss === 'true';
+  if (demoResponseLossAfterBroadcast) {
+    if (settlement.profile.caip2 !== 'eip155:5042002') {
+      throw new Error('Response-loss demo is restricted to Arc Testnet');
+    }
+    if (environment.ONESHOT_DEMO_CONFIRM_TESTNET?.trim() !== 'true') {
+      throw new Error(
+        'ONESHOT_DEMO_CONFIRM_TESTNET=true is required to enable the response-loss demo',
+      );
+    }
+  }
+
   return {
     host: environment.HOST?.trim() || '0.0.0.0',
     port: integer(environment, 'PORT', 8080, 1, 65_535),
@@ -214,5 +235,6 @@ export function loadWorkerRuntimeConfig(
     ),
     maxJobsPerCycle: integer(environment, 'ONESHOT_WORKER_MAX_JOBS', 50, 1, 1_000),
     submissionsDisabled: environment.ONESHOT_SUBMISSIONS_DISABLED === 'true',
+    demoResponseLossAfterBroadcast,
   };
 }

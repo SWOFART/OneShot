@@ -1,4 +1,5 @@
 import type {
+  ActivityResponse,
   CreateJobRequest,
   JobListResponse,
   JobView,
@@ -83,20 +84,12 @@ export class JobApiClient {
     return response.ok ? await responseJson<SupplierResult>(response) : null;
   }
 
-  async refreshActivity(): Promise<{
-    readonly observation?: { readonly freshness: string; readonly coverage_note: string };
-    readonly recorded_settlement_count: number;
-    readonly uncertain_job_count: number;
-  }> {
+  async refreshActivity(): Promise<ActivityResponse> {
     const response = await this.#fetch(`${this.#baseUrl}/v1/activity/refresh`, {
       method: 'POST',
       headers: this.#headers(),
     });
-    const body = await responseJson<{
-      readonly observation?: { readonly freshness: string; readonly coverage_note: string };
-      readonly recorded_settlement_count: number;
-      readonly uncertain_job_count: number;
-    }>(response);
+    const body = await responseJson<ActivityResponse>(response);
     if (!response.ok || !body) throw new Error('Activity refresh is unavailable');
     return body;
   }

@@ -40,6 +40,24 @@ Do not present fixture playback as a live Graph/model demonstration.
   before its hash is durably recorded. Do not delete existing durable evidence,
   rewrite chain history, or suppress a working provider lookup.
 
+The hook is enabled only for the live drill process:
+
+```text
+ONESHOT_R4_LIVE=true
+ONESHOT_R4_CONFIRM_TESTNET=true
+ONESHOT_DEMO_RESPONSE_LOSS_AFTER_BROADCAST=true
+ONESHOT_DEMO_CONFIRM_TESTNET=true
+ONESHOT_R4_API_URL=https://<api-host>
+ONESHOT_R4_API_BEARER_TOKEN=<runtime-secret>
+ONESHOT_R4_TASK_KEY=<stable-demo-task-key>
+pnpm demo:r4
+```
+
+`pnpm demo:r4` is offline unless `ONESHOT_R4_LIVE=true`. It never retries a
+job-create, resume, or payment request after an ambiguous HTTP response; it
+reads the existing task by identity and records a sanitized `HOLD` when the
+original settlement or Studio evidence cannot be proven.
+
 ## Four-minute target walkthrough
 
 1. **Purpose and permission (0:00–0:35).** Show the public landing page, then
