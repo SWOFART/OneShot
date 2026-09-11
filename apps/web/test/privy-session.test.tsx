@@ -35,6 +35,7 @@ vi.mock('@privy-io/react-auth', () => ({
 const { usePrivyOperatorSession, WALLET_REQUEST_TIMEOUT_MS } =
   await import('../src/auth/privy-session.js');
 
+const METAMASK_RAW_ADDRESS = '0x52908400098527886e0f7030069857d2e4169ee7';
 const METAMASK_ADDRESS = '0x52908400098527886E0F7030069857D2E4169EE7';
 
 function neverRespondingWallet(): DetectedWallet {
@@ -105,7 +106,7 @@ describe('usePrivyOperatorSession — wallet request timeout', () => {
   it('logs in with a detected MetaMask provider without forwarding its RDNS as Privy metadata', async () => {
     const request = vi
       .fn()
-      .mockResolvedValueOnce([METAMASK_ADDRESS])
+      .mockResolvedValueOnce([METAMASK_RAW_ADDRESS])
       .mockResolvedValueOnce('0xsignature');
     const wallet: DetectedWallet = {
       uuid: 'metamask-uuid',
@@ -130,5 +131,24 @@ describe('usePrivyOperatorSession — wallet request timeout', () => {
       signature: '0xsignature',
       message: 'siwe-message',
     });
+  });
+
+  it('rejects an invalid provider account before requesting a signature', async () => {
+    const request = vi.fn().mockResolvedValueOnce(['not-an-ethereum-address']);
+    const wallet: DetectedWallet = {
+      uuid: 'invalid-address-wallet-uuid',
+      name: 'Invalid Address Wallet',
+      rdns: 'test.invalid-address-wallet',
+      provider: { request },
+    };
+
+    const { result } = renderHook(() => usePrivyOperatorSession());
+    await expect(result.current.signInWithWallet(wallet)).rejects.toThrow(
+      'The wallet returned an invalid account.',
+    );
+
+    expect(request).toHaveBeenCalledOnce();
+    expect(mocks.generateSiweMessage).not.toHaveBeenCalled();
+    expect(mocks.loginWithSiwe).not.toHaveBeenCalled();
   });
 });

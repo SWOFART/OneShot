@@ -1,5 +1,6 @@
 import { PrivyProvider, useLoginWithSiwe, usePrivy } from '@privy-io/react-auth';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { getAddress } from 'viem';
 
 import type { DetectedWallet } from './eip6963.js';
 import type { OperatorSession, OperatorSessionStatus } from './session.js';
@@ -102,11 +103,22 @@ export function usePrivyOperatorSession(): OperatorSession {
       if (typeof address !== 'string' || address.length === 0) {
         throw new Error('The wallet returned no account.');
       }
-      const message = await generateSiweMessage({ address, chainId: ARC_TESTNET });
+      let checksumAddress: string;
+      try {
+        // SIWE requires an EIP-55 address. Some EIP-1193 providers, including
+        // MetaMask in some configurations, return the same address in lowercase.
+        checksumAddress = getAddress(address.toLowerCase());
+      } catch {
+        throw new Error('The wallet returned an invalid account.');
+      }
+      const message = await generateSiweMessage({
+        address: checksumAddress,
+        chainId: ARC_TESTNET,
+      });
       const signature = await withWalletTimeout(
         wallet.provider.request({
           method: 'personal_sign',
-          params: [message, address],
+          params: [message, checksumAddress],
         }),
       );
       if (typeof signature !== 'string') {
