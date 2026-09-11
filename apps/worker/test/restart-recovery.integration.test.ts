@@ -33,7 +33,7 @@ describePostgres('Startup recovery and restart safety (A04.1, A04.2)', () => {
 
   afterEach(async () => {
     await pool.query(
-      'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, resumable_jobs, business_intents RESTART IDENTITY',
+      'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, resumable_jobs, paid_api_requests, business_intents RESTART IDENTITY',
     );
     attemptCounter = 0;
   });
