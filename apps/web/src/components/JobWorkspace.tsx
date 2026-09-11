@@ -199,6 +199,38 @@ export function JobWorkspace(props: {
   );
 }
 
+export function CircleX402DemoPanel() {
+  return (
+    <section className="panel" aria-label="Circle x402 API demo">
+      <header className="panel-heading">
+        <div>
+          <p className="eyebrow">SEPARATE PAYMENT RAIL</p>
+          <h2>Paid API purchase via Circle x402</h2>
+        </div>
+        <span className="badge tone-neutral">Arc Testnet</span>
+      </header>
+      <p>
+        This demo pays one Circle Gateway x402 dataset request with Privy EIP-712 signing. It is
+        separate from the direct Arc settlement demonstration above and never retries an ambiguous
+        paid request.
+      </p>
+      <p className="field-help">
+        Configure the endpoint and a funded Gateway testnet balance in the deployment secret store,
+        then run <code>pnpm demo:x402</code>. The script prints only the quote, transaction hash and
+        stable Business Intent ID.
+      </p>
+      <a
+        className="secondary compact"
+        href="https://github.com/SWOFART/OneShot/blob/develop/docs/CIRCLE_X402_DEMO.md"
+        target="_blank"
+        rel="noreferrer noopener"
+      >
+        Open x402 runbook
+      </a>
+    </section>
+  );
+}
+
 export function JobList(props: {
   readonly client: JobApiClient;
   readonly onSelectIntent: (id: string) => void;

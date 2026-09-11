@@ -17,7 +17,7 @@ import { IntentForm } from './components/IntentForm.js';
 import { IntentStatusView } from './components/IntentStatusView.js';
 import { LoginGate } from './components/LoginGate.js';
 import { ReadinessBanner } from './components/ReadinessBanner.js';
-import { JobList, JobWorkspace } from './components/JobWorkspace.js';
+import { CircleX402DemoPanel, JobList, JobWorkspace } from './components/JobWorkspace.js';
 import { RecoverySurface, SettlementSurface } from './components/FrontendSurfaces.js';
 import './styles.css';
 
@@ -167,7 +167,10 @@ function CabinetPage(props: {
           </section>
         )}
         {section === 'tools' && (
-          <JobWorkspace client={props.jobClient} onSelectIntent={setIntentId} />
+          <>
+            <JobWorkspace client={props.jobClient} onSelectIntent={setIntentId} />
+            <CircleX402DemoPanel />
+          </>
         )}
         {section === 'jobs' && <JobList client={props.jobClient} onSelectIntent={setIntentId} />}
         {section === 'recovery' && (

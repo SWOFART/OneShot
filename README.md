@@ -245,6 +245,14 @@ payment. The generated task key is shown for retries; users do not need to
 invent one. After settlement, the job list links directly to ArcScan and keeps
 the supplier result separate from payment evidence.
 
+The Tools cabinet also documents a separate **Paid API purchase via Circle
+x402** mode. `pnpm demo:x402` uses the Privy wallet's EIP-712 signer against a
+Circle Gateway-funded Arc Testnet balance and makes exactly one paid request to
+the configured Circle nanopayments sample endpoint. A lost or ambiguous x402
+response is held as `UNKNOWN`; it is never retried by the demo process. See
+[`docs/CIRCLE_X402_DEMO.md`](docs/CIRCLE_X402_DEMO.md). This rail is not the
+direct Arc settlement proof and is not yet the default resumable job supplier.
+
 | Method | Path                             | Purpose                                                       |
 | ------ | -------------------------------- | ------------------------------------------------------------- |
 | `POST` | `/v1/intents`                    | Create an intent; an identical replay returns the same result |

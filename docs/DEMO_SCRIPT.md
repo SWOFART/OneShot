@@ -12,6 +12,12 @@ team-controlled Arc Testnet wallet. The transfer is a real Privy-authorized
 settlement, but the result remains labelled as a team-operated demo until an
 external supplier is integrated.
 
+The second, separately labelled mode is **Paid API purchase via Circle x402**.
+Run `pnpm demo:x402` against one Circle Arc nanopayments sample endpoint after
+funding the wallet's Gateway testnet balance. It uses Privy EIP-712 signing and
+one paid request; an ambiguous response remains `UNKNOWN` and is not retried.
+This demonstrates the x402 supplier rail, not the direct Arc transfer proof.
+
 ## Existing offline rehearsal
 
 Run `pnpm demo:e2e` to build, run invariant scenarios and validate sanitized
