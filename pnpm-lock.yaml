@@ -376,6 +376,9 @@ importers:
       '@circle-fin/x402-batching':
         specifier: 3.4.0
         version: 3.4.0(@x402/core@2.25.0)(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
+      '@oneshot/arc-adapter':
+        specifier: workspace:*
+        version: link:../arc-adapter
       '@oneshot/contracts':
         specifier: workspace:*
         version: link:../contracts

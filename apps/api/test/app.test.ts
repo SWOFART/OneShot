@@ -3,6 +3,8 @@ import type {
   CreateJobRequest,
   IntentResponse,
   JobView,
+  PaidApiResponse,
+  PaidApiQuote,
   RecoveryView,
   ReconcileResponse,
 } from '@oneshot/contracts';
@@ -206,6 +208,86 @@ describe('API boundary controls', () => {
 });
 
 describe('OpenAPI contract endpoints', () => {
+  it('quotes and starts the durable Circle x402 paid API request with replay semantics', async () => {
+    const quote: PaidApiQuote = {
+      supplier_id: 'circle-x402-v1',
+      resource_url: 'https://x402.example.test/api/dataset',
+      recipient: request.recipient,
+      amount_atomic: '10000',
+      asset: 'USDC',
+      network: 'eip155:5042002',
+      x402_version: 2,
+      max_timeout_seconds: 60,
+    };
+    const paidRequest: PaidApiResponse = {
+      business_intent_id: 'intent-paid-api-1',
+      task_key: 'circle-api-test',
+      tool_id: 'circle-x402-api-v1',
+      resource_url: quote.resource_url,
+      payment_state: 'AUTHORIZING',
+      quote,
+      created_at: '2026-09-11T12:00:00.000Z',
+      updated_at: '2026-09-11T12:00:00.000Z',
+    };
+    let mode: 'ACCEPTED' | 'REPLAY_IDENTICAL' = 'ACCEPTED';
+    let starts = 0;
+    const app = buildApi({
+      ledger: createMockLedger(),
+      paidApi: {
+        async quote() {
+          return quote;
+        },
+        async start() {
+          starts += 1;
+          return { kind: mode, request: paidRequest };
+        },
+        async get() {
+          return paidRequest;
+        },
+      },
+      authenticator: staticBearerAuthenticator('test-token'),
+      config: { workspaceId: 'workspace-paid-api' },
+      nextCorrelationId: () => 'correlation-paid-api',
+    });
+
+    const quoteResponse = await app.inject({
+      method: 'POST',
+      url: '/v1/paid-api/quote',
+      headers: { authorization: 'Bearer test-token' },
+      payload: { task_key: 'circle-api-test', tool_id: 'circle-x402-api-v1' },
+    });
+    expect(quoteResponse.statusCode).toBe(200);
+    expect(quoteResponse.json()).toEqual(quote);
+
+    const accepted = await app.inject({
+      method: 'POST',
+      url: '/v1/paid-api',
+      headers: { authorization: 'Bearer test-token' },
+      payload: { task_key: 'circle-api-test', tool_id: 'circle-x402-api-v1' },
+    });
+    expect(accepted.statusCode).toBe(202);
+    expect(accepted.json()).toEqual(paidRequest);
+
+    mode = 'REPLAY_IDENTICAL';
+    const replayed = await app.inject({
+      method: 'POST',
+      url: '/v1/paid-api',
+      headers: { authorization: 'Bearer test-token' },
+      payload: { task_key: 'circle-api-test', tool_id: 'circle-x402-api-v1' },
+    });
+    expect(replayed.statusCode).toBe(200);
+    expect(starts).toBe(2);
+
+    const found = await app.inject({
+      method: 'GET',
+      url: '/v1/paid-api/intent-paid-api-1',
+      headers: { authorization: 'Bearer test-token' },
+    });
+    expect(found.statusCode).toBe(200);
+    expect(found.json()).toEqual(paidRequest);
+    await app.close();
+  });
+
   it('POST /v1/intents returns 202 for new intent and 200 for identical replay', async () => {
     let mode: 'ACCEPTED' | 'REPLAY_IDENTICAL' = 'ACCEPTED';
     const app = buildApi({

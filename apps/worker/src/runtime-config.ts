@@ -7,6 +7,10 @@ export interface WorkerRuntimeConfig {
   readonly port: number;
   readonly database: PoolConfig;
   readonly settlement: SettlementConfig;
+  readonly paidApi?: {
+    readonly url: string;
+    readonly maxAmountAtomic: bigint;
+  };
   readonly privyAppSecret: string;
   readonly walletAddress: `0x${string}`;
   readonly policyDigest: string;
@@ -58,6 +62,33 @@ function unsigned(environment: NodeJS.ProcessEnv, name: string): string {
   return value;
 }
 
+function optionalHttpsUrl(environment: NodeJS.ProcessEnv, name: string): string | undefined {
+  const raw = environment[name]?.trim();
+  if (!raw) return undefined;
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error(`${name} must be a valid URL`);
+  }
+  const loopback = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+  if (parsed.protocol !== 'https:' && !(loopback && parsed.protocol === 'http:')) {
+    throw new Error(`${name} must use HTTPS (HTTP is allowed only for loopback)`);
+  }
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new Error(`${name} must not contain credentials, query parameters, or fragments`);
+  }
+  return parsed.toString();
+}
+
+function optionalAtomicAmount(environment: NodeJS.ProcessEnv, name: string): bigint {
+  const raw = environment[name]?.trim() || '10000';
+  if (!/^(0|[1-9][0-9]*)$/.test(raw) || raw === '0') {
+    throw new Error(`Invalid environment variable: ${name}`);
+  }
+  return BigInt(raw);
+}
+
 function httpsUrl(environment: NodeJS.ProcessEnv, name: string): string {
   const value = required(environment, name);
   let parsed: URL;
@@ -103,6 +134,8 @@ export function loadWorkerRuntimeConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): WorkerRuntimeConfig {
   const settlement = loadSettlementConfig(environment);
+  const paidApiUrl = optionalHttpsUrl(environment, 'ONESHOT_X402_URL');
+  const paidApiMaxAmount = optionalAtomicAmount(environment, 'ONESHOT_X402_MAX_AMOUNT_ATOMIC');
   const walletAddress = required(environment, 'ONESHOT_PRIVY_WALLET_ADDRESS');
   if (!/^0x[0-9a-fA-F]{40}$/.test(walletAddress)) {
     throw new Error('Invalid environment variable: ONESHOT_PRIVY_WALLET_ADDRESS');
@@ -209,6 +242,7 @@ export function loadWorkerRuntimeConfig(
     port: integer(environment, 'PORT', 8080, 1, 65_535),
     database: databaseConfig(environment),
     settlement,
+    ...(paidApiUrl ? { paidApi: { url: paidApiUrl, maxAmountAtomic: paidApiMaxAmount } } : {}),
     privyAppSecret: required(environment, 'ONESHOT_PRIVY_APP_SECRET'),
     walletAddress: walletAddress.toLowerCase() as `0x${string}`,
     policyDigest,

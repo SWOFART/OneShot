@@ -12,10 +12,12 @@ settlement, but the result remains labelled as a team-operated demo until an
 external supplier is integrated.
 
 The second, separately labelled mode is **Paid API purchase via Circle x402**.
-Run `pnpm demo:x402` against one Circle Arc nanopayments sample endpoint after
-funding the wallet's Gateway testnet balance. It uses Privy EIP-712 signing and
-one paid request; an ambiguous response remains `UNKNOWN` and is not retried.
-This demonstrates the x402 supplier rail, not the direct Arc transfer proof.
+Configure `ONESHOT_X402_URL` and `ONESHOT_X402_MAX_AMOUNT_ATOMIC` in the API
+and worker, fund the Gateway testnet balance, and use the Tools page to quote
+and approve one stable task key. The site displays the provider transaction on
+ArcScan as soon as the hash is durable; COMMITTED still requires an exact Arc
+receipt. An ambiguous response remains `UNKNOWN` and is never blindly retried.
+`pnpm demo:x402` remains an operator fallback.
 
 ## Existing offline rehearsal
 

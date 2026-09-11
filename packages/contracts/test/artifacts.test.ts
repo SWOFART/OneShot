@@ -15,7 +15,7 @@ describe('generated contract artifacts', () => {
     ).not.toThrow();
   });
 
-  it('exposes the frozen HTTP seam without a payment retry endpoint', () => {
+  it('exposes the paid API HTTP seam without a payment retry endpoint', () => {
     const document = JSON.parse(
       readFileSync(resolve(packageRoot, 'openapi/openapi.v1.json'), 'utf8'),
     ) as {
@@ -36,6 +36,9 @@ describe('generated contract artifacts', () => {
       '/v1/jobs/{jobId}',
       '/v1/jobs/{jobId}/result',
       '/v1/jobs/{jobId}/resume',
+      '/v1/paid-api',
+      '/v1/paid-api/quote',
+      '/v1/paid-api/{id}',
     ]);
     expect(Object.keys(document.paths).every((path) => !path.includes('retry'))).toBe(true);
 

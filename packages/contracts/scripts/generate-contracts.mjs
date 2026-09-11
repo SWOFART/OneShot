@@ -187,6 +187,66 @@ const schemas = {
       amount_atomic: amountAtomic,
     },
   },
+  CreatePaidApiRequest: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['task_key', 'tool_id'],
+    properties: {
+      task_key: boundedId,
+      tool_id: { type: 'string', const: 'circle-x402-api-v1' },
+    },
+  },
+  PaidApiQuote: {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'supplier_id',
+      'resource_url',
+      'recipient',
+      'amount_atomic',
+      'asset',
+      'network',
+      'x402_version',
+      'max_timeout_seconds',
+    ],
+    properties: {
+      supplier_id: { type: 'string', const: 'circle-x402-v1' },
+      resource_url: { type: 'string', minLength: 1, maxLength: 2048 },
+      recipient: evmAddress,
+      amount_atomic: amountAtomic,
+      asset: { type: 'string', const: 'USDC' },
+      network: { type: 'string', const: 'eip155:5042002' },
+      x402_version: { type: 'integer', const: 2 },
+      max_timeout_seconds: { type: 'integer', minimum: 1, maximum: 604900 },
+    },
+  },
+  PaidApiResponse: {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'business_intent_id',
+      'task_key',
+      'tool_id',
+      'resource_url',
+      'payment_state',
+      'quote',
+      'created_at',
+      'updated_at',
+    ],
+    properties: {
+      business_intent_id: boundedId,
+      task_key: boundedId,
+      tool_id: { type: 'string', const: 'circle-x402-api-v1' },
+      resource_url: { type: 'string', minLength: 1, maxLength: 2048 },
+      payment_state: { type: 'string', enum: intentStates },
+      quote: { $ref: '#/$defs/PaidApiQuote' },
+      provider_transaction_hash: { type: 'string', pattern: '^0x[0-9a-fA-F]{64}$' },
+      settlement: { $ref: '#/$defs/Settlement' },
+      response: {},
+      created_at: { type: 'string', format: 'date-time' },
+      updated_at: { type: 'string', format: 'date-time' },
+    },
+  },
   SupplierQuote: {
     type: 'object',
     additionalProperties: false,
@@ -555,6 +615,53 @@ const openapi = {
         },
       },
     },
+    '/v1/paid-api/quote': {
+      post: {
+        operationId: 'quotePaidApi',
+        summary: 'Return a non-chargeable x402 API quote before approval',
+        security: serviceSecurity,
+        requestBody: { required: true, content: jsonContent('CreatePaidApiRequest') },
+        responses: {
+          200: response('Live x402 API quote.', 'PaidApiQuote'),
+          400: errorResponse('INVALID_REQUEST'),
+          401: errorResponse('UNAUTHORIZED'),
+          403: errorResponse('FORBIDDEN'),
+          503: errorResponse('NOT_READY'),
+        },
+      },
+    },
+    '/v1/paid-api': {
+      post: {
+        operationId: 'startPaidApi',
+        summary: 'Create or replay one paid x402 API Business Intent',
+        security: serviceSecurity,
+        requestBody: { required: true, content: jsonContent('CreatePaidApiRequest') },
+        responses: {
+          200: response('Identical replay; existing paid API request returned.', 'PaidApiResponse'),
+          202: response('Paid API request accepted.', 'PaidApiResponse'),
+          400: errorResponse('INVALID_REQUEST'),
+          401: errorResponse('UNAUTHORIZED'),
+          403: errorResponse('FORBIDDEN'),
+          409: errorResponse('INTENT_PAYLOAD_CONFLICT'),
+          429: errorResponse('RATE_LIMITED'),
+          503: errorResponse('NOT_READY'),
+        },
+      },
+    },
+    '/v1/paid-api/{id}': {
+      get: {
+        operationId: 'getPaidApi',
+        summary: 'Read paid x402 API state and result',
+        security: serviceSecurity,
+        parameters: intentParameters,
+        responses: {
+          200: response('Paid API request.', 'PaidApiResponse'),
+          401: errorResponse('UNAUTHORIZED'),
+          403: errorResponse('FORBIDDEN'),
+          404: errorResponse('INTENT_NOT_FOUND'),
+        },
+      },
+    },
     '/v1/jobs/{jobId}': {
       get: {
         operationId: 'getJob',
@@ -752,6 +859,36 @@ export interface CreateJobRequest {
   readonly report_subject: string;
   readonly recipient: string;
   readonly amount_atomic: string;
+}
+
+export interface CreatePaidApiRequest {
+  readonly task_key: string;
+  readonly tool_id: 'circle-x402-api-v1';
+}
+
+export interface PaidApiQuote {
+  readonly supplier_id: 'circle-x402-v1';
+  readonly resource_url: string;
+  readonly recipient: string;
+  readonly amount_atomic: string;
+  readonly asset: 'USDC';
+  readonly network: 'eip155:5042002';
+  readonly x402_version: number;
+  readonly max_timeout_seconds: number;
+}
+
+export interface PaidApiResponse {
+  readonly business_intent_id: string;
+  readonly task_key: string;
+  readonly tool_id: 'circle-x402-api-v1';
+  readonly resource_url: string;
+  readonly payment_state: IntentState;
+  readonly quote: PaidApiQuote;
+  readonly provider_transaction_hash?: string;
+  readonly settlement?: SettlementView;
+  readonly response?: unknown;
+  readonly created_at: string;
+  readonly updated_at: string;
 }
 
 export interface SupplierQuote {

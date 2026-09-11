@@ -8,6 +8,7 @@ import '@oneshot/settlement-ui/styles.css';
 
 import { OneShotApiClient } from './api/client.js';
 import { JobApiClient } from './api/job-client.js';
+import { PaidApiClient } from './api/paid-api-client.js';
 import { createApiRecoveryClient } from './api/recovery-client.js';
 import {
   selectCredential,
@@ -37,6 +38,7 @@ const TAB_LABELS: Readonly<Record<Tab, string>> = {
 export interface AppProps {
   readonly apiClient?: OneShotApiClient;
   readonly jobClient?: JobApiClient;
+  readonly paidApiClient?: PaidApiClient;
   readonly settlementClient?: SettlementClient;
   readonly recoveryClient?: RecoveryClient;
   readonly useOperatorSession?: UseOperatorSession;
@@ -74,8 +76,8 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
           <p className="eyebrow">RESUMABLE PAID TOOLS / ARC TESTNET</p>
           <h1>Resume the job, not the payment.</h1>
           <p className="hero-lead">
-            Approve one company-data report. If an agent restarts, the original task, payment evidence
-            and supplier result stay together.
+            Approve one company-data report. If an agent restarts, the original task, payment
+            evidence and supplier result stay together.
           </p>
           <p className="hero-sublead">
             One job. Many retries. At most one committed settlement. Team-operated testnet
@@ -129,6 +131,7 @@ function CabinetPage(props: {
   readonly setMachineToken: (value: string) => void;
   readonly apiClient: OneShotApiClient;
   readonly jobClient: JobApiClient;
+  readonly paidApiClient: PaidApiClient;
   readonly settlementClient: SettlementClient;
   readonly recoveryClient: RecoveryClient;
   readonly theme: Theme;
@@ -206,7 +209,7 @@ function CabinetPage(props: {
         {section === 'tools' && (
           <>
             <JobWorkspace client={props.jobClient} onSelectIntent={setIntentId} />
-            <CircleX402DemoPanel />
+            <CircleX402DemoPanel client={props.paidApiClient} onSelectIntent={setIntentId} />
           </>
         )}
         {section === 'jobs' && <JobList client={props.jobClient} onSelectIntent={setIntentId} />}
@@ -361,6 +364,10 @@ export function App(props: AppProps = {}) {
     () => props.jobClient ?? new JobApiClient({ baseUrl: apiBaseUrl, getAuthToken }),
     [apiBaseUrl, getAuthToken, props.jobClient],
   );
+  const paidApiClient = useMemo(
+    () => props.paidApiClient ?? new PaidApiClient({ baseUrl: apiBaseUrl, getAuthToken }),
+    [apiBaseUrl, getAuthToken, props.paidApiClient],
+  );
 
   if (props.route === '/') return <LandingPage theme={theme} onToggleTheme={toggleTheme} />;
   if (props.route?.startsWith('/app')) {
@@ -371,6 +378,7 @@ export function App(props: AppProps = {}) {
         setMachineToken={setMachineToken}
         apiClient={apiClient}
         jobClient={jobClient}
+        paidApiClient={paidApiClient}
         settlementClient={settlementClient}
         recoveryClient={recoveryClient}
         theme={theme}

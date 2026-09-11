@@ -25,6 +25,8 @@ export interface ProviderRequestIdentity {
   readonly requestFingerprint: string;
   readonly walletId?: string | undefined;
   readonly policyId?: string | undefined;
+  readonly providerKind?: 'DIRECT_ARC' | 'CIRCLE_X402' | undefined;
+  readonly transactionHash?: string | undefined;
 }
 
 export interface SettlementPort {
@@ -45,6 +47,7 @@ export interface WorkerOptions {
   readonly ledger: IntentLedger;
   readonly authorizationPort?: AuthorizationPort | undefined;
   readonly settlementPort: SettlementPort;
+  readonly paidApiSettlementPort?: SettlementPort | undefined;
   readonly recoveryService?: RecoveryService | undefined;
   readonly jobLedger?: JobLedger | undefined;
   readonly supplier?: SupplierPort | undefined;

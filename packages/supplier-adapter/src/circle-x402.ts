@@ -11,6 +11,7 @@ import type {
 export const ARC_X402_NETWORK = 'eip155:5042002';
 export const ARC_X402_USDC = '0x3600000000000000000000000000000000000000';
 const DEFAULT_MAX_AMOUNT_ATOMIC = 10_000n;
+const MAX_CIRCLE_X402_TIMEOUT_SECONDS = 604_900;
 const TRANSACTION_HASH = /^0x[0-9a-fA-F]{64}$/u;
 
 export interface CircleX402Quote {
@@ -67,6 +68,25 @@ function assertUrl(value: string): string {
   return url.toString();
 }
 
+function assertResourceUrl(value: string, baseUrl: string): string {
+  if (value.length === 0 || value.length > 2048) {
+    throw new Error('x402 resource URL is not bounded');
+  }
+  const base = new URL(baseUrl);
+  const resolved = new URL(value, base);
+  const loopback = resolved.hostname === 'localhost' || resolved.hostname === '127.0.0.1';
+  if (
+    (resolved.protocol !== 'https:' && !(loopback && resolved.protocol === 'http:')) ||
+    resolved.username ||
+    resolved.password ||
+    resolved.hash ||
+    resolved.origin !== base.origin
+  ) {
+    throw new Error('x402 resource URL must be same-origin credential-free HTTPS metadata');
+  }
+  return value;
+}
+
 function decodeHeader(value: string): unknown {
   const normalized = value.replace(/-/gu, '+').replace(/_/gu, '/');
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
@@ -95,12 +115,44 @@ function asRequirements(value: PaymentRequirements): PaymentRequirements {
     !supportsBatching(value) ||
     !Number.isSafeInteger(value.maxTimeoutSeconds) ||
     value.maxTimeoutSeconds <= 0 ||
+    value.maxTimeoutSeconds > MAX_CIRCLE_X402_TIMEOUT_SECONDS ||
     !/^0x[0-9a-fA-F]{40}$/u.test(value.payTo) ||
     !/^\d+$/u.test(value.amount)
   ) {
     throw new Error('x402 quote is not a Circle Gateway Arc Testnet USDC payment');
   }
   return value;
+}
+
+export function parseCircleX402Quote(value: unknown): CircleX402Quote {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('x402 quote must be an object');
+  }
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate.url !== 'string' ||
+    typeof candidate.resourceUrl !== 'string' ||
+    typeof candidate.x402Version !== 'number' ||
+    !Number.isSafeInteger(candidate.x402Version) ||
+    typeof candidate.requirements !== 'object' ||
+    candidate.requirements === null ||
+    Array.isArray(candidate.requirements)
+  ) {
+    throw new Error('x402 quote is malformed');
+  }
+  const url = assertUrl(candidate.url);
+  const resourceUrl = assertResourceUrl(candidate.resourceUrl, url);
+  if (candidate.x402Version !== 2) {
+    throw new Error('Circle Gateway x402 requires version 2');
+  }
+  const requirements = asRequirements(candidate.requirements as PaymentRequirements);
+  if (BigInt(requirements.amount) <= 0n) throw new Error('x402 quote amount must be positive');
+  return {
+    url,
+    x402Version: candidate.x402Version,
+    resourceUrl,
+    requirements,
+  };
 }
 
 function parsePaymentRequired(response: Response, body: unknown): PaymentRequired {
@@ -122,6 +174,55 @@ function parseSettlement(response: Response): SettleResponse | undefined {
     throw new Error('x402 supplier returned malformed settlement evidence');
   }
   return decoded as SettleResponse;
+}
+
+async function fetchQuote(
+  fetchFn: typeof fetch,
+  url: string,
+  maxAmountAtomic: bigint,
+): Promise<CircleX402Quote> {
+  const normalizedUrl = assertUrl(url);
+  const response = await fetchFn(normalizedUrl, { method: 'GET', redirect: 'error' });
+  const body = response.status === 402 ? await responseBody(response) : undefined;
+  if (response.status !== 402) {
+    throw new Error(`x402 supplier quote request returned HTTP ${response.status}`);
+  }
+  const paymentRequired = parsePaymentRequired(response, body);
+  const matching = paymentRequired.accepts.filter((candidate) => {
+    try {
+      asRequirements(candidate);
+      return BigInt(candidate.amount) <= maxAmountAtomic;
+    } catch {
+      return false;
+    }
+  });
+  if (matching.length !== 1) {
+    throw new Error('x402 supplier must expose exactly one affordable Arc Testnet Gateway option');
+  }
+  const requirements = asRequirements(matching[0]!);
+  return parseCircleX402Quote({
+    url: normalizedUrl,
+    x402Version: paymentRequired.x402Version,
+    resourceUrl: paymentRequired.resource.url,
+    requirements,
+  });
+}
+
+export interface CircleX402QuoteFetchOptions {
+  readonly maxAmountAtomic?: bigint;
+  readonly fetchFn?: typeof fetch;
+}
+
+/** Credential-free quote discovery used by the API before approval. */
+export function fetchCircleX402Quote(
+  url: string,
+  options: CircleX402QuoteFetchOptions = {},
+): Promise<CircleX402Quote> {
+  return fetchQuote(
+    options.fetchFn ?? fetch.bind(globalThis),
+    url,
+    options.maxAmountAtomic ?? DEFAULT_MAX_AMOUNT_ATOMIC,
+  );
 }
 
 /**
@@ -156,33 +257,7 @@ export class CircleX402Client {
   }
 
   async quote(url: string): Promise<CircleX402Quote> {
-    const normalizedUrl = assertUrl(url);
-    const response = await this.#fetch(normalizedUrl, { method: 'GET', redirect: 'error' });
-    const body = response.status === 402 ? await responseBody(response) : undefined;
-    if (response.status !== 402) {
-      throw new Error(`x402 supplier quote request returned HTTP ${response.status}`);
-    }
-    const paymentRequired = parsePaymentRequired(response, body);
-    const matching = paymentRequired.accepts.filter((candidate) => {
-      try {
-        asRequirements(candidate);
-        return BigInt(candidate.amount) <= this.#maxAmountAtomic;
-      } catch {
-        return false;
-      }
-    });
-    if (matching.length !== 1) {
-      throw new Error(
-        'x402 supplier must expose exactly one affordable Arc Testnet Gateway option',
-      );
-    }
-    const requirements = asRequirements(matching[0]!);
-    return {
-      url: normalizedUrl,
-      x402Version: paymentRequired.x402Version,
-      resourceUrl: paymentRequired.resource.url,
-      requirements,
-    };
+    return fetchQuote(this.#fetch, url, this.#maxAmountAtomic);
   }
 
   async payOnce<T = unknown>(input: {

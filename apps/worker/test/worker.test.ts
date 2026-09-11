@@ -155,6 +155,53 @@ describe('Worker Unit Logic', () => {
     expect(completedState).toBe('CONFIRMED');
   });
 
+  it('routes a durable paid API intent to the Circle port and never the direct port', async () => {
+    let directCalls = 0;
+    let circleCalls = 0;
+    const ledger = createMockLedger({
+      async getPaidApiTarget() {
+        return {
+          businessIntentId: sampleRequest.business_intent_id,
+          resourceUrl: 'https://x402.example.test/api/dataset',
+          method: 'GET' as const,
+          quotePayload: {},
+        };
+      },
+      async persistProviderRequestIdentity(_attemptId, identity) {
+        expect(identity.providerKind).toBe('CIRCLE_X402');
+      },
+    });
+
+    await executeSubmitSettlement('intent-worker-unit-1', {
+      pool: {} as never,
+      ledger,
+      settlementPort: {
+        async submit() {
+          directCalls += 1;
+          throw new Error('direct port must not receive x402 work');
+        },
+      },
+      paidApiSettlementPort: {
+        getSubmissionIdentity: () => ({
+          idempotencyKey: 'circle-x402:intent-worker-unit-1',
+          referenceId: 'circle-x402:intent-worker-unit-1',
+          requestFingerprint: 'a'.repeat(64),
+          providerKind: 'CIRCLE_X402' as const,
+        }),
+        async submit() {
+          circleCalls += 1;
+          return {
+            kind: 'POSSIBLY_SUBMITTED' as const,
+            reason: 'receipt pending',
+          };
+        },
+      },
+    });
+
+    expect(circleCalls).toBe(1);
+    expect(directCalls).toBe(0);
+  });
+
   it('persists provider request identity before calling the settlement port', async () => {
     const order: string[] = [];
     let persisted: unknown;

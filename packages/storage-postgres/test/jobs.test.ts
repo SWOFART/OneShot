@@ -91,7 +91,7 @@ describe('JobLedger delivery recovery', () => {
             ],
           };
         }
-        if (sql.includes('SELECT count(*)::text AS count FROM resumable_jobs j JOIN settlements')) {
+        if (sql.includes('SELECT count(*)::text AS count FROM (') && sql.includes('recorded')) {
           return { rows: [{ count: '1' }] };
         }
         if (sql.includes("i.state = 'UNKNOWN'")) return { rows: [{ count: '0' }] };

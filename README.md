@@ -255,13 +255,14 @@ shown for retries; users do not need to invent one. After settlement, the job
 list links directly to ArcScan and keeps the supplier result separate from
 payment evidence.
 
-The Tools cabinet also documents a separate **Paid API purchase via Circle
-x402** mode. `pnpm demo:x402` uses the Privy wallet's EIP-712 signer against a
-Circle Gateway-funded Arc Testnet balance and makes exactly one paid request to
-the configured Circle nanopayments sample endpoint. A lost or ambiguous x402
-response is held as `UNKNOWN`; it is never retried by the demo process. See
+The Tools cabinet also supports **Paid API purchase via Circle x402**. Configure
+the Circle nanopayments sample endpoint in both API and worker environments;
+the site then quotes and starts one durable paid request. `pnpm demo:x402`
+remains an operator fallback. A lost or ambiguous x402 response is held as
+`UNKNOWN`; it is never retried blindly. See
 [`docs/CIRCLE_X402_DEMO.md`](docs/CIRCLE_X402_DEMO.md). This rail is not the
-direct Arc settlement proof and is not yet the default resumable job supplier.
+direct Arc settlement proof; the paid API result has its own resumable payment
+state and recovery evidence.
 
 | Method | Path                             | Purpose                                                       |
 | ------ | -------------------------------- | ------------------------------------------------------------- |
@@ -270,7 +271,10 @@ direct Arc settlement proof and is not yet the default resumable job supplier.
 | `POST` | `/v1/intents/{id}/reconcile`     | Trigger read-only reconciliation; never submits               |
 | `GET`  | `/v1/intents/{id}/recovery-view` | Local authority plus labelled provider observations           |
 | `POST` | `/v1/jobs`                       | Start/replay one workspace-scoped team report task            |
-| `POST` | `/v1/jobs/quote`                 | Return a non-chargeable quote before explicit approval       |
+| `POST` | `/v1/jobs/quote`                 | Return a non-chargeable quote before explicit approval        |
+| `POST` | `/v1/paid-api/quote`             | Return a non-chargeable Circle x402 quote                     |
+| `POST` | `/v1/paid-api`                   | Start/replay one workspace-scoped paid API request            |
+| `GET`  | `/v1/paid-api/{id}`              | Read paid API state, transaction hash, and result             |
 | `GET`  | `/v1/jobs`                       | List workspace jobs and delivery state                        |
 | `GET`  | `/v1/jobs/{jobId}`               | Read a workspace-owned job                                    |
 | `POST` | `/v1/jobs/{jobId}/resume`        | Resume original supplier delivery; never submits payment      |

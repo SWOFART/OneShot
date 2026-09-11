@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   asCorrelationId,
   ContractValidationError,
+  parseCreatePaidApiRequest,
   parseCreateJobRequest,
   type SupplierPort,
   type ErrorCode,
@@ -14,6 +15,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { ServiceAuthenticator } from './auth.js';
 import { allowAllRateLimiter, type RateLimiter } from './rate-limit.js';
 import { UnavailableWalletActivityPort, type WalletActivityPort } from './wallet-activity.js';
+import type { PaidApiService } from './paid-api.js';
 
 export interface ServiceConfig {
   readonly submissionsDisabled?: boolean;
@@ -45,6 +47,7 @@ export interface ApiDependencies {
     'createOrReplay' | 'get' | 'list' | 'resumeDelivery' | 'recordActivityObservation' | 'activity'
   >;
   readonly supplier?: SupplierPort;
+  readonly paidApi?: PaidApiService;
   readonly walletActivity?: WalletActivityPort;
   readonly authenticator: ServiceAuthenticator;
   readonly rateLimiter?: RateLimiter;
@@ -82,6 +85,16 @@ const createJobBodySchema = {
   },
 } as const;
 
+const createPaidApiBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['task_key', 'tool_id'],
+  properties: {
+    task_key: { type: 'string', minLength: 1, maxLength: 128 },
+    tool_id: { type: 'string', const: 'circle-x402-api-v1' },
+  },
+} as const;
+
 function sendError(
   reply: FastifyReply,
   status: number,
@@ -106,6 +119,14 @@ export function buildApi(dependencies: ApiDependencies) {
       503,
       'NOT_READY',
       'Resumable jobs are not configured',
+      correlationFor(request),
+    );
+  const paidApiUnavailable = (reply: FastifyReply, request: FastifyRequest): void =>
+    sendError(
+      reply,
+      503,
+      'NOT_READY',
+      'Paid API integration is not configured',
       correlationFor(request),
     );
   const onError =
@@ -236,6 +257,82 @@ export function buildApi(dependencies: ApiDependencies) {
       expires_at: order.expires_at,
     };
     return reply.code(200).send(quote);
+  });
+
+  app.post(
+    '/v1/paid-api/quote',
+    { schema: { body: createPaidApiBodySchema } },
+    async (request, reply) => {
+      if (!dependencies.paidApi) {
+        paidApiUnavailable(reply, request);
+        return;
+      }
+      const parsed = parseCreatePaidApiRequest(request.body);
+      try {
+        return reply.code(200).send(await dependencies.paidApi.quote(parsed));
+      } catch {
+        sendError(
+          reply,
+          503,
+          'NOT_READY',
+          'Paid API quote is unavailable',
+          correlationFor(request),
+        );
+      }
+    },
+  );
+
+  app.post(
+    '/v1/paid-api',
+    { schema: { body: createPaidApiBodySchema } },
+    async (request, reply) => {
+      if (!dependencies.paidApi) {
+        paidApiUnavailable(reply, request);
+        return;
+      }
+      const parsed = parseCreatePaidApiRequest(request.body);
+      try {
+        const result = await dependencies.paidApi.start(parsed, correlationFor(request));
+        if (result.kind === 'INTENT_PAYLOAD_CONFLICT') {
+          sendError(
+            reply,
+            409,
+            'INTENT_PAYLOAD_CONFLICT',
+            'Task key already has a different immutable paid API quote',
+            correlationFor(request),
+          );
+          return;
+        }
+        return reply.code(result.kind === 'ACCEPTED' ? 202 : 200).send(result.request);
+      } catch {
+        sendError(
+          reply,
+          503,
+          'NOT_READY',
+          'Paid API request could not be created',
+          correlationFor(request),
+        );
+      }
+    },
+  );
+
+  app.get<{ Params: { id: string } }>('/v1/paid-api/:id', async (request, reply) => {
+    if (!dependencies.paidApi) {
+      paidApiUnavailable(reply, request);
+      return;
+    }
+    const paidApi = await dependencies.paidApi.get(request.params.id);
+    if (!paidApi) {
+      sendError(
+        reply,
+        404,
+        'INTENT_NOT_FOUND',
+        'Paid API request was not found in this workspace',
+        correlationFor(request),
+      );
+      return;
+    }
+    return paidApi;
   });
 
   app.get('/v1/jobs', async (request, reply) => {

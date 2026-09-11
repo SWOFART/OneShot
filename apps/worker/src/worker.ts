@@ -41,6 +41,19 @@ export async function executeSubmitSettlement(
   const claim = await options.ledger.claimSubmission(businessIntentId);
   if (!claim.claimed) return true;
 
+  const paidApiTarget =
+    typeof options.ledger.getPaidApiTarget === 'function'
+      ? await options.ledger.getPaidApiTarget(businessIntentId)
+      : undefined;
+  const settlementPort = paidApiTarget ? options.paidApiSettlementPort : options.settlementPort;
+  if (!settlementPort) {
+    await options.ledger.completeSubmission(businessIntentId, claim.attemptId, {
+      kind: 'POSSIBLY_SUBMITTED',
+      reason: 'Paid API settlement adapter is not configured',
+    });
+    return true;
+  }
+
   formatStateTransitionLog({
     correlationId: claim.correlationId,
     businessIntentId,
@@ -52,9 +65,9 @@ export async function executeSubmitSettlement(
 
   // Persist the exact provider request identity before crossing the external
   // effect boundary. Recovery must reuse it after a lost response or restart.
-  if (options.settlementPort.getSubmissionIdentity) {
+  if (settlementPort.getSubmissionIdentity) {
     try {
-      const identity = options.settlementPort.getSubmissionIdentity(claim.intent);
+      const identity = settlementPort.getSubmissionIdentity(claim.intent);
       await options.ledger.persistProviderRequestIdentity(claim.attemptId, identity);
     } catch {
       await options.ledger.completeSubmission(businessIntentId, claim.attemptId, {
@@ -68,7 +81,7 @@ export async function executeSubmitSettlement(
   // A03.3 — Call settlement port outside database transaction
   let result: SettlementResult;
   try {
-    result = await options.settlementPort.submit(claim.intent, {
+    result = await settlementPort.submit(claim.intent, {
       attemptId: claim.attemptId,
       correlationId: claim.correlationId,
     });
