@@ -86,7 +86,6 @@ describe('policy summary', () => {
     expect(within(policy).getByText('eip155:5042002')).toBeTruthy();
     expect(within(policy).getByText('Configured')).toBeTruthy();
     expect(within(policy).getByText('10.000000 USDC')).toBeTruthy();
-    expect(within(policy).getByText('On the allowlist')).toBeTruthy();
     expect(within(policy).getByText('At or under the cap')).toBeTruthy();
   });
 
@@ -98,10 +97,11 @@ describe('policy summary', () => {
     expect(within(policy).getByText('50.000000')).toBeTruthy();
   });
 
-  it('does not claim allowlist membership when no allowlist is reported', () => {
+  it('does not render allowlist indicators in policy summary', () => {
     renderScenario('auth-config-mismatch');
     const policy = screen.getByRole('region', { name: 'Policy' });
-    expect(within(policy).getByText('No allowlist reported')).toBeTruthy();
+    expect(within(policy).queryByText('No allowlist reported')).toBeNull();
+    expect(within(policy).queryByText('On the allowlist')).toBeNull();
   });
 });
 

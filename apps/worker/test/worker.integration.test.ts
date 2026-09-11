@@ -27,8 +27,8 @@ const sampleRequest = {
 };
 
 describePostgres('Atomic at-most-once worker (A03)', () => {
-  let container: StartedPostgreSqlContainer;
-  let pool: Pool;
+  let container!: StartedPostgreSqlContainer;
+  let pool!: Pool;
   let attemptCounter = 0;
 
   beforeAll(async () => {
@@ -39,14 +39,14 @@ describePostgres('Atomic at-most-once worker (A03)', () => {
 
   afterEach(async () => {
     await pool.query(
-      'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, business_intents RESTART IDENTITY',
+      'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, resumable_jobs, business_intents RESTART IDENTITY',
     );
     attemptCounter = 0;
   });
 
   afterAll(async () => {
-    await pool.end();
-    await container.stop();
+    if (typeof pool !== 'undefined') await pool.end();
+    if (typeof container !== 'undefined') await container.stop();
   });
 
   const newLedger = () =>

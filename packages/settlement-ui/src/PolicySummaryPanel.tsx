@@ -28,11 +28,6 @@ const POLICY_STATUS_EXPLANATIONS: Readonly<Record<PolicyDisplayStatus, string>> 
   NOT_REPORTED: 'The API returned no policy summary for this intent.',
 };
 
-function allowlistLabel(allowlisted: boolean | null): string {
-  if (allowlisted === null) return 'No allowlist reported';
-  return allowlisted ? 'On the allowlist' : 'Not on the allowlist';
-}
-
 function capLabel(policy: PolicySummaryDisplay): string {
   if (policy.settlementCapDisplay === null) return 'Not reported';
   return `${policy.settlementCapDisplay} ${policy.asset}`;
@@ -71,12 +66,7 @@ export function PolicySummaryPanel({ policy }: PolicySummaryPanelProps) {
         </div>
         <div>
           <dt>Recipient</dt>
-          <dd>
-            <span className="mono">{policy.recipient}</span>{' '}
-            <span className={policy.recipientAllowlisted === true ? 'inline-ok' : 'inline-warning'}>
-              {allowlistLabel(policy.recipientAllowlisted)}
-            </span>
-          </dd>
+          <dd className="mono">{policy.recipient}</dd>
         </div>
         <div>
           <dt>Per-settlement cap</dt>
@@ -99,20 +89,6 @@ export function PolicySummaryPanel({ policy }: PolicySummaryPanelProps) {
           <div>
             <dt>Policy reference</dt>
             <dd className="mono">{policy.policyId}</dd>
-          </div>
-        )}
-        {policy.allowedRecipients.length > 0 && (
-          <div>
-            <dt>Allowed recipients</dt>
-            <dd>
-              <ul className="address-list">
-                {policy.allowedRecipients.map((address) => (
-                  <li key={address} className="mono">
-                    {address}
-                  </li>
-                ))}
-              </ul>
-            </dd>
           </div>
         )}
       </dl>

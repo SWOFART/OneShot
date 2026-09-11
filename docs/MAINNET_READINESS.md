@@ -20,18 +20,18 @@ The settlement profile configuration is codified in
 
 ### Pinned vs unpublished comparison
 
-| Field | Arc Testnet (`arc-testnet`) | Arc Mainnet (`arc-mainnet`) |
-| :--- | :--- | :--- |
-| **Profile ID** | `arc-testnet` | `arc-mainnet` |
-| **Verification** | `PINNED` (verified at docs.arc.io) | `UNPUBLISHED` |
-| **Enabled** | `true` | `false` (fails closed) |
-| **isMainnet** | `false` | `true` |
-| **Chain ID** | `5042002` | *Awaiting launch publication* |
-| **CAIP-2** | `eip155:5042002` | *Awaiting launch publication* |
-| **USDC Contract** | `0x3600000000000000000000000000000000000000` | *Awaiting launch publication* |
-| **USDC Decimals** | `6` (settlement precision) | `6` (standard ERC-20) |
-| **Native Gas Decimals** | `18` (gas precision) | `18` (gas precision) |
-| **Activation Gate** | Testnet default | Human authorization required |
+| Field                   | Arc Testnet (`arc-testnet`)                  | Arc Mainnet (`arc-mainnet`)   |
+| :---------------------- | :------------------------------------------- | :---------------------------- |
+| **Profile ID**          | `arc-testnet`                                | `arc-mainnet`                 |
+| **Verification**        | `PINNED` (verified at docs.arc.io)           | `UNPUBLISHED`                 |
+| **Enabled**             | `true`                                       | `false` (fails closed)        |
+| **isMainnet**           | `false`                                      | `true`                        |
+| **Chain ID**            | `5042002`                                    | _Awaiting launch publication_ |
+| **CAIP-2**              | `eip155:5042002`                             | _Awaiting launch publication_ |
+| **USDC Contract**       | `0x3600000000000000000000000000000000000000` | _Awaiting launch publication_ |
+| **USDC Decimals**       | `6` (settlement precision)                   | `6` (standard ERC-20)         |
+| **Native Gas Decimals** | `18` (gas precision)                         | `18` (gas precision)          |
+| **Activation Gate**     | Testnet default                              | Human authorization required  |
 
 ### Strict fail-closed policy (zero guessed constants)
 
@@ -76,7 +76,7 @@ READY: Configuration structurally complete and fail-closed.
 The production runtime target consists of:
 
 1. **API Service**: Fastify application running in Google Cloud Run.
-2. **Worker Service**: Graphile Worker background runner running in Google Cloud Run (or Cloud Run Job).
+2. **Worker Service**: `RestartRunner` driving the transactional PostgreSQL outbox poller in Google Cloud Run.
 3. **Database**: Managed Google Cloud SQL for PostgreSQL 16+ instance.
 4. **Secret Store**: Google Secret Manager.
 5. **Operator Console**: Vite SPA deployed on Cloudflare Workers / Pages.
@@ -124,7 +124,7 @@ gcloud run deploy oneshot-api \
   --platform=managed \
   --allow-unauthenticated \
   --add-cloudsql-instances="PROJECT_ID:us-central1:oneshot-postgres" \
-  --set-env-vars="HOST=0.0.0.0,PORT=8080,DB_NAME=oneshot,DB_USER=oneshot_user,INSTANCE_CONNECTION_NAME=PROJECT_ID:us-central1:oneshot-postgres,ONESHOT_ARC_PROFILE=arc-testnet" \
+  --set-env-vars="HOST=0.0.0.0,PORT=8080,DB_NAME=oneshot,DB_USER=oneshot_user,INSTANCE_CONNECTION_NAME=PROJECT_ID:us-central1:oneshot-postgres,ONESHOT_API_RATE_LIMIT_MAX_REQUESTS=60,ONESHOT_API_RATE_LIMIT_WINDOW_MS=60000" \
   --set-secrets="DB_PASS=oneshot-db-pass:latest,SERVICE_BEARER_TOKEN=oneshot-bearer-token:latest"
 ```
 
@@ -138,8 +138,8 @@ gcloud run deploy oneshot-worker \
   --platform=managed \
   --no-allow-unauthenticated \
   --add-cloudsql-instances="PROJECT_ID:us-central1:oneshot-postgres" \
-  --set-env-vars="DB_NAME=oneshot,DB_USER=oneshot_user,INSTANCE_CONNECTION_NAME=PROJECT_ID:us-central1:oneshot-postgres,ONESHOT_ARC_PROFILE=arc-testnet" \
-  --set-secrets="DB_PASS=oneshot-db-pass:latest,ONESHOT_PRIVY_APP_SECRET=privy-secret:latest"
+  --set-env-vars="HOST=0.0.0.0,PORT=8080,DB_NAME=oneshot,DB_USER=oneshot_user,INSTANCE_CONNECTION_NAME=PROJECT_ID:us-central1:oneshot-postgres,ONESHOT_ARC_PROFILE=arc-testnet,ONESHOT_ARC_RPC_URL=https://ARC_RPC_HOST,ONESHOT_PRIVY_APP_ID=PRIVY_APP_ID,ONESHOT_PRIVY_WALLET_ID=PRIVY_WALLET_ID,ONESHOT_PRIVY_WALLET_ADDRESS=PRIVY_WALLET_ADDRESS,ONESHOT_PRIVY_POLICY_ID=PRIVY_POLICY_ID,ONESHOT_PRIVY_POLICY_DIGEST=PRIVY_POLICY_DIGEST,ONESHOT_RECIPIENT_ALLOWLIST=RECIPIENT_ADDRESS,ONESHOT_SETTLEMENT_CAP_ATOMIC=1000000,ONESHOT_SUBGRAPH_SOURCE=STUDIO_GRAPHQL,ONESHOT_SUBGRAPH_QUERY_URL=https://api.studio.thegraph.com/query/STUDIO_ID/SUBGRAPH/VERSION,ONESHOT_SUBGRAPH_DEPLOYMENT_ID=SUBGRAPH_DEPLOYMENT_ID,ONESHOT_SUBGRAPH_MANIFEST_CID=SUBGRAPH_MANIFEST_CID,ONESHOT_SUBGRAPH_MAX_LAG_BLOCKS=5,ONESHOT_RECOVERY_FROM_BLOCK=0,ONESHOT_RECOVERY_TO_BLOCK=RECOVERY_TO_BLOCK,ONESHOT_VERTEX_PROJECT_ID=PROJECT_ID,ONESHOT_VERTEX_LOCATION=europe-west1,ONESHOT_VERTEX_MODEL=gemini-2.5-flash" \
+  --set-secrets="DB_PASS=oneshot-db-pass:latest,ONESHOT_PRIVY_APP_SECRET=privy-secret:latest,ONESHOT_GRAPH_API_KEY=graph-api-key:latest"
 ```
 
 ## 4. Safe disable and emergency pause

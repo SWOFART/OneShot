@@ -9,11 +9,88 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { App } from '../src/App.js';
 import { OneShotApiClient } from '../src/api/client.js';
+import type { JobApiClient } from '../src/api/job-client.js';
 import { signedInSession } from './support/fake-session.js';
 
 afterEach(cleanup);
 
 describe('Gate P5 shell composition', () => {
+  it('separates the public landing page from the authenticated cabinet route', () => {
+    const landing = render(<App route="/" />);
+    expect(screen.getByRole('heading', { name: /Resume the job, not the payment/u })).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: /Open workspace/u })[0]?.getAttribute('href')).toBe(
+      '/app',
+    );
+    landing.unmount();
+
+    render(
+      <App
+        route="/app"
+        useOperatorSession={() => signedInSession()}
+        apiClient={
+          new OneShotApiClient({
+            fetchFn: async () =>
+              new Response(JSON.stringify({ status: 'ok' }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+              }),
+          })
+        }
+        settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
+        recoveryClient={createInMemoryRecoveryClient('lagging')}
+      />,
+    );
+    expect(screen.getByRole('tab', { name: 'Tools' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Jobs' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Recovery & activity' })).toBeTruthy();
+  });
+
+  it('gives Tools and Jobs distinct responsibilities', async () => {
+    const user = userEvent.setup();
+    const jobClient = {
+      async list() {
+        return [];
+      },
+      async start() {
+        throw new Error('not used');
+      },
+      async resume() {
+        throw new Error('not used');
+      },
+      async result() {
+        return null;
+      },
+      async refreshActivity() {
+        return { recorded_settlement_count: 0, uncertain_job_count: 0 };
+      },
+    } as unknown as JobApiClient;
+    render(
+      <App
+        route="/app"
+        useOperatorSession={() => signedInSession()}
+        jobClient={jobClient}
+        apiClient={
+          new OneShotApiClient({
+            fetchFn: async () =>
+              new Response(JSON.stringify({ status: 'ok' }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+              }),
+          })
+        }
+        settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
+        recoveryClient={createInMemoryRecoveryClient('lagging')}
+      />,
+    );
+
+    await user.click(screen.getByRole('tab', { name: 'Tools' }));
+    expect(screen.getByRole('heading', { name: 'Start a company-data report' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Jobs and results', level: 2 })).toBeNull();
+    await user.click(screen.getByRole('tab', { name: 'Jobs' }));
+    expect(await screen.findByRole('heading', { name: 'Jobs and results', level: 2 })).toBeTruthy();
+    expect(screen.getByText(/Open Tools to start/u)).toBeTruthy();
+  });
+
   it('mounts A05, B05, and C05 without a settlement bypass', async () => {
     const settlementIntent = Object.values(SETTLEMENT_SCENARIO_INTENTS)[0];
     if (!settlementIntent) throw new Error('Settlement fixture missing');

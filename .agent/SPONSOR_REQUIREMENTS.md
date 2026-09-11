@@ -5,14 +5,21 @@ release, or submission claims.
 
 ## Primary target: Privy
 
+- Lead with Best B2B financial product: resumable paid tools for business agents.
+  Best financial flow is additional fit from the same purchase experience,
+  not a separate implementation roadmap. The new workflow remains planned.
 - Privy must be core corporate wallet authorization, not login-only branding.
 - The working path must demonstrate a Privy wallet plus scoped authorization,
   policies, signers, quorum, or spending permissions that constrain settlement.
 - Policy denial or an amount above policy must produce zero settlement.
 - The normal agent path must not bypass Privy authorization.
 
-## Primary target: Arc
+## Secondary target: Arc
 
+- Secondary product positioning is Best DeFi/Onchain Finance Application for
+  the eligible pool; verify Continuity registration if applicable. The listed
+  $3,500 award includes $2,500 conditional on mainnet deployment by September
+  30, not an additional bonus. Readiness artifacts are not deployment proof.
 - The demo must execute a real USDC settlement on Arc Testnet.
 - Showing a network label, wallet, explorer page, or mocked payment alone does
   not qualify.
@@ -20,8 +27,9 @@ release, or submission claims.
   public source, documentation, and short demonstration.
 - OneShot must retain settlement identity and result through retries and
   downstream failures.
-- For the Launch track, include a disabled Arc Mainnet profile, deployment and
-  rollback artifacts, and readiness evidence. Actual mainnet execution remains
+- For the conditional mainnet award, readiness artifacts alone are insufficient;
+  retain the disabled profile, deployment/rollback artifacts and require actual
+  authorized deployment proof before claiming that condition. Execution remains
   disabled until Circle publishes official production access/identities and a
   human explicitly authorizes real-value activation.
 
@@ -34,9 +42,10 @@ decides. C01 must prove this with live data before any qualification claim.
 - Target the AI Tooling or AI Use Case track. The recovery agent must use live
   Graph data for meaningful candidate selection, explanation, and automation.
 - The production/demo path must query the pinned live OneShot/Arc Subgraph
-  through Subgraph MCP. A direct application GraphQL client, mocked MCP result,
-  dependency, or configuration entry alone is insufficient.
-- The LLM Recovery Agent must use the live MCP result to select `WAIT`,
+  through a Graph provider. For the ETHOnline 2026 AI track, a live API-key
+  query from Subgraph Studio qualifies; Subgraph MCP is an optional transport
+  and must not be claimed when the active Arc deployment is Studio-only.
+- The LLM Recovery Agent must use the live Graph result to select `WAIT`,
   `RECONCILE`, `ESCALATE`, or `RETURN_EXISTING_RESULT`. A sanitized trace must
   bind the tool call, deployment/query/result, `_meta` health, referenced
   evidence, model recommendation, and deterministic-core disposition.
@@ -46,8 +55,8 @@ decides. C01 must prove this with live data before any qualification claim.
   Subgraph merely to satisfy a requirement that belongs to another track.
 - Empty, delayed, multiple, or contradictory candidates preserve `UNKNOWN` and
   cannot unlock another settlement.
-- Malformed/injected MCP content and invalid model output also preserve
-  `UNKNOWN`. Subgraph MCP and the LLM have no signing, settlement, retry,
+- Malformed/injected Graph content and invalid model output also preserve
+  `UNKNOWN`. Graph transports and the LLM have no signing, settlement, retry,
   Attempt-creation, or submission-ownership capability.
 - Include a public repository, clear README, and a two-to-four-minute demo.
 

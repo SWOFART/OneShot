@@ -15,6 +15,7 @@ import {
   type EvidenceBinding,
   type GraphCandidatePayload,
   type GraphMetaPayload,
+  type GraphRetrieval,
   type IndexDiagnosticCode,
   type IndexHealth,
   type IndexedCandidate,
@@ -79,6 +80,22 @@ function isPositiveUint(value: unknown): value is string {
   return isUint(value) && BigInt(value) > 0n;
 }
 
+function isSafeEndpoint(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 512) return false;
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === 'https:' &&
+      url.username.length === 0 &&
+      url.password.length === 0 &&
+      url.search.length === 0 &&
+      url.hash.length === 0
+    );
+  } catch {
+    return false;
+  }
+}
+
 function sameAddress(left: string, right: string): boolean {
   return left.toLowerCase() === right.toLowerCase();
 }
@@ -136,9 +153,15 @@ function validCorrelation(value: unknown): value is CandidateCorrelation {
 }
 
 function validPolicy(policy: SubgraphMcpPolicy): boolean {
+  const retrieval: GraphRetrieval = policy.retrieval ?? 'SUBGRAPH_MCP';
+  const transportIdentityValid =
+    retrieval === 'STUDIO_GRAPHQL'
+      ? policy.queryUrl === undefined || isSafeEndpoint(policy.queryUrl)
+      : policy.serverName === 'subgraph-mcp' &&
+        isBoundedString(policy.serverVersion, 32, /^[A-Za-z0-9._+-]+$/);
   return (
-    policy.serverName === 'subgraph-mcp' &&
-    isBoundedString(policy.serverVersion, 32, /^[A-Za-z0-9._+-]+$/) &&
+    (retrieval === 'STUDIO_GRAPHQL' || retrieval === 'SUBGRAPH_MCP') &&
+    transportIdentityValid &&
     isBoundedString(policy.deploymentId, 66, HEX_32) &&
     isBoundedString(policy.manifestCid, 128, CID) &&
     isUint(policy.maxLagBlocks) &&
@@ -226,7 +249,13 @@ function parseMeta(value: unknown): GraphMetaPayload | null {
     !Number.isSafeInteger(value.block.number) ||
     (value.block.number as number) < 0 ||
     !isBoundedString(value.block.hash, 66, HEX_32) ||
-    !(value.block.timestamp === null || isUint(value.block.timestamp))
+    !(
+      value.block.timestamp === null ||
+      isUint(value.block.timestamp) ||
+      (typeof value.block.timestamp === 'number' &&
+        Number.isSafeInteger(value.block.timestamp) &&
+        value.block.timestamp >= 0)
+    )
   )
     return null;
   return {
@@ -235,7 +264,7 @@ function parseMeta(value: unknown): GraphMetaPayload | null {
     block: {
       number: value.block.number as number,
       hash: value.block.hash,
-      timestamp: value.block.timestamp,
+      timestamp: value.block.timestamp === null ? null : String(value.block.timestamp),
     },
   };
 }
@@ -299,20 +328,23 @@ function baseView(
   policy: SubgraphMcpPolicy,
   trace: SubgraphMcpTrace,
 ): IndexView {
+  const retrieval = trace.retrieval ?? policy.retrieval ?? 'SUBGRAPH_MCP';
   return {
     schemaVersion: INDEX_VIEW_VERSION,
     source: {
       provider: 'THE_GRAPH',
-      retrieval: 'SUBGRAPH_MCP',
+      retrieval,
       authority: 'NON_AUTHORITATIVE_CANDIDATE_DISCOVERY',
     },
     binding: request.binding,
     correlation: request.correlation,
-    mcp: {
+    graph: {
+      retrieval,
+      endpointUrl: isSafeEndpoint(trace.endpointUrl) ? trace.endpointUrl : 'unavailable',
       callId: safeCallId(trace),
-      serverName: policy.serverName,
-      serverVersion: policy.serverVersion,
-      toolName: MCP_TOOL_NAME,
+      ...(trace.serverName ? { serverName: trace.serverName } : {}),
+      ...(trace.serverVersion ? { serverVersion: trace.serverVersion } : {}),
+      ...(trace.toolName === MCP_TOOL_NAME ? { toolName: MCP_TOOL_NAME } : {}),
       deploymentId: policy.deploymentId,
       manifestCid: policy.manifestCid,
       queryName: MCP_QUERY_NAME,
@@ -412,11 +444,15 @@ export function normalizeSubgraphMcpTrace(
       issue('INVALID_IDENTITY', '$input'),
     );
   }
+  const retrieval = trace.retrieval ?? policy.retrieval ?? 'SUBGRAPH_MCP';
   if (
     !isIsoInstant(trace.retrievedAt) ||
     !validChainHead(trace.chainHead) ||
-    trace.serverName !== policy.serverName ||
-    trace.serverVersion !== policy.serverVersion
+    (retrieval === 'SUBGRAPH_MCP' &&
+      (trace.serverName !== policy.serverName || trace.serverVersion !== policy.serverVersion)) ||
+    (retrieval === 'STUDIO_GRAPHQL' &&
+      (!isSafeEndpoint(trace.endpointUrl) ||
+        (policy.queryUrl !== undefined && trace.endpointUrl !== policy.queryUrl)))
   ) {
     return rejected(
       request,
@@ -426,7 +462,7 @@ export function normalizeSubgraphMcpTrace(
       issue('INVALID_IDENTITY', '$trace'),
     );
   }
-  if (trace.toolName !== MCP_TOOL_NAME) {
+  if (retrieval === 'SUBGRAPH_MCP' && trace.toolName !== MCP_TOOL_NAME) {
     return rejected(
       request,
       policy,
@@ -500,77 +536,99 @@ export function normalizeSubgraphMcpTrace(
       issue('RESULT_TOO_LARGE', '$trace.result'),
     );
   }
-  if (!isRecord(trace.result) || !hasExactKeys(trace.result, ['content'], ['isError'])) {
-    return rejected(
-      request,
-      policy,
-      trace,
-      'BOUNDARY_REJECTED',
-      issue('INVALID_ENVELOPE', '$trace.result'),
-    );
+  const directStudio = retrieval === 'STUDIO_GRAPHQL';
+  let rawPayload: unknown;
+  if (directStudio) {
+    if (envelopeSize > policy.maxResultBytes) {
+      return rejected(
+        request,
+        policy,
+        trace,
+        'RESULT_TOO_LARGE',
+        issue('RESULT_TOO_LARGE', '$trace.result'),
+      );
+    }
+    rawPayload = trace.result;
+  } else {
+    if (!isRecord(trace.result) || !hasExactKeys(trace.result, ['content'], ['isError'])) {
+      return rejected(
+        request,
+        policy,
+        trace,
+        'BOUNDARY_REJECTED',
+        issue('INVALID_ENVELOPE', '$trace.result'),
+      );
+    }
+    if (trace.result.isError === true) {
+      return rejected(
+        request,
+        policy,
+        trace,
+        'MCP_ERROR',
+        issue('INVALID_ENVELOPE', '$trace.result.isError'),
+      );
+    }
+    if (trace.result.isError !== undefined && trace.result.isError !== false) {
+      return rejected(
+        request,
+        policy,
+        trace,
+        'BOUNDARY_REJECTED',
+        issue('INVALID_ENVELOPE', '$trace.result.isError'),
+      );
+    }
+    if (!Array.isArray(trace.result.content) || trace.result.content.length !== 1) {
+      return rejected(
+        request,
+        policy,
+        trace,
+        'BOUNDARY_REJECTED',
+        issue('INVALID_ENVELOPE', '$trace.result.content'),
+      );
+    }
+    const content: unknown = trace.result.content[0];
+    if (
+      !isRecord(content) ||
+      !hasExactKeys(content, ['type', 'text']) ||
+      content.type !== 'text' ||
+      typeof content.text !== 'string'
+    ) {
+      return rejected(
+        request,
+        policy,
+        trace,
+        'BOUNDARY_REJECTED',
+        issue('INVALID_ENVELOPE', '$trace.result.content[0]'),
+      );
+    }
+    if (Buffer.byteLength(content.text, 'utf8') > policy.maxResultBytes) {
+      return rejected(
+        request,
+        policy,
+        trace,
+        'RESULT_TOO_LARGE',
+        issue('RESULT_TOO_LARGE', '$trace.result.content[0].text'),
+      );
+    }
+    try {
+      rawPayload = JSON.parse(content.text);
+    } catch {
+      return rejected(
+        request,
+        policy,
+        trace,
+        'BOUNDARY_REJECTED',
+        issue('INVALID_JSON', '$trace.result.content[0].text'),
+      );
+    }
   }
-  if (trace.result.isError === true) {
+  if (directStudio && isRecord(rawPayload) && 'errors' in rawPayload) {
     return rejected(
       request,
       policy,
       trace,
       'MCP_ERROR',
-      issue('INVALID_ENVELOPE', '$trace.result.isError'),
-    );
-  }
-  if (trace.result.isError !== undefined && trace.result.isError !== false) {
-    return rejected(
-      request,
-      policy,
-      trace,
-      'BOUNDARY_REJECTED',
-      issue('INVALID_ENVELOPE', '$trace.result.isError'),
-    );
-  }
-  if (!Array.isArray(trace.result.content) || trace.result.content.length !== 1) {
-    return rejected(
-      request,
-      policy,
-      trace,
-      'BOUNDARY_REJECTED',
-      issue('INVALID_ENVELOPE', '$trace.result.content'),
-    );
-  }
-  const content = (trace.result.content as unknown[])[0];
-  if (
-    !isRecord(content) ||
-    !hasExactKeys(content, ['type', 'text']) ||
-    content.type !== 'text' ||
-    typeof content.text !== 'string'
-  ) {
-    return rejected(
-      request,
-      policy,
-      trace,
-      'BOUNDARY_REJECTED',
-      issue('INVALID_ENVELOPE', '$trace.result.content[0]'),
-    );
-  }
-  if (Buffer.byteLength(content.text, 'utf8') > policy.maxResultBytes) {
-    return rejected(
-      request,
-      policy,
-      trace,
-      'RESULT_TOO_LARGE',
-      issue('RESULT_TOO_LARGE', '$trace.result.content[0].text'),
-    );
-  }
-
-  let rawPayload: unknown;
-  try {
-    rawPayload = JSON.parse(content.text);
-  } catch {
-    return rejected(
-      request,
-      policy,
-      trace,
-      'BOUNDARY_REJECTED',
-      issue('INVALID_JSON', '$trace.result.content[0].text'),
+      issue('INVALID_RESULT', '$trace.result.errors'),
     );
   }
   const payload = parsePayload(rawPayload);

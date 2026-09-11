@@ -25,6 +25,7 @@ export interface ResetDemoResult {
 }
 
 export const DEMO_RESETTABLE_TABLES = [
+  'api_rate_limit_buckets',
   'operational_metric_events',
   'outbox_jobs',
   'evidence_observations',

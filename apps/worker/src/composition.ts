@@ -6,7 +6,10 @@ import {
   type CreateIntentRequest,
   type SettlementResult,
 } from '@oneshot/contracts';
-import type { IntentLedger } from '@oneshot/storage-postgres';
+import { randomUUID } from 'node:crypto';
+import { JobLedger, type IntentLedger } from '@oneshot/storage-postgres';
+import type { SupplierPort } from '@oneshot/contracts';
+import { TeamReportSupplier } from '@oneshot/supplier-adapter';
 import type { Pool } from 'pg';
 import type {
   AuthorizationPort,
@@ -122,6 +125,7 @@ export interface CompositionOptions {
   readonly submissionsDisabled?: boolean;
   readonly expectedContractVersion?: string;
   readonly expectedNetwork?: string;
+  readonly supplier?: SupplierPort;
 }
 
 export interface ComposedWorker {
@@ -173,6 +177,8 @@ export function composeWorker(
     settlementPort,
     authorizationPort,
     recoveryService,
+    jobLedger: new JobLedger(pool, { now: () => new Date(), nextAttemptId: randomUUID }),
+    supplier: options.supplier ?? new TeamReportSupplier(),
     config: {
       submissionsDisabled: options.submissionsDisabled,
       contractVersion: expectedContractVersion,

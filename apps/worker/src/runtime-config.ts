@@ -1,6 +1,6 @@
 import type { PoolConfig } from 'pg';
 import { loadSettlementConfig, type SettlementConfig } from '@oneshot/arc-adapter';
-import type { SubgraphMcpPolicy } from '@oneshot/reconciliation';
+import type { GraphRetrieval, SubgraphMcpPolicy } from '@oneshot/reconciliation';
 
 export interface WorkerRuntimeConfig {
   readonly host: string;
@@ -59,10 +59,18 @@ function unsigned(environment: NodeJS.ProcessEnv, name: string): string {
 
 function httpsUrl(environment: NodeJS.ProcessEnv, name: string): string {
   const value = required(environment, name);
-  const parsed = new URL(value);
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${name} must be a valid URL`);
+  }
   const loopback = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
   if (parsed.protocol !== 'https:' && !(loopback && parsed.protocol === 'http:')) {
     throw new Error(`${name} must use HTTPS (HTTP is allowed only for loopback)`);
+  }
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new Error(`${name} must not contain credentials, query parameters, or fragments`);
   }
   return parsed.toString();
 }
@@ -103,9 +111,35 @@ export function loadWorkerRuntimeConfig(
     throw new Error('Invalid environment variable: ONESHOT_PRIVY_POLICY_DIGEST');
   }
 
+  const mcpEndpoint = environment.ONESHOT_SUBGRAPH_MCP_ENDPOINT?.trim()
+    ? httpsUrl(environment, 'ONESHOT_SUBGRAPH_MCP_ENDPOINT')
+    : undefined;
+  const graphQueryUrl = environment.ONESHOT_SUBGRAPH_QUERY_URL?.trim()
+    ? httpsUrl(environment, 'ONESHOT_SUBGRAPH_QUERY_URL')
+    : undefined;
+  const configuredRetrieval = environment.ONESHOT_SUBGRAPH_SOURCE?.trim() as
+    GraphRetrieval | undefined;
+  const retrieval: GraphRetrieval =
+    configuredRetrieval ?? (graphQueryUrl ? 'STUDIO_GRAPHQL' : 'SUBGRAPH_MCP');
+  if (retrieval !== 'STUDIO_GRAPHQL' && retrieval !== 'SUBGRAPH_MCP') {
+    throw new Error('ONESHOT_SUBGRAPH_SOURCE must be STUDIO_GRAPHQL or SUBGRAPH_MCP');
+  }
+  if (retrieval === 'STUDIO_GRAPHQL' && !graphQueryUrl) {
+    throw new Error('STUDIO_GRAPHQL recovery requires ONESHOT_SUBGRAPH_QUERY_URL');
+  }
+  if (retrieval === 'SUBGRAPH_MCP' && !mcpEndpoint) {
+    throw new Error('SUBGRAPH_MCP recovery requires ONESHOT_SUBGRAPH_MCP_ENDPOINT');
+  }
+
   const policy: SubgraphMcpPolicy = {
-    serverName: 'subgraph-mcp',
-    serverVersion: required(environment, 'ONESHOT_SUBGRAPH_MCP_SERVER_VERSION'),
+    retrieval,
+    ...(retrieval === 'SUBGRAPH_MCP'
+      ? {
+          serverName: 'subgraph-mcp',
+          serverVersion: required(environment, 'ONESHOT_SUBGRAPH_MCP_SERVER_VERSION'),
+        }
+      : {}),
+    ...(graphQueryUrl ? { queryUrl: graphQueryUrl } : {}),
     deploymentId: required(environment, 'ONESHOT_SUBGRAPH_DEPLOYMENT_ID'),
     manifestCid: required(environment, 'ONESHOT_SUBGRAPH_MANIFEST_CID'),
     maxLagBlocks: unsigned(environment, 'ONESHOT_SUBGRAPH_MAX_LAG_BLOCKS'),
@@ -118,7 +152,10 @@ export function loadWorkerRuntimeConfig(
       128 * 1024,
     ),
   };
-  if (!/^[A-Za-z0-9._+-]{1,32}$/.test(policy.serverVersion)) {
+  if (
+    retrieval === 'SUBGRAPH_MCP' &&
+    (!policy.serverVersion || !/^[A-Za-z0-9._+-]{1,32}$/.test(policy.serverVersion))
+  ) {
     throw new Error('Invalid environment variable: ONESHOT_SUBGRAPH_MCP_SERVER_VERSION');
   }
   if (!/^0x[0-9a-fA-F]{64}$/.test(policy.deploymentId)) {
@@ -126,18 +163,6 @@ export function loadWorkerRuntimeConfig(
   }
   if (!/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{20,})$/.test(policy.manifestCid)) {
     throw new Error('Invalid environment variable: ONESHOT_SUBGRAPH_MANIFEST_CID');
-  }
-
-  const mcpEndpoint = environment.ONESHOT_SUBGRAPH_MCP_ENDPOINT?.trim()
-    ? httpsUrl(environment, 'ONESHOT_SUBGRAPH_MCP_ENDPOINT')
-    : undefined;
-  const graphQueryUrl = environment.ONESHOT_SUBGRAPH_QUERY_URL?.trim()
-    ? httpsUrl(environment, 'ONESHOT_SUBGRAPH_QUERY_URL')
-    : undefined;
-  if (!mcpEndpoint && !graphQueryUrl) {
-    throw new Error(
-      'Recovery requires ONESHOT_SUBGRAPH_QUERY_URL or ONESHOT_SUBGRAPH_MCP_ENDPOINT',
-    );
   }
 
   const fromBlock = unsigned(environment, 'ONESHOT_RECOVERY_FROM_BLOCK');
@@ -167,8 +192,8 @@ export function loadWorkerRuntimeConfig(
     walletAddress: walletAddress.toLowerCase() as `0x${string}`,
     policyDigest,
     recovery: {
-      ...(mcpEndpoint ? { mcpEndpoint } : {}),
-      ...(graphQueryUrl ? { graphQueryUrl } : {}),
+      ...(retrieval === 'SUBGRAPH_MCP' && mcpEndpoint ? { mcpEndpoint } : {}),
+      ...(retrieval === 'STUDIO_GRAPHQL' && graphQueryUrl ? { graphQueryUrl } : {}),
       ...(environment.ONESHOT_GRAPH_API_KEY?.trim()
         ? { graphApiKey: environment.ONESHOT_GRAPH_API_KEY.trim() }
         : {}),

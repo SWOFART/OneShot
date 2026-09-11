@@ -9,6 +9,7 @@ export const MAX_MCP_RESULT_BYTES = 128 * 1024;
 export const MAX_MCP_ENVELOPE_BYTES = 160 * 1024;
 
 export type IndexHealth = 'FRESH' | 'LAGGING' | 'UNHEALTHY' | 'UNAVAILABLE' | 'UNKNOWN_FRESHNESS';
+export type GraphRetrieval = 'STUDIO_GRAPHQL' | 'SUBGRAPH_MCP';
 
 export type CorrelationStrategy = 'MEMO_ID' | 'TRANSFER_TUPLE_WINDOW';
 
@@ -112,8 +113,12 @@ export interface IndexLookupRequest {
 }
 
 export interface SubgraphMcpPolicy {
-  serverName: string;
-  serverVersion: string;
+  /** The transport is explicit so direct Studio results cannot be mislabeled as MCP. */
+  retrieval?: GraphRetrieval | undefined;
+  serverName?: string | undefined;
+  serverVersion?: string | undefined;
+  /** Pinned direct GraphQL URL. It is an identity, never a credential. */
+  queryUrl?: string | undefined;
   deploymentId: string;
   manifestCid: string;
   maxLagBlocks: string;
@@ -122,10 +127,12 @@ export interface SubgraphMcpPolicy {
 }
 
 export interface SubgraphMcpTrace {
+  readonly retrieval?: GraphRetrieval | undefined;
+  readonly endpointUrl?: string | undefined;
   callId: string;
-  serverName: string;
-  serverVersion: string;
-  toolName: string;
+  serverName?: string | undefined;
+  serverVersion?: string | undefined;
+  toolName?: string | undefined;
   arguments: unknown;
   result: unknown;
   retrievedAt: string;
@@ -192,16 +199,18 @@ export interface IndexView {
   schemaVersion: typeof INDEX_VIEW_VERSION;
   source: {
     provider: 'THE_GRAPH';
-    retrieval: 'SUBGRAPH_MCP';
+    retrieval: GraphRetrieval;
     authority: 'NON_AUTHORITATIVE_CANDIDATE_DISCOVERY';
   };
   binding: EvidenceBinding;
   correlation: CandidateCorrelation;
-  mcp: {
+  graph: {
+    retrieval: GraphRetrieval;
     callId: string;
-    serverName: string;
-    serverVersion: string;
-    toolName: typeof MCP_TOOL_NAME;
+    endpointUrl: string;
+    serverName?: string | undefined;
+    serverVersion?: string | undefined;
+    toolName?: typeof MCP_TOOL_NAME | undefined;
     deploymentId: string;
     manifestCid: string;
     queryName: typeof MCP_QUERY_NAME;
@@ -304,11 +313,20 @@ export interface RecoveryAgentInput {
   providerObservations: readonly BoundEvidenceRecord[];
   candidateObservations: readonly IndexedCandidate[];
   indexSummary: {
+    retrieval: GraphRetrieval;
+    endpointUrl: string;
+    deploymentId: string;
+    manifestCid: string;
+    queryName: string;
+    queryDigest: string;
+    retrievedAt: string;
     health: IndexHealth;
     lagBlocks: string | null;
     observedThroughBlock: string | null;
+    chainHeadBlock: string | null;
     candidateCount: number;
     contradiction: boolean;
+    diagnostics: readonly string[];
   };
   untrustedDataNotice: string;
   sanitized: true;

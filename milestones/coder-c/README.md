@@ -1,6 +1,7 @@
 # Coder C Lane — Reconciliation and Recovery Evidence
 
-Mission: implement the live OneShot/Arc Subgraph through Subgraph MCP as the
+Mission: implement the live OneShot/Arc Subgraph through Studio GraphQL (with
+optional Subgraph MCP) as the
 hashless candidate-discovery path, let an LLM Recovery Agent emit a bounded
 four-action recommendation, enforce it through deterministic zero-submit
 reconciliation, build failure-injection proof, render recovery UI, and assemble

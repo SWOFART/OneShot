@@ -1,108 +1,48 @@
-# Missing Plan Implementation
+# Current Delivery Gaps
 
-Audit basis: `plan.md`, current source, tests, checked-in evidence, and the
-2026-09-09 Graph Explorer status. This is a delivery-gap report, not a change
-to the approved product plan. Completed offline milestones are not listed as
-missing merely because their final project gate is still open.
+Updated 2026-09-10 for the [resumable paid-tools plan](plan.md).
+Planning backlog only; no fresh live qualification is claimed.
 
-## Not Started
+## Existing foundation
 
-### Arc Mainnet activation
+Durable intents/outbox, worker, Privy/Arc adapters, Studio recovery, advisor,
+operator authentication and four-tab UI are reused. Historical P4/P5 evidence
+does not prove the new job workflow or current deployment health.
 
-- Pin official Arc Mainnet chain, RPC, explorer, and USDC identities when Arc
-  publishes them.
-- Enable and probe the Mainnet profile only after explicit human authorization.
-- Run the required review and deployment procedure; no real-value transaction
-  is authorized by this report.
+## New increment: all gates not started
 
-This is deliberately absent today: `docs/MAINNET_READINESS.md` reports
-`DEPLOYMENT-READY`, and the code is designed to fail closed until those inputs
-exist.
+| Gate | Missing work | Acceptance boundary |
+| --- | --- | --- |
+| R0 | Supplier/task/ownership/delivery/binding/route contracts | Feasible supplier, scoped Privy execution, no guessed order association |
+| R1 | Durable job/order/result and one connector | Two agents share purchase; paid delivery failure never repays |
+| R2 | Separate landing and cabinet | Accessible job-centered UX over real APIs |
+| R3 | Bounded activity audit and job-aware triage | Live cited evidence; explicit coverage; ambiguous binding holds |
+| R4 | Live interrupted-job demonstration | Real payment, labelled fault, live Graph where needed, same supplier result |
+| R5 | Release and submission | Exact-head checks, FreePi A/B, public docs/video, correct pool, human review |
 
-### Sponsor-submission deliverables
+## Current limitations
 
-- Prepare submission text that explicitly names the claimed Arc tracks and
-  links the public repository and evidence.
-- Use [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) for the judge-facing walkthrough;
-  no recorded video artifact is included in this candidate.
-- Do not include a The Graph qualification claim unless its live MCP and model
-  evidence is complete.
+- Recovery already queries Graph; routine wallet audit is new work. More
+  queries alone do not establish AI value.
+- Indexed memoId is null. Transfer tuples may collide. Order binding and
+  cross-job transfer attribution must be proved in R0/R1.
+- Supplier delivery and job APIs are planned; preserve existing intent clients
+  through additive contracts.
+- Landing and console currently share a page. Raw intent/hash views become
+  advanced details, not the default task.
+- The existing demo:e2e command is offline rehearsal, not fresh live evidence.
+  No recorded submission video is included.
+- New job/result endpoints require server-side workspace access controls.
+  Authentication alone does not isolate records.
 
-The repository contains demo runbooks, evidence, and a repeatable offline demo;
-the recorded submission artifact remains intentionally absent.
+## Deferred
 
-### Circle Agent Stack (out of scope)
+Mainnet requires official parameters, explicit authorization and actual
+deployment proof. Circle Agent Stack, multichain, pooled budgets, treasury,
+payroll and arbitrary supplier integrations remain out of scope.
 
-Circle Agent Stack is intentionally excluded from the Gate P6 release candidate.
-No Circle wallet, CLI, Skills, or agent-payment claim is supported by this bundle.
-Privy remains the canonical authorization rail; a future Circle lane must preserve
-the OneShot policy/idempotency core and acquire its own evidence.
+## Next action
 
-Any future Circle implementation must add bounded spend controls, a live Arc
-payment, and its own sanitized evidence before a Circle track can be claimed.
-
-Circle must not bypass the OneShot policy/idempotency core or gain authority over
-hashless recovery. Hedera HTS and Hedera x402 remain out of scope.
-
-## Completed in Gate P4
-
-### Live The Graph Studio recovery
-
-The real Subgraph Studio deployment
-(`1758917/oneshot-arc-testnet/version/latest`) is synchronized and queryable.
-The production fix uses its direct GraphQL endpoint because the Network Gateway
-does not serve this Arc deployment.
-
-- Pinned immutable deployment CID: `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0`).
-- Canonical Explorer target: `69FEby7GetXpJVWJShPL6XjMsWWDowLuqf6cE5MvTHdy`.
-- Duplicate registration observed: `FnXJmkEuxCDeqr4tTejszcLgpodazPoy2ifeNrA5VnBw` (identical deployment hash).
-- Direct Studio GraphQL returns `_meta` health and real transfer candidates.
-- Vertex AI Gemini 2.5 Flash advised `RECONCILE` referencing candidate transaction `0x72ab1e93...`.
-- Deterministic OneShot safety core validated Arc receipt in block `61116056` (log index 23) and committed the settlement with 0 duplicate broadcasts.
-- Existing evidence remains useful for recovery behavior, but official Subgraph
-  MCP qualification is `NOT VERIFIED` until a genuine MCP tool call can query
-  this Arc deployment.
-
-### Gate P4 integrated proof
-
-All backend composition pieces and the live Privy/Arc allowed, denied, and
-lost-response drills are complete. Studio candidate discovery plus Vertex AI
-and deterministic Arc verification are implemented; official MCP qualification
-is tracked separately and does not authorize settlement. Gate P4 remains PASS.
-
-## In Progress
-
-### Gate P5 frontend acceptance
-
-The Gate P5 candidate composes A05/B05/C05 against the frozen API and adds
-Playwright coverage for create, replay, conflict, denial, committed, `UNKNOWN`,
-Graph discovery/degradation, service-unavailable, keyboard, responsive,
-memory-only token, and no-force-pay behavior. The recovery API now returns the
-persisted Recovery Agent and deterministic-core decision instead of a hard-coded
-action. Exact-tree review, CI, and human merge remain before the project gate is
-closed.
-
-### Gate P6 release candidate
-
-Release runbooks, safe-disable behavior, a disabled Mainnet profile, and
-Privy/Arc/The Graph testnet evidence exist. `pnpm demo:e2e` and
-`docs/DEMO_SCRIPT.md` provide the repeatable demo; video is intentionally absent.
-P6 remains subject to CI, Gate A, Gate B, and human release review.
-
-## Potential Dependencies and Blockers
-
-| Item                        | Dependency or blocker                                                                                              | Safe response while blocked                                                  |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| Live Graph recovery         | IN PROGRESS: Studio queries work; Network Gateway cannot serve the Arc deployment and official MCP is not verified | Use direct Studio GraphQL read-only; preserve `settlementPermission: NEVER`. |
-| P4 live lost-hash proof     | RESOLVED: Full live lost-hash recovery trace verified and recorded                                                 | Gate P4 is PASS.                                                             |
-| P5 live UI acceptance       | RESOLVED in candidate: configured Cloud Run is reachable and frozen-API Playwright coverage exists                 | Await exact-tree review, CI, and human merge.                                |
-| P6 release                  | P5 completion, CI, exact-tree reviews, and human demo/submission decisions                                         | Keep release candidate and sponsor claims incomplete.                        |
-| Arc Mainnet                 | Official published network values and explicit human authorization                                                 | Preserve the disabled, fail-closed profile.                                  |
-| Circle Agent Stack Arc lane | Agent Stack/Agent Wallet implementation, supported-chain confirmation, spend controls, live payment, and evidence  | Intentionally out of scope; do not claim the Circle track.                   |
-
-## Immediate Priorities
-
-1. Complete Gate A, CI, Gate B, and human review for the Gate P5 candidate.
-2. Prepare final submission text using checked-in evidence; keep Circle out of
-   the claimed scope.
-3. Perform the P6 release-candidate CI and review sequence.
+After this planning PR is reviewed, implement R0 on a separate branch. Select
+and prove one supplier's idempotency/retrieval semantics before production
+job implementation or UX integration.

@@ -12,16 +12,16 @@ composition and no credential.
 Verified 2026-09-07 against official Arc documentation. Evidence and source URLs
 are in `.agent/research/20260907-b01-arc-privy-verification.md`.
 
-| Field | Arc Testnet | Arc Mainnet |
-| --- | --- | --- |
-| `id` | `arc-testnet` | `arc-mainnet` |
-| `verification` | `PINNED` | `UNPUBLISHED` |
-| `enabled` | `true` | `false` |
-| `chainId` | `5042002` | absent |
-| `caip2` | `eip155:5042002` | absent |
-| `tokenContract` | `0x3600000000000000000000000000000000000000` | absent |
-| `tokenDecimals` (settlement) | `6` | absent |
-| `nativeDecimals` (gas) | `18` | absent |
+| Field                        | Arc Testnet                                  | Arc Mainnet   |
+| ---------------------------- | -------------------------------------------- | ------------- |
+| `id`                         | `arc-testnet`                                | `arc-mainnet` |
+| `verification`               | `PINNED`                                     | `UNPUBLISHED` |
+| `enabled`                    | `true`                                       | `false`       |
+| `chainId`                    | `5042002`                                    | absent        |
+| `caip2`                      | `eip155:5042002`                             | absent        |
+| `tokenContract`              | `0x3600000000000000000000000000000000000000` | absent        |
+| `tokenDecimals` (settlement) | `6`                                          | absent        |
+| `nativeDecimals` (gas)       | `18`                                         | absent        |
 
 ### Two precisions, one name
 
@@ -54,19 +54,19 @@ Classification: `public` safe to log; `secret` never logged, committed, or sent
 to a reviewer; `optional` public with a documented default; `human-only` a human
 must supply and approve it.
 
-| Variable | Class | Required | Notes |
-| --- | --- | --- | --- |
-| `ONESHOT_ARC_PROFILE` | public | yes | Unknown id is refused, never defaulted |
-| `ONESHOT_ARC_RPC_URL` | public | yes | https, or http on loopback only |
-| `ONESHOT_ARC_EXPLORER_URL` | optional | no | Operator evidence links |
-| `ONESHOT_PRIVY_APP_ID` | public | yes | Not a credential |
-| `ONESHOT_PRIVY_APP_SECRET` | secret | yes at runtime | Read by no code in these packages |
-| `ONESHOT_PRIVY_WALLET_ID` | public | yes | Execution wallet |
-| `ONESHOT_PRIVY_POLICY_ID` | public | yes | Must be attached to the wallet |
-| `ONESHOT_RECIPIENT_ALLOWLIST` | human-only | yes | Empty list settles nothing |
-| `ONESHOT_SETTLEMENT_CAP_ATOMIC` | human-only | yes | Atomic units, compared as `bigint` |
-| `ONESHOT_RPC_TIMEOUT_MS` | optional | no | Default 10000, max 120000 |
-| `ONESHOT_ALLOW_MAINNET_ACTIVATION` | human-only | no | Default false |
+| Variable                           | Class      | Required       | Notes                                  |
+| ---------------------------------- | ---------- | -------------- | -------------------------------------- |
+| `ONESHOT_ARC_PROFILE`              | public     | yes            | Unknown id is refused, never defaulted |
+| `ONESHOT_ARC_RPC_URL`              | public     | yes            | https, or http on loopback only        |
+| `ONESHOT_ARC_EXPLORER_URL`         | optional   | no             | Operator evidence links                |
+| `ONESHOT_PRIVY_APP_ID`             | public     | yes            | Not a credential                       |
+| `ONESHOT_PRIVY_APP_SECRET`         | secret     | yes at runtime | Read by no code in these packages      |
+| `ONESHOT_PRIVY_WALLET_ID`          | public     | yes            | Execution wallet                       |
+| `ONESHOT_PRIVY_POLICY_ID`          | public     | yes            | Must be attached to the wallet         |
+| `ONESHOT_RECIPIENT_ALLOWLIST`      | human-only | yes            | Empty list settles nothing             |
+| `ONESHOT_SETTLEMENT_CAP_ATOMIC`    | human-only | yes            | Atomic units, compared as `bigint`     |
+| `ONESHOT_RPC_TIMEOUT_MS`           | optional   | no             | Default 10000, max 120000              |
+| `ONESHOT_ALLOW_MAINNET_ACTIVATION` | human-only | no             | Default false                          |
 
 `packages/arc-adapter/.env.example` is generated from this schema and contains
 placeholders only.
@@ -82,6 +82,7 @@ ready only when every check passes. There is no partial-ready state.
 | `privy.identityFormat` | Wallet and policy identifier shape, printing neither value |
 | `rpc.chainId` | Live `eth_chainId` equals the profile chain ID |
 | `token.bytecode` | The configured USDC address holds contract bytecode |
+| `token.decimals` | Live `decimals()` equals the profile's six-decimal ERC-20 settlement precision |
 
 ### `UNAVAILABLE` versus `MISMATCH`
 
@@ -91,7 +92,8 @@ ready only when every check passes. There is no partial-ready state.
   must never be retried into working.
 
 Both block readiness. Only `MISMATCH` is permanent. The probe runs against the
-`RpcProbe` interface, so it works fully offline with no credential.
+`RpcProbe` interface, so it works fully offline with no credential. The live
+probe also reads the token's `decimals()` view method; it never signs or sends.
 
 ## 4. Selected settlement path
 
@@ -105,7 +107,7 @@ B01.3 permits `SUPPORTED` only with deny fixtures for every wrong dimension, and
 two dimensions have none available.
 
 Consequence: `memo_id` in `milestones/CONTRACTS.md` section 2 stays unused.
-Hashless correlation relies on the tuple/window and Subgraph MCP discovery owned
+Hashless correlation relies on the tuple/window and provider-neutral Graph discovery owned
 by Coder C.
 
 ### Constrained dimensions
@@ -120,13 +122,13 @@ configuration and can drift, and the local check can only refuse, never grant.
 
 ## 5. Pinned dependencies and rationale
 
-| Dependency | Version | Rationale |
-| --- | --- | --- |
-| Node | `>=22.12.0` | Vitest 5 requires `^22.12.0 \|\| ^24 \|\| >=26`; local runtime is 22.16.0 |
-| TypeScript | `5.9.3` | See rejection below |
-| viem | `2.56.3` | Typed ABI encoding and address handling; peer `typescript >=5.0.4` |
-| Vitest | `5.0.0` | Test runner; peer `@types/node ^22 \|\| >=24` |
-| ESLint | `9.39.1` | With `typescript-eslint` `8.69.0` `strictTypeChecked` |
+| Dependency | Version     | Rationale                                                                 |
+| ---------- | ----------- | ------------------------------------------------------------------------- |
+| Node       | `>=22.12.0` | Vitest 5 requires `^22.12.0 \|\| ^24 \|\| >=26`; local runtime is 22.16.0 |
+| TypeScript | `5.9.3`     | See rejection below                                                       |
+| viem       | `2.56.3`    | Typed ABI encoding and address handling; peer `typescript >=5.0.4`        |
+| Vitest     | `5.0.0`     | Test runner; peer `@types/node ^22 \|\| >=24`                             |
+| ESLint     | `9.39.1`    | With `typescript-eslint` `8.69.0` `strictTypeChecked`                     |
 
 ### Rejected: TypeScript 7.0.2
 

@@ -41,7 +41,7 @@ Run this only after `LIVE_CAPTURE_CHECKLIST.md` is complete:
    state or a hash already known to OneShot.
 3. Show durable `UNKNOWN`, one Attempt, and no stored transaction hash. Query the
    original Privy request and exercise the branch where it returns no hash.
-4. Query the pinned deployment using Subgraph MCP
+4. Query the pinned deployment using the native Studio GraphQL path
    `execute_query_by_deployment_id`. Capture the sanitized call identity,
    arguments digest, deployment/manifest, `_meta`, chain head, lag, health, and
    candidate count.

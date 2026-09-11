@@ -5,8 +5,8 @@
  * what actually contacts a configured endpoint, and it is the only thing that
  * can tell an operator whether THEIR setup is correct.
  *
- * Read-only by construction: it exposes `eth_chainId` and `eth_getCode` and
- * nothing that can sign, send, or mutate.
+ * Read-only by construction: it exposes `eth_chainId`, `eth_getCode`, and the
+ * token's `decimals()` view call, and nothing that can sign, send, or mutate.
  */
 
 import { createPublicClient, http } from 'viem';
@@ -33,6 +33,23 @@ export function createViemProbe(config: SettlementConfig): RpcProbe {
     async getCode(address: `0x${string}`): Promise<string | null> {
       const code = await client.getCode({ address });
       return code ?? null;
+    },
+
+    async getTokenDecimals(address: `0x${string}`): Promise<number> {
+      const decimals = await client.readContract({
+        address,
+        abi: [
+          {
+            type: 'function',
+            name: 'decimals',
+            stateMutability: 'view',
+            inputs: [],
+            outputs: [{ type: 'uint8' }],
+          },
+        ],
+        functionName: 'decimals',
+      });
+      return Number(decimals);
     },
   };
 }

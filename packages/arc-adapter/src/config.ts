@@ -235,16 +235,19 @@ export function loadSettlementConfig(env: RawEnv): SettlementConfig {
     ? parseHttpsUrl(rawExplorer, 'ONESHOT_ARC_EXPLORER_URL')
     : undefined;
 
-  const allowlistRaw = required(env, 'ONESHOT_RECIPIENT_ALLOWLIST');
-  const recipientAllowlist = allowlistRaw
-    .split(',')
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0)
-    .map((entry) => normalizeAddress(entry, 'ONESHOT_RECIPIENT_ALLOWLIST entry'));
+  const allowlistRaw = required(env, 'ONESHOT_RECIPIENT_ALLOWLIST').trim();
+  const recipientAllowlist =
+    allowlistRaw === '*' || allowlistRaw === ''
+      ? []
+      : allowlistRaw
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter((entry) => entry.length > 0)
+          .map((entry) => normalizeAddress(entry, 'ONESHOT_RECIPIENT_ALLOWLIST entry'));
 
-  if (recipientAllowlist.length === 0) {
+  if (allowlistRaw !== '*' && allowlistRaw !== '' && recipientAllowlist.length === 0) {
     throw new ConfigError(
-      'ONESHOT_RECIPIENT_ALLOWLIST must contain at least one address.',
+      'ONESHOT_RECIPIENT_ALLOWLIST must contain at least one address or "*".',
       'EMPTY_ALLOWLIST',
     );
   }
@@ -290,6 +293,7 @@ export function loadSettlementConfig(env: RawEnv): SettlementConfig {
 /** Is this recipient permitted? Exact match against the normalized allowlist. */
 export function isAllowedRecipient(config: SettlementConfig, recipient: string): boolean {
   if (!EVM_ADDRESS.test(recipient.trim())) return false;
+  if (config.recipientAllowlist.length === 0) return true;
   return config.recipientAllowlist.includes(recipient.trim().toLowerCase() as `0x${string}`);
 }
 

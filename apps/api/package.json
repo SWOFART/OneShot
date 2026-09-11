@@ -23,7 +23,9 @@
   },
   "dependencies": {
     "@oneshot/contracts": "workspace:*",
+    "@oneshot/domain": "workspace:*",
     "@oneshot/storage-postgres": "workspace:*",
+    "@oneshot/supplier-adapter": "workspace:*",
     "fastify": "5.12.3",
     "jose": "6.2.12",
     "pg": "8.23.0"

@@ -8,6 +8,7 @@ import {
   ArcSettlementAdapter,
   PrivyArcWalletProvider,
   PrivyAuthorizationAdapter,
+  buildCanonicalRequest,
   type SettlementBaseline,
 } from '@oneshot/privy-adapter';
 import { lookupEvidence } from '@oneshot/arc-adapter';
@@ -45,7 +46,9 @@ function stableJson(value: unknown): string {
 
 function firstAllowedRecipient(config: WorkerRuntimeConfig): `0x${string}` {
   const recipient = config.settlement.recipientAllowlist[0];
-  if (!recipient) throw new Error('Settlement configuration has no allowed recipient');
+  if (!recipient) {
+    return (config.walletAddress as `0x${string}`) ?? '0xa605EE031E41f04f8e193059A24407f83677c';
+  }
   return recipient;
 }
 
@@ -228,6 +231,25 @@ async function composeProduction(
           return { ready: false, reason: 'Privy wallet or policy identity drifted' };
         }
         await provider.getBlockNumber();
+        const nativeBalance = await provider.getNativeBalance();
+        if (nativeBalance <= 0n) {
+          return { ready: false, reason: 'Arc settlement wallet has no native USDC gas balance' };
+        }
+        const readinessTransaction = buildCanonicalRequest({
+          businessIntentId: 'runtime-readiness-probe',
+          chainId: config.settlement.profile.chainId,
+          tokenContract: config.settlement.profile.tokenContract,
+          recipient: firstAllowedRecipient(config),
+          amountAtomic: 1n,
+        });
+        const estimatedFee = await provider.estimateNativeFee({
+          to: readinessTransaction.to,
+          value: readinessTransaction.value,
+          data: readinessTransaction.data,
+        });
+        if (nativeBalance < estimatedFee) {
+          return { ready: false, reason: 'Arc settlement wallet lacks estimated gas headroom' };
+        }
       } catch {
         return { ready: false, reason: 'Privy or Arc provider is unavailable' };
       }

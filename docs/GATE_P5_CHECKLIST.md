@@ -45,7 +45,7 @@ data. Graph and model observations never grant settlement permission.
 - [x] `pnpm build:frontend`: passed.
 - [x] `pnpm lint`: passed.
 - [x] `pnpm typecheck`: passed.
-- [x] `pnpm test`: 58 files and 904 tests passed after clean UI-dist removal;
+- [x] `pnpm test`: 66 files and 977 tests passed after clean UI-dist removal;
       browser suites are excluded from Vitest.
 - [x] `pnpm --filter @oneshot/web typecheck:browser`: passed.
 - [x] `pnpm test:browser`: 7 Chromium tests passed, including create/replay,

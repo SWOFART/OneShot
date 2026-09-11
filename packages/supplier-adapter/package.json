@@ -1,0 +1,27 @@
+{
+  "name": "@oneshot/supplier-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "lint": "eslint src test",
+    "test": "vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@circle-fin/x402-batching": "3.4.0",
+    "@x402/core": "2.25.0",
+    "@oneshot/contracts": "workspace:*",
+    "@oneshot/domain": "workspace:*"
+  }
+}

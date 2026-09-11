@@ -21,8 +21,8 @@ const sampleRequest = {
 };
 
 describePostgres('Startup recovery and restart safety (A04.1, A04.2)', () => {
-  let container: StartedPostgreSqlContainer;
-  let pool: Pool;
+  let container!: StartedPostgreSqlContainer;
+  let pool!: Pool;
   let attemptCounter = 0;
 
   beforeAll(async () => {
@@ -33,14 +33,14 @@ describePostgres('Startup recovery and restart safety (A04.1, A04.2)', () => {
 
   afterEach(async () => {
     await pool.query(
-      'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, business_intents RESTART IDENTITY',
+      'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, resumable_jobs, business_intents RESTART IDENTITY',
     );
     attemptCounter = 0;
   });
 
   afterAll(async () => {
-    await pool.end();
-    await container.stop();
+    if (typeof pool !== 'undefined') await pool.end();
+    if (typeof container !== 'undefined') await container.stop();
   });
 
   const newLedger = () =>

@@ -33,21 +33,28 @@ configured for a public/demo deployment.
 database and frozen network/contract identity. Schema migrations must succeed before
 the server binds a port.
 
+Authenticated `POST /v1/*` requests use the PostgreSQL-backed fixed-window rate
+limiter shared by API instances. `ONESHOT_API_RATE_LIMIT_MAX_REQUESTS` defaults
+to `60` and `ONESHOT_API_RATE_LIMIT_WINDOW_MS` defaults to `60000`; limiter
+storage failure rejects admission rather than failing open.
+
 ## Production target
 
 The production target is one private Cloud SQL for PostgreSQL instance used by the API
-and worker, with the API running on Cloud Run. Store `DB_PASS` and
-`SERVICE_BEARER_TOKEN` in Google Secret Manager and expose them to the Cloud Run
-revision. Grant the Cloud Run service account Cloud SQL Client access and attach the
-Cloud SQL instance to the service.
+and worker, with both services running on Cloud Run. Store `DB_PASS`,
+`SERVICE_BEARER_TOKEN`, and worker/provider secrets in Google Secret Manager and
+expose them only to the appropriate revision. Grant each Cloud Run service account
+Cloud SQL Client access and attach the Cloud SQL instance to the service.
 
 Provisioning the Google Cloud project, IAM, secrets, container image, and rollout is a
 deployment task. This milestone establishes the executable process and its database
 contract without embedding cloud credentials or requiring Google-specific code in the
 domain.
 
-## Frontend gate
+## Frontend and release gate
 
-This server does not unlock A05, B05, or C05. Those milestones remain blocked until
-Gate P4 composes the reviewed Arc, Privy, and Subgraph MCP packages, revalidates the
-OpenAPI and recovery semantics, and publishes the frozen mock server.
+The A05/B05/C05 frontend implementation and automated Chromium coverage are complete
+in the current candidate. This runtime document does not by itself close the release:
+manual desktop/mobile click-through, fresh exact-tree Gate A/Gate B reviews, required
+CI, and human merge remain separate acceptance steps. The Graph sponsor claim remains
+`NOT VERIFIED` until its fresh live trace is captured.

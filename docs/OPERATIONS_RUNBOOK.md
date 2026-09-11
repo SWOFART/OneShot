@@ -35,16 +35,18 @@ One job. Many retries. One settlement.
 
 ### Environment variables classification
 
-| Variable | Classification | Purpose | Default / Requirement |
-| :--- | :--- | :--- | :--- |
-| `DATABASE_URL` | Secret / Config | PostgreSQL TCP connection string | Required for local/CI |
-| `INSTANCE_CONNECTION_NAME` | Config | Google Cloud SQL connection name | Used on Cloud Run |
-| `DB_USER` / `DB_PASS` | Secret | Cloud SQL credentials | Required for Cloud SQL |
-| `DB_NAME` | Config | PostgreSQL database name | Default: `oneshot` |
-| `SERVICE_BEARER_TOKEN` | Secret | Shared bearer token for Fastify API | Required, min 16 chars |
-| `ONESHOT_ARC_PROFILE` | Public | Deployment profile identifier | `arc-testnet` |
-| `ONESHOT_ARC_RPC_URL` | Public | RPC endpoint URL for Arc | Validated on startup |
-| `ONESHOT_SUBMISSIONS_DISABLED` | Public | Safe disable configuration switch | `false` |
+| Variable                              | Classification  | Purpose                                           | Default / Requirement  |
+| :------------------------------------ | :-------------- | :------------------------------------------------ | :--------------------- |
+| `DATABASE_URL`                        | Secret / Config | PostgreSQL TCP connection string                  | Required for local/CI  |
+| `INSTANCE_CONNECTION_NAME`            | Config          | Google Cloud SQL connection name                  | Used on Cloud Run      |
+| `DB_USER` / `DB_PASS`                 | Secret          | Cloud SQL credentials                             | Required for Cloud SQL |
+| `DB_NAME`                             | Config          | PostgreSQL database name                          | Default: `oneshot`     |
+| `SERVICE_BEARER_TOKEN`                | Secret          | Shared bearer token for Fastify API               | Required, min 16 chars |
+| `ONESHOT_ARC_PROFILE`                 | Public          | Deployment profile identifier                     | `arc-testnet`          |
+| `ONESHOT_ARC_RPC_URL`                 | Public          | RPC endpoint URL for Arc                          | Validated on startup   |
+| `ONESHOT_SUBMISSIONS_DISABLED`        | Public          | Safe disable configuration switch                 | `false`                |
+| `ONESHOT_API_RATE_LIMIT_MAX_REQUESTS` | Public          | Maximum POST requests per client and route window | `60`                   |
+| `ONESHOT_API_RATE_LIMIT_WINDOW_MS`    | Public          | Shared API rate-limit window in milliseconds      | `60000`                |
 
 Secrets must be provided via Google Secret Manager in Cloud Run or local `.env`
 files. Secrets are **never** logged, checked into version control, or passed to
@@ -111,15 +113,15 @@ pnpm scenarios:invariants
 
 ### Scripted scenarios and evidence table
 
-| Scenario | Business Intent ID | Durable Final State | Attempts | Settlements | Invariant Satisfied | Status |
-| :--- | :--- | :--- | :---: | :---: | :---: | :---: |
-| `identical-replay` | `intent-a06-identical-replay` | `COMMITTED` | 1 | 1 | YES (<= 1) | **PASS** |
-| `conflicting-replay` | `intent-a06-conflicting-replay` | `COMMITTED` | 1 | 1 | YES (<= 1) | **PASS** |
-| `ten-parallel-workers` | `intent-a06-ten-parallel-workers` | `COMMITTED` | 1 | 1 | YES (<= 1) | **PASS** |
-| `two-processes` | `intent-a06-two-processes` | `COMMITTED` | 1 | 1 | YES (<= 1) | **PASS** |
-| `restart` | `intent-a06-restart-recovery` | `COMMITTED` | 1 | 1 | YES (<= 1) | **PASS** |
-| `lost-response` | `intent-a06-lost-response` | `COMMITTED` | 1 | 1 | YES (<= 1) | **PASS** |
-| `downstream-failure` | `intent-a06-downstream-failure` | `FAILED_SAFE` | 1 | 0 | YES (<= 1) | **PASS** |
+| Scenario               | Business Intent ID                | Durable Final State | Attempts | Settlements | Invariant Satisfied |  Status  |
+| :--------------------- | :-------------------------------- | :------------------ | :------: | :---------: | :-----------------: | :------: |
+| `identical-replay`     | `intent-a06-identical-replay`     | `COMMITTED`         |    1     |      1      |     YES (<= 1)      | **PASS** |
+| `conflicting-replay`   | `intent-a06-conflicting-replay`   | `COMMITTED`         |    1     |      1      |     YES (<= 1)      | **PASS** |
+| `ten-parallel-workers` | `intent-a06-ten-parallel-workers` | `COMMITTED`         |    1     |      1      |     YES (<= 1)      | **PASS** |
+| `two-processes`        | `intent-a06-two-processes`        | `COMMITTED`         |    1     |      1      |     YES (<= 1)      | **PASS** |
+| `restart`              | `intent-a06-restart-recovery`     | `COMMITTED`         |    1     |      1      |     YES (<= 1)      | **PASS** |
+| `lost-response`        | `intent-a06-lost-response`        | `COMMITTED`         |    1     |      1      |     YES (<= 1)      | **PASS** |
+| `downstream-failure`   | `intent-a06-downstream-failure`   | `FAILED_SAFE`       |    1     |      0      |     YES (<= 1)      | **PASS** |
 
 ### Scenario descriptions
 
@@ -197,7 +199,9 @@ never grants settlement permission or changes a ledger transition.
    - Condition: `activeUnknownIntents > 0`.
    - Severity: `CRITICAL`.
    - Action: Check logs for provider timeouts or network partitions. Reconciler
-     automatically queries known-identity evidence and Subgraph MCP.
+     automatically queries known-identity evidence and the configured Graph
+     source. Arc Testnet uses the pinned Studio GraphQL endpoint; MCP is only
+     used when explicitly configured for a Network deployment.
 2. **Outbox Queue Lag Alert**:
    - Condition: `queueLagSeconds > 60` (Warning), `> 300` (Critical).
    - Severity: `WARNING` / `CRITICAL`.
@@ -255,17 +259,17 @@ Under normal operation, **no manual SQL updates** (`UPDATE business_intents
 ### Release checklist for Gate P6
 
 - [x] All 7 invariant scenarios pass deterministically
-  (`pnpm scenarios:invariants`).
+      (`pnpm scenarios:invariants`).
 - [x] Schema digest matches frozen `STORAGE_V1_SCHEMA_DIGEST`.
 - [x] Unit, integration, and contract tests pass with 0 failures
-  (`pnpm test`).
+      (`pnpm test`).
 - [x] Contract artifacts match schema with 0 drift (`pnpm check:generated`).
 - [x] All UI and contract fixtures validate against JSON Schema
-  (`pnpm validate:fixtures`).
+      (`pnpm validate:fixtures`).
 - [x] TypeScript compiler and linters pass cleanly (`pnpm typecheck`,
-  `pnpm lint`).
+      `pnpm lint`).
 - [x] Formatter passes (`pnpm format:check`).
 - [x] Markdown lint passes without bare URLs or syntax issues
-  (`npx markdownlint-cli2`).
+      (`npx markdownlint-cli2`).
 - [x] Mainnet profile is confirmed disabled (`enabled: false`) and fails closed
-  in `MAINNET_READINESS.md`.
+      in `MAINNET_READINESS.md`.

@@ -21,6 +21,9 @@ export type AuthorizationStatus = (typeof AUTHORIZATION_STATUSES)[number];
 export const POLICY_STATUSES = ["CONFIGURED","EXCEEDED","NOT_CONFIGURED","UNKNOWN"] as const;
 export type PolicyStatus = (typeof POLICY_STATUSES)[number];
 
+export const DELIVERY_STATES = ["NOT_REQUESTED","PENDING","AVAILABLE","RETRIEVAL_FAILED"] as const;
+export type DeliveryState = (typeof DELIVERY_STATES)[number];
+
 export interface CreateIntentRequest {
   readonly business_intent_id: string;
   readonly recipient: string;
@@ -79,6 +82,52 @@ export interface ReconcileResponse {
   readonly state: IntentState;
 }
 
+export interface CreateJobRequest {
+  readonly task_key: string;
+  readonly tool_id: 'team-report-v1';
+  readonly report_subject: string;
+}
+
+export interface SupplierQuote {
+  readonly supplier_id: 'team-report-v1';
+  readonly order_reference: string;
+  readonly recipient: string;
+  readonly amount_atomic: string;
+  readonly asset: 'USDC';
+  readonly network: 'eip155:5042002';
+  readonly expires_at: string;
+}
+
+export interface SupplierResult {
+  readonly order_reference: string;
+  readonly result_reference: string;
+  readonly report: string;
+}
+
+export interface JobResponse {
+  readonly job_id: string;
+  readonly task_key: string;
+  readonly tool_id: 'team-report-v1';
+  readonly business_intent_id: string;
+  readonly supplier: SupplierQuote;
+  readonly payment_state: IntentState;
+  readonly delivery_state: DeliveryState;
+  readonly settlement?: SettlementView;
+  readonly result?: SupplierResult;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+export interface JobListResponse {
+  readonly jobs: readonly JobResponse[];
+}
+
+export interface ActivityResponse {
+  readonly observation?: Record<string, unknown>;
+  readonly recorded_settlement_count: number;
+  readonly uncertain_job_count: number;
+}
+
 export interface RecoveryAgentDecisionView {
   readonly accepted: boolean;
   readonly reason: string;
@@ -105,9 +154,11 @@ export interface RecoveryCandidateView {
 }
 
 export interface RecoveryGraphObservationView {
-  readonly server_name: string;
-  readonly server_version: string;
-  readonly tool_name: string;
+  readonly retrieval_path: 'STUDIO_GRAPHQL' | 'SUBGRAPH_MCP' | 'UNKNOWN';
+  readonly endpoint_url: string;
+  readonly server_name?: string;
+  readonly server_version?: string;
+  readonly tool_name?: string;
   readonly deployment_id: string;
   readonly manifest_cid: string;
   readonly observed_through_block?: string;

@@ -5,6 +5,7 @@ import {
   checkIdentityFormat,
   checkProfileConsistency,
   checkTokenBytecode,
+  checkTokenDecimals,
   probeReadiness,
   type RpcProbe,
 } from '../src/readiness.js';
@@ -24,6 +25,7 @@ function stubProbe(overrides: Partial<RpcProbe> = {}): RpcProbe {
   return {
     getChainId: () => Promise.resolve(5042002),
     getCode: () => Promise.resolve('0x60806040'),
+    getTokenDecimals: () => Promise.resolve(6),
     ...overrides,
   };
 }
@@ -90,6 +92,36 @@ describe('checkTokenBytecode', () => {
         getCode: () => Promise.reject(new Error('timeout')),
       }),
       '0x3600000000000000000000000000000000000000',
+    );
+    expect(result.status).toBe('UNAVAILABLE');
+  });
+});
+
+describe('checkTokenDecimals', () => {
+  it('passes when the live token uses the profile precision', async () => {
+    const result = await checkTokenDecimals(
+      stubProbe(),
+      '0x3600000000000000000000000000000000000000',
+      6,
+    );
+    expect(result.status).toBe('PASS');
+  });
+
+  it('reports MISMATCH when the live token uses another precision', async () => {
+    const result = await checkTokenDecimals(
+      stubProbe({ getTokenDecimals: () => Promise.resolve(18) }),
+      '0x3600000000000000000000000000000000000000',
+      6,
+    );
+    expect(result.status).toBe('MISMATCH');
+    expect(result.detail).toContain('18');
+  });
+
+  it('reports UNAVAILABLE when the token interface cannot be read', async () => {
+    const result = await checkTokenDecimals(
+      stubProbe({ getTokenDecimals: () => Promise.reject(new Error('timeout')) }),
+      '0x3600000000000000000000000000000000000000',
+      6,
     );
     expect(result.status).toBe('UNAVAILABLE');
   });
@@ -177,6 +209,7 @@ describe('probeReadiness', () => {
       'privy.identityFormat',
       'rpc.chainId',
       'token.bytecode',
+      'token.decimals',
     ]);
   });
 });

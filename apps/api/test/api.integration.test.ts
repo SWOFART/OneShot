@@ -15,8 +15,8 @@ const request = {
 };
 
 describePostgres('durable HTTP API', () => {
-  let container: StartedPostgreSqlContainer;
-  let pool: Pool;
+  let container!: StartedPostgreSqlContainer;
+  let pool!: Pool;
   let attempts = 0;
 
   beforeAll(async () => {
@@ -26,8 +26,8 @@ describePostgres('durable HTTP API', () => {
   });
 
   afterAll(async () => {
-    await pool.end();
-    await container.stop();
+    if (typeof pool !== 'undefined') await pool.end();
+    if (typeof container !== 'undefined') await container.stop();
   });
 
   const ledger = () =>
@@ -82,6 +82,7 @@ describePostgres('durable HTTP API', () => {
       serviceBearerToken: 'integration-token',
       database: { connectionString: container.getConnectionUri() },
       submissionsDisabled: false,
+      rateLimit: { maxRequests: 60, windowMs: 60_000 },
     });
     try {
       const response = await fetch(`${runtime.address}/health/ready`);

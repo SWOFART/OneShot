@@ -154,7 +154,7 @@ function persistedRecovery(payload: unknown): {
   const graphRecord = records.find(
     (record) => record['recordType'] === 'OBSERVATION' && record['source'] === 'THE_GRAPH',
   );
-  const mcp = object(graphRecord?.['provenance']);
+  const graph = object(graphRecord?.['provenance']);
   const candidates = Array.isArray(view['indexedCandidates'])
     ? view['indexedCandidates'].flatMap((value) => {
         const candidate = object(value);
@@ -191,11 +191,18 @@ function persistedRecovery(payload: unknown): {
     view['indexHealth'] === 'UNKNOWN_FRESHNESS'
       ? view['indexHealth']
       : null;
-  const serverName = text(mcp?.['serverName'], 128);
-  const serverVersion = text(mcp?.['serverVersion'], 128);
-  const toolName = text(mcp?.['toolName'], 128);
-  const deploymentId = text(mcp?.['deploymentId'], 128);
-  const manifestCid = text(mcp?.['manifestCid'], 128);
+  const serverName = text(graph?.['serverName'], 128);
+  const serverVersion = text(graph?.['serverVersion'], 128);
+  const toolName = text(graph?.['toolName'], 128);
+  const deploymentId = text(graph?.['deploymentId'], 128);
+  const manifestCid = text(graph?.['manifestCid'], 128);
+  const endpointUrl = text(graph?.['endpointUrl'], 512) ?? 'not-exposed-by-legacy-record';
+  const retrievalPath =
+    graph?.['retrieval'] === 'STUDIO_GRAPHQL' || graph?.['retrieval'] === 'SUBGRAPH_MCP'
+      ? graph['retrieval']
+      : graph?.['kind'] === 'MCP'
+        ? 'SUBGRAPH_MCP'
+        : 'UNKNOWN';
   const observedThroughBlock = text(graphRecord?.['blockNumber'], 78);
   const observedThroughTime = text(graphRecord?.['retrievedAt'], 128);
 
@@ -236,12 +243,14 @@ function persistedRecovery(payload: unknown): {
           },
         }
       : {}),
-    ...(health && serverName && serverVersion && toolName && deploymentId && manifestCid
+    ...(health && deploymentId && manifestCid
       ? {
           graph_observation: {
-            server_name: serverName,
-            server_version: serverVersion,
-            tool_name: toolName,
+            retrieval_path: retrievalPath,
+            endpoint_url: endpointUrl,
+            ...(serverName ? { server_name: serverName } : {}),
+            ...(serverVersion ? { server_version: serverVersion } : {}),
+            ...(toolName ? { tool_name: toolName } : {}),
             deployment_id: deploymentId,
             manifest_cid: manifestCid,
             ...(observedThroughBlock ? { observed_through_block: observedThroughBlock } : {}),
@@ -507,14 +516,32 @@ export class IntentLedger {
         await client.query('COMMIT');
         return { business_intent_id: id, queued: false, state: row.state };
       }
+      const reconciliationJobs = await client.query<{ count: string; pending: boolean | null }>(
+        `SELECT count(*)::text AS count, bool_or(status = 'PENDING') AS pending
+         FROM outbox_jobs
+         WHERE business_intent_id = $1
+           AND job_key LIKE 'reconcile:%'`,
+        [id],
+      );
+      const jobs = reconciliationJobs.rows[0];
+      if (jobs?.pending === true) {
+        await client.query('COMMIT');
+        return { business_intent_id: id, queued: false, state: row.state };
+      }
       const now = this.#dependencies.now();
+      const generation = BigInt(jobs?.count ?? '0') + 1n;
       const inserted = await client.query(
         `INSERT INTO outbox_jobs (
           business_intent_id, job_key, task_identifier, payload,
           available_at, created_at
         ) VALUES ($1, $2, 'reconcile_intent', $3::jsonb, $4, $4)
         ON CONFLICT (job_key) DO NOTHING`,
-        [id, `reconcile:${id}:${row.version}`, JSON.stringify({ business_intent_id: id }), now],
+        [
+          id,
+          `reconcile:${id}:${row.version}:${generation}`,
+          JSON.stringify({ business_intent_id: id }),
+          now,
+        ],
       );
       await client.query('COMMIT');
       return { business_intent_id: id, queued: inserted.rowCount === 1, state: row.state };
@@ -823,6 +850,34 @@ export class IntentLedger {
           'COMMITTED',
           attemptId,
         ]);
+        // A job delivery is a separate, non-financial state machine. Scheduling
+        // fulfillment in this same transaction preserves the committed payment
+        // even when the supplier is unavailable, and never grants another pay.
+        const delivery = await client.query<{
+          job_id: string;
+          supplier_order_reference: string;
+          delivery_attempt: number;
+        }>(
+          `UPDATE resumable_jobs
+           SET delivery_state = 'PENDING', delivery_attempt = delivery_attempt + 1, updated_at = $1
+           WHERE business_intent_id = $2 AND delivery_state = 'NOT_REQUESTED'
+           RETURNING job_id, supplier_order_reference, delivery_attempt`,
+          [now, id],
+        );
+        for (const job of delivery.rows) {
+          await client.query(
+            `INSERT INTO outbox_jobs (
+               business_intent_id, job_key, task_identifier, payload, available_at, created_at
+             ) VALUES ($1, $2, 'fulfill_supplier_order', $3::jsonb, $4, $4)
+             ON CONFLICT (job_key) DO NOTHING`,
+            [
+              id,
+              `fulfill:${job.job_id}:${job.supplier_order_reference}:${job.delivery_attempt}`,
+              JSON.stringify({ job_id: job.job_id, delivery_attempt: job.delivery_attempt }),
+              now,
+            ],
+          );
+        }
         await client.query('COMMIT');
         return { completed: true, state: 'COMMITTED', version: newVersion };
       }

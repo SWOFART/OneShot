@@ -21,36 +21,46 @@ All ports conform to frozen definitions in `@oneshot/contracts`:
 
 3. **Reconciliation / Recovery Port (`RecoveryPort`)**:
    - Contract Version: `c01-simulator-v1`
-   - Discovers candidate settlements via Subgraph MCP queries without granting autonomous settlement permission to AI models.
+   - Discovers candidate settlements through the configured Graph provider
+     (Studio GraphQL for Arc Testnet; optional Subgraph MCP) without granting
+     autonomous settlement permission to AI models.
 
 ## Composition Profiles
 
-### 1. `simulator` Profile (Default for A01–A04)
+### 1. `simulator` Profile (Test and fixture profile)
 
 - **Settlement**: `SimulatorSettlementPort` (`@oneshot/worker/composition`)
 - **Authorization**: `SimulatorAuthorizationPort` (`@oneshot/worker/composition`)
 - **Domain Core**: `DeterministicDomainSimulator` (`@oneshot/testkit-domain`)
 - **Reconciliation**: Deterministic scenario harness (`@oneshot/reconciliation`)
 
-### 2. `production` Profile (Targeted for Gate P4 Convergence)
+The simulator profile is used by tests and invariant scenarios. The executable
+worker runtime composes the `production` profile after validating external
+configuration; it does not select the simulator through an environment default.
+
+### 2. `production` Profile (Active executable runtime)
 
 - **Settlement**: `ArcSettlementAdapter` (`@oneshot/privy-adapter`, owned by Coder B)
 - **Authorization**: `PrivyAuthorizationAdapter` (`@oneshot/privy-adapter`, owned by Coder B)
-- **Reconciliation**: `RecoveryService` with a Subgraph MCP adapter (`@oneshot/reconciliation`, owned by Coder C)
+- **Reconciliation**: `RecoveryService` with the provider-neutral Graph adapter
+  (`@oneshot/reconciliation`, Studio GraphQL active for Arc Testnet; MCP optional)
 
 ## Environment Configuration
 
 | Variable                       | Default          | Purpose                                                    |
 | ------------------------------ | ---------------- | ---------------------------------------------------------- |
-| `ONESHOT_PROFILE`              | `simulator`      | Active composition profile (`simulator` or `production`)   |
-| `ONESHOT_NETWORK`              | `eip155:5042002` | Expected CAIP-2 blockchain network identifier              |
-| `ONESHOT_CONTRACT_VERSION`     | `1.0.0`          | Frozen contract interface version                          |
+| `ONESHOT_ARC_PROFILE`          | required         | Enabled, pinned Arc profile; `arc-testnet` is the current supported profile |
+| `ONESHOT_ARC_RPC_URL`          | required         | HTTPS JSON-RPC endpoint for the selected Arc profile       |
 | `ONESHOT_SUBMISSIONS_DISABLED` | `false`          | Safe disable switch pausing new submission ownership       |
 | `ONESHOT_SUBMISSION_LEASE_MS`  | `30000`          | Lease duration before orphaned `SUBMITTING` intents expire |
+| `ONESHOT_SUBGRAPH_SOURCE`      | source-dependent | `STUDIO_GRAPHQL` or `SUBGRAPH_MCP` recovery source         |
+| `ONESHOT_SUBGRAPH_QUERY_URL` / `ONESHOT_SUBGRAPH_MCP_ENDPOINT` | source-dependent | Required endpoint for the selected source |
 
-The executable API runtime and its PostgreSQL/Cloud SQL configuration are documented
-in [`SERVER_RUNTIME.md`](SERVER_RUNTIME.md). Runtime hosting does not freeze the
-frontend contract or release the P4 frontend gate.
+The complete worker runtime contract, including Privy, recipient, recovery, and
+Vertex settings, is maintained in [`.env.example`](../.env.example) and
+`apps/worker/src/runtime-config.ts`. The executable API runtime and its
+PostgreSQL/Cloud SQL configuration are documented in
+[`SERVER_RUNTIME.md`](SERVER_RUNTIME.md).
 
 ## Readiness Verification
 

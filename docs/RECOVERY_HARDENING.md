@@ -2,12 +2,13 @@
 
 This document describes the production contracts implemented by the recovery-
 hardening milestone. It covers hashless recovery, provider identity, receipt
-evidence, Subgraph MCP admission, operator authentication, and operational
+evidence, Graph provider admission, operator authentication, and operational
 metrics.
 
 ## Recovery authority
 
-The Graph and Subgraph MCP are discovery and evidence sources only. A candidate
+The Graph provider (Studio GraphQL or optional Subgraph MCP) is a discovery and
+evidence source only. A candidate
 transfer is not authoritative until the deterministic recovery core verifies it
 against Arc RPC evidence. For a candidate to support `MARK_COMMITTED`, the core
 requires:
@@ -42,7 +43,8 @@ Production composition requires an explicit read-only Graph recovery port. The
 runtime requires either `ONESHOT_SUBGRAPH_MCP_ENDPOINT` for a supported remote
 MCP server or `ONESHOT_SUBGRAPH_QUERY_URL` for the Studio-only Arc deployment.
 It does not silently fall back to an unavailable Network Gateway. Direct Studio
-GraphQL is operational recovery evidence, not official MCP qualification.
+GraphQL is operational recovery evidence; it does not constitute an official
+MCP qualification claim.
 
 ## Operator authentication
 

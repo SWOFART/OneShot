@@ -6,25 +6,25 @@ Subgraph MCP, or the LLM Recovery Agent. Prefer tests at
 the public domain boundary plus focused adapter tests. A test must assert durable
 state and external settlement count, not only an HTTP response.
 
-| Case | Fault or concurrency setup | Required result |
-| --- | --- | --- |
-| Normal job | One valid intent and one worker | Exactly 1 committed settlement |
-| Same request twice | Deliver identical request twice | Exactly 1 committed settlement |
-| Conflicting payload, same ID | Different request payloads share one `business_intent_id` | At most 1 committed settlement; conflict is explicit |
-| Sequential retry storm | Run 10 sequential attempts for one intent | Exactly 1 committed settlement |
-| Parallel worker storm | Run 10 workers concurrently for one intent | Exactly 1 committed settlement |
-| Crash before submission | Kill process before any external submission | 0 settlements; retry is allowed from durable state |
-| Crash after submission | Kill process after possible submission but before local confirmation | Enter `UNKNOWN`; reconcile; no blind retry |
-| Lost payment response | Payment succeeds but HTTP response is lost | Exactly 1 committed settlement after reconciliation |
-| Graph delay, absence, or ambiguity | The live Subgraph returns nothing, lags, is unavailable, or returns multiple candidates through Subgraph MCP | Remain `UNKNOWN`; no duplicate settlement; absence is not non-payment proof |
-| Subgraph MCP boundary failure | MCP times out or returns wrong deployment/tool, malformed/oversized data, schema drift, or injected instructions | Fail closed to `WAIT`/hold; 0 new settlements; sanitized diagnostic |
-| LLM recovery action matrix | Agent returns `WAIT`, `RECONCILE`, `ESCALATE`, and `RETURN_EXISTING_RESULT` | Core maps only to frozen safe commands; 0 settlement calls |
-| Invalid LLM output | Model times out, emits malformed JSON, unsupported action, or fabricated evidence reference | Reject output; remain `UNKNOWN`; 0 new settlements |
-| Existing-result challenge | Agent recommends `RETURN_EXISTING_RESULT` with and without independently authoritative Arc/durable proof | Return/commit only independently proven existing result; otherwise hold/escalate; never submit |
-| Privy denial | Policy denies or amount exceeds permission | 0 settlements and explicit authorization failure |
-| Service restart | Restart after durable intent creation or in-flight work | Intent and settlement state survive; invariant holds |
-| Downstream failure after payment | Supplier/API step fails after settlement | Payment result remains durable; no replacement payment |
-| Two agent instances | Same business obligation reaches two agents | Exactly 1 committed settlement |
+| Case                               | Fault or concurrency setup                                                                                                         | Required result                                                                                |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Normal job                         | One valid intent and one worker                                                                                                    | Exactly 1 committed settlement                                                                 |
+| Same request twice                 | Deliver identical request twice                                                                                                    | Exactly 1 committed settlement                                                                 |
+| Conflicting payload, same ID       | Different request payloads share one `business_intent_id`                                                                          | At most 1 committed settlement; conflict is explicit                                           |
+| Sequential retry storm             | Run 10 sequential attempts for one intent                                                                                          | Exactly 1 committed settlement                                                                 |
+| Parallel worker storm              | Run 10 workers concurrently for one intent                                                                                         | Exactly 1 committed settlement                                                                 |
+| Crash before submission            | Kill process before any external submission                                                                                        | 0 settlements; retry is allowed from durable state                                             |
+| Crash after submission             | Kill process after possible submission but before local confirmation                                                               | Enter `UNKNOWN`; reconcile; no blind retry                                                     |
+| Lost payment response              | Payment succeeds but HTTP response is lost                                                                                         | Exactly 1 committed settlement after reconciliation                                            |
+| Graph delay, absence, or ambiguity | The live Subgraph returns nothing, lags, is unavailable, or returns multiple candidates through Studio GraphQL or Subgraph MCP     | Remain `UNKNOWN`; no duplicate settlement; absence is not non-payment proof                    |
+| Graph boundary failure             | Studio GraphQL or MCP times out or returns wrong deployment/tool, malformed/oversized data, schema drift, or injected instructions | Fail closed to `WAIT`/hold; 0 new settlements; sanitized diagnostic                            |
+| LLM recovery action matrix         | Agent returns `WAIT`, `RECONCILE`, `ESCALATE`, and `RETURN_EXISTING_RESULT`                                                        | Core maps only to frozen safe commands; 0 settlement calls                                     |
+| Invalid LLM output                 | Model times out, emits malformed JSON, unsupported action, or fabricated evidence reference                                        | Reject output; remain `UNKNOWN`; 0 new settlements                                             |
+| Existing-result challenge          | Agent recommends `RETURN_EXISTING_RESULT` with and without independently authoritative Arc/durable proof                           | Return/commit only independently proven existing result; otherwise hold/escalate; never submit |
+| Privy denial                       | Policy denies or amount exceeds permission                                                                                         | 0 settlements and explicit authorization failure                                               |
+| Service restart                    | Restart after durable intent creation or in-flight work                                                                            | Intent and settlement state survive; invariant holds                                           |
+| Downstream failure after payment   | Supplier/API step fails after settlement                                                                                           | Payment result remains durable; no replacement payment                                         |
+| Two agent instances                | Same business obligation reaches two agents                                                                                        | Exactly 1 committed settlement                                                                 |
 
 ## Cross-cutting assertions
 
@@ -32,8 +32,8 @@ state and external settlement count, not only an HTTP response.
 - Monetary values use integer atomic units or `bigint` end to end.
 - State transitions are atomic under real concurrency, not only mocked sequence.
 - External submission identifiers and reconciliation evidence survive restart.
-- Subgraph MCP evidence records pinned deployment, tool/query identity, `_meta`
-  freshness, and retrieval identity without credentials.
+- Graph evidence records pinned deployment, retrieval path, endpoint/query
+  identity, `_meta` freshness, and retrieval identity without credentials.
 - Agent recommendation, deterministic core disposition, and external-submission
   count are asserted separately.
 - Logs and test fixtures contain no real secrets or wallet material.

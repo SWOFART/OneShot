@@ -157,6 +157,31 @@
           "additionalProperties": false,
           "required": [
             "kind",
+            "retrieval",
+            "endpointUrl",
+            "deploymentId",
+            "manifestCid",
+            "queryName",
+            "queryDigest"
+          ],
+          "properties": {
+            "kind": { "const": "GRAPH" },
+            "retrieval": { "enum": ["STUDIO_GRAPHQL", "SUBGRAPH_MCP"] },
+            "endpointUrl": { "type": "string", "maxLength": 512 },
+            "serverName": { "type": "string" },
+            "serverVersion": { "type": "string" },
+            "toolName": { "const": "execute_query_by_deployment_id" },
+            "deploymentId": { "type": "string" },
+            "manifestCid": { "type": "string" },
+            "queryName": { "const": "OneShotRecoveryCandidatesV1" },
+            "queryDigest": { "type": "string", "minLength": 64, "maxLength": 64 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
             "serverName",
             "serverVersion",
             "deploymentId",

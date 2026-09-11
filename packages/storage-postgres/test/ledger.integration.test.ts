@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { Pool } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { IntentLedger, migrate, migrationDigest } from '../src/index.js';
+import { jobFingerprint } from '@oneshot/domain';
+import { IntentLedger, JobLedger, migrate, migrationDigest } from '../src/index.js';
 
 const describePostgres = process.env.TEST_POSTGRES === '1' ? describe : describe.skip;
 const request = {
@@ -17,8 +18,8 @@ const request = {
 };
 
 describePostgres('PostgreSQL intent ledger', () => {
-  let container: StartedPostgreSqlContainer;
-  let pool: Pool;
+  let container!: StartedPostgreSqlContainer;
+  let pool!: Pool;
   let nextAttempt = 0;
 
   beforeAll(async () => {
@@ -28,15 +29,16 @@ describePostgres('PostgreSQL intent ledger', () => {
   });
 
   afterEach(async () => {
+    if (typeof pool === 'undefined') return;
     await pool.query(
-      'TRUNCATE operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, business_intents RESTART IDENTITY',
+      'TRUNCATE wallet_activity_observations, operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, resumable_jobs, business_intents RESTART IDENTITY',
     );
     nextAttempt = 0;
   });
 
   afterAll(async () => {
-    await pool.end();
-    await container.stop();
+    if (typeof pool !== 'undefined') await pool.end();
+    if (typeof container !== 'undefined') await container.stop();
   });
 
   const newLedger = (targetPool = pool) =>
@@ -49,7 +51,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const versions = await pool.query<{ version: number }>(
       'SELECT version FROM schema_versions ORDER BY version',
     );
-    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4]);
+    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(await migrationDigest()).toMatch(/^[0-9a-f]{64}$/u);
   });
 
@@ -57,7 +59,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const directory = await mkdtemp(join(tmpdir(), 'oneshot-migration-'));
     try {
       await writeFile(
-        join(directory, '005_broken.sql'),
+        join(directory, '007_broken.sql'),
         'CREATE TABLE must_rollback (id integer); SELECT missing_function();',
         'utf8',
       );
@@ -66,7 +68,7 @@ describePostgres('PostgreSQL intent ledger', () => {
         "SELECT to_regclass('public.must_rollback')::text AS name",
       );
       expect(table.rows[0]?.name).toBeNull();
-      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 5');
+      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 7');
       expect(version.rowCount).toBe(0);
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -91,6 +93,104 @@ describePostgres('PostgreSQL intent ledger', () => {
     expect(counts.rows[0]).toEqual({ intents: '1', attempts: '1', jobs: '1' });
   });
 
+  it('binds ten concurrent agents to one job, one supplier order and one payment right', async () => {
+    const jobs = new JobLedger(pool, {
+      now: () => new Date('2026-09-07T12:00:00.000Z'),
+      nextAttemptId: () => `job-attempt-${++nextAttempt}`,
+    });
+    const request = {
+      task_key: 'report-acme-2026',
+      tool_id: 'team-report-v1' as const,
+      report_subject: 'Acme',
+    };
+    const order = {
+      supplier_id: 'team-report-v1' as const,
+      order_reference: 'team_report_order_123',
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount_atomic: '2500000',
+      asset: 'USDC' as const,
+      network: 'eip155:5042002' as const,
+      expires_at: '2026-09-07T13:00:00.000Z',
+      supplier_payload_fingerprint: jobFingerprint(request),
+    };
+    const results = await Promise.all(
+      Array.from({ length: 10 }, (_, index) =>
+        jobs.createOrReplay({
+          workspaceId: 'workspace-test',
+          request,
+          supplierOrder: order,
+          correlationId: `job-correlation-${index}`,
+        }),
+      ),
+    );
+    expect(results.filter((result) => result.kind === 'ACCEPTED')).toHaveLength(1);
+    expect(results.filter((result) => result.kind === 'REPLAYED')).toHaveLength(9);
+    const counts = await pool.query<{ jobs: string; intents: string; payments: string }>(
+      'SELECT (SELECT count(*) FROM resumable_jobs)::text AS jobs, (SELECT count(*) FROM business_intents)::text AS intents, (SELECT count(*) FROM settlements)::text AS payments',
+    );
+    expect(counts.rows[0]).toEqual({ jobs: '1', intents: '1', payments: '0' });
+  });
+
+  it('resumes a failed paid delivery with a new fenced outbox task and no second settlement', async () => {
+    const jobs = new JobLedger(pool, {
+      now: () => new Date('2026-09-07T12:00:00.000Z'),
+      nextAttemptId: () => `job-attempt-${++nextAttempt}`,
+    });
+    const jobRequest = {
+      task_key: 'report-recovery-2026',
+      tool_id: 'team-report-v1' as const,
+      report_subject: 'Recovery Acme',
+    };
+    const order = {
+      supplier_id: 'team-report-v1' as const,
+      order_reference: 'team_report_order_recovery',
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount_atomic: '2500000',
+      asset: 'USDC' as const,
+      network: 'eip155:5042002' as const,
+      expires_at: '2026-09-07T13:00:00.000Z',
+      supplier_payload_fingerprint: jobFingerprint(jobRequest),
+    };
+    const created = await jobs.createOrReplay({
+      workspaceId: 'workspace-test',
+      request: jobRequest,
+      supplierOrder: order,
+      correlationId: 'job-recovery-create',
+    });
+    expect(created.kind).toBe('ACCEPTED');
+    await pool.query(
+      "UPDATE business_intents SET state = 'COMMITTED' WHERE business_intent_id = $1",
+      [created.job.business_intent_id],
+    );
+
+    await jobs.resumeDelivery('workspace-test', created.job.job_id);
+    await jobs.failDelivery(created.job.job_id, 1);
+    expect((await jobs.get('workspace-test', created.job.job_id))?.delivery_state).toBe(
+      'RETRIEVAL_FAILED',
+    );
+
+    await jobs.resumeDelivery('workspace-test', created.job.job_id);
+    await jobs.completeDelivery(created.job.job_id, 2, {
+      order_reference: order.order_reference,
+      result_reference: 'team_report_result_recovery',
+      report: 'Recovered original supplier result',
+    });
+
+    await expect(jobs.get('workspace-test', created.job.job_id)).resolves.toMatchObject({
+      payment_state: 'COMMITTED',
+      delivery_state: 'AVAILABLE',
+      result: { result_reference: 'team_report_result_recovery' },
+    });
+    const outbox = await pool.query<{ job_key: string }>(
+      "SELECT job_key FROM outbox_jobs WHERE task_identifier = 'fulfill_supplier_order' ORDER BY outbox_job_id",
+    );
+    expect(outbox.rows.map((row) => row.job_key)).toEqual([
+      `fulfill:${created.job.job_id}:${order.order_reference}:1`,
+      `fulfill:${created.job.job_id}:${order.order_reference}:2`,
+    ]);
+    await expect(pool.query('SELECT * FROM settlements')).resolves.toMatchObject({ rowCount: 0 });
+  });
+
   it('returns conflict without creating another durable right', async () => {
     const ledger = newLedger();
     await ledger.createOrReplay(request, 'correlation-original');
@@ -106,6 +206,43 @@ describePostgres('PostgreSQL intent ledger', () => {
         (SELECT count(*) FROM settlements)::text AS settlements
     `);
     expect(counts.rows[0]).toEqual({ attempts: '1', jobs: '1', settlements: '0' });
+  });
+
+  it('queues one reconciliation retry after the prior job is delivered', async () => {
+    const ledger = newLedger();
+    await ledger.createOrReplay(request, 'correlation-recovery-retry');
+    await ledger.completeAuthorization(request.business_intent_id, 1, { kind: 'AUTHORIZED' });
+    const claim = await ledger.claimSubmission(request.business_intent_id);
+    expect(claim.claimed).toBe(true);
+    if (!claim.claimed) return;
+
+    await ledger.completeSubmission(request.business_intent_id, claim.attemptId, {
+      kind: 'POSSIBLY_SUBMITTED',
+      reason: 'provider response lost',
+    });
+    await expect(ledger.enqueueReconciliation(request.business_intent_id)).resolves.toMatchObject({
+      queued: false,
+      state: 'UNKNOWN',
+    });
+
+    await pool.query(
+      "UPDATE outbox_jobs SET status = 'DELIVERED' WHERE task_identifier = 'reconcile_intent'",
+    );
+    const retries = await Promise.all(
+      Array.from({ length: 5 }, () => ledger.enqueueReconciliation(request.business_intent_id)),
+    );
+    expect(retries.filter((result) => result?.queued)).toHaveLength(1);
+
+    const jobs = await pool.query<{ job_key: string; status: string }>(
+      `SELECT job_key, status FROM outbox_jobs
+       WHERE business_intent_id = $1 AND job_key LIKE 'reconcile:%'
+       ORDER BY outbox_job_id`,
+      [request.business_intent_id],
+    );
+    expect(jobs.rows).toEqual([
+      { job_key: 'reconcile:intent-storage-1:4', status: 'DELIVERED' },
+      { job_key: 'reconcile:intent-storage-1:4:2', status: 'PENDING' },
+    ]);
   });
 
   it('preserves a ledger replay when operational metrics fail inside the transaction', async () => {

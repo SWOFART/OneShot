@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { IntentResponse, RecoveryView, ReconcileResponse } from '@oneshot/contracts';
+import type { IntentResponse, JobView, RecoveryView, ReconcileResponse } from '@oneshot/contracts';
 import type { CreateIntentResult, IntentLedger } from '@oneshot/storage-postgres';
-import { buildApi, staticBearerAuthenticator } from '../src/index.js';
+import { buildApi, staticBearerAuthenticator, type ApiDependencies } from '../src/index.js';
 
 const request = {
   business_intent_id: 'intent-api-1',
@@ -350,6 +350,41 @@ describe('OpenAPI contract endpoints', () => {
     await app.close();
   });
 
+  it('classifies an empty JSON reconcile body as a client error and logs only safe identity', async () => {
+    const errors: Array<Record<string, string>> = [];
+    const app = buildApi({
+      ledger: createMockLedger(),
+      authenticator: staticBearerAuthenticator('test-token'),
+      nextCorrelationId: () => 'correlation-empty-body',
+      onError: (error) => errors.push(error),
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/intents/intent-api-1/reconcile?token=must-not-log',
+      headers: {
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+      },
+      payload: '',
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      code: 'INVALID_REQUEST',
+      correlation_id: 'correlation-empty-body',
+    });
+    expect(errors).toEqual([
+      {
+        correlationId: 'correlation-empty-body',
+        method: 'POST',
+        path: '/v1/intents/intent-api-1/reconcile',
+        code: 'FST_ERR_CTP_EMPTY_JSON_BODY',
+      },
+    ]);
+    await app.close();
+  });
+
   it('GET /health/live and /health/ready reflect status without authentication', async () => {
     let pingHealthy = true;
     const app = buildApi({
@@ -374,6 +409,146 @@ describe('OpenAPI contract endpoints', () => {
     const notReady = await app.inject({ method: 'GET', url: '/health/ready' });
     expect(notReady.statusCode).toBe(503);
     expect(notReady.json()).toMatchObject({ code: 'NOT_READY' });
+    await app.close();
+  });
+});
+
+describe('resumable job API boundary', () => {
+  it('creates, scopes, resumes, retrieves, and records activity without granting a settlement path', async () => {
+    let job: JobView = {
+      job_id: `job_${'c'.repeat(64)}`,
+      task_key: 'report-acme',
+      tool_id: 'team-report-v1',
+      business_intent_id: `intent_${'d'.repeat(64)}`,
+      supplier: {
+        supplier_id: 'team-report-v1',
+        order_reference: 'team_report_order_api',
+        recipient: '0x1111111111111111111111111111111111111111',
+        amount_atomic: '2500000',
+        asset: 'USDC',
+        network: 'eip155:5042002',
+        expires_at: '2026-09-08T12:00:00.000Z',
+      },
+      payment_state: 'COMMITTED',
+      delivery_state: 'RETRIEVAL_FAILED',
+      created_at: '2026-09-07T12:00:00.000Z',
+      updated_at: '2026-09-07T12:01:00.000Z',
+    };
+    const calls: Array<{ operation: string; workspaceId?: string }> = [];
+    let createMode: 'ACCEPTED' | 'TASK_PAYLOAD_CONFLICT' = 'ACCEPTED';
+    const jobs = {
+      async createOrReplay(params: { workspaceId: string }) {
+        calls.push({ operation: 'create', workspaceId: params.workspaceId });
+        return createMode === 'ACCEPTED'
+          ? { kind: 'ACCEPTED' as const, job }
+          : { kind: 'TASK_PAYLOAD_CONFLICT' as const, job };
+      },
+      async get(workspaceId: string, jobId: string) {
+        calls.push({ operation: `get:${jobId}`, workspaceId });
+        return jobId === job.job_id ? job : undefined;
+      },
+      async list(workspaceId: string) {
+        calls.push({ operation: 'list', workspaceId });
+        return [job];
+      },
+      async resumeDelivery(workspaceId: string, jobId: string) {
+        calls.push({ operation: `resume:${jobId}`, workspaceId });
+        if (jobId !== job.job_id) return undefined;
+        job = { ...job, delivery_state: 'PENDING', updated_at: '2026-09-07T12:02:00.000Z' };
+        return job;
+      },
+      async recordActivityObservation(params: { workspaceId: string }) {
+        calls.push({ operation: 'observe', workspaceId: params.workspaceId });
+      },
+      async activity(workspaceId: string) {
+        calls.push({ operation: 'activity', workspaceId });
+        return { recorded_settlement_count: 1, uncertain_job_count: 0 };
+      },
+    } as unknown as ApiDependencies['jobs'];
+    const app = buildApi({
+      ledger: createMockLedger(),
+      jobs,
+      supplier: {
+        async createOrder() {
+          return {
+            ...job.supplier,
+            supplier_payload_fingerprint: 'e'.repeat(64),
+          };
+        },
+        async fulfillOrder() {
+          throw new Error('API must not fulfill supplier orders');
+        },
+        async getResult() {
+          return null;
+        },
+      },
+      walletActivity: {
+        async refresh() {
+          return { freshness: 'FRESH', coverageNote: 'indexed', payload: { transfers: [] } };
+        },
+      },
+      authenticator: staticBearerAuthenticator('test-token'),
+      config: { workspaceId: 'workspace-api-test' },
+      nextCorrelationId: () => 'correlation-job-api',
+    });
+    const headers = { authorization: 'Bearer test-token' };
+    const payload = { task_key: 'report-acme', tool_id: 'team-report-v1', report_subject: 'Acme' };
+
+    const quote = await app.inject({ method: 'POST', url: '/v1/jobs/quote', headers, payload });
+    expect(quote.statusCode).toBe(200);
+    expect(quote.json()).toEqual(job.supplier);
+    expect(calls).toEqual([]);
+
+    const created = await app.inject({ method: 'POST', url: '/v1/jobs', headers, payload });
+    expect(created.statusCode).toBe(202);
+    expect(created.json()).toMatchObject({ job_id: job.job_id, payment_state: 'COMMITTED' });
+    expect((await app.inject({ method: 'GET', url: '/v1/jobs', headers })).json()).toEqual({
+      jobs: [job],
+    });
+    expect(
+      (await app.inject({ method: 'GET', url: `/v1/jobs/${job.job_id}`, headers })).statusCode,
+    ).toBe(200);
+
+    const unavailable = await app.inject({
+      method: 'GET',
+      url: `/v1/jobs/${job.job_id}/result`,
+      headers,
+    });
+    expect(unavailable.statusCode).toBe(409);
+    expect(unavailable.json()).toMatchObject({ code: 'RECONCILIATION_NOT_ALLOWED' });
+    expect(
+      (await app.inject({ method: 'POST', url: `/v1/jobs/${job.job_id}/resume`, headers }))
+        .statusCode,
+    ).toBe(202);
+
+    job = {
+      ...job,
+      delivery_state: 'AVAILABLE',
+      result: {
+        order_reference: 'team_report_order_api',
+        result_reference: 'team_report_result_api',
+        report: 'retrieved result',
+      },
+    };
+    expect(
+      (await app.inject({ method: 'GET', url: `/v1/jobs/${job.job_id}/result`, headers })).json(),
+    ).toEqual(job.result);
+    expect(
+      (await app.inject({ method: 'POST', url: '/v1/activity/refresh', headers })).statusCode,
+    ).toBe(202);
+    expect((await app.inject({ method: 'GET', url: '/v1/activity', headers })).json()).toEqual({
+      recorded_settlement_count: 1,
+      uncertain_job_count: 0,
+    });
+
+    createMode = 'TASK_PAYLOAD_CONFLICT';
+    const conflict = await app.inject({ method: 'POST', url: '/v1/jobs', headers, payload });
+    expect(conflict.statusCode).toBe(409);
+    expect(
+      calls.every(
+        (call) => call.workspaceId === undefined || call.workspaceId === 'workspace-api-test',
+      ),
+    ).toBe(true);
     await app.close();
   });
 });

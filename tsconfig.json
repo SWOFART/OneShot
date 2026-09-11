@@ -26,6 +26,9 @@
       "path": "./packages/privy-adapter"
     },
     {
+      "path": "./packages/supplier-adapter"
+    },
+    {
       "path": "./packages/testkit-settlement"
     },
     {

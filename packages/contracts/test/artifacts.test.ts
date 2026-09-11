@@ -25,10 +25,17 @@ describe('generated contract artifacts', () => {
     expect(Object.keys(document.paths).sort()).toEqual([
       '/health/live',
       '/health/ready',
+      '/v1/activity',
+      '/v1/activity/refresh',
       '/v1/intents',
       '/v1/intents/{id}',
       '/v1/intents/{id}/reconcile',
       '/v1/intents/{id}/recovery-view',
+      '/v1/jobs',
+      '/v1/jobs/quote',
+      '/v1/jobs/{jobId}',
+      '/v1/jobs/{jobId}/result',
+      '/v1/jobs/{jobId}/resume',
     ]);
     expect(Object.keys(document.paths).every((path) => !path.includes('retry'))).toBe(true);
 

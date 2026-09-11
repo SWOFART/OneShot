@@ -22,6 +22,7 @@ describe('API runtime configuration', () => {
     });
 
     expect(config.port).toBe(8080);
+    expect(config.rateLimit).toEqual({ maxRequests: 60, windowMs: 60_000 });
     expect(config.database).toEqual({
       connectionString: 'postgresql://oneshot:secret@localhost:5432/oneshot',
       max: 10,
@@ -58,7 +59,43 @@ describe('API runtime configuration', () => {
   it('leaves Privy login disabled when no Privy variable is set', () => {
     const config = loadApiRuntimeConfig({ ...base });
     expect(config.privyAuth).toBeUndefined();
+    expect(config.supplier).toBeUndefined();
     expect(config.serviceBearerToken).toBe('service-token-1234');
+  });
+
+  it('loads an explicit team-operated supplier destination and atomic quote', () => {
+    const config = loadApiRuntimeConfig({
+      ...base,
+      ONESHOT_SUPPLIER_RECIPIENT: '0x2222222222222222222222222222222222222222',
+      ONESHOT_SUPPLIER_AMOUNT_ATOMIC: '10000',
+    });
+    expect(config.supplier).toEqual({
+      recipient: '0x2222222222222222222222222222222222222222',
+      amountAtomic: '10000',
+    });
+  });
+
+  it('fails closed on a partial or invalid supplier quote configuration', () => {
+    expect(() =>
+      loadApiRuntimeConfig({
+        ...base,
+        ONESHOT_SUPPLIER_RECIPIENT: '0x2222222222222222222222222222222222222222',
+      }),
+    ).toThrow('must be configured together');
+    expect(() =>
+      loadApiRuntimeConfig({
+        ...base,
+        ONESHOT_SUPPLIER_RECIPIENT: 'not-an-address',
+        ONESHOT_SUPPLIER_AMOUNT_ATOMIC: '10000',
+      }),
+    ).toThrow('Invalid supplier quote configuration');
+    expect(() =>
+      loadApiRuntimeConfig({
+        ...base,
+        ONESHOT_SUPPLIER_RECIPIENT: '0x2222222222222222222222222222222222222222',
+        ONESHOT_SUPPLIER_AMOUNT_ATOMIC: '0',
+      }),
+    ).toThrow('greater than zero');
   });
 
   it('loads a complete Privy configuration', () => {
@@ -144,6 +181,18 @@ describe('API runtime configuration', () => {
         SERVICE_BEARER_TOKEN: 'too-short',
       }),
     ).toThrow('at least 16 characters');
+  });
+
+  it('loads and validates the shared API rate-limit settings', () => {
+    const config = loadApiRuntimeConfig({
+      ...base,
+      ONESHOT_API_RATE_LIMIT_MAX_REQUESTS: '12',
+      ONESHOT_API_RATE_LIMIT_WINDOW_MS: '5000',
+    });
+    expect(config.rateLimit).toEqual({ maxRequests: 12, windowMs: 5000 });
+    expect(() =>
+      loadApiRuntimeConfig({ ...base, ONESHOT_API_RATE_LIMIT_MAX_REQUESTS: '0' }),
+    ).toThrow('ONESHOT_API_RATE_LIMIT_MAX_REQUESTS');
   });
 
   it('rejects an allowlist entry that is not a Privy DID', () => {

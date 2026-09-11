@@ -24,6 +24,7 @@ function config(privyEnabled: boolean): ApiRuntimeConfig {
     serviceBearerToken: 'service-token-1234',
     database: { connectionString: 'postgresql://localhost/oneshot' },
     submissionsDisabled: false,
+    rateLimit: { maxRequests: 60, windowMs: 60_000 },
     ...(privyEnabled
       ? { privyAuth: { appId: APP_ID, verificationKey, allowedSubjects: [OPERATOR] } }
       : {}),

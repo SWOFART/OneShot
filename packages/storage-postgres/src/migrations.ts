@@ -41,7 +41,7 @@ async function migrationFiles(directory: string): Promise<readonly MigrationFile
 }
 
 export const STORAGE_V1_SCHEMA_DIGEST =
-  '9af3339865c54f19e351f00b4ca552d352d34d23e3ec9e0fa2e23230ce4f8fde';
+  'daedb728b6cd496dc1c35c7313909c662fd2186debe85c9bbf1981ffafcbd7f9';
 
 export async function migrationDigest(directory = defaultMigrationDirectory): Promise<string> {
   const files = await migrationFiles(directory);
