@@ -1,10 +1,23 @@
 # Circle x402 API demo
 
+The workspace Tools page now contains the live paid-API path. Configure
+`ONESHOT_X402_URL` and `ONESHOT_X402_MAX_AMOUNT_ATOMIC` in both the API and
+worker environments, then use the site to request a quote and approve the
+stable task key. The approval creates one durable Business Intent; the worker
+submits Circle Gateway x402 only after the existing authorization and
+submission claims.
+
+To include the paid transfer in the website's Graph activity panel, point the
+API's `ONESHOT_ACTIVITY_WALLET_ADDRESS` at Circle's Arc Testnet Gateway wallet
+(`0x0077777d7EBA4688BDeF3E311b846F25870A19B9`). Worker recovery uses that same
+Gateway identity automatically for x402 candidates.
+
 This is the second, deliberately separate demo mode:
 
 - **Arc settlement demonstration** — the cabinet's team-operated transfer uses
   OneShot's normal Privy policy and direct Arc Testnet USDC settlement.
-- **Paid API purchase via Circle x402** — `scripts/demo-circle-x402.mjs` pays
+- **Paid API purchase via Circle x402** — the website is the primary demo path;
+  `scripts/demo-circle-x402.mjs` remains an operator fallback that pays
   one Circle Arc nanopayments sample endpoint through Circle Gateway.
 
 The x402 request is signed by the configured Privy wallet through its EIP-712

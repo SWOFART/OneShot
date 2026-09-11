@@ -31,7 +31,7 @@ describePostgres('PostgreSQL intent ledger', () => {
   afterEach(async () => {
     if (typeof pool === 'undefined') return;
     await pool.query(
-      'TRUNCATE wallet_activity_observations, operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, resumable_jobs, business_intents RESTART IDENTITY',
+      'TRUNCATE wallet_activity_observations, operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, resumable_jobs, paid_api_requests, business_intents RESTART IDENTITY',
     );
     nextAttempt = 0;
   });
@@ -51,7 +51,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const versions = await pool.query<{ version: number }>(
       'SELECT version FROM schema_versions ORDER BY version',
     );
-    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(await migrationDigest()).toMatch(/^[0-9a-f]{64}$/u);
   });
 
@@ -59,7 +59,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const directory = await mkdtemp(join(tmpdir(), 'oneshot-migration-'));
     try {
       await writeFile(
-        join(directory, '007_broken.sql'),
+        join(directory, '008_broken.sql'),
         'CREATE TABLE must_rollback (id integer); SELECT missing_function();',
         'utf8',
       );
@@ -68,7 +68,7 @@ describePostgres('PostgreSQL intent ledger', () => {
         "SELECT to_regclass('public.must_rollback')::text AS name",
       );
       expect(table.rows[0]?.name).toBeNull();
-      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 7');
+      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 8');
       expect(version.rowCount).toBe(0);
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -91,6 +91,49 @@ describePostgres('PostgreSQL intent ledger', () => {
         (SELECT count(*) FROM outbox_jobs)::text AS jobs
     `);
     expect(counts.rows[0]).toEqual({ intents: '1', attempts: '1', jobs: '1' });
+  });
+
+  it('binds ten concurrent paid API approvals to one x402 intent and one payment attempt', async () => {
+    const ledger = newLedger();
+    const paidRequest = { task_key: 'circle-api-2026', tool_id: 'circle-x402-api-v1' as const };
+    const quote = {
+      resourceUrl: 'https://x402.example.test/api/dataset',
+      x402Version: 2,
+      maxTimeoutSeconds: 60,
+      recipient: '0x1111111111111111111111111111111111111111',
+      amountAtomic: '10000',
+      quotePayload: {
+        url: 'https://x402.example.test/api/dataset',
+        x402Version: 2,
+        resourceUrl: 'https://x402.example.test/api/dataset',
+        requirements: { scheme: 'exact', network: 'eip155:5042002', amount: '10000' },
+      },
+    };
+    const results = await Promise.all(
+      Array.from({ length: 10 }, (_, index) =>
+        ledger.createPaidApiOrReplay({
+          workspaceId: 'workspace-paid-api',
+          request: paidRequest,
+          quote,
+          correlationId: `paid-api-correlation-${index}`,
+        }),
+      ),
+    );
+    expect(results.filter((result) => result.kind === 'ACCEPTED')).toHaveLength(1);
+    expect(results.filter((result) => result.kind === 'REPLAY_IDENTICAL')).toHaveLength(9);
+    const counts = await pool.query<{
+      intents: string;
+      paid: string;
+      attempts: string;
+      jobs: string;
+    }>(
+      `SELECT
+        (SELECT count(*) FROM business_intents)::text AS intents,
+        (SELECT count(*) FROM paid_api_requests)::text AS paid,
+        (SELECT count(*) FROM attempts)::text AS attempts,
+        (SELECT count(*) FROM outbox_jobs)::text AS jobs`,
+    );
+    expect(counts.rows[0]).toEqual({ intents: '1', paid: '1', attempts: '1', jobs: '1' });
   });
 
   it('binds ten concurrent agents to one job, one supplier order and one payment right', async () => {

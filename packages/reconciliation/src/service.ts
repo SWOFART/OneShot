@@ -60,6 +60,8 @@ export interface LocalRecoverySnapshot {
   readonly providerIdentity?: {
     readonly referenceId: string;
     readonly requestFingerprint: string;
+    readonly providerKind?: 'DIRECT_ARC' | 'CIRCLE_X402';
+    readonly transactionHash?: string;
     readonly walletId?: string | undefined;
     readonly policyId?: string | undefined;
   };

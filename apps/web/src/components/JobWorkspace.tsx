@@ -1,7 +1,8 @@
 import { formatAtomicUsdcWithAsset } from '@oneshot/settlement-ui';
 import { useEffect, useState } from 'react';
-import type { JobView, SupplierQuote } from '@oneshot/contracts';
+import type { JobView, PaidApiQuote, PaidApiResponse, SupplierQuote } from '@oneshot/contracts';
 import type { JobApiClient } from '../api/job-client.js';
+import type { PaidApiClient } from '../api/paid-api-client.js';
 import { usdcToAtomicUnits } from '../utils/money.js';
 
 function shortenAddress(value: string): string {
@@ -22,7 +23,7 @@ function subjectSlug(value: string): string {
 }
 
 function explorerHref(transactionHash: string | undefined): string | undefined {
-  return transactionHash && /^0x[0-9a-f]{64}$/u.test(transactionHash)
+  return transactionHash && /^0x[0-9a-f]{64}$/iu.test(transactionHash)
     ? `https://testnet.arcscan.app/tx/${transactionHash}`
     : undefined;
 }
@@ -260,33 +261,213 @@ export function JobWorkspace(props: {
   );
 }
 
-export function CircleX402DemoPanel() {
+export function CircleX402DemoPanel(props: {
+  readonly client?: PaidApiClient;
+  readonly onSelectIntent: (id: string) => void;
+}) {
+  const [taskKey, setTaskKey] = useState(() => `circle-api-${crypto.randomUUID().slice(0, 8)}`);
+  const [quote, setQuote] = useState<PaidApiQuote | null>(null);
+  const [request, setRequest] = useState<PaidApiResponse | null>(null);
+  const [loading, setLoading] = useState<'quote' | 'start' | 'refresh' | null>(null);
+  const [notice, setNotice] = useState('');
+  const paidApiRequest = { task_key: taskKey.trim(), tool_id: 'circle-x402-api-v1' as const };
+
+  function clear(): void {
+    setQuote(null);
+    setRequest(null);
+    setNotice('');
+  }
+
+  async function loadQuote(): Promise<void> {
+    if (!props.client || !paidApiRequest.task_key) return;
+    setLoading('quote');
+    setNotice('');
+    try {
+      setQuote(await props.client.quote(paidApiRequest));
+    } catch {
+      setQuote(null);
+      setNotice('A live x402 quote is unavailable. Check the API endpoint and try again.');
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function approve(): Promise<void> {
+    if (!props.client) return;
+    setLoading('start');
+    setNotice('');
+    try {
+      const result = await props.client.start(paidApiRequest);
+      setRequest(result);
+      props.onSelectIntent(result.business_intent_id);
+      setNotice('OneShot accepted this Business Intent. The worker owns the payment attempt.');
+    } catch {
+      setNotice('The paid API request was not accepted. Keep the same task key before retrying.');
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function refresh(): Promise<void> {
+    if (!props.client || !request) return;
+    setLoading('refresh');
+    try {
+      setRequest(await props.client.get(request.business_intent_id));
+      setNotice('Payment state refreshed from the authoritative OneShot ledger.');
+    } catch {
+      setNotice('Payment state could not be refreshed; no new payment was submitted.');
+    } finally {
+      setLoading(null);
+    }
+  }
+
   return (
     <section className="panel" aria-label="Circle x402 API demo">
       <header className="panel-heading">
         <div>
-          <p className="eyebrow">SEPARATE PAYMENT RAIL</p>
-          <h2>Paid API purchase via Circle x402</h2>
+          <p className="eyebrow">LIVE PAID API</p>
+          <h2>Buy a Circle x402 API result</h2>
         </div>
         <span className="badge tone-neutral">Arc Testnet</span>
       </header>
       <p>
-        This demo pays one Circle Gateway x402 dataset request with Privy EIP-712 signing. It is
-        separate from the direct Arc settlement demonstration above and never retries an ambiguous
-        paid request.
+        Review the live Circle Gateway quote, approve one stable task key, and watch OneShot move
+        the payment through Arc Testnet. Repeating the same task key replays the stored Business
+        Intent and cannot create a second settlement.
       </p>
-      <p className="field-help">
-        Configure the endpoint and a funded Gateway testnet balance in the deployment secret store,
-        then run <code>pnpm demo:x402</code>. The script prints only the quote, transaction hash and
-        stable Business Intent ID.
-      </p>
+      <label htmlFor="paid-api-task-key">Paid API task key</label>
+      <input
+        id="paid-api-task-key"
+        value={taskKey}
+        onChange={(event) => {
+          setTaskKey(event.target.value);
+          clear();
+        }}
+        maxLength={128}
+        autoComplete="off"
+        spellCheck={false}
+      />
+      <small className="field-help">
+        Keep this exact key if the browser or agent retries. A changed quote is returned as a
+        conflict instead of being charged twice.
+      </small>
+      {!props.client ? (
+        <p className="field-help">
+          The paid API integration is not configured in this environment.
+        </p>
+      ) : !quote && !request ? (
+        <button
+          type="button"
+          disabled={loading !== null || !paidApiRequest.task_key}
+          onClick={() => void loadQuote()}
+        >
+          {loading === 'quote' ? 'Checking live quote…' : 'Check live quote'}
+        </button>
+      ) : null}
+      {quote && !request && (
+        <>
+          <section className="panel quote-panel" aria-label="Paid API quote">
+            <header className="panel-heading">
+              <h3>Review x402 quote</h3>
+              <span className="badge tone-neutral">No charge yet</span>
+            </header>
+            <dl className="facts">
+              <div>
+                <dt>Amount</dt>
+                <dd className="mono">
+                  {formatAtomicUsdcWithAsset(quote.amount_atomic, quote.asset) ?? 'Unavailable'}
+                </dd>
+              </div>
+              <div>
+                <dt>Recipient</dt>
+                <dd className="mono" title={quote.recipient}>
+                  {shortenAddress(quote.recipient)}
+                </dd>
+              </div>
+              <div>
+                <dt>Network</dt>
+                <dd>{quote.network}</dd>
+              </div>
+              <div>
+                <dt>Resource</dt>
+                <dd className="break-all">{quote.resource_url}</dd>
+              </div>
+            </dl>
+          </section>
+          <p className="field-help">
+            Approval creates the durable intent. Only the worker can submit the Circle payment;
+            delayed or ambiguous outcomes stay UNKNOWN for reconciliation.
+          </p>
+          <button type="button" disabled={loading !== null} onClick={() => void approve()}>
+            {loading === 'start' ? 'Approving…' : 'Approve and buy API result'}
+          </button>
+        </>
+      )}
+      {request && (
+        <section className="paid-api-status" aria-label="Paid API payment status">
+          <div className="job-row-heading">
+            <strong>Payment: {request.payment_state}</strong>
+            <span className="badge tone-neutral">One intent</span>
+          </div>
+          <p className="mono break-all">{request.business_intent_id}</p>
+          {request.provider_transaction_hash && (
+            <p>
+              Circle Gateway transaction:{' '}
+              {explorerHref(request.provider_transaction_hash) ? (
+                <a
+                  href={explorerHref(request.provider_transaction_hash)}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  View on ArcScan
+                </a>
+              ) : (
+                <span className="mono">{request.provider_transaction_hash}</span>
+              )}
+            </p>
+          )}
+          {request.settlement ? (
+            <p>
+              <strong>Payment confirmed on Arc:</strong>{' '}
+              <a
+                href={explorerHref(request.settlement.transaction_hash)}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                View committed settlement
+              </a>
+            </p>
+          ) : (
+            <p className="field-help">
+              Arc confirmation is pending. Refresh this read-only status; do not approve a new task
+              key while this one is unresolved.
+            </p>
+          )}
+          {request.response !== undefined && (
+            <pre className="response-output">{JSON.stringify(request.response, null, 2)}</pre>
+          )}
+          <button
+            type="button"
+            className="secondary compact"
+            disabled={loading !== null}
+            onClick={() => void refresh()}
+          >
+            {loading === 'refresh' ? 'Refreshing…' : 'Refresh payment'}
+          </button>
+        </section>
+      )}
+      {notice && (
+        <p role="status" className="notice">
+          {notice}
+        </p>
+      )}
       <a
         className="secondary compact"
         href="https://github.com/SWOFART/OneShot/blob/develop/docs/CIRCLE_X402_DEMO.md"
         target="_blank"
         rel="noreferrer noopener"
       >
-        Open x402 runbook
+        Open x402 deployment runbook
       </a>
     </section>
   );

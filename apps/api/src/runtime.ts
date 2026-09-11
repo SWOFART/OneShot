@@ -12,6 +12,7 @@ import {
 import { loadApiRuntimeConfig, type ApiRuntimeConfig } from './config.js';
 import { createPrivyAccessTokenAuthenticator, isJwtCredential } from './privy-auth.js';
 import { PostgresRateLimiter } from './rate-limit.js';
+import { createCircleX402PaidApiService } from './paid-api.js';
 
 export interface ApiRuntime {
   readonly address: string;
@@ -40,6 +41,13 @@ export function buildApiAuthenticator(
 
 export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRuntime> {
   const pool = new Pool(config.database);
+  const boundedFetch: typeof fetch = (input, init = {}) =>
+    fetch(input, {
+      ...init,
+      signal: init.signal
+        ? AbortSignal.any([init.signal, AbortSignal.timeout(10_000)])
+        : AbortSignal.timeout(10_000),
+    });
   try {
     await migrate(pool);
     const ledger = new IntentLedger(pool, {
@@ -51,6 +59,17 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
       ledger,
       jobs,
       supplier: new TeamReportSupplier(),
+      ...(config.paidApi
+        ? {
+            paidApi: createCircleX402PaidApiService({
+              ledger,
+              workspaceId: config.workspaceId ?? 'default-workspace',
+              url: config.paidApi.url,
+              maxAmountAtomic: config.paidApi.maxAmountAtomic,
+              fetchFn: boundedFetch,
+            }),
+          }
+        : {}),
       ...(config.walletActivity
         ? { walletActivity: new StudioWalletActivityPort(config.walletActivity) }
         : {}),

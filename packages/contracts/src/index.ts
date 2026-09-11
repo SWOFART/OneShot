@@ -3,5 +3,6 @@ export * from './ids.js';
 export * from './intent.js';
 export * from './job.js';
 export * from './money.js';
+export * from './paid-api.js';
 export * from './ports.js';
 export * from './mock-server.js';

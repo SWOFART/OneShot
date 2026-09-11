@@ -42,6 +42,16 @@ describe('production worker configuration', () => {
     expect(loadWorkerRuntimeConfig(env).recovery.mcpEndpoint).toBeUndefined();
   });
 
+  it('loads the optional Circle x402 worker resource and amount cap', () => {
+    const env = environment();
+    env.ONESHOT_X402_URL = 'https://x402.example.test/api/dataset';
+    env.ONESHOT_X402_MAX_AMOUNT_ATOMIC = '10000';
+    expect(loadWorkerRuntimeConfig(env).paidApi).toEqual({
+      url: 'https://x402.example.test/api/dataset',
+      maxAmountAtomic: 10000n,
+    });
+  });
+
   it('fails closed without a configured recovery query source', () => {
     const env = environment();
     delete env.ONESHOT_SUBGRAPH_QUERY_URL;

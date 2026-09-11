@@ -88,3 +88,4 @@ export class TeamReportSupplier implements SupplierPort {
 }
 
 export * from './circle-x402.js';
+export * from './circle-x402-settlement.js';

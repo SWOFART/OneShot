@@ -29,6 +29,7 @@ import {
   type ReceiptSource,
   type TransactionReceipt,
 } from '@oneshot/arc-adapter';
+import { ARC_X402_GATEWAY_WALLET, verifyCircleX402Receipt } from '@oneshot/supplier-adapter';
 import type { EvidencePort as LaneBEvidencePort } from '@oneshot/privy-adapter';
 import { createHash } from 'node:crypto';
 
@@ -60,6 +61,7 @@ function toContractAuthorityClass(authClass: string): 'AUTHORITATIVE' | 'OBSERVA
 export interface IntentLedgerLocalRecoveryStatePortOptions {
   readonly tokenContract: string;
   readonly correlationSender: string;
+  readonly gatewayWalletAddress?: string;
   readonly fromBlock: string;
   readonly toBlock: string;
   readonly getToBlock?: () => Promise<string>;
@@ -96,11 +98,20 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
       ? await this.options.getToBlock()
       : this.options.toBlock;
 
+    const providerIdentity =
+      typeof this.ledger.getProviderRequestIdentity === 'function'
+        ? await this.ledger.getProviderRequestIdentity(businessIntentId)
+        : null;
+    const correlationSender =
+      providerIdentity?.providerKind === 'CIRCLE_X402'
+        ? (this.options.gatewayWalletAddress ?? ARC_X402_GATEWAY_WALLET)
+        : this.options.correlationSender;
+
     const indexRequest: IndexLookupRequest = {
       binding,
       correlation: {
         strategy: 'TRANSFER_TUPLE_WINDOW',
-        sender: this.options.correlationSender,
+        sender: correlationSender,
         fromBlock: this.options.fromBlock,
         toBlock,
       },
@@ -109,11 +120,6 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
     if (!isValidSubgraphLookupInput(indexRequest, this.options.mcpPolicy)) {
       throw new Error('Invalid Subgraph MCP recovery lookup input');
     }
-
-    const providerIdentity =
-      typeof this.ledger.getProviderRequestIdentity === 'function'
-        ? await this.ledger.getProviderRequestIdentity(businessIntentId)
-        : null;
 
     return {
       schemaVersion: LOCAL_RECOVERY_SNAPSHOT_VERSION,
@@ -125,6 +131,12 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
               requestFingerprint: providerIdentity.requestFingerprint,
               ...(providerIdentity.walletId ? { walletId: providerIdentity.walletId } : {}),
               ...(providerIdentity.policyId ? { policyId: providerIdentity.policyId } : {}),
+              ...(providerIdentity.providerKind
+                ? { providerKind: providerIdentity.providerKind }
+                : {}),
+              ...(providerIdentity.transactionHash
+                ? { transactionHash: providerIdentity.transactionHash }
+                : {}),
             },
           }
         : {}),
@@ -314,6 +326,7 @@ export interface PrivyArcEvidenceBridgeOptions {
   readonly evidencePort?: LaneBEvidencePort;
   readonly receiptSource?: ReceiptSource;
   readonly walletAddress?: string;
+  readonly gatewayWalletAddress?: string;
   readonly chainId?: number;
   readonly defaultArcTxHash?: string;
   readonly defaultReceipt?: TransactionReceipt;
@@ -335,7 +348,29 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     if (candidate.tokenContract.toLowerCase() !== binding.tokenContract.toLowerCase()) return null;
     if (candidate.recipient.toLowerCase() !== binding.recipient.toLowerCase()) return null;
     if (candidate.amountAtomic !== binding.amountAtomic) return null;
-    if (candidate.sender.toLowerCase() !== this.options.walletAddress.toLowerCase()) return null;
+    let durableProviderKind: 'DIRECT_ARC' | 'CIRCLE_X402' = 'DIRECT_ARC';
+    let durableTransactionHash: string | undefined;
+    if (this.options.localStatePort) {
+      try {
+        const snapshot = await this.options.localStatePort.read(binding.businessIntentId);
+        durableProviderKind = snapshot.providerIdentity?.providerKind ?? 'DIRECT_ARC';
+        durableTransactionHash = snapshot.providerIdentity?.transactionHash;
+      } catch {
+        return null;
+      }
+    }
+    if (
+      durableTransactionHash &&
+      durableTransactionHash.toLowerCase() !== candidate.transactionHash.toLowerCase()
+    ) {
+      return null;
+    }
+    const base = await this.read(binding);
+    if (!base.privy) return null;
+    const gatewayWallet = this.options.gatewayWalletAddress ?? ARC_X402_GATEWAY_WALLET;
+    const isCircleX402 = durableProviderKind === 'CIRCLE_X402';
+    const expectedSender = isCircleX402 ? gatewayWallet : this.options.walletAddress;
+    if (candidate.sender.toLowerCase() !== expectedSender.toLowerCase()) return null;
 
     const receipt = await this.options.receiptSource.getReceipt(candidate.transactionHash);
     if (!receipt) return null;
@@ -345,18 +380,23 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
     if (receipt.blockNumber.toString() !== candidate.blockNumber) return null;
     if (receipt.blockHash.toLowerCase() !== candidate.blockHash.toLowerCase()) return null;
 
-    const base = await this.read(binding);
     // Candidate discovery can never establish the provider identity. Without
     // the durable identity, an Arc receipt is not bound to this attempt.
-    if (!base.privy) return null;
-
-    const verdict = verifyReceipt(receipt, {
-      chainId: this.options.chainId ?? 5042002,
-      walletAddress: this.options.walletAddress,
-      tokenContract: binding.tokenContract,
-      recipient: binding.recipient,
-      amountAtomic: BigInt(binding.amountAtomic),
-    });
+    const verdict = isCircleX402
+      ? verifyCircleX402Receipt(receipt, {
+          chainId: this.options.chainId ?? 5042002,
+          tokenContract: binding.tokenContract,
+          recipient: binding.recipient,
+          amountAtomic: BigInt(binding.amountAtomic),
+          gatewayWalletAddress: this.options.gatewayWalletAddress ?? ARC_X402_GATEWAY_WALLET,
+        })
+      : verifyReceipt(receipt, {
+          chainId: this.options.chainId ?? 5042002,
+          walletAddress: this.options.walletAddress,
+          tokenContract: binding.tokenContract,
+          recipient: binding.recipient,
+          amountAtomic: BigInt(binding.amountAtomic),
+        });
     if (verdict.result !== 'CONFIRMED') return null;
     if (String(verdict.transferLogIndex) !== candidate.logIndex) return null;
 
@@ -402,12 +442,29 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
 
   async read(binding: EvidenceBinding): Promise<KnownIdentityRecoveryEvidence> {
     const nowIso = new Date().toISOString();
-    const txHash = this.options.defaultArcTxHash ?? null;
+    let localStateVersion = '1';
+    let localSettlementState: 'SUBMITTING' | 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE' = 'UNKNOWN';
+    let providerReferenceId: string | undefined;
+    let providerKind: 'DIRECT_ARC' | 'CIRCLE_X402' | undefined;
+    let durableTransactionHash: string | undefined;
+    if (this.options.localStatePort) {
+      try {
+        const snapshot = await this.options.localStatePort.read(binding.businessIntentId);
+        localStateVersion = snapshot.durable.stateVersion;
+        localSettlementState = snapshot.durable.state;
+        providerReferenceId = snapshot.providerIdentity?.referenceId;
+        providerKind = snapshot.providerIdentity?.providerKind;
+        durableTransactionHash = snapshot.providerIdentity?.transactionHash;
+      } catch {
+        // Missing durable state is not permission to invent a provider identity.
+      }
+    }
+    const txHash = durableTransactionHash ?? this.options.defaultArcTxHash ?? null;
 
     let laneBResult: EvidenceResult = 'UNAVAILABLE';
     let lookupError: string | undefined;
 
-    if (this.options.evidencePort) {
+    if (this.options.evidencePort && providerKind !== 'CIRCLE_X402') {
       try {
         laneBResult = await this.options.evidencePort.lookup({
           businessIntentId: binding.businessIntentId,
@@ -432,8 +489,20 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
       }
     }
 
-    const isSuccess = laneBResult === 'FINAL_SUCCESS';
-    const isRevert = laneBResult === 'FINAL_REVERT';
+    const circleReceiptVerdict =
+      providerKind === 'CIRCLE_X402' && realReceipt
+        ? verifyCircleX402Receipt(realReceipt, {
+            chainId: this.options.chainId ?? 5042002,
+            tokenContract: binding.tokenContract,
+            recipient: binding.recipient,
+            amountAtomic: BigInt(binding.amountAtomic),
+            gatewayWalletAddress: this.options.gatewayWalletAddress ?? ARC_X402_GATEWAY_WALLET,
+          })
+        : undefined;
+    const isSuccess =
+      laneBResult === 'FINAL_SUCCESS' || circleReceiptVerdict?.result === 'CONFIRMED';
+    const isRevert =
+      laneBResult === 'FINAL_REVERT' || circleReceiptVerdict?.result === 'FINAL_REVERT';
 
     const privyStatus: 'SUCCEEDED' | 'FAILED' | 'PENDING' | 'NOT_FOUND' | 'UNAVAILABLE' = isSuccess
       ? 'SUCCEEDED'
@@ -444,21 +513,6 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
           : laneBResult === 'NOT_FOUND'
             ? 'NOT_FOUND'
             : 'UNAVAILABLE';
-
-    // Retrieve local state from port if available to match actual stateVersion
-    let localStateVersion = '1';
-    let localSettlementState: 'SUBMITTING' | 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE' = 'UNKNOWN';
-    let providerReferenceId: string | undefined;
-    if (this.options.localStatePort) {
-      try {
-        const snapshot = await this.options.localStatePort.read(binding.businessIntentId);
-        localStateVersion = snapshot.durable.stateVersion;
-        localSettlementState = snapshot.durable.state;
-        providerReferenceId = snapshot.providerIdentity?.referenceId;
-      } catch {
-        // Missing durable state is not permission to invent a provider identity.
-      }
-    }
 
     if ((txHash || realReceipt) && !providerReferenceId) {
       throw new Error(
@@ -492,15 +546,23 @@ export class PrivyArcEvidenceBridge implements KnownIdentityEvidencePort {
       const receiptMatchesHash =
         txHash === null || realReceipt.transactionHash.toLowerCase() === txHash.toLowerCase();
       const verdict =
-        expectedWallet && receiptMatchesHash
-          ? verifyReceipt(realReceipt, {
+        receiptMatchesHash && providerKind === 'CIRCLE_X402'
+          ? verifyCircleX402Receipt(realReceipt, {
               chainId: this.options.chainId ?? 5042002,
-              walletAddress: expectedWallet,
               tokenContract: binding.tokenContract,
               recipient: binding.recipient,
               amountAtomic: BigInt(binding.amountAtomic),
+              gatewayWalletAddress: this.options.gatewayWalletAddress ?? ARC_X402_GATEWAY_WALLET,
             })
-          : null;
+          : expectedWallet && receiptMatchesHash
+            ? verifyReceipt(realReceipt, {
+                chainId: this.options.chainId ?? 5042002,
+                walletAddress: expectedWallet,
+                tokenContract: binding.tokenContract,
+                recipient: binding.recipient,
+                amountAtomic: BigInt(binding.amountAtomic),
+              })
+            : null;
 
       let transfer: {
         tokenContract: string;

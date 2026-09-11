@@ -90,6 +90,36 @@ export interface CreateJobRequest {
   readonly amount_atomic: string;
 }
 
+export interface CreatePaidApiRequest {
+  readonly task_key: string;
+  readonly tool_id: 'circle-x402-api-v1';
+}
+
+export interface PaidApiQuote {
+  readonly supplier_id: 'circle-x402-v1';
+  readonly resource_url: string;
+  readonly recipient: string;
+  readonly amount_atomic: string;
+  readonly asset: 'USDC';
+  readonly network: 'eip155:5042002';
+  readonly x402_version: number;
+  readonly max_timeout_seconds: number;
+}
+
+export interface PaidApiResponse {
+  readonly business_intent_id: string;
+  readonly task_key: string;
+  readonly tool_id: 'circle-x402-api-v1';
+  readonly resource_url: string;
+  readonly payment_state: IntentState;
+  readonly quote: PaidApiQuote;
+  readonly provider_transaction_hash?: string;
+  readonly settlement?: SettlementView;
+  readonly response?: unknown;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
 export interface SupplierQuote {
   readonly supplier_id: 'team-report-v1';
   readonly order_reference: string;
