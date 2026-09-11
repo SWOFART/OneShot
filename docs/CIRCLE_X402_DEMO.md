@@ -1,8 +1,9 @@
 # Circle x402 API demo
 
-The workspace Tools page now contains the live paid-API path. Configure
-`ONESHOT_X402_URL` and `ONESHOT_X402_MAX_AMOUNT_ATOMIC` in both the API and
-worker environments, then use the site to request a quote and approve the
+The workspace Tools page now contains the live paid-API path. First deploy the
+seller described in [`CIRCLE_X402_SELLER.md`](CIRCLE_X402_SELLER.md), then
+configure `ONESHOT_X402_URL` and `ONESHOT_X402_MAX_AMOUNT_ATOMIC` in both the
+API and worker environments. Use the site to request a quote and approve the
 stable task key. The approval creates one durable Business Intent; the worker
 submits Circle Gateway x402 only after the existing authorization and
 submission claims.
@@ -31,7 +32,7 @@ Build the workspace, then run the script with a deployment secret store or an
 ignored local `.env` file:
 
 ```powershell
-$env:ONESHOT_X402_URL = 'https://<circle-sample-host>/api/premium/dataset'
+$env:ONESHOT_X402_URL = 'https://oneshot.kapustazh.dev/api/premium/dataset'
 $env:ONESHOT_X402_BUSINESS_INTENT_ID = 'x402-demo-2026-09-11'
 $env:ONESHOT_X402_GATEWAY_FUNDED = 'true'
 $env:ONESHOT_X402_MAX_AMOUNT_ATOMIC = '10000'
@@ -42,6 +43,12 @@ The endpoint must return one affordable Circle Gateway option for Arc Testnet
 (`eip155:5042002`) using the native USDC contract
 `0x3600000000000000000000000000000000000000`. The default limit is `10000`
 atomic units (`0.01 USDC`).
+
+Before running the browser flow, verify that both the direct Cloud Run seller
+URL and the same-domain URL return HTTP `402` with a `PAYMENT-REQUIRED` header.
+An HTML `200` response means the Cloudflare Worker is serving the SPA instead of
+the seller proxy; a `503 SELLER_NOT_READY` response means
+`SELLER_BACKEND_URL` has not been configured on the Worker.
 
 The script performs one paid HTTP request. If the response is lost, malformed,
 or lacks a confirmed `PAYMENT-RESPONSE` transaction hash, the result is treated

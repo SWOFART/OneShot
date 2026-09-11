@@ -1,0 +1,29 @@
+{
+  "name": "@oneshot/seller",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "lint": "eslint src test",
+    "start": "node dist/entrypoint.js",
+    "start:local": "node --env-file=../../.env dist/entrypoint.js",
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@circle-fin/x402-batching": "3.4.0",
+    "@x402/core": "2.25.0",
+    "@x402/evm": "2.25.0",
+    "viem": "2.56.3"
+  }
+}

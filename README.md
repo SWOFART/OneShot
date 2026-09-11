@@ -255,9 +255,11 @@ shown for retries; users do not need to invent one. After settlement, the job
 list links directly to ArcScan and keeps the supplier result separate from
 payment evidence.
 
-The Tools cabinet also supports **Paid API purchase via Circle x402**. Configure
-the Circle nanopayments sample endpoint in both API and worker environments;
-the site then quotes and starts one durable paid request. `pnpm demo:x402`
+The Tools cabinet also supports **Paid API purchase via Circle x402**. Deploy
+the repository's Circle Arc Testnet seller from
+[`docs/CIRCLE_X402_SELLER.md`](docs/CIRCLE_X402_SELLER.md), then configure its
+same-domain dataset endpoint in both API and worker environments; the site then
+quotes and starts one durable paid request. `pnpm demo:x402`
 remains an operator fallback. A lost or ambiguous x402 response is held as
 `UNKNOWN`; it is never retried blindly. See
 [`docs/CIRCLE_X402_DEMO.md`](docs/CIRCLE_X402_DEMO.md). This rail is not the

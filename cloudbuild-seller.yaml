@@ -1,0 +1,14 @@
+substitutions:
+  _IMAGE: seller-image
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--file'
+      - 'Dockerfile.seller'
+      - '--tag'
+      - '${_IMAGE}'
+      - '.'
+images:
+  - '${_IMAGE}'

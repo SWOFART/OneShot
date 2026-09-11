@@ -81,6 +81,21 @@ importers:
         specifier: 12.1.0
         version: 12.1.0(supports-color@10.2.2)
 
+  apps/seller:
+    dependencies:
+      '@circle-fin/x402-batching':
+        specifier: 3.4.0
+        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
+      '@x402/core':
+        specifier: 2.25.0
+        version: 2.25.0
+      '@x402/evm':
+        specifier: 2.25.0
+        version: 2.25.0(typescript@6.0.3)
+      viem:
+        specifier: 2.56.3
+        version: 2.56.3(typescript@6.0.3)(zod@3.25.76)
+
   apps/web:
     dependencies:
       '@oneshot/brand':
@@ -167,7 +182,7 @@ importers:
         version: link:../../packages/supplier-adapter
       '@privy-io/node':
         specifier: 0.34.0
-        version: 0.34.0(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
+        version: 0.34.0(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
       google-auth-library:
         specifier: 11.0.2
         version: 11.0.2(supports-color@10.2.2)
@@ -247,7 +262,7 @@ importers:
         version: link:../contracts
       '@privy-io/node':
         specifier: 0.34.0
-        version: 0.34.0(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
+        version: 0.34.0(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
       viem:
         specifier: 2.56.3
         version: 2.56.3(typescript@6.0.3)(zod@3.25.76)
@@ -375,7 +390,7 @@ importers:
     dependencies:
       '@circle-fin/x402-batching':
         specifier: 3.4.0
-        version: 3.4.0(@x402/core@2.25.0)(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
+        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
       '@oneshot/arc-adapter':
         specifier: workspace:*
         version: link:../arc-adapter
@@ -2045,6 +2060,9 @@ packages:
 
   '@x402/core@2.25.0':
     resolution: {integrity: sha512-5Ys0XYz3FKutxVKoXC46R/XPT/oaAbuj7ahzrlVHwQxZJPH9u6u91IOh0ztz+7G/zYGsaXR8l3ety205QtEnUw==}
+
+  '@x402/evm@2.25.0':
+    resolution: {integrity: sha512-EmnL4MyGW8weEUlq0qC1uJUeoBmtp9GWGwyPl+qkC0CYItRHn748puhYAxK8GsrofscQrt63HsFCB0Gp3iEROA==}
 
   abitype@0.7.1:
     resolution: {integrity: sha512-VBkRHTDZf9Myaek/dO3yMmOzB/y2s3Zo6nVU7yaw1G+TvCHAjwaJzNGN9yo4K5D8bU/VZXKP1EJpRhFr862PlQ==}
@@ -5365,10 +5383,12 @@ snapshots:
     dependencies:
       '@chainsafe/is-ip': 2.1.0
 
-  '@circle-fin/x402-batching@3.4.0(@x402/core@2.25.0)(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))':
+  '@circle-fin/x402-batching@3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))':
     dependencies:
       '@x402/core': 2.25.0
       viem: 2.56.3(typescript@6.0.3)(zod@3.25.76)
+    optionalDependencies:
+      '@x402/evm': 2.25.0(typescript@6.0.3)
 
   '@cloudflare/kv-asset-handler@0.5.0': {}
 
@@ -6322,7 +6342,7 @@ snapshots:
     optionalDependencies:
       viem: 2.56.3(typescript@6.0.3)(zod@3.25.76)
 
-  '@privy-io/node@0.34.0(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))':
+  '@privy-io/node@0.34.0(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))':
     dependencies:
       '@hpke/chacha20poly1305': 1.8.0
       '@hpke/core': 1.9.0
@@ -6334,6 +6354,7 @@ snapshots:
       lru-cache: 11.5.2
       svix: 1.99.1
     optionalDependencies:
+      '@x402/evm': 2.25.0(typescript@6.0.3)
       viem: 2.56.3(typescript@6.0.3)(zod@3.25.76)
 
   '@privy-io/popup@0.0.1': {}
@@ -7640,6 +7661,16 @@ snapshots:
   '@x402/core@2.25.0':
     dependencies:
       zod: 3.25.76
+
+  '@x402/evm@2.25.0(typescript@6.0.3)':
+    dependencies:
+      '@x402/core': 2.25.0
+      viem: 2.56.3(typescript@6.0.3)(zod@3.25.76)
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - bufferutil
+      - typescript
+      - utf-8-validate
 
   abitype@0.7.1(typescript@6.0.3)(zod@3.25.76):
     dependencies:
