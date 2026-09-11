@@ -13,8 +13,8 @@
   },
   "vars": {
     "API_BACKEND_URL": "https://oneshot-api-775560462825.europe-west1.run.app",
-    // The seller is deployed separately on Cloud Run. Supply this per deploy:
-    // `wrangler deploy --var SELLER_BACKEND_URL:https://<seller-url>`.
+    // Public seller origin; override with `wrangler deploy --var` per environment.
+    "SELLER_BACKEND_URL": "https://oneshot-seller-775560462825.europe-west1.run.app",
   },
   "routes": [
     {
