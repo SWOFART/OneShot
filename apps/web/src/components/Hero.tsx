@@ -1,5 +1,5 @@
 import { HERO_MIN_WIDTH, heroClipPaths } from '@oneshot/brand';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 /**
  * The hero, and the only diagonal cut in the product.
@@ -18,7 +18,13 @@ export function Hero({ children }: { readonly children: ReactNode }) {
   const [width, setWidth] = useState(0);
   const id = useId();
 
-  useEffect(() => {
+  // `useLayoutEffect`, not `useEffect`: this app is pure client-side render
+  // (see `src/main.tsx`, no SSR), so the synchronous flush happens before the
+  // browser paints. `useEffect` fires after paint, which meant every desktop
+  // load painted `.hero-plain` for one frame and then flashed to `.hero-cut`.
+  // Measuring synchronously here removes that flash. The `ResizeObserver`
+  // wiring for subsequent resizes is unchanged.
+  useLayoutEffect(() => {
     const element = box.current;
     if (element === null) return;
 
