@@ -35,8 +35,19 @@
 
   /* Fixed inks. The signal pill and the lime field are the same colour in both
    * themes, so the text on them is too — it is a property of the surface, not
-   * of the theme, and neither is ever overridden below. */
+   * of the theme, and neither is ever overridden below.
+   *
+   * A surface with its own fixed ink needs a fixed muted ink too. Without one,
+   * secondary copy on the lime field (a quote's `dt` labels, a panel lede)
+   * inherits --os-panel-ink-muted, which is near-white: correct on the forest
+   * panel it was chosen for, invisible on lime. */
   --os-on-field: #0b332c;
+  --os-on-field-muted: #3f5c46;
+
+  /* The lime field's own line, for the same reason --os-panel-line exists: a
+   * surface that does not flip needs a border that does not flip either.
+   * Deliberately not overridden in the dark block below. */
+  --os-field-line: rgba(11, 51, 44, 0.18);
 
   /* lines */
   --os-line: rgba(11, 51, 44, 0.14);

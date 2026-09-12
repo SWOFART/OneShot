@@ -44,8 +44,37 @@ describe('Gate P5 shell composition', () => {
     expect(screen.getByRole('tab', { name: 'API services' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Requests' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Payment proof' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Spending rules' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Team & access' })).toBeTruthy();
+  });
+
+  it('offers only the four working cabinet sections', () => {
+    render(
+      <App
+        route="/app"
+        useOperatorSession={() => signedInSession()}
+        apiClient={
+          new OneShotApiClient({
+            fetchFn: async () =>
+              new Response(JSON.stringify({ status: 'ok' }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+              }),
+          })
+        }
+        settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
+        recoveryClient={createInMemoryRecoveryClient('lagging')}
+      />,
+    );
+
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Overview',
+      'API services',
+      'Requests',
+      'Payment proof',
+    ]);
+    // Spending rules and Team & access were read-only restatements of facts the
+    // other sections already show, and neither had a control behind it.
+    expect(screen.queryByRole('tab', { name: 'Spending rules' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Team & access' })).toBeNull();
   });
 
   it('gives API services and Requests distinct responsibilities', async () => {
