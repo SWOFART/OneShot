@@ -4,9 +4,17 @@ import type { JobView, PaidApiQuote, PaidApiResponse, SupplierQuote } from '@one
 import type { JobApiClient } from '../api/job-client.js';
 import type { PaidApiClient } from '../api/paid-api-client.js';
 import { usdcToAtomicUnits } from '../utils/money.js';
+import {
+  deliveryStatusCopy,
+  maskAddress,
+  maskIdentifier,
+  networkLabel,
+  paymentStatusCopy,
+  serviceLabel,
+} from './workspace-copy.js';
 
 function shortenAddress(value: string): string {
-  return value.length > 14 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
+  return maskAddress(value);
 }
 
 function quoteAmount(quote: SupplierQuote): string {
@@ -39,33 +47,44 @@ export function SupplierQuotePanel({
     <section className="panel quote-panel" aria-label={heading}>
       <header className="panel-heading">
         <h3>{heading}</h3>
-        <span className="badge tone-neutral">API quote</span>
+        <span className="badge tone-neutral">Payment preview</span>
       </header>
-      <p className="panel-lede">These values came from the supplier order returned by the API.</p>
+      <p className="panel-lede">
+        Confirm the recipient and the USDC amount they will receive. Network fees are separate.
+      </p>
       <dl className="facts">
         <div>
-          <dt>Amount</dt>
+          <dt>Recipient receives</dt>
           <dd className="mono">{quoteAmount(quote)}</dd>
         </div>
         <div>
-          <dt>Recipient</dt>
+          <dt>Service destination</dt>
           <dd className="mono" title={quote.recipient}>
             {shortenAddress(quote.recipient)}
           </dd>
         </div>
         <div>
           <dt>Network</dt>
-          <dd>{quote.network}</dd>
+          <dd>{networkLabel(quote.network)}</dd>
         </div>
         <div>
-          <dt>Order reference</dt>
-          <dd className="mono break-all">{quote.order_reference}</dd>
-        </div>
-        <div>
-          <dt>Quote expires</dt>
+          <dt>Quote valid until</dt>
           <dd>{new Date(quote.expires_at).toLocaleString()}</dd>
         </div>
       </dl>
+      <details className="technical-details">
+        <summary>Show supplier details</summary>
+        <dl className="facts">
+          <div>
+            <dt>Order reference</dt>
+            <dd className="mono break-all">{quote.order_reference}</dd>
+          </div>
+          <div>
+            <dt>Full destination</dt>
+            <dd className="mono break-all">{quote.recipient}</dd>
+          </div>
+        </dl>
+      </details>
     </section>
   );
 }
@@ -81,6 +100,7 @@ export function JobWorkspace(props: {
   const [runSuffix] = useState(() => crypto.randomUUID().slice(0, 8));
   const [quote, setQuote] = useState<SupplierQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [approvedJob, setApprovedJob] = useState<JobView | null>(null);
   const [notice, setNotice] = useState('');
   const generatedTaskKey = subject.trim() ? `report-${subjectSlug(subject)}-${runSuffix}` : '';
@@ -116,7 +136,7 @@ export function JobWorkspace(props: {
   async function loadQuote(): Promise<void> {
     const jobRequest = request();
     if (!jobRequest) {
-      setNotice('Enter a valid recipient wallet and a positive USDC amount.');
+      setNotice('Enter a valid service destination and a positive USDC amount.');
       return;
     }
     setQuoteLoading(true);
@@ -129,7 +149,9 @@ export function JobWorkspace(props: {
       );
     } catch {
       setQuote(null);
-      setNotice('A live quote is not available. Check API readiness and try again.');
+      setNotice(
+        'The service could not prepare a payment preview. No payment was requested. Check the connection and try again.',
+      );
     } finally {
       setQuoteLoading(false);
     }
@@ -142,28 +164,36 @@ export function JobWorkspace(props: {
       setNotice('Enter a valid recipient wallet and a positive USDC amount.');
       return;
     }
+    setStarting(true);
     try {
       const job = await props.client.start(jobRequest);
       setApprovedJob(job);
-      setNotice(`Job ${job.job_id} is approved. Payment authorization is queued.`);
-      props.onSelectIntent(job.business_intent_id);
+      setNotice('Request accepted. Payment authorization is queued.');
     } catch {
-      setNotice('The job was not started. Keep the same task key when retrying this request.');
+      setNotice('The request was not started. Keep the same request key when retrying.');
+    } finally {
+      setStarting(false);
     }
   }
 
   return (
-    <section className="panel job-workspace" aria-label="Start a company-data report">
+    <section
+      className="panel job-workspace"
+      aria-label="Company research service"
+      aria-busy={quoteLoading || starting}
+    >
       <header>
-        <h2>Start a company-data report</h2>
+        <p className="eyebrow">API SERVICE</p>
+        <h2>Company research service</h2>
         <p>
-          Enter a company or domain. OneShot creates a stable task key for this run and fetches a
-          live team-operated Arc Testnet invoice before any payment authorization is requested.
+          Prepare a team-operated company report request. You choose the destination and payment
+          amount; preview confirms those details before you approve a payment.
         </p>
       </header>
       <label htmlFor="report-subject">Company or domain</label>
       <input
         id="report-subject"
+        disabled={quoteLoading || starting}
         value={subject}
         onChange={(event) => {
           setSubject(event.target.value);
@@ -171,9 +201,10 @@ export function JobWorkspace(props: {
         }}
         placeholder="acme.com"
       />
-      <label htmlFor="report-recipient">Recipient wallet</label>
+      <label htmlFor="report-recipient">Service destination wallet</label>
       <input
         id="report-recipient"
+        disabled={quoteLoading || starting}
         value={recipient}
         onChange={(event) => {
           setRecipient(event.target.value);
@@ -186,11 +217,12 @@ export function JobWorkspace(props: {
         aria-describedby="report-recipient-help"
       />
       <small id="report-recipient-help" className="field-help">
-        Use an Arc Testnet wallet allowed by the active Privy policy.
+        Use an Arc Testnet destination allowed by the active Privy spending rule.
       </small>
       <label htmlFor="report-amount">Amount (USDC)</label>
       <input
         id="report-amount"
+        disabled={quoteLoading || starting}
         value={amount}
         onChange={(event) => {
           setAmount(event.target.value);
@@ -202,24 +234,25 @@ export function JobWorkspace(props: {
         aria-describedby="report-amount-help"
       />
       <small id="report-amount-help" className="field-help">
-        Up to 6 decimal places. The request is sent as integer USDC atomic units.
-      </small>
-      <label htmlFor="generated-task-key">Task key for retries</label>
-      <input
-        id="generated-task-key"
-        value={generatedTaskKey}
-        readOnly
-        placeholder="Generated after entering a subject"
-      />
-      <small className="field-help">
-        Keep this generated key if the request needs to be retried. It prevents a second payment for
-        the same run.
+        This is the amount the recipient receives, excluding network fees. Up to 6 decimal places.
       </small>
       <details className="advanced-fields">
-        <summary>Use a custom task key (advanced)</summary>
-        <label htmlFor="custom-task-key">Custom stable task key</label>
+        <summary>Request key (advanced)</summary>
+        <label htmlFor="generated-task-key">Request key</label>
+        <input
+          id="generated-task-key"
+          value={generatedTaskKey}
+          readOnly
+          placeholder="Generated after entering a subject"
+        />
+        <small className="field-help">
+          Keep this key when retrying. It resumes the same request instead of creating another
+          payment.
+        </small>
+        <label htmlFor="custom-task-key">Custom request key (optional)</label>
         <input
           id="custom-task-key"
+          disabled={quoteLoading || starting}
           value={customTaskKey}
           onChange={(event) => {
             setCustomTaskKey(event.target.value);
@@ -234,18 +267,26 @@ export function JobWorkspace(props: {
           disabled={quoteLoading || !request()}
           onClick={() => void loadQuote()}
         >
-          {quoteLoading ? 'Loading live quote…' : 'Get live quote'}
+          {quoteLoading ? 'Preparing preview…' : 'Review payment details'}
         </button>
       )}
       {quote && !approvedJob && (
         <>
-          <SupplierQuotePanel heading="Review quote before approval" quote={quote} />
+          <SupplierQuotePanel heading="Review before approval" quote={quote} />
+          <details className="technical-details agent-handoff">
+            <summary>Request for your agent</summary>
+            <p>
+              Send this exact request to POST /v1/jobs only after approval. Reuse its task key when
+              resuming. The amount is in USDC atomic units, not dollars; network fees are separate.
+            </p>
+            <pre className="response-output">{JSON.stringify(request(), null, 2)}</pre>
+          </details>
           <p className="field-help">
-            Nothing has been paid yet. Approval sends the quoted USDC from the Privy wallet to the
-            recipient you entered, subject to the active wallet policy.
+            Nothing has been paid yet. Approval sends the exact quote through the active Privy
+            spending rule.
           </p>
-          <button type="button" onClick={() => void start()}>
-            Approve payment and start job
+          <button type="button" disabled={starting} onClick={() => void start()}>
+            {starting ? 'Starting request…' : 'Approve and run service'}
           </button>
         </>
       )}
@@ -255,7 +296,16 @@ export function JobWorkspace(props: {
         </p>
       )}
       {approvedJob && (
-        <SupplierQuotePanel heading="Approved payment" quote={approvedJob.supplier} />
+        <>
+          <SupplierQuotePanel heading="Request accepted" quote={approvedJob.supplier} />
+          <button
+            type="button"
+            className="secondary compact"
+            onClick={() => props.onSelectIntent(approvedJob.business_intent_id)}
+          >
+            Open payment proof
+          </button>
+        </>
       )}
     </section>
   );
@@ -286,23 +336,24 @@ export function CircleX402DemoPanel(props: {
       setQuote(await props.client.quote(paidApiRequest));
     } catch {
       setQuote(null);
-      setNotice('A live x402 quote is unavailable. Check the API endpoint and try again.');
+      setNotice('A current price is unavailable. Check the connected service and try again.');
     } finally {
       setLoading(null);
     }
   }
 
   async function approve(): Promise<void> {
-    if (!props.client) return;
+    const approvedQuote = request?.quote ?? quote;
+    if (!props.client || !approvedQuote) return;
     setLoading('start');
     setNotice('');
     try {
-      const result = await props.client.start(paidApiRequest);
+      const result = await props.client.start({ ...paidApiRequest, approved_quote: approvedQuote });
       setRequest(result);
-      props.onSelectIntent(result.business_intent_id);
-      setNotice('OneShot accepted this Business Intent. The worker owns the payment attempt.');
+      setNotice('Request accepted. OneShot now owns the payment attempt.');
     } catch {
-      setNotice('The paid API request was not accepted. Keep the same task key before retrying.');
+      setQuote(null);
+      setNotice('The API request was not accepted. Keep the same request key before retrying.');
     } finally {
       setLoading(null);
     }
@@ -313,7 +364,7 @@ export function CircleX402DemoPanel(props: {
     setLoading('refresh');
     try {
       setRequest(await props.client.get(request.business_intent_id));
-      setNotice('Payment state refreshed from the authoritative OneShot ledger.');
+      setNotice('Payment status checked from the OneShot ledger.');
     } catch {
       setNotice('Payment state could not be refreshed; no new payment was submitted.');
     } finally {
@@ -322,22 +373,22 @@ export function CircleX402DemoPanel(props: {
   }
 
   return (
-    <section className="panel paid-api-panel" aria-label="Circle x402 API demo">
+    <section className="panel" aria-label="Circle Dataset API service">
       <header className="panel-heading">
         <div>
-          <p className="eyebrow">LIVE PAID API</p>
-          <h2>Buy a Circle x402 API result</h2>
+          <p className="eyebrow">CONNECTED API SERVICE</p>
+          <h2>Circle Dataset API</h2>
         </div>
         <span className="badge tone-neutral">Arc Testnet</span>
       </header>
       <p>
-        Review the live Circle Gateway quote, approve one stable task key, and watch OneShot move
-        the payment through Arc Testnet. Repeating the same task key replays the stored Business
-        Intent and cannot create a second settlement.
+        Get a dataset result through Circle’s payment rail. OneShot keeps one request key so a retry
+        reuses the original payment instead of charging twice.
       </p>
-      <label htmlFor="paid-api-task-key">Paid API task key</label>
+      <label htmlFor="paid-api-task-key">Request key</label>
       <input
         id="paid-api-task-key"
+        disabled={loading !== null || request !== null}
         value={taskKey}
         onChange={(event) => {
           setTaskKey(event.target.value);
@@ -348,8 +399,7 @@ export function CircleX402DemoPanel(props: {
         spellCheck={false}
       />
       <small className="field-help">
-        Keep this exact key if the browser or agent retries. A changed quote is returned as a
-        conflict instead of being charged twice.
+        Keep this exact key if the browser or agent retries. It identifies the same API request.
       </small>
       {!props.client ? (
         <p className="field-help">
@@ -361,74 +411,69 @@ export function CircleX402DemoPanel(props: {
           disabled={loading !== null || !paidApiRequest.task_key}
           onClick={() => void loadQuote()}
         >
-          {loading === 'quote' ? 'Checking live quote…' : 'Check live quote'}
+          {loading === 'quote' ? 'Checking price…' : 'Check price'}
         </button>
       ) : null}
       {quote && !request && (
         <>
           <section className="panel quote-panel" aria-label="Paid API quote">
             <header className="panel-heading">
-              <h3>Review x402 quote</h3>
+              <h3>Review payment</h3>
               <span className="badge tone-neutral">No charge yet</span>
             </header>
             <dl className="facts">
               <div>
-                <dt>Amount</dt>
+                <dt>Recipient receives</dt>
                 <dd className="mono">
                   {formatAtomicUsdcWithAsset(quote.amount_atomic, quote.asset) ?? 'Unavailable'}
                 </dd>
               </div>
               <div>
-                <dt>Recipient</dt>
+                <dt>Service destination</dt>
                 <dd className="mono" title={quote.recipient}>
                   {shortenAddress(quote.recipient)}
                 </dd>
               </div>
               <div>
                 <dt>Network</dt>
-                <dd>{quote.network}</dd>
-              </div>
-              <div>
-                <dt>Resource</dt>
-                <dd className="break-all">{quote.resource_url}</dd>
+                <dd>{networkLabel(quote.network)}</dd>
               </div>
             </dl>
+            <details className="technical-details">
+              <summary>Show API payment details</summary>
+              <dl className="facts">
+                <div>
+                  <dt>Resource</dt>
+                  <dd className="break-all">{quote.resource_url}</dd>
+                </div>
+                <div>
+                  <dt>Full destination</dt>
+                  <dd className="mono break-all">{quote.recipient}</dd>
+                </div>
+              </dl>
+            </details>
           </section>
           <p className="field-help">
-            Approval creates the durable intent. Only the worker can submit the Circle payment;
-            delayed or ambiguous outcomes stay UNKNOWN for reconciliation.
+            Approval creates the request. Only the worker can submit the Circle payment, and a
+            delayed response remains protected until evidence is checked.
           </p>
           <button type="button" disabled={loading !== null} onClick={() => void approve()}>
-            {loading === 'start' ? 'Approving…' : 'Approve and buy API result'}
+            {loading === 'start' ? 'Starting request…' : 'Approve and get result'}
           </button>
         </>
       )}
       {request && (
         <section className="paid-api-status" aria-label="Paid API payment status">
           <div className="job-row-heading">
-            <strong>Payment: {request.payment_state}</strong>
-            <span className="badge tone-neutral">One intent</span>
+            <strong>{paymentStatusCopy(request.payment_state).label}</strong>
+            <span className={`badge tone-${paymentStatusCopy(request.payment_state).tone}`}>
+              One request
+            </span>
           </div>
-          <p className="mono break-all">{request.business_intent_id}</p>
-          {request.provider_transaction_hash && (
-            <p>
-              Circle Gateway transaction:{' '}
-              {explorerHref(request.provider_transaction_hash) ? (
-                <a
-                  href={explorerHref(request.provider_transaction_hash)}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  View on ArcScan
-                </a>
-              ) : (
-                <span className="mono">{request.provider_transaction_hash}</span>
-              )}
-            </p>
-          )}
+          <p>{paymentStatusCopy(request.payment_state).description}</p>
           {request.settlement ? (
             <p>
-              <strong>Payment confirmed on Arc:</strong>{' '}
+              <strong>Arc payment confirmed.</strong>{' '}
               <a
                 href={explorerHref(request.settlement.transaction_hash)}
                 target="_blank"
@@ -439,12 +484,15 @@ export function CircleX402DemoPanel(props: {
             </p>
           ) : (
             <p className="field-help">
-              Arc confirmation is pending. Refresh this read-only status; do not approve a new task
-              key while this one is unresolved.
+              Check this request again later. Do not start a new request while payment verification
+              is in progress.
             </p>
           )}
           {request.response !== undefined && (
-            <pre className="response-output">{JSON.stringify(request.response, null, 2)}</pre>
+            <div className="response-output">
+              <strong>API result</strong>
+              <pre>{JSON.stringify(request.response, null, 2)}</pre>
+            </div>
           )}
           <button
             type="button"
@@ -452,8 +500,56 @@ export function CircleX402DemoPanel(props: {
             disabled={loading !== null}
             onClick={() => void refresh()}
           >
-            {loading === 'refresh' ? 'Refreshing…' : 'Refresh payment'}
+            {loading === 'refresh' ? 'Checking…' : 'Check payment status'}
           </button>
+          {request.payment_state === 'COMMITTED' && (
+            <button
+              type="button"
+              className="secondary compact"
+              disabled={loading !== null}
+              onClick={() => void approve()}
+            >
+              Replay same request safely
+            </button>
+          )}
+          <button
+            type="button"
+            className="secondary compact"
+            onClick={() => props.onSelectIntent(request.business_intent_id)}
+          >
+            Open payment proof
+          </button>
+          <details className="technical-details">
+            <summary>Show technical request details</summary>
+            <dl className="facts">
+              <div>
+                <dt>Request identity</dt>
+                <dd className="mono break-all">{maskIdentifier(request.business_intent_id, 10)}</dd>
+              </div>
+              <div>
+                <dt>Resource</dt>
+                <dd className="break-all">{request.resource_url}</dd>
+              </div>
+              {request.provider_transaction_hash && (
+                <div>
+                  <dt>Circle transaction</dt>
+                  <dd>
+                    {explorerHref(request.provider_transaction_hash) ? (
+                      <a
+                        href={explorerHref(request.provider_transaction_hash)}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        View on ArcScan
+                      </a>
+                    ) : (
+                      <span className="mono">{request.provider_transaction_hash}</span>
+                    )}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </details>
         </section>
       )}
       {notice && (
@@ -467,7 +563,7 @@ export function CircleX402DemoPanel(props: {
         target="_blank"
         rel="noreferrer noopener"
       >
-        Open x402 deployment runbook
+        Open service deployment runbook
       </a>
     </section>
   );
@@ -480,6 +576,7 @@ export function JobList(props: {
   const [jobs, setJobs] = useState<readonly JobView[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [resumingJobId, setResumingJobId] = useState<string | null>(null);
 
   async function refresh(): Promise<void> {
     setLoading(true);
@@ -487,9 +584,22 @@ export function JobList(props: {
       setJobs(await props.client.list());
       setError('');
     } catch {
-      setError('Jobs could not be loaded. Check API readiness and operator authentication.');
+      setError('Requests could not be loaded. Check API readiness and your workspace session.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function resume(jobId: string): Promise<void> {
+    setResumingJobId(jobId);
+    setError('');
+    try {
+      await props.client.resume(jobId);
+      await refresh();
+    } catch {
+      setError('The result could not be resumed. No new payment was submitted.');
+    } finally {
+      setResumingJobId(null);
     }
   }
 
@@ -498,14 +608,23 @@ export function JobList(props: {
   }, []);
 
   return (
-    <section className="panel" aria-label="Jobs and results">
+    <section
+      className="panel"
+      aria-label="Requests and results"
+      aria-busy={loading || resumingJobId !== null}
+    >
       <header className="panel-heading">
         <div>
-          <p className="eyebrow">WORKSPACE JOBS</p>
-          <h2>Jobs and results</h2>
+          <p className="eyebrow">API REQUESTS</p>
+          <h2>Requests and results</h2>
         </div>
-        <button type="button" className="secondary compact" onClick={() => void refresh()}>
-          Refresh jobs
+        <button
+          type="button"
+          className="secondary compact"
+          disabled={loading || resumingJobId !== null}
+          onClick={() => void refresh()}
+        >
+          {loading ? 'Refreshing…' : 'Refresh requests'}
         </button>
       </header>
       {error && (
@@ -514,71 +633,90 @@ export function JobList(props: {
         </p>
       )}
       {loading ? (
-        <p role="status">Loading jobs…</p>
+        <p role="status">Checking requests…</p>
       ) : jobs.length === 0 ? (
-        <p>No jobs yet. Open Tools to start a supported report.</p>
+        <p>No requests yet. Open API services to start a supported request.</p>
       ) : (
         <ul className="attempts job-list">
-          {jobs.map((job) => (
-            <li key={job.job_id}>
-              <div className="job-row-heading">
+          {jobs.map((job, index) => {
+            const payment = paymentStatusCopy(job.payment_state);
+            const delivery = deliveryStatusCopy(job.delivery_state);
+            return (
+              <li key={job.job_id}>
+                <div className="job-row-heading">
+                  <button
+                    type="button"
+                    className="secondary compact"
+                    onClick={() => props.onSelectIntent(job.business_intent_id)}
+                  >
+                    Open request {index + 1}
+                  </button>
+                  <span className={`badge tone-${delivery.tone}`}>{delivery.label}</span>
+                </div>
+                <p>
+                  <strong>{serviceLabel(job.tool_id)}</strong> · {payment.label}
+                </p>
+                <p className="job-quote-summary">
+                  Price: <span className="mono">{quoteAmount(job.supplier)}</span> ·{' '}
+                  {delivery.description}
+                </p>
+                {job.settlement && (
+                  <p className="job-settlement-summary">
+                    <strong>Payment confirmed:</strong>{' '}
+                    {explorerHref(job.settlement.transaction_hash) ? (
+                      <a
+                        href={explorerHref(job.settlement.transaction_hash)}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        View the ArcScan transaction
+                      </a>
+                    ) : (
+                      <span className="mono">{job.settlement.transaction_hash}</span>
+                    )}
+                  </p>
+                )}
+                {job.result ? (
+                  <p>
+                    <strong>Result ready:</strong> {job.result.report}
+                  </p>
+                ) : job.payment_state === 'COMMITTED' ? (
+                  <button
+                    type="button"
+                    className="secondary compact"
+                    disabled={resumingJobId !== null}
+                    onClick={() => void resume(job.job_id)}
+                  >
+                    {resumingJobId === job.job_id ? 'Resuming…' : 'Resume result (no new payment)'}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="secondary compact"
                   onClick={() => props.onSelectIntent(job.business_intent_id)}
                 >
-                  {job.task_key}
+                  Open payment proof
                 </button>
-                <span className="badge tone-neutral">{job.delivery_state}</span>
-              </div>
-              <p>
-                Payment: <strong>{job.payment_state}</strong> · Delivery:{' '}
-                <strong>{job.delivery_state}</strong>
-              </p>
-              <p className="job-quote-summary">
-                Quote: <span className="mono">{quoteAmount(job.supplier)}</span> · recipient{' '}
-                <span className="mono" title={job.supplier.recipient}>
-                  {shortenAddress(job.supplier.recipient)}
-                </span>
-              </p>
-              {job.settlement && (
-                <p className="job-settlement-summary">
-                  <strong>Payment confirmed:</strong>{' '}
-                  {explorerHref(job.settlement.transaction_hash) ? (
-                    <a
-                      href={explorerHref(job.settlement.transaction_hash)}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                    >
-                      View the ArcScan transaction
-                    </a>
-                  ) : (
-                    <span className="mono">{job.settlement.transaction_hash}</span>
-                  )}
-                </p>
-              )}
-              {job.result ? (
-                <p>
-                  <strong>Result ready:</strong> {job.result.report}
-                </p>
-              ) : job.payment_state === 'COMMITTED' ? (
-                <button
-                  type="button"
-                  className="secondary compact"
-                  onClick={() => void props.client.resume(job.job_id).then(refresh)}
-                >
-                  Resume delivery (never pays)
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className="secondary compact"
-                onClick={() => props.onSelectIntent(job.business_intent_id)}
-              >
-                View payment evidence
-              </button>
-            </li>
-          ))}
+                <details className="technical-details">
+                  <summary>Show request details</summary>
+                  <dl className="facts">
+                    <div>
+                      <dt>Request key</dt>
+                      <dd className="mono break-all">{maskIdentifier(job.task_key)}</dd>
+                    </div>
+                    <div>
+                      <dt>Supplier order</dt>
+                      <dd className="mono break-all">{job.supplier.order_reference}</dd>
+                    </div>
+                    <div>
+                      <dt>Destination</dt>
+                      <dd className="mono break-all">{shortenAddress(job.supplier.recipient)}</dd>
+                    </div>
+                  </dl>
+                </details>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

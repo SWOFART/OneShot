@@ -1,5 +1,4 @@
 import {
-  RECOVERY_MOCK_SERVER_VERSION,
   parseRecoveryTimelinePage,
   type RecoveryActionReceipt,
   type RecoveryTimelinePage,
@@ -136,7 +135,6 @@ export function createInMemoryRecoveryClient(scenario: RecoveryScenario): Recove
       status: result.status,
       headers: {
         'content-type': 'application/json',
-        'x-oneshot-mock-version': RECOVERY_MOCK_SERVER_VERSION,
       },
     });
   };

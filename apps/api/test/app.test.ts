@@ -259,11 +259,24 @@ describe('OpenAPI contract endpoints', () => {
     expect(quoteResponse.statusCode).toBe(200);
     expect(quoteResponse.json()).toEqual(quote);
 
-    const accepted = await app.inject({
+    const missingApproval = await app.inject({
       method: 'POST',
       url: '/v1/paid-api',
       headers: { authorization: 'Bearer test-token' },
       payload: { task_key: 'circle-api-test', tool_id: 'circle-x402-api-v1' },
+    });
+    expect(missingApproval.statusCode).toBe(400);
+    expect(starts).toBe(0);
+
+    const accepted = await app.inject({
+      method: 'POST',
+      url: '/v1/paid-api',
+      headers: { authorization: 'Bearer test-token' },
+      payload: {
+        task_key: 'circle-api-test',
+        tool_id: 'circle-x402-api-v1',
+        approved_quote: quote,
+      },
     });
     expect(accepted.statusCode).toBe(202);
     expect(accepted.json()).toEqual(paidRequest);
@@ -273,7 +286,11 @@ describe('OpenAPI contract endpoints', () => {
       method: 'POST',
       url: '/v1/paid-api',
       headers: { authorization: 'Bearer test-token' },
-      payload: { task_key: 'circle-api-test', tool_id: 'circle-x402-api-v1' },
+      payload: {
+        task_key: 'circle-api-test',
+        tool_id: 'circle-x402-api-v1',
+        approved_quote: quote,
+      },
     });
     expect(replayed.statusCode).toBe(200);
     expect(starts).toBe(2);

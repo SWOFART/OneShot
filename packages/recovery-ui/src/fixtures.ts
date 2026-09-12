@@ -1,5 +1,4 @@
 import {
-  RECOVERY_MOCK_SERVER_VERSION,
   RECOVERY_TIMELINE_VERSION,
   type CoreDisposition,
   type GraphObservationSummary,
@@ -109,7 +108,6 @@ function makeScenario(options: ScenarioOptions = {}): readonly RecoveryTimelineP
 
   const common = {
     schemaVersion: RECOVERY_TIMELINE_VERSION,
-    mockServerVersion: RECOVERY_MOCK_SERVER_VERSION,
     businessIntentId: INTENT_ID,
     authoritativeState: state,
     stateVersion: '12',

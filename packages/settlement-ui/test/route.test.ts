@@ -37,7 +37,8 @@ describe('settlement details route', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { level: 2, name: 'Transaction' })).toBeTruthy();
     });
-    expect(screen.getByRole('heading', { level: 1, name: COMMITTED_ID })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Payment proof' })).toBeTruthy();
+    expect(screen.getByText(COMMITTED_ID)).toBeTruthy();
   });
 
   it.each([

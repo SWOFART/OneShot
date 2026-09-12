@@ -40,9 +40,12 @@ describe('Gate P5 shell composition', () => {
         recoveryClient={createInMemoryRecoveryClient('lagging')}
       />,
     );
-    expect(screen.getByRole('tab', { name: 'Tools' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Jobs' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Recovery & activity' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Your payment workspace', level: 1 })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'API services' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Requests' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Payment proof' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Spending rules' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Team & access' })).toBeTruthy();
   });
 
   it('offers only the four working cabinet sections', () => {
@@ -119,12 +122,14 @@ describe('Gate P5 shell composition', () => {
       />,
     );
 
-    await user.click(screen.getByRole('tab', { name: 'Tools' }));
-    expect(screen.getByRole('heading', { name: 'Start a company-data report' })).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Jobs and results', level: 2 })).toBeNull();
-    await user.click(screen.getByRole('tab', { name: 'Jobs' }));
-    expect(await screen.findByRole('heading', { name: 'Jobs and results', level: 2 })).toBeTruthy();
-    expect(screen.getByText(/Open Tools to start/u)).toBeTruthy();
+    await user.click(screen.getByRole('tab', { name: 'API services' }));
+    expect(screen.getByRole('heading', { name: 'Company research service' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Requests and results', level: 2 })).toBeNull();
+    await user.click(screen.getByRole('tab', { name: 'Requests' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Requests and results', level: 2 }),
+    ).toBeTruthy();
+    expect(screen.getByText(/Open API services to start/u)).toBeTruthy();
   });
 
   it('mounts A05, B05, and C05 without a settlement bypass', async () => {
@@ -146,20 +151,21 @@ describe('Gate P5 shell composition', () => {
         useOperatorSession={() => signedInSession()}
       />,
     );
+    expect(screen.getByRole('heading', { name: 'Your payment workspace', level: 2 })).toBeTruthy();
 
     await user.type(
-      screen.getByLabelText('Active Business Intent ID'),
+      screen.getByLabelText('Request identifier'),
       settlementIntent.business_intent_id,
     );
-    await user.click(screen.getByRole('tab', { name: 'Settlement evidence' }));
+    await user.click(screen.getByRole('tab', { name: 'Payment proof' }));
     expect(await screen.findByText('Authorization')).toBeTruthy();
 
-    await user.clear(screen.getByLabelText('Active Business Intent ID'));
+    await user.clear(screen.getByLabelText('Request identifier'));
     await user.type(
-      screen.getByLabelText('Active Business Intent ID'),
+      screen.getByLabelText('Request identifier'),
       recoveryScenarioPages.lagging[0]?.businessIntentId ?? '',
     );
-    await user.click(screen.getByRole('tab', { name: 'Recovery evidence' }));
+    await user.click(screen.getByRole('tab', { name: 'Recovery control' }));
     expect(await screen.findByText('Subgraph MCP')).toBeTruthy();
     expect(screen.getByText('LAGGING')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /force|pay|submit settlement/iu })).toBeNull();

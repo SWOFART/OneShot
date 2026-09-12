@@ -444,6 +444,30 @@
         }
       }
     },
+    "ApprovePaidApiRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_key",
+        "tool_id",
+        "approved_quote"
+      ],
+      "properties": {
+        "task_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "tool_id": {
+          "type": "string",
+          "const": "circle-x402-api-v1"
+        },
+        "approved_quote": {
+          "$ref": "#/$defs/PaidApiQuote"
+        }
+      }
+    },
     "PaidApiQuote": {
       "type": "object",
       "additionalProperties": false,

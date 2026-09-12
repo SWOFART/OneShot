@@ -48,6 +48,26 @@ function signer() {
 }
 
 describe('Circle Gateway x402 client', () => {
+  it('rejects a different verifying contract before asking Privy to sign', async () => {
+    const signTypedData = signer();
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response('{}', {
+        status: 402,
+        headers: {
+          'PAYMENT-REQUIRED': encoded({
+            x402Version: 2,
+            resource: { url: URL },
+            accepts: [
+              { ...requirements(), extra: { ...requirements().extra, verifyingContract: PAY_TO } },
+            ],
+          }),
+        },
+      }),
+    );
+    const client = new CircleX402Client({ signer: signTypedData, fetchFn });
+    await expect(client.quote(URL)).rejects.toThrow('exactly one affordable');
+    expect(signTypedData.signTypedData).not.toHaveBeenCalled();
+  });
   it('validates the Arc quote and performs one paid request', async () => {
     const signTypedData = signer();
     const fetchFn = vi

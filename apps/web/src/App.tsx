@@ -23,16 +23,21 @@ import { LoginGate } from './components/LoginGate.js';
 import { ReadinessBanner } from './components/ReadinessBanner.js';
 import { CircleX402DemoPanel, JobList, JobWorkspace } from './components/JobWorkspace.js';
 import { RecoverySurface, SettlementSurface } from './components/FrontendSurfaces.js';
+import {
+  PaymentProtectionPanel,
+  SpendingRulesPanel,
+  TeamAccessPanel,
+} from './components/WorkspacePanels.js';
 import { applyTheme, readStoredTheme, type Theme } from './theme.js';
 import './styles.css';
 
 type Tab = 'create' | 'status' | 'settlement' | 'recovery';
 const TAB_ORDER: readonly Tab[] = ['create', 'status', 'settlement', 'recovery'];
 const TAB_LABELS: Readonly<Record<Tab, string>> = {
-  create: 'Create or replay',
-  status: 'Authoritative status',
-  settlement: 'Settlement evidence',
-  recovery: 'Recovery evidence',
+  create: 'Create request',
+  status: 'Payment status',
+  settlement: 'Payment proof',
+  recovery: 'Recovery control',
 };
 
 export interface AppProps {
@@ -60,9 +65,9 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
         <div className="nav-status-group">
           <span className="status-badge network-badge">
             <span className="status-dot" />
-            Arc Testnet (5042002)
+            Arc Testnet
           </span>
-          <span className="status-badge token-badge">Native USDC</span>
+          <span className="status-badge token-badge">USDC</span>
           <button type="button" className="theme-toggle" onClick={props.onToggleTheme}>
             {props.theme === 'dark' ? 'Light theme' : 'Dark theme'}
           </button>
@@ -72,8 +77,8 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
         </a>
       </nav>
       <header className="app-header hero-section">
-        <Hero>
-          <p className="eyebrow">RESUMABLE PAID TOOLS / ARC TESTNET</p>
+        <Hero height={460}>
+          <p className="eyebrow">RESUMABLE PAID SERVICES / ARC TESTNET</p>
           <h1>Resume the job, not the payment.</h1>
           <p className="hero-lead">
             Approve one company-data report. If an agent restarts, the original task, payment
@@ -101,22 +106,22 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
           <article className="invariant-card">
             <h3>Approve the exact purchase</h3>
             <p>
-              Review supplier, recipient, amount, network and wallet policy before an external
-              payment can start.
+              Review the service, destination, amount, network and wallet rule before payment can
+              start.
             </p>
           </article>
           <article className="invariant-card">
             <h3>Keep one task key</h3>
             <p>
-              Replacement agents reuse the same task key, supplier order and Business Intent. A
-              changed payload is held as a conflict.
+              Retries reuse the same request key and supplier order. Changed details are held for
+              review.
             </p>
           </article>
           <article className="invariant-card">
             <h3>Retrieve the existing result</h3>
             <p>
-              Payment uncertainty is reconciled read-only. A committed payment with delayed delivery
-              resumes the original supplier order only.
+              Payment checks are read-only. If delivery is delayed, the original supplier request
+              resumes without another charge.
             </p>
           </article>
         </div>
@@ -147,6 +152,11 @@ function CabinetPage(props: {
     jobs: 'Jobs',
     recovery: 'Recovery & activity',
   } as const;
+
+  function selectRequest(id: string): void {
+    setIntentId(id);
+    setSection('protection');
+  }
   return (
     <main className="app-shell" aria-label="OneShot workspace cabinet">
       <nav className="top-nav" aria-label="Workspace navigation">
@@ -157,9 +167,9 @@ function CabinetPage(props: {
         <div className="nav-status-group">
           <span className="status-badge network-badge">
             <span className="status-dot" />
-            Arc Testnet (5042002)
+            Arc Testnet
           </span>
-          <span className="status-badge token-badge">Native USDC</span>
+          <span className="status-badge token-badge">USDC</span>
           <button type="button" className="theme-toggle" onClick={props.onToggleTheme}>
             {props.theme === 'dark' ? 'Light theme' : 'Dark theme'}
           </button>
@@ -170,15 +180,60 @@ function CabinetPage(props: {
         machineToken={props.machineToken}
         onMachineTokenChange={props.setMachineToken}
       >
-        <header className="app-header hero-section">
+        <header className="app-header hero-section cabinet-header">
           <Hero>
             <p className="eyebrow">WORKSPACE</p>
-            <h1>Jobs and results</h1>
+            <h1>Your payment workspace</h1>
             <p className="hero-lead">
-              Payments and delivery are separate. No action here can force a replacement payment.
+              Run approved paid APIs, keep one payment identity per request, and recover results
+              without paying twice.
             </p>
           </Hero>
         </header>
+        <details className="walkthrough">
+          <summary>Walk through a real request</summary>
+          <p>
+            Use the actual service, wallet and result. This guide never creates or pays a request
+            for you.
+          </p>
+          <ol>
+            <li>
+              <strong>Review controls.</strong> Check the execution wallet’s active Privy rules and
+              the permitted amount and recipient.
+            </li>
+            <li>
+              <strong>Prepare a request.</strong> Open API services. For the team report, enter a
+              subject, recipient and amount, then review payment details. Circle Dataset API gets
+              its price from the service.
+            </li>
+            <li>
+              <strong>Approve deliberately.</strong> Read “Recipient receives”, the destination and
+              Arc Testnet network. Keep the request key. Only the explicit approval button starts a
+              payment request.
+            </li>
+            <li>
+              <strong>Read the result.</strong> Open Requests for a team report. For Circle Dataset
+              API, use Check payment status in its service card. Inspect the actual payment state
+              and result.
+            </li>
+            <li>
+              <strong>Demonstrate recovery.</strong> For a team report, resume the existing result
+              from Requests. For Circle, replay the same request only when its payment is confirmed.
+              An uncertain payment needs investigation, not a new key.
+            </li>
+          </ol>
+          <p>
+            Record the actual outcome. If a service is unavailable or a payment stays uncertain,
+            explain that state instead of presenting a completed demo.
+          </p>
+          <button
+            type="button"
+            className="secondary compact"
+            onClick={() => setSection('services')}
+          >
+            Open services for walkthrough
+          </button>
+        </details>
         <nav className="tabs" aria-label="Cabinet sections" role="tablist">
           {Object.entries(labels).map(([key, label]) => (
             <button
@@ -285,6 +340,8 @@ function CabinetPage(props: {
             <SettlementSurface businessIntentId={intentId} client={props.settlementClient} />
           </section>
         )}
+        {section === 'spending' && <SpendingRulesPanel />}
+        {section === 'access' && <TeamAccessPanel status={props.session.status} />}
       </LoginGate>
     </main>
   );
@@ -388,16 +445,16 @@ export function App(props: AppProps = {}) {
           <div className="nav-status-group">
             <span className="status-badge network-badge">
               <span className="status-dot"></span>
-              Arc Testnet (5042002)
+              Arc Testnet
             </span>
-            <span className="status-badge token-badge">Native USDC</span>
+            <span className="status-badge token-badge">USDC</span>
             <button type="button" className="theme-toggle" onClick={toggleTheme}>
               {theme === 'dark' ? 'Light theme' : 'Dark theme'}
             </button>
           </div>
 
           <a href="#console" className="nav-console-link">
-            Operator Console ↓
+            Open payment console ↓
           </a>
         </nav>
 
@@ -406,12 +463,12 @@ export function App(props: AppProps = {}) {
             <p className="eyebrow">ONESHOT / ARC TESTNET</p>
             <h1>One job. Many retries. One settlement.</h1>
             <p className="hero-lead">
-              Deterministic payment lifecycle with pre-execution policy checks, idempotency
-              enforcement, and hashless recovery on Arc.
+              A durable payment workflow with wallet policy checks, retry protection, and read-only
+              recovery on Arc.
             </p>
             <div className="hero-actions">
               <a href="#console" className="btn-hero-cta">
-                Open Operator Console ↓
+                Open payment console ↓
               </a>
               <a
                 href="https://testnet.arcscan.app"
@@ -434,51 +491,47 @@ export function App(props: AppProps = {}) {
 
           <div className="invariants-grid">
             <article className="invariant-card">
-              <div className="invariant-index">01 / ATOMIC PRECISION</div>
-              <h3>At-most-once settlement</h3>
+              <div className="invariant-index">01 / PAYMENT SAFETY</div>
+              <h3>One payment per request</h3>
+              <p>A stable request key keeps retries on one approved payment path.</p>
+            </article>
+
+            <article className="invariant-card">
+              <div className="invariant-index">02 / WALLET POLICY</div>
+              <h3>Approved before sending</h3>
               <p>
-                Stable intent identity keeps retries and replays on one approved settlement path.
+                Destination, amount and spending rules are checked before the worker can submit a
+                payment.
               </p>
             </article>
 
             <article className="invariant-card">
-              <div className="invariant-index">02 / PRE-EXECUTION POLICY</div>
-              <h3>Pre-Flight Policy Gating</h3>
+              <div className="invariant-index">03 / NETWORK EVIDENCE</div>
+              <h3>Read-only recovery</h3>
               <p>
-                Dynamic balance verification, recipient allowlists, and operator volume caps run
-                prior to mempool submission, denying unauthorized calls before gas is consumed.
+                If a response is delayed, OneShot checks the ledger and network observations without
+                submitting another payment.
               </p>
             </article>
 
             <article className="invariant-card">
-              <div className="invariant-index">03 / HASHLESS RECOVERY</div>
-              <h3>Cryptographic Reconciliation</h3>
+              <div className="invariant-index">04 / REQUEST LIFECYCLE</div>
+              <h3>Safe hold on uncertainty</h3>
               <p>
-                When RPC gateways timeout or transaction hashes are dropped during transit, the
-                engine queries authoritative ledger receipts and Subgraph indexers to discover truth
-                safely.
-              </p>
-            </article>
-
-            <article className="invariant-card">
-              <div className="invariant-index">04 / CARDINALITY INVARIANT</div>
-              <h3>Bounded State Machine</h3>
-              <p>
-                Strict 1:1 business-intent-to-settlement mapping across all ledger transitions. An
-                intent marked UNKNOWN strictly freezes all concurrent payouts until proof is
-                observed.
+                When payment proof is incomplete, the request pauses until it is verified. No second
+                payment is allowed.
               </p>
             </article>
           </div>
         </section>
 
-        <section className="console-container" id="console" aria-label="Operator Console Workspace">
+        <section className="console-container" id="console" aria-label="Payment workspace">
           <div className="console-header">
             <span className="section-eyebrow">WORKSPACE</span>
-            <h2>Authoritative Execution Engine</h2>
+            <h2>Your payment workspace</h2>
             <p className="console-subtitle">
-              Inspect real-time ledger states, construct validated payment intents, or audit
-              cryptographic settlement and recovery evidence.
+              Run and protect API payments: create a request, review the exact payment, and inspect
+              proof only when you need it.
             </p>
           </div>
 
@@ -487,15 +540,16 @@ export function App(props: AppProps = {}) {
             machineToken={machineToken}
             onMachineTokenChange={setMachineToken}
           >
-            <section className="intent-context" aria-label="Selected business intent">
-              <label htmlFor="selected-intent-input">Active Business Intent ID</label>
+            <details className="intent-context technical-details">
+              <summary>Open a request by identifier (advanced)</summary>
+              <label htmlFor="selected-intent-input">Request identifier</label>
               <input
                 id="selected-intent-input"
                 value={selectedIntentId}
                 onChange={(event) => setSelectedIntentId(event.target.value)}
-                placeholder="Create an intent or enter its stable ID"
+                placeholder="Create a request or enter its stable identifier"
               />
-            </section>
+            </details>
 
             <nav className="tabs" aria-label="Application sections" role="tablist">
               {TAB_ORDER.map((tab) => (
@@ -560,15 +614,11 @@ export function App(props: AppProps = {}) {
             <div className="footer-meta">
               <div className="meta-col">
                 <span className="meta-label">NETWORK</span>
-                <span className="meta-value">Arc Testnet (5042002)</span>
+                <span className="meta-value">Arc Testnet</span>
               </div>
               <div className="meta-col">
                 <span className="meta-label">SETTLEMENT ASSET</span>
-                <span className="meta-value">Native USDC (ERC-20)</span>
-              </div>
-              <div className="meta-col">
-                <span className="meta-label">TOKEN CONTRACT</span>
-                <code className="meta-code">0x3600...0000</code>
+                <span className="meta-value">USDC</span>
               </div>
             </div>
           </div>

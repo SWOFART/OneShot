@@ -20,7 +20,13 @@ import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
  */
 const HERO_MIN_HEIGHT = 268;
 
-export function Hero({ children }: { readonly children: ReactNode }) {
+export function Hero({
+  children,
+  height = HERO_HEIGHT,
+}: {
+  readonly children: ReactNode;
+  readonly height?: number;
+}) {
   const box = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(HERO_MIN_HEIGHT);
@@ -62,7 +68,7 @@ export function Hero({ children }: { readonly children: ReactNode }) {
       {cut === null ? (
         <div className="hero-plain">{children}</div>
       ) : (
-        <div className="hero-cut">
+        <div className="hero-cut" style={{ height: `${height}px` }}>
           <svg width="0" height="0" aria-hidden="true" style={{ position: 'absolute' }}>
             <clipPath id={panelClip} clipPathUnits="userSpaceOnUse">
               <path d={cut.panel} />

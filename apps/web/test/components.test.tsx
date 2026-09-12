@@ -45,15 +45,15 @@ describe('IntentForm', () => {
     const user = userEvent.setup();
     render(<IntentForm client={client} />);
 
-    const id = screen.getByLabelText(/Business Intent ID/u) as HTMLInputElement;
+    const id = screen.getByLabelText(/Request key/u) as HTMLInputElement;
     const stableId = id.value;
     await user.type(
-      screen.getByLabelText(/Recipient/u),
+      screen.getByLabelText(/Service destination/u),
       '0x1111111111111111111111111111111111111111',
     );
-    await user.click(screen.getByRole('button', { name: /Submit Intent/u }));
+    await user.click(screen.getByRole('button', { name: /Create request/u }));
 
-    expect(await screen.findByText(/REPLAYED/u)).toBeTruthy();
+    expect(await screen.findByText(/Existing request reused/u)).toBeTruthy();
     expect(id.value).toBe(stableId);
   });
 
@@ -68,21 +68,21 @@ describe('IntentForm', () => {
     });
     const user = userEvent.setup();
     render(<IntentForm client={client} />);
-    const id = screen.getByLabelText(/Business Intent ID/u) as HTMLInputElement;
+    const id = screen.getByLabelText(/Request key/u) as HTMLInputElement;
     const stableId = id.value;
     await user.type(
-      screen.getByLabelText(/Recipient/u),
+      screen.getByLabelText(/Service destination/u),
       '0x1111111111111111111111111111111111111111',
     );
-    await user.click(screen.getByRole('button', { name: /Submit Intent/u }));
+    await user.click(screen.getByRole('button', { name: /Create request/u }));
 
-    expect(await screen.findByText(/PAYLOAD CONFLICT/u)).toBeTruthy();
+    expect(await screen.findByText(/Request details changed/u)).toBeTruthy();
     expect(id.value).toBe(stableId);
   });
 
   it.each([
-    [403, 'AUTHORIZATION DENIED'],
-    [503, 'SERVICE UNAVAILABLE'],
+    [403, 'Request not approved'],
+    [503, 'Service unavailable'],
   ] as const)('names safe create failure %s without offering a bypass', async (status, title) => {
     const client = new OneShotApiClient({
       fetchFn: async () => json(status, { message: 'safe failure' }),
@@ -90,10 +90,10 @@ describe('IntentForm', () => {
     const user = userEvent.setup();
     render(<IntentForm client={client} />);
     await user.type(
-      screen.getByLabelText(/Recipient/u),
+      screen.getByLabelText(/Service destination/u),
       '0x1111111111111111111111111111111111111111',
     );
-    await user.click(screen.getByRole('button', { name: /Submit Intent/u }));
+    await user.click(screen.getByRole('button', { name: /Create request/u }));
 
     expect(await screen.findByText(new RegExp(title, 'u'))).toBeTruthy();
     expect(screen.queryByRole('button', { name: /force|bypass|pay/iu })).toBeNull();
@@ -117,13 +117,22 @@ describe('IntentStatusView', () => {
     'FAILED_SAFE',
     'UNKNOWN',
     'REJECTED',
-  ] as const)('renders authoritative %s state', async (state) => {
+  ] as const)('renders user-facing status for %s state', async (state) => {
+    const labels: Record<IntentState, string> = {
+      AUTHORIZING: 'Authorizing payment',
+      READY: 'Ready to pay',
+      SUBMITTING: 'Payment in progress',
+      COMMITTED: 'Paid and confirmed',
+      FAILED_SAFE: 'Stopped safely',
+      UNKNOWN: 'Checking payment',
+      REJECTED: 'Not approved',
+    };
     const client = new OneShotApiClient({ fetchFn: async () => json(200, intent(state)) });
     render(<IntentStatusView client={client} initialIntentId="intent-web-1" />);
-    await waitFor(() => expect(screen.getByText(state)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(labels[state])).toBeTruthy());
   });
 
-  it('holds UNKNOWN and only offers reconciliation', async () => {
+  it('holds an unresolved payment and only offers evidence checks', async () => {
     const client = new OneShotApiClient({
       fetchFn: async (input, init) => {
         if (String(input).endsWith('/reconcile') && init?.method === 'POST') {
@@ -135,10 +144,10 @@ describe('IntentStatusView', () => {
     const user = userEvent.setup();
     render(<IntentStatusView client={client} initialIntentId="intent-web-1" />);
 
-    const reconcile = await screen.findByRole('button', { name: /Enqueue Reconciliation/u });
-    expect(screen.queryByRole('button', { name: /pay|retry settlement/iu })).toBeNull();
+    const reconcile = await screen.findByRole('button', { name: /Check payment status/u });
+    expect(screen.queryByRole('button', { name: /^(?:pay|retry settlement)$/iu })).toBeNull();
     await user.click(reconcile);
-    expect(await screen.findByText(/job enqueued/u)).toBeTruthy();
+    expect(await screen.findByText(/Payment check queued/u)).toBeTruthy();
   });
 });
 
@@ -164,18 +173,20 @@ describe('JobWorkspace payment inputs', () => {
 
     await user.type(screen.getByLabelText('Company or domain'), 'acme.com');
     await user.type(
-      screen.getByLabelText('Recipient wallet'),
+      screen.getByLabelText('Service destination wallet'),
       '0x2222222222222222222222222222222222222222',
     );
     await user.type(screen.getByLabelText('Amount (USDC)'), '1.25');
-    await user.click(screen.getByRole('button', { name: 'Get live quote' }));
+    await user.click(screen.getByRole('button', { name: 'Review payment details' }));
 
-    await waitFor(() => expect(quotedRequest).toEqual({
-      task_key: expect.stringMatching(/^report-acme-com-/u),
-      tool_id: 'team-report-v1',
-      report_subject: 'acme.com',
-      recipient: '0x2222222222222222222222222222222222222222',
-      amount_atomic: '1250000',
-    }));
+    await waitFor(() =>
+      expect(quotedRequest).toEqual({
+        task_key: expect.stringMatching(/^report-acme-com-/u),
+        tool_id: 'team-report-v1',
+        report_subject: 'acme.com',
+        recipient: '0x2222222222222222222222222222222222222222',
+        amount_atomic: '1250000',
+      }),
+    );
   });
 });

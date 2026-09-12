@@ -57,6 +57,8 @@ function readTheme(css: string, selector: string): Readonly<Record<string, strin
  * audited against those rather than against the theme's `--os-ink`.
  */
 const AUDITED_PAIRS: readonly (readonly [ink: string, surface: string])[] = [
+  ['accent-ink', 'ground'],
+  ['accent-ink', 'surface'],
   ['ink', 'ground'],
   ['ink-muted', 'ground'],
   ['ink', 'surface'],
