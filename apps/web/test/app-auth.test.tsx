@@ -42,7 +42,7 @@ describe('App operator gating', () => {
         }),
     );
     render(<App apiClient={okClient(fetchFn)} useOperatorSession={() => fakeSession()} />);
-    expect(screen.queryByRole('tab', { name: 'Create or replay' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Create request' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Sign in with Privy' })).toBeTruthy();
   });
 
@@ -55,7 +55,7 @@ describe('App operator gating', () => {
         }),
     );
     render(<App apiClient={okClient(fetchFn)} useOperatorSession={() => signedInSession()} />);
-    expect(screen.getByRole('tab', { name: 'Create or replay' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Create request' })).toBeTruthy();
   });
 
   it('sends the Privy access token on an authenticated request', async () => {
@@ -65,9 +65,9 @@ describe('App operator gating', () => {
     const user = userEvent.setup();
     render(<App useOperatorSession={() => signedInSession('did:privy:x', 'aaa.bbb.ccc')} />);
 
-    await user.click(screen.getByRole('tab', { name: 'Authoritative status' }));
-    await user.type(screen.getByLabelText('Business Intent ID'), 'intent-1');
-    await user.click(screen.getByRole('button', { name: 'Lookup' }));
+    await user.click(screen.getByRole('tab', { name: 'Payment status' }));
+    await user.type(screen.getByPlaceholderText('Request identifier'), 'intent-1');
+    await user.click(screen.getByRole('button', { name: 'Look up' }));
 
     await waitFor(() => expect(seen).toContain('Bearer aaa.bbb.ccc'));
   });
@@ -81,9 +81,9 @@ describe('App operator gating', () => {
 
     await user.click(screen.getByText('Machine token (advanced)'));
     await user.type(screen.getByLabelText('Machine token'), 'service-token');
-    await user.click(screen.getByRole('tab', { name: 'Authoritative status' }));
-    await user.type(screen.getByLabelText('Business Intent ID'), 'intent-1');
-    await user.click(screen.getByRole('button', { name: 'Lookup' }));
+    await user.click(screen.getByRole('tab', { name: 'Payment status' }));
+    await user.type(screen.getByPlaceholderText('Request identifier'), 'intent-1');
+    await user.click(screen.getByRole('button', { name: 'Look up' }));
 
     await waitFor(() => expect(seen).toContain('Bearer service-token'));
   });

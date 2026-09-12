@@ -38,46 +38,44 @@ describe('composed frontend shell', () => {
       />,
     );
 
-    expect(screen.getByRole('tab', { name: 'Create or replay' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Authoritative status' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Settlement evidence' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Recovery evidence' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Create request' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Payment status' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Payment proof' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Protection checks' })).toBeTruthy();
 
-    const createTab = screen.getByRole('tab', { name: 'Create or replay' });
+    const createTab = screen.getByRole('tab', { name: 'Create request' });
     createTab.focus();
     await user.keyboard('{ArrowRight}');
-    expect(
-      screen.getByRole('tab', { name: 'Authoritative status' }).getAttribute('aria-selected'),
-    ).toBe('true');
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Authoritative status' }));
+    expect(screen.getByRole('tab', { name: 'Payment status' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Payment status' }));
 
     await user.keyboard('{ArrowLeft}');
-    expect(
-      screen.getByRole('tab', { name: 'Create or replay' }).getAttribute('aria-selected'),
-    ).toBe('true');
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Create or replay' }));
+    expect(screen.getByRole('tab', { name: 'Create request' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Create request' }));
 
     await user.keyboard('{End}');
     expect(
-      screen.getByRole('tab', { name: 'Recovery evidence' }).getAttribute('aria-selected'),
+      screen.getByRole('tab', { name: 'Protection checks' }).getAttribute('aria-selected'),
     ).toBe('true');
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Recovery evidence' }));
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Protection checks' }));
 
     await user.keyboard('{Home}');
-    expect(
-      screen.getByRole('tab', { name: 'Create or replay' }).getAttribute('aria-selected'),
-    ).toBe('true');
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Create or replay' }));
+    expect(screen.getByRole('tab', { name: 'Create request' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Create request' }));
 
-    await user.click(screen.getByRole('tab', { name: 'Settlement evidence' }));
-    expect(
-      await screen.findByText(/Select an intent to inspect settlement evidence/u),
-    ).toBeTruthy();
+    await user.click(screen.getByRole('tab', { name: 'Payment proof' }));
+    expect(await screen.findByText(/Select a request to inspect payment proof/u)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /pay|retry|resend|force/iu })).toBeNull();
 
-    await user.click(screen.getByRole('tab', { name: 'Recovery evidence' }));
+    await user.click(screen.getByRole('tab', { name: 'Protection checks' }));
     await user.type(
-      screen.getByLabelText('Active Business Intent ID'),
+      screen.getByLabelText('Request identifier'),
       recoveryScenarioPages.lagging[0]?.businessIntentId ?? '',
     );
     expect(await screen.findByText('LAGGING')).toBeTruthy();

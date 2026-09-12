@@ -68,15 +68,17 @@ describe('Circle x402 paid API workspace flow', () => {
     };
     render(<CircleX402DemoPanel client={client} onSelectIntent={onSelectIntent} />);
 
-    await user.click(screen.getByRole('button', { name: 'Check live quote' }));
-    expect(await screen.findByText('Review x402 quote')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Approve and buy API result' }));
+    await user.click(screen.getByRole('button', { name: 'Check price' }));
+    expect(await screen.findByText('Review payment')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Approve and get result' }));
 
     await waitFor(() => expect(start).toHaveBeenCalledOnce());
+    await user.click(screen.getByRole('button', { name: 'Open payment protection' }));
     expect(onSelectIntent).toHaveBeenCalledWith(approved.business_intent_id);
+    await user.click(screen.getByText('Show technical request details'));
     expect((await screen.findByText('View on ArcScan')).getAttribute('href')).toBe(
       `https://testnet.arcscan.app/tx/${approved.provider_transaction_hash}`,
     );
-    expect(screen.getByText(/do not approve a new task key/u)).toBeTruthy();
+    expect(screen.getByText(/do not start a new request/iu)).toBeTruthy();
   });
 });

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 
 import type { OneShotApiClient } from '../api/client.js';
 import { atomicUnitsToUsdc } from '../utils/money.js';
+import { maskIdentifier, paymentStatusCopy } from './workspace-copy.js';
 
 interface Props {
   readonly client: OneShotApiClient;
@@ -42,7 +43,11 @@ export function IntentStatusView({ client, initialIntentId = '' }: Props) {
           return result.intent;
         }
         setIntent(null);
-        setMessage(result.kind === 'NOT_FOUND' ? `Intent "${id}" was not found.` : result.message);
+        setMessage(
+          result.kind === 'NOT_FOUND'
+            ? 'That request could not be found in the workspace.'
+            : result.message,
+        );
         return null;
       } finally {
         if (showLoading) setLoading(false);
@@ -98,7 +103,7 @@ export function IntentStatusView({ client, initialIntentId = '' }: Props) {
       const result = await client.reconcileIntent(intent.business_intent_id);
       if (result.kind === 'QUEUED') {
         setReconcileMessage(
-          'Reconciliation job enqueued. Settlement remains blocked pending evidence.',
+          'Payment check queued. A new settlement remains blocked until it finishes.',
         );
         await read(intent.business_intent_id);
       } else if (result.kind === 'NOT_FOUND') {
@@ -112,31 +117,34 @@ export function IntentStatusView({ client, initialIntentId = '' }: Props) {
   }
 
   return (
-    <section className="panel status-view" aria-label="Authoritative intent status viewer">
+    <section className="panel status-view" aria-label="Payment status viewer">
       <header>
-        <h2>Authoritative status</h2>
-        <p>Read from the OneShot ledger. UNKNOWN always blocks another payment.</p>
+        <h2>Payment status</h2>
+        <p>Read from the OneShot ledger. A request being checked cannot be paid again.</p>
       </header>
 
-      <form className="lookup" onSubmit={lookup}>
-        <label className="sr-only" htmlFor="status-intent-id">
-          Business Intent ID
-        </label>
-        <input
-          id="status-intent-id"
-          value={searchId}
-          onChange={(event) => setSearchId(event.target.value)}
-          placeholder="Business Intent ID"
-        />
-        <button type="submit" disabled={loading || !searchId.trim()}>
-          {loading ? 'Loading…' : 'Lookup'}
-        </button>
-        {activeId && (
-          <button className="secondary" type="button" onClick={() => void read(activeId)}>
-            Refresh
+      <details className="technical-details" open={!activeId}>
+        <summary>Look up another request (advanced)</summary>
+        <form className="lookup" onSubmit={lookup}>
+          <label className="sr-only" htmlFor="status-intent-id">
+            Request identifier
+          </label>
+          <input
+            id="status-intent-id"
+            value={searchId}
+            onChange={(event) => setSearchId(event.target.value)}
+            placeholder="Request identifier"
+          />
+          <button type="submit" disabled={loading || !searchId.trim()}>
+            {loading ? 'Checking…' : 'Look up'}
           </button>
-        )}
-      </form>
+          {activeId && (
+            <button className="secondary" type="button" onClick={() => void read(activeId)}>
+              Check again
+            </button>
+          )}
+        </form>
+      </details>
 
       {message && (
         <div className="notice error" role="alert">
@@ -145,7 +153,7 @@ export function IntentStatusView({ client, initialIntentId = '' }: Props) {
       )}
       {polling && (
         <p className="polling" role="status">
-          Polling authoritative state · {pollCount + 1}/{MAX_POLLS}
+          Checking payment status · {pollCount + 1}/{MAX_POLLS}
         </p>
       )}
 
@@ -153,25 +161,20 @@ export function IntentStatusView({ client, initialIntentId = '' }: Props) {
         <div className="intent-details">
           <div className={`state-card state-${intent.state.toLowerCase()}`}>
             <div>
-              <small>Authoritative state</small>
-              <strong>{intent.state}</strong>
-            </div>
-            <div>
-              <small>Ledger version</small>
-              <strong>{intent.version}</strong>
-            </div>
-            <div>
-              <small>Attempts</small>
-              <strong>{intent.attempts.length}</strong>
+              <small>Payment status</small>
+              <strong>{paymentStatusCopy(intent.state).label}</strong>
             </div>
           </div>
 
           {intent.state === 'UNKNOWN' && (
             <section className="notice warning" role="alert">
-              <h3>Settlement outcome is unknown</h3>
-              <p>No retry is allowed until reconciliation finds authoritative evidence.</p>
+              <h3>Payment verification is still in progress</h3>
+              <p>
+                OneShot is checking the existing payment. Do not start a new request until this
+                check finishes.
+              </p>
               <button type="button" disabled={reconciling} onClick={() => void reconcile()}>
-                {reconciling ? 'Enqueueing…' : 'Enqueue Reconciliation'}
+                {reconciling ? 'Checking…' : 'Check payment status'}
               </button>
               {reconcileMessage && <p role="status">{reconcileMessage}</p>}
             </section>
@@ -179,45 +182,52 @@ export function IntentStatusView({ client, initialIntentId = '' }: Props) {
 
           <dl className="facts">
             <div>
-              <dt>Business Intent ID</dt>
-              <dd>{intent.business_intent_id}</dd>
-            </div>
-            <div>
-              <dt>Recipient</dt>
-              <dd>{intent.recipient}</dd>
-            </div>
-            <div>
               <dt>Amount</dt>
-              <dd>
-                {atomicUnitsToUsdc(intent.amount_atomic)} USDC{' '}
-                <small>({intent.amount_atomic} atomic)</small>
-              </dd>
+              <dd>{atomicUnitsToUsdc(intent.amount_atomic)} USDC</dd>
             </div>
             <div>
               <dt>Network</dt>
-              <dd>{intent.network}</dd>
+              <dd>Arc Testnet</dd>
             </div>
             <div>
-              <dt>Purpose</dt>
+              <dt>Request</dt>
               <dd>{intent.purpose}</dd>
             </div>
           </dl>
 
-          <section>
-            <h3>Attempts</h3>
-            {intent.attempts.length === 0 ? (
-              <p className="muted">No execution attempts yet.</p>
-            ) : (
-              <ol className="attempts">
-                {intent.attempts.map((attempt) => (
-                  <li key={attempt.attempt_id}>
-                    <strong>{attempt.stage}</strong> · {attempt.created_at}
-                    {attempt.sanitized_error && <p>{attempt.sanitized_error}</p>}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
+          <details className="technical-details">
+            <summary>Show request identifiers and execution history</summary>
+            <dl className="facts">
+              <div>
+                <dt>Request identifier</dt>
+                <dd className="mono break-all">{maskIdentifier(intent.business_intent_id, 10)}</dd>
+              </div>
+              <div>
+                <dt>Service destination</dt>
+                <dd className="mono break-all">{intent.recipient}</dd>
+              </div>
+              <div>
+                <dt>Ledger version</dt>
+                <dd>{intent.version}</dd>
+              </div>
+            </dl>
+            <section>
+              <h3>Execution history</h3>
+              {intent.attempts.length === 0 ? (
+                <p className="muted">No execution attempts yet.</p>
+              ) : (
+                <ol className="attempts">
+                  {intent.attempts.map((attempt) => (
+                    <li key={attempt.attempt_id}>
+                      <strong>{paymentStatusCopy(attempt.stage).label}</strong> ·{' '}
+                      {attempt.created_at}
+                      {attempt.sanitized_error && <p>{attempt.sanitized_error}</p>}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          </details>
         </div>
       )}
     </section>
