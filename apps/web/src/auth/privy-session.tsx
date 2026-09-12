@@ -6,14 +6,42 @@ import {
   type BaseConnectedWalletType,
 } from '@privy-io/react-auth';
 import { BatchEvmScheme } from '@circle-fin/x402-batching/client';
+import { encodeFunctionData, erc20Abi } from 'viem';
 import { useEffect, useState, type ReactNode } from 'react';
 import type { PaidApiQuote, SubmitPaidApiUserWalletRequest } from '@oneshot/contracts';
 
-import type { OperatorSession, OperatorSessionStatus, UserWalletSession } from './session.js';
+import {
+  GatewayFundingError,
+  type GatewayFundingResult,
+  type GatewayPendingDeposit,
+  type OperatorSession,
+  type OperatorSessionStatus,
+  type UserWalletSession,
+} from './session.js';
+import { usdcToAtomicUnits } from '../utils/money.js';
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const ARC_TESTNET_GATEWAY_DOMAIN = 26;
 const CIRCLE_GATEWAY_BALANCES_URL = 'https://gateway-api-testnet.circle.com/v1/balances';
+const CIRCLE_GATEWAY_DEPOSITS_URL = 'https://gateway-api-testnet.circle.com/v1/deposits';
+const ARC_TESTNET_USDC = '0x3600000000000000000000000000000000000000' as const;
+const ARC_TESTNET_GATEWAY_WALLET = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9' as const;
+const ARC_TESTNET_CHAIN_ID = 'eip155:5042002' as const;
+const GATEWAY_DEPOSIT_ABI = [
+  {
+    type: 'function',
+    name: 'deposit',
+    inputs: [
+      { name: 'token', type: 'address' },
+      { name: 'value', type: 'uint256' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+] as const;
+const TRANSACTION_HASH = /^0x[0-9a-fA-F]{64}$/u;
+const EVM_ADDRESS = /^0x[0-9a-fA-F]{40}$/u;
+const MAX_UINT256 = 2n ** 256n - 1n;
 
 export function PrivyOperatorProvider(props: {
   readonly appId: string;
@@ -88,6 +116,7 @@ function transferData(recipient: string, amountAtomic: string): `0x${string}` {
 }
 
 type EthereumWallet = Extract<BaseConnectedWalletType, { readonly type: 'ethereum' }>;
+type EthereumProvider = Awaited<ReturnType<EthereumWallet['getEthereumProvider']>>;
 
 function jsonSafe(value: unknown): unknown {
   if (typeof value === 'bigint') return value.toString(10);
@@ -103,6 +132,41 @@ function jsonSafe(value: unknown): unknown {
   return value;
 }
 
+function validateAddress(value: string, label: string): asserts value is `0x${string}` {
+  if (!EVM_ADDRESS.test(value)) throw new Error(`${label} is invalid`);
+}
+
+function validatePositiveAtomic(value: string, label: string): bigint {
+  if (!/^[1-9][0-9]*$/u.test(value)) throw new Error(`${label} must be a positive integer`);
+  const parsed = BigInt(value);
+  if (parsed > MAX_UINT256) throw new Error(`${label} is too large`);
+  return parsed;
+}
+
+function validateTransactionHash(value: unknown): `0x${string}` {
+  if (typeof value !== 'string' || !TRANSACTION_HASH.test(value)) {
+    throw new Error('Wallet did not return a valid transaction hash');
+  }
+  return value.toLowerCase() as `0x${string}`;
+}
+
+async function waitForSuccessfulReceipt(provider: EthereumProvider, transactionHash: string) {
+  for (let attempt = 0; attempt < 90; attempt += 1) {
+    const receipt = await provider.request({
+      method: 'eth_getTransactionReceipt',
+      params: [transactionHash],
+    });
+    if (receipt !== null && typeof receipt === 'object' && !Array.isArray(receipt)) {
+      const status = (receipt as Record<string, unknown>).status;
+      if (status === '0x1') return;
+      if (status === '0x0') throw new Error('Gateway transaction reverted');
+      throw new Error('Gateway transaction receipt is malformed');
+    }
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 1000));
+  }
+  throw new Error('Gateway transaction confirmation is not available yet');
+}
+
 export function usePrivyUserWallet(): UserWalletSession {
   const active = useActiveWallet();
   const wallet: EthereumWallet | undefined =
@@ -113,18 +177,26 @@ export function usePrivyUserWallet(): UserWalletSession {
     return result.wallet?.type === 'ethereum' ? result.wallet.address : null;
   }
 
-  async function sendTransfer(payment: Parameters<UserWalletSession['sendTransfer']>[0]) {
+  async function resolveWallet(): Promise<EthereumWallet> {
     let current = wallet;
     if (!current) {
       const result = await active.connect();
       current = result.wallet?.type === 'ethereum' ? (result.wallet as EthereumWallet) : undefined;
     }
     if (!current) throw new Error('Connect an Ethereum wallet before approving payment');
+    return current;
+  }
+
+  async function resolveArcWallet(): Promise<EthereumWallet> {
+    const current = await resolveWallet();
+    if (current.chainId !== ARC_TESTNET_CHAIN_ID) await current.switchChain(5042002);
+    return current;
+  }
+
+  async function sendTransfer(payment: Parameters<UserWalletSession['sendTransfer']>[0]) {
+    const current = await resolveArcWallet();
     if (current.address.toLowerCase() !== payment.payer_wallet.toLowerCase()) {
       throw new Error('The active wallet changed; review the payment again');
-    }
-    if (current.chainId !== 'eip155:5042002') {
-      await current.switchChain(5042002);
     }
     const provider = await current.getEthereumProvider();
     const result = await provider.request({
@@ -145,9 +217,7 @@ export function usePrivyUserWallet(): UserWalletSession {
   }
 
   async function getGatewayBalance(payerWallet: string): Promise<string> {
-    if (!/^0x[0-9a-fA-F]{40}$/u.test(payerWallet)) {
-      throw new Error('Gateway balance payer wallet is invalid');
-    }
+    validateAddress(payerWallet, 'Gateway balance payer wallet');
     const response = await fetch(CIRCLE_GATEWAY_BALANCES_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -171,24 +241,176 @@ export function usePrivyUserWallet(): UserWalletSession {
         typeof entry.depositor === 'string' &&
         entry.depositor.toLowerCase() === payerWallet.toLowerCase(),
     );
-    if (!matching || typeof matching.balance !== 'string' || !/^\d+$/u.test(matching.balance)) {
+    if (
+      !matching ||
+      typeof matching.balance !== 'string' ||
+      !/^(?:0|[1-9][0-9]*)(?:\.[0-9]{1,6})?$/u.test(matching.balance)
+    ) {
       throw new Error('Circle Gateway balance response is invalid');
     }
-    return matching.balance;
+    try {
+      return usdcToAtomicUnits(matching.balance);
+    } catch {
+      throw new Error('Circle Gateway balance response is invalid');
+    }
+  }
+
+  async function getGatewayPendingDeposits(
+    payerWallet: string,
+  ): Promise<readonly GatewayPendingDeposit[]> {
+    validateAddress(payerWallet, 'Gateway deposit payer wallet');
+    const response = await fetch(CIRCLE_GATEWAY_DEPOSITS_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        token: 'USDC',
+        sources: [{ depositor: payerWallet, domain: ARC_TESTNET_GATEWAY_DOMAIN }],
+      }),
+    });
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok || body === null || typeof body !== 'object' || Array.isArray(body)) {
+      throw new Error('Circle Gateway pending-deposit lookup failed');
+    }
+    const deposits = (body as Record<string, unknown>).deposits;
+    if (!Array.isArray(deposits))
+      throw new Error('Circle Gateway pending-deposit response is invalid');
+    return deposits.flatMap((entry): GatewayPendingDeposit[] => {
+      if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) return [];
+      const record = entry as Record<string, unknown>;
+      if (
+        record.domain !== ARC_TESTNET_GATEWAY_DOMAIN ||
+        typeof record.depositor !== 'string' ||
+        record.depositor.toLowerCase() !== payerWallet.toLowerCase() ||
+        record.status !== 'pending' ||
+        typeof record.transactionHash !== 'string' ||
+        !TRANSACTION_HASH.test(record.transactionHash) ||
+        typeof record.amount !== 'string'
+      ) {
+        return [];
+      }
+      return [
+        {
+          transaction_hash: record.transactionHash.toLowerCase(),
+          amount: record.amount,
+          status: record.status,
+        },
+      ];
+    });
+  }
+
+  async function fundGateway(targetAmountAtomic: string): Promise<GatewayFundingResult> {
+    const target = validatePositiveAtomic(targetAmountAtomic, 'Gateway target amount');
+    const current = await resolveArcWallet();
+    const payerWallet = current.address;
+    const available = BigInt(await getGatewayBalance(payerWallet));
+    if (available >= target) {
+      return {
+        target_amount_atomic: targetAmountAtomic,
+        deposited_amount_atomic: '0',
+        approval_transaction_hash: null,
+        deposit_transaction_hash: null,
+      };
+    }
+
+    const pending = await getGatewayPendingDeposits(payerWallet);
+    const existingPending = pending[0];
+    if (existingPending) {
+      throw new GatewayFundingError(
+        'A Gateway deposit is already pending for this wallet. Check its status before funding again.',
+        'DEPOSIT',
+        existingPending.transaction_hash,
+      );
+    }
+
+    const amount = target - available;
+    const provider = await current.getEthereumProvider();
+    const allowanceData = encodeFunctionData({
+      abi: erc20Abi,
+      functionName: 'allowance',
+      args: [payerWallet as `0x${string}`, ARC_TESTNET_GATEWAY_WALLET],
+    });
+    let allowance = 0n;
+    try {
+      const rawAllowance = await provider.request({
+        method: 'eth_call',
+        params: [{ to: ARC_TESTNET_USDC, data: allowanceData }, 'latest'],
+      });
+      if (typeof rawAllowance === 'string') allowance = BigInt(rawAllowance);
+    } catch {
+      allowance = 0n;
+    }
+
+    let approvalTransactionHash: string | null = null;
+    if (allowance < amount) {
+      const approvalData = encodeFunctionData({
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [ARC_TESTNET_GATEWAY_WALLET, amount],
+      });
+      try {
+        approvalTransactionHash = validateTransactionHash(
+          await provider.request({
+            method: 'eth_sendTransaction',
+            params: [
+              {
+                from: payerWallet,
+                to: ARC_TESTNET_USDC,
+                data: approvalData,
+                value: '0x0',
+              },
+            ],
+          }),
+        );
+        await waitForSuccessfulReceipt(provider, approvalTransactionHash);
+      } catch (error) {
+        throw new GatewayFundingError(
+          error instanceof Error ? error.message : 'Gateway approval did not complete',
+          'APPROVAL',
+          approvalTransactionHash,
+        );
+      }
+    }
+
+    const depositData = encodeFunctionData({
+      abi: GATEWAY_DEPOSIT_ABI,
+      functionName: 'deposit',
+      args: [ARC_TESTNET_USDC, amount],
+    });
+    let depositTransactionHash: string | null = null;
+    try {
+      depositTransactionHash = validateTransactionHash(
+        await provider.request({
+          method: 'eth_sendTransaction',
+          params: [
+            {
+              from: payerWallet,
+              to: ARC_TESTNET_GATEWAY_WALLET,
+              data: depositData,
+              value: '0x0',
+            },
+          ],
+        }),
+      );
+      await waitForSuccessfulReceipt(provider, depositTransactionHash);
+    } catch (error) {
+      throw new GatewayFundingError(
+        error instanceof Error ? error.message : 'Gateway deposit did not complete',
+        'DEPOSIT',
+        typeof depositTransactionHash === 'string' ? depositTransactionHash : null,
+      );
+    }
+    return {
+      target_amount_atomic: targetAmountAtomic,
+      deposited_amount_atomic: amount.toString(),
+      approval_transaction_hash: approvalTransactionHash,
+      deposit_transaction_hash: depositTransactionHash,
+    };
   }
 
   async function signX402Payment(
     quote: PaidApiQuote,
   ): Promise<SubmitPaidApiUserWalletRequest['payment_payload']> {
-    let current = wallet;
-    if (!current) {
-      const result = await active.connect();
-      current = result.wallet?.type === 'ethereum' ? (result.wallet as EthereumWallet) : undefined;
-    }
-    if (!current) throw new Error('Connect an Ethereum wallet before approving payment');
-    if (current.chainId !== 'eip155:5042002') {
-      await current.switchChain(5042002);
-    }
+    const current = await resolveArcWallet();
     const provider = await current.getEthereumProvider();
     const signer = {
       address: current.address as `0x${string}`,
@@ -245,6 +467,8 @@ export function usePrivyUserWallet(): UserWalletSession {
     address: wallet?.address ?? null,
     connect,
     getGatewayBalance,
+    getGatewayPendingDeposits,
+    fundGateway,
     sendTransfer,
     signX402Payment,
   };

@@ -234,6 +234,9 @@ describe('JobWorkspace payment inputs', () => {
         userWallet={{
           address: job.user_payment.payer_wallet,
           connect: vi.fn(async () => job.user_payment.payer_wallet),
+          getGatewayBalance: vi.fn(async () => '0'),
+          getGatewayPendingDeposits: vi.fn(async () => []),
+          fundGateway: vi.fn(),
           sendTransfer,
           signX402Payment: vi.fn(),
         }}
