@@ -6,7 +6,6 @@
   "additionalProperties": false,
   "required": [
     "schemaVersion",
-    "mockServerVersion",
     "businessIntentId",
     "authoritativeState",
     "stateVersion",
@@ -26,7 +25,6 @@
   ],
   "properties": {
     "schemaVersion": { "const": "recovery-timeline-v1" },
-    "mockServerVersion": { "const": "c05-mock-v1" },
     "businessIntentId": { "type": "string", "minLength": 1, "maxLength": 128 },
     "authoritativeState": {
       "enum": ["SUBMITTING", "UNKNOWN", "COMMITTED", "FAILED_SAFE"]

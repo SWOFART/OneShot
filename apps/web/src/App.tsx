@@ -37,7 +37,7 @@ const TAB_LABELS: Readonly<Record<Tab, string>> = {
   create: 'Create request',
   status: 'Payment status',
   settlement: 'Payment proof',
-  recovery: 'Protection checks',
+  recovery: 'Recovery control',
 };
 
 export interface AppProps {
@@ -152,7 +152,7 @@ function CabinetPage(props: {
     overview: 'Overview',
     services: 'API services',
     requests: 'Requests',
-    protection: 'Payment protection',
+    protection: 'Payment proof',
     spending: 'Spending rules',
     access: 'Team & access',
   } as const;
@@ -267,7 +267,7 @@ function CabinetPage(props: {
                 View requests
               </button>
               <button type="button" className="secondary" onClick={() => setSection('protection')}>
-                See payment protection
+                See payment proof
               </button>
             </div>
             <ReadinessBanner client={props.apiClient} />

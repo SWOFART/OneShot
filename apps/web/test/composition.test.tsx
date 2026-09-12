@@ -41,7 +41,7 @@ describe('composed frontend shell', () => {
     expect(screen.getByRole('tab', { name: 'Create request' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Payment status' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Payment proof' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Protection checks' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Recovery control' })).toBeTruthy();
 
     const createTab = screen.getByRole('tab', { name: 'Create request' });
     createTab.focus();
@@ -59,9 +59,9 @@ describe('composed frontend shell', () => {
 
     await user.keyboard('{End}');
     expect(
-      screen.getByRole('tab', { name: 'Protection checks' }).getAttribute('aria-selected'),
+      screen.getByRole('tab', { name: 'Recovery control' }).getAttribute('aria-selected'),
     ).toBe('true');
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Protection checks' }));
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Recovery control' }));
 
     await user.keyboard('{Home}');
     expect(screen.getByRole('tab', { name: 'Create request' }).getAttribute('aria-selected')).toBe(
@@ -73,7 +73,7 @@ describe('composed frontend shell', () => {
     expect(await screen.findByText(/Select a request to inspect payment proof/u)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /pay|retry|resend|force/iu })).toBeNull();
 
-    await user.click(screen.getByRole('tab', { name: 'Protection checks' }));
+    await user.click(screen.getByRole('tab', { name: 'Recovery control' }));
     await user.type(
       screen.getByLabelText('Request identifier'),
       recoveryScenarioPages.lagging[0]?.businessIntentId ?? '',

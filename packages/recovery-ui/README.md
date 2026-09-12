@@ -24,15 +24,12 @@ pnpm --filter @oneshot/recovery-ui dev
 Open `/?scenario=aged-unknown`. Any scenario exported by
 `RECOVERY_SCENARIOS` may be selected.
 
-The same fixture viewer is included in the combined Wrangler static-asset
-target. From the repository root, `pnpm build:frontend` builds the main app and
-emits this viewer to `apps/web/dist/recovery`, where it is served at
-`/recovery/` on the configured custom domain. Its persistent banner identifies
-all data as synthetic review fixtures; it is not live sponsor evidence.
+The fixture viewer is a local development and test surface only. It is not
+included in the production frontend asset build. Production recovery evidence
+is composed inside the authenticated workspace through the real API client.
 
 ## Frozen mock boundary
 
-- Mock server version: `c05-mock-v1`.
 - Response schema version: `recovery-timeline-v1`.
 - Read endpoint:
   `GET /mock/v1/intents/{businessIntentId}/recovery?scenario={scenario}&cursor={cursor}`.

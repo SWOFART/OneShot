@@ -170,7 +170,7 @@ test.describe('resumable job workspace', () => {
     await mockJobApi(page);
     await page.goto('/app');
     await unlockWorkspace(page);
-    await page.getByRole('tab', { name: 'Payment protection' }).click();
+    await page.getByRole('tab', { name: 'Payment proof' }).click();
     await page.getByRole('button', { name: 'Check payment activity' }).click();
     await expect(page.locator('.workspace-status')).toContainText('FRESH');
     await expect(page.getByText(/payment records unchanged/u)).toBeVisible();
@@ -237,7 +237,7 @@ for (const theme of ['light', 'dark'] as const) {
         'Overview',
         'API services',
         'Requests',
-        'Payment protection',
+        'Payment proof',
         'Spending rules',
         'Team & access',
       ]) {

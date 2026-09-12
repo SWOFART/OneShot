@@ -150,7 +150,6 @@ function project(intent: IntentResponse, view: RecoveryView): RecoveryTimelinePa
   );
   const page: RecoveryTimelinePage = {
     schemaVersion: 'recovery-timeline-v1',
-    mockServerVersion: 'c05-mock-v1',
     businessIntentId: intent.business_intent_id,
     authoritativeState: state,
     stateVersion: String(intent.version),

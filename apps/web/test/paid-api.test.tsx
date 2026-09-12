@@ -77,7 +77,7 @@ describe('Circle x402 paid API workspace flow', () => {
     await user.click(screen.getByRole('button', { name: 'Approve and get result' }));
 
     await waitFor(() => expect(start).toHaveBeenCalledOnce());
-    await user.click(screen.getByRole('button', { name: 'Open payment protection' }));
+    await user.click(screen.getByRole('button', { name: 'Open payment proof' }));
     expect(onSelectIntent).toHaveBeenCalledWith(approved.business_intent_id);
     await user.click(screen.getByText('Show technical request details'));
     expect((await screen.findByText('View on ArcScan')).getAttribute('href')).toBe(

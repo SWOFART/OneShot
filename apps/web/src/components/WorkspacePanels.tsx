@@ -84,7 +84,7 @@ export function TeamAccessPanel({ status }: { readonly status: OperatorSessionSt
         <article>
           <span>Available actions</span>
           <strong>Run, review, and inspect</strong>
-          <p>Start approved services, review quotes, and check payment protection.</p>
+          <p>Start approved services, review quotes, and check payment proof.</p>
         </article>
         <article>
           <span>Payment authority</span>
@@ -119,83 +119,79 @@ export function PaymentProtectionPanel({
   readonly onRefresh: () => void;
 }) {
   const observation = activity?.observation;
-  const confirmed = activity?.recorded_settlement_count ?? 0;
-  const checking = activity?.uncertain_job_count ?? 0;
-  const extra = activity?.unmatched_transfer_count ?? 0;
+  const count = (value: number | undefined): string =>
+    activity === null || value === undefined ? '—' : String(value);
 
   return (
-    <section className="panel workspace-panel protection-panel" aria-label="Payment protection">
+    <section className="panel workspace-panel proof-panel" aria-label="Payment proof">
       <header className="panel-heading">
         <div>
-          <p className="eyebrow">PAYMENT SAFETY</p>
-          <h2>Payment protection</h2>
+          <p className="eyebrow">READ-ONLY EVIDENCE</p>
+          <h2>Payment proof</h2>
         </div>
-        <span className="badge tone-success">No duplicate payments</span>
+        <span className={`badge tone-${activity === null ? 'neutral' : 'success'}`}>
+          {activity === null ? 'Not checked' : 'Checked'}
+        </span>
       </header>
       <p className="panel-lede">
-        If a paid API responds late or a browser loses the response, OneShot checks the existing
-        payment before allowing any next step.
+        OneShot reads the durable ledger, provider status, and Arc observations before a result can
+        be resumed. This view never creates another payment.
       </p>
-      <div className="protection-steps" aria-label="Payment protection steps">
+      <div className="proof-metrics" aria-label="Payment activity summary">
         <article>
-          <span className="step-number">1</span>
-          <div>
-            <strong>Payment proof</strong>
-            <p>Circle and Arc evidence are checked before a retry.</p>
-          </div>
+          <span>Committed settlements</span>
+          <strong>{count(activity?.recorded_settlement_count)}</strong>
+          <small>Recorded in OneShot</small>
         </article>
         <article>
-          <span className="step-number">2</span>
-          <div>
-            <strong>Result recovery</strong>
-            <p>The original request is resumed; the payment is not repeated.</p>
-          </div>
+          <span>Unknown outcomes</span>
+          <strong>{count(activity?.uncertain_job_count)}</strong>
+          <small>Held for reconciliation</small>
         </article>
         <article>
-          <span className="step-number">3</span>
-          <div>
-            <strong>Safe hold</strong>
-            <p>Unclear evidence blocks a new payment until it is resolved.</p>
-          </div>
+          <span>Unmatched transfers</span>
+          <strong>{count(activity?.unmatched_transfer_count)}</strong>
+          <small>Network activity without a match</small>
         </article>
       </div>
-      <div className="protection-summary" aria-label="Payment protection summary">
-        <div>
-          <span>Confirmed payments</span>
-          <strong>{confirmed}</strong>
-        </div>
-        <div>
-          <span>Requests being checked</span>
-          <strong>{checking}</strong>
-        </div>
-        <div>
-          <span>Additional network activity</span>
-          <strong>{extra}</strong>
-        </div>
+      <div className="proof-controls">
+        <button type="button" className="secondary" onClick={onRefresh}>
+          Check payment activity
+        </button>
+        <p className="workspace-status" role="status">
+          {activityError ??
+            (activity
+              ? `${String(observation?.freshness ?? 'Evidence checked')} · payment records unchanged`
+              : 'No activity check has been requested.')}
+        </p>
       </div>
-      <button type="button" className="secondary" onClick={onRefresh}>
-        Check payment activity
-      </button>
-      <p className="workspace-status" role="status">
-        {activityError ??
-          (activity
-            ? `${String(observation?.freshness ?? 'Evidence checked')} · payment records unchanged`
-            : 'Evidence is checked read-only when you request it.')}
-      </p>
       {intentId ? (
-        <details className="technical-details">
-          <summary>Open payment proof for {maskIdentifier(intentId)}</summary>
-          <p className="panel-lede">
-            This read-only view shows the Arc and Privy evidence for the selected request. It cannot
-            create or retry a payment.
-          </p>
-          <SettlementSurface businessIntentId={intentId} client={settlementClient} />
-          <h3>Payment and result checks</h3>
-          <RecoverySurface businessIntentId={intentId} client={recoveryClient} />
-        </details>
+        <div className="proof-request">
+          <header className="proof-request-heading">
+            <div>
+              <p className="eyebrow">SELECTED REQUEST</p>
+              <h3>Payment proof</h3>
+              <p className="proof-request-id">{maskIdentifier(intentId)}</p>
+            </div>
+            <span className="proof-read-only">READ ONLY</span>
+          </header>
+          <div className="proof-surface">
+            <SettlementSurface businessIntentId={intentId} client={settlementClient} />
+          </div>
+          <header className="proof-request-heading recovery-heading">
+            <div>
+              <p className="eyebrow">RECOVERY CONTROL</p>
+              <h3>Recovery control</h3>
+            </div>
+            <span className="proof-read-only">NO PAYMENT ACTION</span>
+          </header>
+          <div className="proof-surface">
+            <RecoverySurface businessIntentId={intentId} client={recoveryClient} />
+          </div>
+        </div>
       ) : (
         <p className="field-help">
-          Open a request from Requests to inspect its protection details.
+          Open a request from Requests to inspect its payment proof and recovery control.
         </p>
       )}
     </section>

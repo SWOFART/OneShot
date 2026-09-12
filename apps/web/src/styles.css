@@ -57,7 +57,11 @@ button {
   font-weight: 300;
   letter-spacing: 0.06em;
   cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
 }
 
 button:hover:not(:disabled) {
@@ -1477,8 +1481,7 @@ a:hover {
   background: var(--os-surface);
 }
 
-.workspace-fact-grid span,
-.protection-summary span {
+.workspace-fact-grid span {
   color: var(--os-panel-ink-muted);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -1498,60 +1501,101 @@ a:hover {
   line-height: 1.45;
 }
 
-.protection-steps {
+.proof-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
   margin: 1.25rem 0;
 }
 
-.protection-steps article {
-  display: flex;
-  gap: 0.65rem;
-  padding: 0.9rem;
+.proof-metrics article {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.9rem 1rem;
   border: 1px solid var(--os-panel-line);
   border-radius: 0.75rem;
   background: var(--os-surface);
 }
 
-.protection-steps p {
-  margin: 0.25rem 0 0;
-  color: var(--os-panel-ink-muted);
-  font-size: 0.82rem;
-  line-height: 1.4;
+.proof-metrics span,
+.proof-metrics small {
+  color: var(--os-ink-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.step-number {
-  display: grid;
-  flex: 0 0 1.6rem;
-  place-items: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: 50%;
-  color: var(--os-on-signal);
-  background: var(--os-signal);
-  font-weight: 700;
-}
-
-.protection-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin: 1rem 0;
-}
-
-.protection-summary div {
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.8rem;
-  border-left: 2px solid var(--os-signal);
-  background: var(--os-surface);
-}
-
-.protection-summary strong {
-  color: var(--os-panel-ink);
-  font-size: 1.25rem;
+.proof-metrics strong {
+  color: var(--os-ink);
+  font-size: 1.45rem;
   font-weight: 500;
+}
+
+.proof-metrics small {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.proof-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.proof-controls .workspace-status {
+  margin: 0;
+}
+
+.proof-request {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--os-panel-line);
+}
+
+.proof-request-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.proof-request-heading .eyebrow {
+  margin-bottom: 0.35rem;
+}
+
+.proof-request-heading h3 {
+  margin: 0;
+  color: var(--os-panel-ink);
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.proof-request-id {
+  margin: 0.35rem 0 0;
+  color: var(--os-panel-ink-muted);
+  font-family: var(--os-font-mono);
+  font-size: 0.78rem;
+}
+
+.proof-read-only {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--os-panel-line);
+  border-radius: 999px;
+  color: var(--os-panel-ink-muted);
+  font-family: var(--os-font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+}
+
+.proof-surface {
+  overflow: hidden;
+  border: 1px solid var(--os-panel-line);
+  border-radius: 0.75rem;
 }
 
 .workspace-status {
@@ -1599,8 +1643,7 @@ a:hover {
 @media (max-width: 768px) {
   .workspace-action-grid,
   .workspace-fact-grid,
-  .protection-steps,
-  .protection-summary {
+  .proof-metrics {
     grid-template-columns: 1fr;
   }
 }
@@ -1647,8 +1690,6 @@ a:hover {
 .quote-panel,
 .job-list li,
 .workspace-fact-grid article,
-.protection-steps article,
-.protection-summary div,
 .advanced-fields {
   --os-panel-ink: var(--os-ink);
   --os-panel-ink-muted: var(--os-ink-muted);

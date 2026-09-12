@@ -3,7 +3,6 @@ import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 
-import { RECOVERY_MOCK_SERVER_VERSION } from './src/contract.js';
 import { handleRecoveryMockRequest } from './src/mock-server.js';
 
 function recoveryMockPlugin(): Plugin {
@@ -18,7 +17,6 @@ function recoveryMockPlugin(): Plugin {
         }
         response.statusCode = result.status;
         response.setHeader('content-type', 'application/json; charset=utf-8');
-        response.setHeader('x-oneshot-mock-version', RECOVERY_MOCK_SERVER_VERSION);
         response.end(JSON.stringify(result.body));
       });
     },
