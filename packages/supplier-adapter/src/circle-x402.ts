@@ -7,7 +7,7 @@ import type {
   PaymentRequirements,
   SettleResponse,
 } from '@x402/core/types';
-import { asEvmAddress } from '@oneshot/contracts';
+import { asEvmAddress, CIRCLE_X402_USER_WALLET_VALIDITY_WINDOW_SECONDS } from '@oneshot/contracts';
 import type { TransactionReceipt } from '@oneshot/arc-adapter';
 
 export const ARC_X402_GATEWAY_WALLET = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9';
@@ -15,6 +15,9 @@ export const ARC_X402_NETWORK = 'eip155:5042002';
 export const ARC_X402_USDC = '0x3600000000000000000000000000000000000000';
 const DEFAULT_MAX_AMOUNT_ATOMIC = 10_000n;
 const MAX_CIRCLE_X402_TIMEOUT_SECONDS = 604_900;
+const MAX_CIRCLE_X402_VALIDITY_WINDOW_SECONDS = BigInt(
+  CIRCLE_X402_USER_WALLET_VALIDITY_WINDOW_SECONDS,
+);
 const TRANSACTION_HASH = /^0x[0-9a-fA-F]{64}$/u;
 const TRANSFER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const CIRCLE_GATEWAY_API = 'https://gateway-api-testnet.circle.com';
@@ -135,10 +138,10 @@ export function parseCircleX402UserWalletPayload(
   const validAfter = BigInt(authorization.validAfter);
   const validBefore = BigInt(authorization.validBefore);
   if (
-    validAfter < now - 600n ||
+    validAfter < now - 900n ||
     validAfter > now ||
     validBefore < now ||
-    validBefore > now + BigInt(MAX_CIRCLE_X402_TIMEOUT_SECONDS)
+    validBefore > now + MAX_CIRCLE_X402_VALIDITY_WINDOW_SECONDS
   ) {
     throw new CircleX402PreSubmitError(
       'x402 user-wallet payment authorization is outside its validity window',
@@ -288,6 +291,11 @@ export class CircleX402UserWalletForwarder {
         input.businessIntentId,
         input.quote,
         `x402 paid response was malformed: ${cause instanceof Error ? cause.message : 'unknown error'}`,
+      );
+    }
+    if (isPreSettlementVerificationRefusal(response.status, body)) {
+      throw new CircleX402PreSubmitError(
+        'x402 supplier rejected the authorization before settlement',
       );
     }
     if (!response.ok || settlement?.success !== true) {
@@ -473,6 +481,16 @@ function parseSettlement(response: Response): SettleResponse | undefined {
     throw new Error('x402 supplier returned malformed settlement evidence');
   }
   return decoded as SettleResponse;
+}
+
+function isPreSettlementVerificationRefusal(status: number, body: unknown): boolean {
+  return (
+    status === 402 &&
+    typeof body === 'object' &&
+    body !== null &&
+    !Array.isArray(body) &&
+    (body as Record<string, unknown>).error === 'Payment verification failed'
+  );
 }
 
 async function fetchQuote(
@@ -708,6 +726,11 @@ export class CircleX402Client {
         input.businessIntentId,
         quote,
         `x402 paid response was malformed: ${cause instanceof Error ? cause.message : 'unknown error'}`,
+      );
+    }
+    if (isPreSettlementVerificationRefusal(response.status, body)) {
+      throw new CircleX402PreSubmitError(
+        'x402 supplier rejected the authorization before settlement',
       );
     }
     if (!response.ok || settlement?.success !== true) {
