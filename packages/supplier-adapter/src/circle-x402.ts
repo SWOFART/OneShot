@@ -7,6 +7,8 @@ import type {
   PaymentRequirements,
   SettleResponse,
 } from '@x402/core/types';
+import { asEvmAddress } from '@oneshot/contracts';
+import type { TransactionReceipt } from '@oneshot/arc-adapter';
 
 export const ARC_X402_GATEWAY_WALLET = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9';
 export const ARC_X402_NETWORK = 'eip155:5042002';
@@ -56,6 +58,275 @@ export interface CircleX402ClientOptions {
   readonly network?: string;
   readonly asset?: string;
   readonly fetchFn?: typeof fetch;
+}
+
+export interface CircleX402UserWalletPayload {
+  readonly x402Version: 2;
+  readonly payload: Record<string, unknown>;
+}
+
+function isHex(value: unknown, bytes: number): value is `0x${string}` {
+  return typeof value === 'string' && new RegExp(`^0x[0-9a-fA-F]{${bytes * 2}}$`, 'u').test(value);
+}
+
+/**
+ * Validates the browser-created Circle Gateway authorization against the
+ * durable quote and payer before it reaches the supplier. The signature is
+ * intentionally kept in memory only; the ledger stores provider identities,
+ * hashes, and receipt evidence instead of the signed payload.
+ */
+export function parseCircleX402UserWalletPayload(
+  value: unknown,
+  quote: CircleX402Quote,
+  payerAddress: string,
+): CircleX402UserWalletPayload {
+  const candidate =
+    value !== null && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null;
+  const payload =
+    candidate?.payload !== null &&
+    typeof candidate?.payload === 'object' &&
+    !Array.isArray(candidate.payload)
+      ? (candidate.payload as Record<string, unknown>)
+      : null;
+  const authorization =
+    payload?.authorization !== null &&
+    typeof payload?.authorization === 'object' &&
+    !Array.isArray(payload.authorization)
+      ? (payload.authorization as Record<string, unknown>)
+      : null;
+  if (!candidate || candidate.x402Version !== 2 || !payload || !authorization) {
+    throw new CircleX402PreSubmitError('x402 user-wallet payment payload is malformed');
+  }
+  const requirement = asRequirements(quote.requirements);
+  const payer = asEvmAddress(payerAddress);
+  const expectedKeys = ['from', 'to', 'value', 'validAfter', 'validBefore', 'nonce'];
+  const actualKeys = Object.keys(authorization).sort();
+  if (
+    actualKeys.length !== expectedKeys.length ||
+    actualKeys.some((key, index) => key !== expectedKeys.slice().sort()[index]) ||
+    (!isHex(payload.signature, 64) && !isHex(payload.signature, 65)) ||
+    typeof authorization.from !== 'string' ||
+    typeof authorization.to !== 'string' ||
+    typeof authorization.value !== 'string' ||
+    typeof authorization.validAfter !== 'string' ||
+    typeof authorization.validBefore !== 'string' ||
+    !isHex(authorization.nonce, 32) ||
+    !/^0x[0-9a-fA-F]{40}$/u.test(authorization.from) ||
+    !/^0x[0-9a-fA-F]{40}$/u.test(authorization.to) ||
+    !/^\d+$/u.test(authorization.value) ||
+    !/^\d+$/u.test(authorization.validAfter) ||
+    !/^\d+$/u.test(authorization.validBefore)
+  ) {
+    throw new CircleX402PreSubmitError('x402 user-wallet payment payload is malformed');
+  }
+  if (
+    authorization.from.toLowerCase() !== payer.toLowerCase() ||
+    authorization.to.toLowerCase() !== requirement.payTo.toLowerCase() ||
+    authorization.value !== requirement.amount ||
+    BigInt(authorization.validAfter) > BigInt(authorization.validBefore)
+  ) {
+    throw new CircleX402PreSubmitError(
+      'x402 user-wallet payment does not match the approved payer, recipient, or amount',
+    );
+  }
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  const validAfter = BigInt(authorization.validAfter);
+  const validBefore = BigInt(authorization.validBefore);
+  if (
+    validAfter < now - 600n ||
+    validAfter > now ||
+    validBefore < now ||
+    validBefore > now + BigInt(MAX_CIRCLE_X402_TIMEOUT_SECONDS)
+  ) {
+    throw new CircleX402PreSubmitError(
+      'x402 user-wallet payment authorization is outside its validity window',
+    );
+  }
+  return {
+    x402Version: 2,
+    payload: {
+      authorization: {
+        from: authorization.from,
+        to: authorization.to,
+        value: authorization.value,
+        validAfter: authorization.validAfter,
+        validBefore: authorization.validBefore,
+        nonce: authorization.nonce,
+      },
+      signature: payload.signature,
+    },
+  };
+}
+
+export interface CircleX402UserWalletForwarderOptions {
+  readonly allowedUrl: string;
+  readonly maxAmountAtomic?: bigint;
+  readonly fetchFn?: typeof fetch;
+  readonly getReceipt?: (transactionHash: string) => Promise<TransactionReceipt | null>;
+  readonly getTransactionInput?: (transactionHash: string) => Promise<string>;
+}
+
+/** Forwards a user-signed Circle Gateway payload without holding a signer. */
+export class CircleX402UserWalletForwarder {
+  readonly #http = new x402HTTPClient(new x402Client());
+  readonly #fetch: typeof fetch;
+  readonly #allowedUrl: string;
+  readonly #maxAmountAtomic: bigint;
+  readonly #getReceipt:
+    ((transactionHash: string) => Promise<TransactionReceipt | null>) | undefined;
+  readonly #getTransactionInput: ((transactionHash: string) => Promise<string>) | undefined;
+
+  constructor(options: CircleX402UserWalletForwarderOptions) {
+    this.#fetch = options.fetchFn ?? fetch.bind(globalThis);
+    this.#allowedUrl = assertUrl(options.allowedUrl);
+    this.#maxAmountAtomic = options.maxAmountAtomic ?? DEFAULT_MAX_AMOUNT_ATOMIC;
+    this.#getReceipt = options.getReceipt;
+    this.#getTransactionInput = options.getTransactionInput;
+    if (this.#maxAmountAtomic <= 0n) throw new Error('x402 maximum amount must be positive');
+  }
+
+  async getReceipt(transactionHash: string): Promise<TransactionReceipt | null> {
+    return this.#getReceipt ? this.#getReceipt(transactionHash) : null;
+  }
+
+  async getTransactionInput(transactionHash: string): Promise<string | undefined> {
+    return this.#getTransactionInput?.(transactionHash);
+  }
+
+  async getTransfer(id: string): Promise<CircleX402Transfer> {
+    if (!TRANSFER_ID.test(id)) throw new Error('Circle x402 transfer ID is malformed');
+    const response = await this.#fetch(`${CIRCLE_GATEWAY_API}/v1/x402/transfers/${id}`, {
+      method: 'GET',
+      redirect: 'error',
+    });
+    const body = await responseBody(response);
+    if (!response.ok || typeof body !== 'object' || body === null || Array.isArray(body)) {
+      throw new Error(`Circle x402 transfer lookup returned HTTP ${response.status}`);
+    }
+    const transfer = body as Record<string, unknown>;
+    const statuses = new Set(['received', 'batched', 'confirmed', 'completed', 'failed']);
+    if (
+      transfer.id !== id ||
+      typeof transfer.status !== 'string' ||
+      !statuses.has(transfer.status) ||
+      transfer.token !== 'USDC' ||
+      typeof transfer.sendingNetwork !== 'string' ||
+      typeof transfer.recipientNetwork !== 'string' ||
+      typeof transfer.fromAddress !== 'string' ||
+      !/^0x[0-9a-fA-F]{40}$/u.test(transfer.fromAddress) ||
+      typeof transfer.toAddress !== 'string' ||
+      !/^0x[0-9a-fA-F]{40}$/u.test(transfer.toAddress) ||
+      typeof transfer.amount !== 'string' ||
+      !/^\d+$/u.test(transfer.amount) ||
+      (transfer.txHash !== undefined &&
+        (typeof transfer.txHash !== 'string' || !TRANSACTION_HASH.test(transfer.txHash)))
+    ) {
+      throw new Error('Circle x402 transfer response is malformed');
+    }
+    return {
+      id,
+      status: transfer.status as CircleX402Transfer['status'],
+      sendingNetwork: transfer.sendingNetwork,
+      recipientNetwork: transfer.recipientNetwork,
+      fromAddress: transfer.fromAddress,
+      toAddress: transfer.toAddress,
+      amount: transfer.amount,
+      ...(typeof transfer.txHash === 'string' ? { txHash: transfer.txHash as `0x${string}` } : {}),
+    };
+  }
+
+  async forward<T = unknown>(input: {
+    readonly businessIntentId: string;
+    readonly quote: CircleX402Quote;
+    readonly payerAddress: string;
+    readonly paymentPayload: unknown;
+  }): Promise<CircleX402PaymentResult<T>> {
+    if (!input.businessIntentId.trim()) throw new Error('businessIntentId is required');
+    if (input.quote.url !== this.#allowedUrl) {
+      throw new CircleX402PreSubmitError(
+        'x402 resource URL does not match the configured supplier',
+      );
+    }
+    const requirements = asRequirements(input.quote.requirements);
+    if (BigInt(requirements.amount) > this.#maxAmountAtomic) {
+      throw new CircleX402PreSubmitError('x402 quote exceeds the configured maximum amount');
+    }
+    const paymentPayload = parseCircleX402UserWalletPayload(
+      input.paymentPayload,
+      input.quote,
+      input.payerAddress,
+    );
+    const encoded = this.#http.encodePaymentSignatureHeader({
+      x402Version: paymentPayload.x402Version,
+      payload: paymentPayload.payload,
+      resource: { url: input.quote.resourceUrl, description: '', mimeType: 'application/json' },
+      accepted: requirements,
+    });
+    let response: Response;
+    try {
+      response = await this.#fetch(input.quote.url, {
+        method: 'GET',
+        redirect: 'error',
+        headers: encoded,
+      });
+    } catch (cause) {
+      throw new CircleX402AmbiguousError(
+        input.businessIntentId,
+        input.quote,
+        `x402 paid request failed after signing: ${cause instanceof Error ? cause.message : 'unknown error'}`,
+      );
+    }
+    let body: unknown;
+    let settlement: SettleResponse | undefined;
+    try {
+      body = await responseBody(response);
+      settlement = parseSettlement(response);
+    } catch (cause) {
+      throw new CircleX402AmbiguousError(
+        input.businessIntentId,
+        input.quote,
+        `x402 paid response was malformed: ${cause instanceof Error ? cause.message : 'unknown error'}`,
+      );
+    }
+    if (!response.ok || settlement?.success !== true) {
+      throw new CircleX402AmbiguousError(
+        input.businessIntentId,
+        input.quote,
+        `x402 paid request returned HTTP ${response.status} without confirmed settlement`,
+      );
+    }
+    if (
+      typeof settlement.transaction !== 'string' ||
+      (!TRANSACTION_HASH.test(settlement.transaction) &&
+        !TRANSFER_ID.test(settlement.transaction)) ||
+      settlement.network !== ARC_X402_NETWORK
+    ) {
+      throw new CircleX402AmbiguousError(
+        input.businessIntentId,
+        input.quote,
+        'x402 settlement evidence did not include a valid Arc transfer identity',
+      );
+    }
+    return {
+      businessIntentId: input.businessIntentId,
+      quote: input.quote,
+      data: body as T,
+      settlement: {
+        success: true,
+        network: settlement.network,
+        ...(TRANSACTION_HASH.test(settlement.transaction)
+          ? {
+              transaction: settlement.transaction as `0x${string}`,
+              transactionHash: settlement.transaction as `0x${string}`,
+            }
+          : { providerTransferId: settlement.transaction }),
+        ...(settlement.payer ? { payer: settlement.payer } : {}),
+        ...(settlement.amount ? { amountAtomic: settlement.amount } : {}),
+      },
+    };
+  }
 }
 
 /**

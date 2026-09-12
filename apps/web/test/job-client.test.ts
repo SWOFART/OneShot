@@ -41,4 +41,23 @@ describe('JobApiClient quote flow', () => {
     expect(calledUrl).toBe('/v1/jobs/quote');
     expect(JSON.parse(calledBody)).toEqual(request);
   });
+
+  it('refreshes activity without sending an empty JSON body', async () => {
+    let calledInit: RequestInit | undefined;
+    const client = new JobApiClient({
+      getAuthToken: () => 'demo-token',
+      fetchFn: async (_input, init) => {
+        calledInit = init;
+        return new Response(JSON.stringify({ observations: [] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      },
+    });
+
+    await expect(client.refreshActivity()).resolves.toEqual({ observations: [] });
+    expect(calledInit?.method).toBe('POST');
+    expect(new Headers(calledInit?.headers).get('content-type')).toBeNull();
+    expect(calledInit?.body).toBeUndefined();
+  });
 });

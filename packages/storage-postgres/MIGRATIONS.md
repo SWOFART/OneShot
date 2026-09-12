@@ -13,10 +13,10 @@ silently edited or automatically reversed.
 ## Current schema digest
 
 The append-only ledger plus resumable-jobs, paid-API, and Circle x402 transfer
-identity migration set (`001` through `009`) has SHA-256 digest:
+identity migration set (`001` through `010`) has SHA-256 digest:
 
 ```text
-d1aa8ae6d0541aa42994a796442308c1fdd1917d20879e965b959f076ea2de72
+e073e3f13db1be93c3f1359b6359cdb683ad3d7c46f26022e8fd388a36570275
 ```
 
 ## Containerized Testing Command

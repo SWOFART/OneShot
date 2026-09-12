@@ -422,12 +422,13 @@ export function JobWorkspace(props: {
 
 export function CircleX402DemoPanel(props: {
   readonly client?: PaidApiClient;
+  readonly userWallet?: UserWalletSession;
   readonly onSelectIntent: (id: string) => void;
 }) {
   const [taskKey, setTaskKey] = useState(() => `circle-api-${crypto.randomUUID().slice(0, 8)}`);
   const [quote, setQuote] = useState<PaidApiQuote | null>(null);
   const [request, setRequest] = useState<PaidApiResponse | null>(null);
-  const [loading, setLoading] = useState<'quote' | 'start' | 'refresh' | null>(null);
+  const [loading, setLoading] = useState<'quote' | 'start' | 'sign' | 'refresh' | null>(null);
   const [notice, setNotice] = useState('');
   const paidApiRequest = { task_key: taskKey.trim(), tool_id: 'circle-x402-api-v1' as const };
 
@@ -457,12 +458,69 @@ export function CircleX402DemoPanel(props: {
     setLoading('start');
     setNotice('');
     try {
-      const result = await props.client.start({ ...paidApiRequest, approved_quote: approvedQuote });
+      if (!props.userWallet) {
+        const result = await props.client.start({ ...paidApiRequest, approved_quote: approvedQuote });
+        setRequest(result);
+        setNotice('Request accepted. OneShot now owns the payment attempt.');
+        return;
+      }
+      const payerWallet = props.userWallet.address ?? (await props.userWallet.connect());
+      if (!payerWallet) throw new Error('No Ethereum wallet is connected');
+      const result = await props.client.prepareUserWallet({
+        ...paidApiRequest,
+        approved_quote: approvedQuote,
+        payer_wallet: payerWallet,
+      });
       setRequest(result);
-      setNotice('Request accepted. OneShot now owns the payment attempt.');
+      setNotice('Request prepared. Your wallet will now ask you to sign the exact Circle payment.');
+      await signAndSubmit(result, approvedQuote, payerWallet);
     } catch {
-      setQuote(null);
-      setNotice('The API request was not accepted. Keep the same request key before retrying.');
+      if (!props.userWallet) setQuote(null);
+      setNotice(
+        props.userWallet
+          ? 'The payment was not completed. If your wallet showed a signature request, check the same request status before trying again.'
+          : 'The API request was not accepted. Keep the same request key before retrying.',
+      );
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function signAndSubmit(
+    prepared: PaidApiResponse,
+    approvedQuote: PaidApiQuote,
+    payerWallet: string,
+  ): Promise<void> {
+    if (!props.client || !props.userWallet) return;
+    setLoading('sign');
+    const paymentPayload = await props.userWallet.signX402Payment(approvedQuote);
+    const submitted = await props.client.submitUserWalletPayment(
+      prepared.business_intent_id,
+      payerWallet,
+      paymentPayload,
+    );
+    setRequest(submitted);
+    setNotice(
+      submitted.payment_state === 'COMMITTED'
+        ? 'Payment confirmed from your connected wallet. The dataset result is ready.'
+        : submitted.payment_state === 'UNKNOWN'
+          ? 'The signed payment was recorded but is not final. Check the same request; do not sign another payment.'
+          : `Payment state: ${submitted.payment_state}.`,
+    );
+  }
+
+  async function signPrepared(): Promise<void> {
+    if (!request || !quote || !props.userWallet) return;
+    const payerWallet = request.payer_wallet ?? props.userWallet.address;
+    if (!payerWallet) {
+      setNotice('Connect the same wallet that was bound to this request.');
+      return;
+    }
+    setNotice('');
+    try {
+      await signAndSubmit(request, quote, payerWallet);
+    } catch {
+      setNotice('The payment was not completed. Check the same request status before trying again.');
     } finally {
       setLoading(null);
     }
@@ -472,7 +530,11 @@ export function CircleX402DemoPanel(props: {
     if (!props.client || !request) return;
     setLoading('refresh');
     try {
-      setRequest(await props.client.get(request.business_intent_id));
+      const updated =
+        props.userWallet && request.payment_mode === 'USER_WALLET'
+          ? await props.client.reconcileUserWalletPayment(request.business_intent_id)
+          : await props.client.get(request.business_intent_id);
+      setRequest(updated);
       setNotice('Payment status checked from the OneShot ledger.');
     } catch {
       setNotice('Payment state could not be refreshed; no new payment was submitted.');
@@ -492,8 +554,16 @@ export function CircleX402DemoPanel(props: {
       </header>
       <p>
         Buy a demo dataset from OneShot’s own seller through Circle x402. OneShot keeps one request
-        key so a retry reuses the original payment instead of charging twice.
+        key so a retry reuses the original payment instead of charging twice. When a connected
+        wallet is used, it signs the exact payment to the API seller; OneShot never substitutes its
+        own wallet.
       </p>
+      {props.userWallet && (
+        <p className="field-help">
+          Circle Gateway requires this wallet to have a funded Arc Testnet Gateway balance. OneShot
+          does not deposit or move funds automatically; approval only signs the reviewed payment.
+        </p>
+      )}
       <label htmlFor="paid-api-task-key">Request key</label>
       <input
         id="paid-api-task-key"
@@ -543,6 +613,14 @@ export function CircleX402DemoPanel(props: {
                   {shortenAddress(quote.recipient)}
                 </dd>
               </div>
+              {props.userWallet?.address && (
+                <div>
+                  <dt>Payer wallet</dt>
+                  <dd className="mono" title={props.userWallet.address}>
+                    {shortenAddress(props.userWallet.address)}
+                  </dd>
+                </div>
+              )}
               <div>
                 <dt>Network</dt>
                 <dd>{networkLabel(quote.network)}</dd>
@@ -563,11 +641,18 @@ export function CircleX402DemoPanel(props: {
             </details>
           </section>
           <p className="field-help">
-            Approval creates the request. Only the worker can submit the Circle payment, and a
-            delayed response remains protected until evidence is checked.
+            {props.userWallet
+              ? 'Approval binds your wallet, the seller, the amount and Arc Testnet. Your wallet signs one Circle Gateway authorization; OneShot forwards it once and verifies the Arc receipt.'
+              : 'Approval creates the request. The server-side Privy execution wallet pays in this test composition; your connected wallet is not charged here.'}
           </p>
           <button type="button" disabled={loading !== null} onClick={() => void approve()}>
-            {loading === 'start' ? 'Starting request…' : 'Approve and get result'}
+            {loading === 'start' || loading === 'sign'
+              ? loading === 'sign'
+                ? 'Waiting for wallet signature…'
+                : 'Preparing request…'
+              : props.userWallet
+                ? 'Approve and pay from my wallet'
+                : 'Approve and get result'}
           </button>
         </>
       )}
@@ -597,6 +682,16 @@ export function CircleX402DemoPanel(props: {
               is in progress.
             </p>
           )}
+          {props.userWallet && request.payment_state === 'READY' && (
+            <button
+              type="button"
+              className="secondary compact"
+              disabled={loading !== null}
+              onClick={() => void signPrepared()}
+            >
+              {loading === 'sign' ? 'Waiting for wallet signature…' : 'Sign and pay from my wallet'}
+            </button>
+          )}
           {request.response !== undefined && (
             <div className="response-output">
               <strong>API result</strong>
@@ -611,16 +706,6 @@ export function CircleX402DemoPanel(props: {
           >
             {loading === 'refresh' ? 'Checking…' : 'Check payment status'}
           </button>
-          {request.payment_state === 'COMMITTED' && (
-            <button
-              type="button"
-              className="secondary compact"
-              disabled={loading !== null}
-              onClick={() => void approve()}
-            >
-              Replay same request safely
-            </button>
-          )}
           <button
             type="button"
             className="secondary compact"

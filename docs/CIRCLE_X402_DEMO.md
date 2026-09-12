@@ -1,14 +1,18 @@
 # Circle x402 API demo
 
-The workspace Tools page now contains the live paid-API path. First deploy the
-seller described in [`CIRCLE_X402_SELLER.md`](CIRCLE_X402_SELLER.md), then
-configure `ONESHOT_X402_URL` and `ONESHOT_X402_MAX_AMOUNT_ATOMIC` in both the
-API and worker environments. Use the site to request a quote and approve the
-stable task key. Approval sends the exact displayed quote; if the provider quote
-changes, the API rejects the approval before creating durable payment work. The
-approval creates one durable Business Intent; the worker
-submits Circle Gateway x402 only after the existing authorization and
-submission claims.
+The workspace Tools page now contains the live user-funded paid-API path. First
+deploy the seller described in [`CIRCLE_X402_SELLER.md`](CIRCLE_X402_SELLER.md),
+then configure `ONESHOT_X402_URL` and `ONESHOT_X402_MAX_AMOUNT_ATOMIC` in the
+API environment. Use the site to request a quote and approve the stable task
+key. The connected Privy Ethereum wallet signs the exact Circle Gateway
+authorization for the reviewed quote; OneShot forwards that authorization to
+the seller and verifies the resulting Arc settlement. The API never signs a
+user-funded request with the server wallet.
+
+The existing worker buyer adapter remains available for the operator fallback
+and for compatibility with server-paid requests. It is not used for a
+`USER_WALLET` paid-API intent, and a defensive worker guard refuses to route one
+there even if a stray outbox row exists.
 
 To include the paid transfer in the website's Graph activity panel, point the
 API's `ONESHOT_ACTIVITY_WALLET_ADDRESS` at Circle's Arc Testnet Gateway wallet
@@ -23,10 +27,12 @@ This is the second, deliberately separate demo mode:
   `scripts/demo-circle-x402.mjs` remains an operator fallback that pays
   one Circle Arc nanopayments sample endpoint through Circle Gateway.
 
-The x402 request is signed by the configured Privy wallet through its EIP-712
-signing API. No private key is accepted or exported. The wallet must already
-have a Circle Gateway testnet balance; the one-time deposit is an operational
-setup step and is not repeated by the demo script.
+The website x402 request is signed by the connected Privy wallet through its
+EIP-712 signing API. No private key is accepted or exported. The paying wallet
+must already have the required Circle Gateway testnet balance; the one-time
+deposit is an operational setup step and is not repeated by the website. The
+operator fallback signs with the configured server-side Privy wallet and has
+the same Gateway-balance prerequisite.
 
 ## Run
 
@@ -52,15 +58,14 @@ An HTML `200` response means the Cloudflare Worker is serving the SPA instead of
 the seller proxy; a `503 SELLER_NOT_READY` response means
 `SELLER_BACKEND_URL` has not been configured on the Worker.
 
-The script performs one paid HTTP request. Circle's `PAYMENT-RESPONSE` may carry
-a transfer UUID instead of an Arc transaction hash. OneShot persists that UUID
-and the paid response first, then reads Circle's transfer status and transaction
-hash and verifies the Arc Gateway `submitBatch` calldata plus its
+The paid request has one durable Business Intent. Circle's `PAYMENT-RESPONSE`
+may carry a transfer UUID instead of an Arc transaction hash. OneShot persists
+that identity and the paid response, then reads Circle's transfer status and
+transaction hash and verifies the Arc Gateway `submitBatch` calldata plus its
 `BatchProcessed` event. A lost or malformed response remains `UNKNOWN` and the
-process exits without retrying. The in-process guard collapses duplicate calls
-for one Business Intent; the production job adapter persists the claim and
-evidence in OneShot's PostgreSQL ledger before using this rail across restarts
-or workers.
+same request can only be checked again; it cannot silently sign or forward a
+replacement payment. The durable claim and evidence apply across restarts and
+workers.
 
 This runbook does not claim that the x402 request is a direct ERC-20 transfer.
 Circle Gateway batches the signed authorization, so a Graph token-transfer

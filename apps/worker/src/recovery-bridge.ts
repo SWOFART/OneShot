@@ -308,6 +308,7 @@ export class IntentLedgerRecoveryCommandStore implements RecoveryCommandStorePor
         transaction_hash: txHash,
         block_number: blockNumber,
         transfer_log_index: transferLogIndex,
+        verified_by: 'ARC_RPC_EXACT_TRANSFER',
       });
 
       if (!completion.completed) {

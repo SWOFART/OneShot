@@ -29,10 +29,10 @@ export class JobApiClient {
     this.#fetch = config.fetchFn ?? fetch.bind(globalThis);
   }
 
-  #headers(): HeadersInit {
+  #headers(withJsonBody = false): HeadersInit {
     const token = this.#getAuthToken();
     return {
-      'content-type': 'application/json',
+      ...(withJsonBody ? { 'content-type': 'application/json' } : {}),
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     };
   }
@@ -45,7 +45,7 @@ export class JobApiClient {
   async start(request: CreateJobRequest): Promise<JobView> {
     const response = await this.#fetch(`${this.#baseUrl}/v1/jobs`, {
       method: 'POST',
-      headers: this.#headers(),
+      headers: this.#headers(true),
       body: JSON.stringify(request),
     });
     const body = await responseJson<JobView>(response);
@@ -56,7 +56,7 @@ export class JobApiClient {
   async prepareUserWalletJob(request: CreateUserWalletJobRequest): Promise<JobView> {
     const response = await this.#fetch(`${this.#baseUrl}/v1/jobs/user-wallet/prepare`, {
       method: 'POST',
-      headers: this.#headers(),
+      headers: this.#headers(true),
       body: JSON.stringify(request),
     });
     const body = await responseJson<JobView>(response);
@@ -69,7 +69,7 @@ export class JobApiClient {
       `${this.#baseUrl}/v1/jobs/${encodeURIComponent(jobId)}/user-wallet/submit`,
       {
         method: 'POST',
-        headers: this.#headers(),
+        headers: this.#headers(true),
         body: JSON.stringify({ transaction_hash: transactionHash }),
       },
     );
@@ -81,7 +81,7 @@ export class JobApiClient {
   async quote(request: CreateJobRequest): Promise<SupplierQuote> {
     const response = await this.#fetch(`${this.#baseUrl}/v1/jobs/quote`, {
       method: 'POST',
-      headers: this.#headers(),
+      headers: this.#headers(true),
       body: JSON.stringify(request),
     });
     const body = await responseJson<SupplierQuote>(response);

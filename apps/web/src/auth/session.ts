@@ -1,3 +1,5 @@
+import type { PaidApiQuote, SubmitPaidApiUserWalletRequest } from '@oneshot/contracts';
+
 export type OperatorSessionStatus = 'UNCONFIGURED' | 'LOADING' | 'SIGNED_OUT' | 'SIGNED_IN';
 
 /**
@@ -25,6 +27,7 @@ export interface UserWalletSession {
     readonly recipient: string;
     readonly amount_atomic: string;
   }): Promise<string>;
+  signX402Payment(quote: PaidApiQuote): Promise<SubmitPaidApiUserWalletRequest['payment_payload']>;
 }
 
 export const unconfiguredOperatorSession: UseOperatorSession = () => ({

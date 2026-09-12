@@ -802,6 +802,293 @@
         }
       }
     },
+    "/v1/paid-api/user-wallet/prepare": {
+      "post": {
+        "operationId": "preparePaidApiUserWallet",
+        "summary": "Bind a paid API quote to the connected user wallet before signing",
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreparePaidApiUserWalletRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Identical user-wallet preparation; existing request returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaidApiResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "User-wallet paid API request prepared.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaidApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INTENT_PAYLOAD_CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/paid-api/{id}/user-wallet/submit": {
+      "post": {
+        "operationId": "submitPaidApiUserWallet",
+        "summary": "Forward one signed user-wallet x402 payment and verify settlement",
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "description": "Stable Business Intent identifier."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitPaidApiUserWalletRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Final paid API state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaidApiResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Paid API settlement is still being verified.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaidApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "RECONCILIATION_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/paid-api/{id}/user-wallet/reconcile": {
+      "post": {
+        "operationId": "reconcilePaidApiUserWallet",
+        "summary": "Re-check the same user-wallet Circle payment without forwarding again",
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "description": "Stable Business Intent identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Final paid API state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaidApiResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Paid API settlement remains non-final.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaidApiResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "RECONCILIATION_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/paid-api/{id}": {
       "get": {
         "operationId": "getPaidApi",
@@ -1937,6 +2224,59 @@
           }
         }
       },
+      "PreparePaidApiUserWalletRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task_key",
+          "tool_id",
+          "approved_quote",
+          "payer_wallet"
+        ],
+        "properties": {
+          "task_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          },
+          "tool_id": {
+            "type": "string",
+            "const": "circle-x402-api-v1"
+          },
+          "approved_quote": {
+            "$ref": "#/components/schemas/PaidApiQuote"
+          },
+          "payer_wallet": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "examples": [
+              "0x1111111111111111111111111111111111111111"
+            ]
+          }
+        }
+      },
+      "SubmitPaidApiUserWalletRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "payer_wallet",
+          "payment_payload"
+        ],
+        "properties": {
+          "payer_wallet": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "examples": [
+              "0x1111111111111111111111111111111111111111"
+            ]
+          },
+          "payment_payload": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
       "PaidApiQuote": {
         "type": "object",
         "additionalProperties": false,
@@ -2040,6 +2380,20 @@
               "FAILED_SAFE",
               "UNKNOWN",
               "REJECTED"
+            ]
+          },
+          "payment_mode": {
+            "type": "string",
+            "enum": [
+              "SERVER_PRIVY",
+              "USER_WALLET"
+            ]
+          },
+          "payer_wallet": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "examples": [
+              "0x1111111111111111111111111111111111111111"
             ]
           },
           "quote": {

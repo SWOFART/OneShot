@@ -340,6 +340,120 @@ describe('OpenAPI contract endpoints', () => {
     await app.close();
   });
 
+  it('prepares and submits a Circle payment signed by the connected user wallet', async () => {
+    const quote: PaidApiQuote = {
+      supplier_id: 'circle-x402-v1',
+      resource_url: 'https://x402.example.test/api/dataset',
+      recipient: request.recipient,
+      amount_atomic: '10000',
+      asset: 'USDC',
+      network: 'eip155:5042002',
+      x402_version: 2,
+      max_timeout_seconds: 60,
+    };
+    const payer = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const prepared: PaidApiResponse = {
+      business_intent_id: 'intent-paid-api-user-wallet',
+      task_key: 'circle-api-user-wallet',
+      tool_id: 'circle-x402-api-v1',
+      resource_url: quote.resource_url,
+      payment_state: 'READY',
+      payment_mode: 'USER_WALLET',
+      payer_wallet: payer,
+      quote,
+      created_at: '2026-09-12T00:00:00Z',
+      updated_at: '2026-09-12T00:00:00Z',
+    };
+    const committed: PaidApiResponse = {
+      ...prepared,
+      payment_state: 'COMMITTED',
+      provider_transaction_hash: `0x${'b'.repeat(64)}`,
+      settlement: {
+        provider_reference_id: 'circle-x402-user:nonce',
+        transaction_hash: `0x${'b'.repeat(64)}`,
+        block_number: '100',
+        transfer_log_index: 0,
+      },
+      response: { rows: 1 },
+    };
+    const calls: Array<{ name: string; value: unknown }> = [];
+    const app = buildApi({
+      ledger: createMockLedger(),
+      paidApi: {
+        async quote() {
+          return quote;
+        },
+        async start() {
+          throw new Error('server-paid path must not be used');
+        },
+        async prepareUserWallet(_request, _correlationId, approvedQuote, payerWallet) {
+          calls.push({ name: 'prepare', value: { approvedQuote, payerWallet } });
+          return { kind: 'ACCEPTED' as const, request: prepared };
+        },
+        async submitUserWallet(id, payerWallet, paymentPayload) {
+          calls.push({ name: 'submit', value: { id, payerWallet, paymentPayload } });
+          return committed;
+        },
+        async reconcileUserWallet(id) {
+          calls.push({ name: 'reconcile', value: { id } });
+          return committed;
+        },
+        async get() {
+          return committed;
+        },
+      },
+      authenticator: staticBearerAuthenticator('test-token'),
+      config: { workspaceId: 'workspace-paid-api-user-wallet' },
+      nextCorrelationId: () => 'correlation-paid-api-user-wallet',
+    });
+    const headers = { authorization: 'Bearer test-token' };
+    const prepare = await app.inject({
+      method: 'POST',
+      url: '/v1/paid-api/user-wallet/prepare',
+      headers,
+      payload: {
+        task_key: prepared.task_key,
+        tool_id: prepared.tool_id,
+        approved_quote: quote,
+        payer_wallet: payer,
+      },
+    });
+    expect(prepare.statusCode).toBe(202);
+    expect(prepare.json()).toEqual(prepared);
+
+    const paymentPayload = {
+      x402Version: 2,
+      payload: {
+        authorization: { nonce: `0x${'c'.repeat(64)}` },
+        signature: `0x${'d'.repeat(128)}`,
+      },
+    };
+    const submit = await app.inject({
+      method: 'POST',
+      url: `/v1/paid-api/${prepared.business_intent_id}/user-wallet/submit`,
+      headers,
+      payload: { payer_wallet: payer, payment_payload: paymentPayload },
+    });
+    expect(submit.statusCode).toBe(200);
+    expect(submit.json()).toEqual(committed);
+    const reconciled = await app.inject({
+      method: 'POST',
+      url: `/v1/paid-api/${prepared.business_intent_id}/user-wallet/reconcile`,
+      headers,
+    });
+    expect(reconciled.statusCode).toBe(200);
+    expect(reconciled.json()).toEqual(committed);
+    expect(calls).toEqual([
+      { name: 'prepare', value: { approvedQuote: quote, payerWallet: payer } },
+      {
+        name: 'submit',
+        value: { id: prepared.business_intent_id, payerWallet: payer, paymentPayload },
+      },
+      { name: 'reconcile', value: { id: prepared.business_intent_id } },
+    ]);
+    await app.close();
+  });
+
   it('POST /v1/intents returns 202 for new intent and 200 for identical replay', async () => {
     let mode: 'ACCEPTED' | 'REPLAY_IDENTICAL' = 'ACCEPTED';
     const app = buildApi({

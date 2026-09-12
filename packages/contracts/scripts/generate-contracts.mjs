@@ -249,6 +249,26 @@ const schemas = {
       approved_quote: { $ref: '#/$defs/PaidApiQuote' },
     },
   },
+  PreparePaidApiUserWalletRequest: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['task_key', 'tool_id', 'approved_quote', 'payer_wallet'],
+    properties: {
+      task_key: boundedId,
+      tool_id: { type: 'string', const: 'circle-x402-api-v1' },
+      approved_quote: { $ref: '#/$defs/PaidApiQuote' },
+      payer_wallet: evmAddress,
+    },
+  },
+  SubmitPaidApiUserWalletRequest: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['payer_wallet', 'payment_payload'],
+    properties: {
+      payer_wallet: evmAddress,
+      payment_payload: { type: 'object', additionalProperties: true },
+    },
+  },
   PaidApiQuote: {
     type: 'object',
     additionalProperties: false,
@@ -292,6 +312,8 @@ const schemas = {
       tool_id: { type: 'string', const: 'circle-x402-api-v1' },
       resource_url: { type: 'string', minLength: 1, maxLength: 2048 },
       payment_state: { type: 'string', enum: intentStates },
+      payment_mode: { type: 'string', enum: paymentModes },
+      payer_wallet: evmAddress,
       quote: { $ref: '#/$defs/PaidApiQuote' },
       provider_transaction_hash: { type: 'string', pattern: '^0x[0-9a-fA-F]{64}$' },
       settlement: { $ref: '#/$defs/Settlement' },
@@ -721,6 +743,66 @@ const openapi = {
         },
       },
     },
+    '/v1/paid-api/user-wallet/prepare': {
+      post: {
+        operationId: 'preparePaidApiUserWallet',
+        summary: 'Bind a paid API quote to the connected user wallet before signing',
+        security: serviceSecurity,
+        requestBody: {
+          required: true,
+          content: jsonContent('PreparePaidApiUserWalletRequest'),
+        },
+        responses: {
+          200: response(
+            'Identical user-wallet preparation; existing request returned.',
+            'PaidApiResponse',
+          ),
+          202: response('User-wallet paid API request prepared.', 'PaidApiResponse'),
+          400: errorResponse('INVALID_REQUEST'),
+          401: errorResponse('UNAUTHORIZED'),
+          403: errorResponse('FORBIDDEN'),
+          409: errorResponse('INTENT_PAYLOAD_CONFLICT'),
+          503: errorResponse('NOT_READY'),
+        },
+      },
+    },
+    '/v1/paid-api/{id}/user-wallet/submit': {
+      post: {
+        operationId: 'submitPaidApiUserWallet',
+        summary: 'Forward one signed user-wallet x402 payment and verify settlement',
+        security: serviceSecurity,
+        parameters: intentParameters,
+        requestBody: {
+          required: true,
+          content: jsonContent('SubmitPaidApiUserWalletRequest'),
+        },
+        responses: {
+          200: response('Final paid API state.', 'PaidApiResponse'),
+          202: response('Paid API settlement is still being verified.', 'PaidApiResponse'),
+          400: errorResponse('INVALID_REQUEST'),
+          401: errorResponse('UNAUTHORIZED'),
+          403: errorResponse('FORBIDDEN'),
+          409: errorResponse('RECONCILIATION_NOT_ALLOWED'),
+          503: errorResponse('NOT_READY'),
+        },
+      },
+    },
+    '/v1/paid-api/{id}/user-wallet/reconcile': {
+      post: {
+        operationId: 'reconcilePaidApiUserWallet',
+        summary: 'Re-check the same user-wallet Circle payment without forwarding again',
+        security: serviceSecurity,
+        parameters: intentParameters,
+        responses: {
+          200: response('Final paid API state.', 'PaidApiResponse'),
+          202: response('Paid API settlement remains non-final.', 'PaidApiResponse'),
+          401: errorResponse('UNAUTHORIZED'),
+          403: errorResponse('FORBIDDEN'),
+          409: errorResponse('RECONCILIATION_NOT_ALLOWED'),
+          503: errorResponse('NOT_READY'),
+        },
+      },
+    },
     '/v1/paid-api/{id}': {
       get: {
         operationId: 'getPaidApi',
@@ -997,6 +1079,15 @@ export interface ApprovePaidApiRequest extends CreatePaidApiRequest {
   readonly approved_quote: PaidApiQuote;
 }
 
+export interface PreparePaidApiUserWalletRequest extends ApprovePaidApiRequest {
+  readonly payer_wallet: string;
+}
+
+export interface SubmitPaidApiUserWalletRequest {
+  readonly payer_wallet: string;
+  readonly payment_payload: Record<string, unknown>;
+}
+
 export interface PaidApiQuote {
   readonly supplier_id: 'circle-x402-v1';
   readonly resource_url: string;
@@ -1014,6 +1105,8 @@ export interface PaidApiResponse {
   readonly tool_id: 'circle-x402-api-v1';
   readonly resource_url: string;
   readonly payment_state: IntentState;
+  readonly payment_mode?: PaymentMode;
+  readonly payer_wallet?: string;
   readonly quote: PaidApiQuote;
   readonly provider_transaction_hash?: string;
   readonly settlement?: SettlementView;

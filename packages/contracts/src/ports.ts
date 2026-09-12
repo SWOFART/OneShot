@@ -20,6 +20,8 @@ export type SettlementResult =
       readonly transaction_hash: TransactionHash;
       readonly block_number: BlockNumber;
       readonly transfer_log_index: number;
+      /** Set only when the adapter verified the exact Arc receipt and Transfer. */
+      readonly verified_by?: 'ARC_RPC_EXACT_TRANSFER';
     }
   | { readonly kind: 'DEFINITELY_NOT_SUBMITTED'; readonly reason: string }
   | { readonly kind: 'POSSIBLY_SUBMITTED'; readonly reason: string };
@@ -75,7 +77,14 @@ export function parseSettlementResult(value: unknown): SettlementResult {
     case 'CONFIRMED': {
       exactKeys(
         candidate,
-        ['kind', 'provider_reference_id', 'transaction_hash', 'block_number', 'transfer_log_index'],
+        [
+          'kind',
+          'provider_reference_id',
+          'transaction_hash',
+          'block_number',
+          'transfer_log_index',
+          'verified_by',
+        ],
         'settlement result',
       );
       if (
@@ -84,12 +93,21 @@ export function parseSettlementResult(value: unknown): SettlementResult {
       ) {
         throw new ContractValidationError('transfer_log_index must be a non-negative safe integer');
       }
+      if (
+        candidate.verified_by !== undefined &&
+        candidate.verified_by !== 'ARC_RPC_EXACT_TRANSFER'
+      ) {
+        throw new ContractValidationError(
+          'verified_by must identify exact Arc receipt verification',
+        );
+      }
       return {
         kind,
         provider_reference_id: asProviderReferenceId(candidate.provider_reference_id),
         transaction_hash: asTransactionHash(candidate.transaction_hash),
         block_number: asBlockNumber(candidate.block_number),
         transfer_log_index: Number(candidate.transfer_log_index),
+        ...(candidate.verified_by ? { verified_by: candidate.verified_by } : {}),
       };
     }
     case 'DEFINITELY_NOT_SUBMITTED':

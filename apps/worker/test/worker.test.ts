@@ -202,13 +202,64 @@ describe('Worker Unit Logic', () => {
     expect(directCalls).toBe(0);
   });
 
-  it('persists provider request identity before calling the settlement port', async () => {
-    const order: string[] = [];
-    let persisted: unknown;
+  it('never routes a user-funded paid API intent to a server-wallet port', async () => {
+    let directCalls = 0;
+    let circleCalls = 0;
+    let claimCalls = 0;
     const ledger = createMockLedger({
-      async persistProviderRequestIdentity(_attemptId, identity) {
-        order.push('persist');
-        persisted = identity;
+      async getPaidApiTarget() {
+        return {
+          businessIntentId: sampleRequest.business_intent_id,
+          resourceUrl: 'https://x402.example.test/api/dataset',
+          method: 'GET' as const,
+          quotePayload: {},
+          paymentMode: 'USER_WALLET' as const,
+          payerWallet: '0x2222222222222222222222222222222222222222',
+        };
+      },
+      async claimSubmission() {
+        claimCalls += 1;
+        throw new Error('user-funded intent must not be claimed by the worker');
+      },
+    });
+
+    const processed = await executeSubmitSettlement('intent-worker-unit-1', {
+      pool: {} as never,
+      ledger,
+      settlementPort: {
+        async submit() {
+          directCalls += 1;
+          throw new Error('direct port must not receive user-funded API work');
+        },
+      },
+      paidApiSettlementPort: {
+        async submit() {
+          circleCalls += 1;
+          throw new Error('server-wallet Circle port must not receive user-funded API work');
+        },
+      },
+    });
+
+    expect(processed).toBe(true);
+    expect(claimCalls).toBe(0);
+    expect(circleCalls).toBe(0);
+    expect(directCalls).toBe(0);
+  });
+
+  it('passes provider request identity into the atomic claim before calling the settlement port', async () => {
+    const order: string[] = [];
+    let claimedIdentity: unknown;
+    const ledger = createMockLedger({
+      async claimSubmission(_id, _correlationId, identity) {
+        order.push('claim');
+        claimedIdentity = identity;
+        return {
+          claimed: true,
+          intent: { ...sampleIntent, state: 'READY' },
+          attemptId: 'attempt-mock-1',
+          correlationId: 'corr-mock-1',
+          version: 2,
+        };
       },
     });
 
@@ -238,8 +289,8 @@ describe('Worker Unit Logic', () => {
       },
     });
 
-    expect(order).toEqual(['persist', 'submit']);
-    expect(persisted).toEqual({
+    expect(order).toEqual(['claim', 'submit']);
+    expect(claimedIdentity).toEqual({
       idempotencyKey: '0x' + '1'.repeat(64),
       referenceId: 'oneshot-intent-worker-unit-1',
       requestFingerprint: '0x' + '2'.repeat(64),
@@ -248,37 +299,63 @@ describe('Worker Unit Logic', () => {
     });
   });
 
-  it('does not call the provider when identity persistence fails', async () => {
+  it('does not claim or call the provider when identity derivation fails', async () => {
     let portCalled = false;
-    let completedKind: string | undefined;
+    let claimCalled = false;
     const ledger = createMockLedger({
-      async persistProviderRequestIdentity() {
-        throw new Error('database unavailable');
-      },
-      async completeSubmission(_id, _attemptId, result: SettlementResult) {
-        completedKind = result.kind;
-        return { completed: true, state: 'FAILED_SAFE', version: 3 };
+      async claimSubmission() {
+        claimCalled = true;
+        throw new Error('claim must not run');
       },
     });
 
-    await executeSubmitSettlement('intent-worker-unit-1', {
-      pool: {} as never,
-      ledger,
-      settlementPort: {
-        getSubmissionIdentity: () => ({
-          idempotencyKey: '0x' + '3'.repeat(64),
-          referenceId: 'oneshot-intent-worker-unit-1',
-          requestFingerprint: '0x' + '4'.repeat(64),
-        }),
-        async submit() {
-          portCalled = true;
-          throw new Error('must not submit');
+    await expect(
+      executeSubmitSettlement('intent-worker-unit-1', {
+        pool: {} as never,
+        ledger,
+        settlementPort: {
+          getSubmissionIdentity: () => {
+            throw new Error('identity derivation failed');
+          },
+          async submit() {
+            portCalled = true;
+            throw new Error('provider must not run');
+          },
         },
-      },
-    });
+      }),
+    ).rejects.toThrow('identity derivation failed');
 
     expect(portCalled).toBe(false);
-    expect(completedKind).toBe('DEFINITELY_NOT_SUBMITTED');
+    expect(claimCalled).toBe(false);
+  });
+
+  it('does not call the provider when the atomic identity claim fails', async () => {
+    let portCalled = false;
+    const ledger = createMockLedger({
+      async claimSubmission() {
+        throw new Error('database unavailable');
+      },
+    });
+
+    await expect(
+      executeSubmitSettlement('intent-worker-unit-1', {
+        pool: {} as never,
+        ledger,
+        settlementPort: {
+          getSubmissionIdentity: () => ({
+            idempotencyKey: '0x' + '3'.repeat(64),
+            referenceId: 'oneshot-intent-worker-unit-1',
+            requestFingerprint: '4'.repeat(64),
+          }),
+          async submit() {
+            portCalled = true;
+            throw new Error('provider must not run');
+          },
+        },
+      }),
+    ).rejects.toThrow('database unavailable');
+
+    expect(portCalled).toBe(false);
   });
 
   it('does not invoke port if CAS claim returns claimed=false', async () => {

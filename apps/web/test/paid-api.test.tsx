@@ -74,6 +74,7 @@ describe('Circle x402 paid API workspace flow', () => {
 
     await user.click(screen.getByRole('button', { name: 'Check price' }));
     expect(await screen.findByText('Review payment')).toBeTruthy();
+    expect(screen.getByText(/server-side Privy execution wallet/iu)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Approve and get result' }));
 
     await waitFor(() => expect(start).toHaveBeenCalledOnce());
@@ -101,5 +102,78 @@ describe('Circle x402 paid API workspace flow', () => {
     await waitFor(() => expect(start).toHaveBeenCalledOnce());
     expect(screen.queryByText('Review payment')).toBeNull();
     expect(screen.getByRole('button', { name: 'Check price' })).toBeTruthy();
+  });
+
+  it('prepares and submits the Circle payment from the connected user wallet', async () => {
+    const user = userEvent.setup();
+    const payerWallet = '0x2222222222222222222222222222222222222222';
+    const prepared = {
+      ...approved,
+      payment_state: 'READY' as const,
+      payment_mode: 'USER_WALLET' as const,
+      payer_wallet: payerWallet,
+    };
+    const submitted = {
+      ...prepared,
+      payment_state: 'COMMITTED' as const,
+      provider_transaction_hash: `0x${'b'.repeat(64)}`,
+      settlement: {
+        provider_reference_id: 'circle-x402-user:nonce',
+        transaction_hash: `0x${'b'.repeat(64)}`,
+        block_number: '100',
+        transfer_log_index: 0,
+        explorer_url: `https://testnet.arcscan.app/tx/0x${'b'.repeat(64)}`,
+      },
+      response: { rows: 1 },
+    };
+    const prepareUserWallet = vi.fn(async () => prepared);
+    const submitUserWalletPayment = vi.fn(async () => submitted);
+    const reconcileUserWalletPayment = vi.fn(async () => submitted);
+    const signX402Payment = vi.fn(async () => ({
+      x402Version: 2,
+      payload: { authorization: {}, signature: '0xsignature' },
+    }));
+    const client = {
+      quote: vi.fn(async () => quote),
+      start: vi.fn(async () => approved),
+      prepareUserWallet,
+      submitUserWalletPayment,
+      reconcileUserWalletPayment,
+      get: vi.fn(async () => submitted),
+    };
+    render(
+      <CircleX402DemoPanel
+        client={client}
+        userWallet={{
+          address: payerWallet,
+          connect: vi.fn(async () => payerWallet),
+          sendTransfer: vi.fn(),
+          signX402Payment,
+        }}
+        onSelectIntent={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Check price' }));
+    expect(await screen.findByText('Review payment')).toBeTruthy();
+    expect(screen.getByText('Payer wallet')).toBeTruthy();
+    expect(screen.getByTitle(payerWallet)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Approve and pay from my wallet' }));
+
+    await waitFor(() => expect(prepareUserWallet).toHaveBeenCalledOnce());
+    await waitFor(() => expect(signX402Payment).toHaveBeenCalledWith(quote));
+    await waitFor(() => expect(submitUserWalletPayment).toHaveBeenCalledOnce());
+    expect(submitUserWalletPayment).toHaveBeenCalledWith(
+      prepared.business_intent_id,
+      payerWallet,
+      expect.objectContaining({ x402Version: 2 }),
+    );
+    expect(
+      await screen.findByText(
+        'Payment confirmed from your connected wallet. The dataset result is ready.',
+      ),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Check payment status' }));
+    await waitFor(() => expect(reconcileUserWalletPayment).toHaveBeenCalledOnce());
   });
 });
