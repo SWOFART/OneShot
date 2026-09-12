@@ -117,6 +117,15 @@ export interface ApprovePaidApiRequest extends CreatePaidApiRequest {
   readonly approved_quote: PaidApiQuote;
 }
 
+export interface PreparePaidApiUserWalletRequest extends ApprovePaidApiRequest {
+  readonly payer_wallet: string;
+}
+
+export interface SubmitPaidApiUserWalletRequest {
+  readonly payer_wallet: string;
+  readonly payment_payload: Record<string, unknown>;
+}
+
 export interface PaidApiQuote {
   readonly supplier_id: 'circle-x402-v1';
   readonly resource_url: string;
@@ -134,6 +143,8 @@ export interface PaidApiResponse {
   readonly tool_id: 'circle-x402-api-v1';
   readonly resource_url: string;
   readonly payment_state: IntentState;
+  readonly payment_mode?: PaymentMode;
+  readonly payer_wallet?: string;
   readonly quote: PaidApiQuote;
   readonly provider_transaction_hash?: string;
   readonly settlement?: SettlementView;

@@ -27,11 +27,13 @@ new submission. Recovery is read-only with respect to the external chain.
 ## Durable provider and receipt identity
 
 The worker derives the provider request identity before calling the external
-provider and persists it on the owned `SUBMITTING` attempt. If persistence
-fails, the provider call is not made. Restart and reconciliation paths reload
-that identity from PostgreSQL rather than reconstructing it from transient
-state. The deterministic per-intent idempotency key prevents a retry from
-becoming a second provider request.
+provider and persists it as part of the same database transaction that claims
+`READY -> SUBMITTING`. A claim cannot commit without the identity required for
+replay and reconciliation. If that transaction fails, the provider call is
+not made. Restart and reconciliation paths reload the identity from PostgreSQL
+rather than reconstructing it from transient state. The deterministic
+per-intent idempotency key prevents a retry from becoming a second provider
+request.
 
 Confirmed settlements bind the verified transaction hash, block number, and
 Transfer log index through a guarded ledger transition. Existing settlement

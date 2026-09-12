@@ -15,11 +15,14 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "@circle-fin/x402-batching": "3.4.0",
     "@oneshot/brand": "workspace:*",
     "@oneshot/contracts": "workspace:*",
     "@oneshot/recovery-ui": "workspace:*",
     "@oneshot/settlement-ui": "workspace:*",
     "@privy-io/react-auth": "3.6.1",
+    "@x402/core": "2.25.0",
+    "viem": "2.36.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

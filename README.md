@@ -265,14 +265,17 @@ payment evidence.
 The Tools cabinet also supports **Paid API purchase via Circle x402**. Deploy
 the repository's Circle Arc Testnet seller from
 [`docs/CIRCLE_X402_SELLER.md`](docs/CIRCLE_X402_SELLER.md), then configure its
-same-domain dataset endpoint in both API and worker environments; the site then
-quotes and starts one durable paid request. Approval includes the exact quote
-shown to the operator; the API rejects a changed price, recipient or destination
-before creating durable payment work. `pnpm demo:x402`
-remains an operator fallback. A lost or ambiguous x402 response is held as
-`UNKNOWN`; it is never retried blindly. See
+same-domain dataset endpoint in the API environment. The connected Privy
+wallet is durably bound to the quote and signs the Circle Gateway authorization;
+OneShot forwards that signed authorization to the seller and verifies the Arc
+receipt. The server-side Privy wallet remains available for the legacy worker
+buyer adapter and is not used for the website's user-funded path. Approval
+includes the exact quote shown to the operator; the API rejects a changed
+price, recipient or destination before creating durable payment work.
+`pnpm demo:x402` remains an operator fallback. A lost or ambiguous x402
+response is held as `UNKNOWN`; it is never retried blindly. See
 [`docs/CIRCLE_X402_DEMO.md`](docs/CIRCLE_X402_DEMO.md). This rail is not the
-direct Arc settlement proof; the paid API result has its own resumable payment
+direct Arc settlement proof; the paid API result has its own durable payment
 state and recovery evidence.
 
 | Method | Path                             | Purpose                                                       |
@@ -285,6 +288,8 @@ state and recovery evidence.
 | `POST` | `/v1/jobs/quote`                 | Return a non-chargeable quote before explicit approval        |
 | `POST` | `/v1/paid-api/quote`             | Return a non-chargeable Circle x402 quote                     |
 | `POST` | `/v1/paid-api`                   | Start/replay one workspace-scoped paid API request            |
+| `POST` | `/v1/paid-api/user-wallet/prepare` | Bind quote and connected payer before signing                |
+| `POST` | `/v1/paid-api/{id}/user-wallet/submit` | Forward signed x402 payment and verify settlement       |
 | `GET`  | `/v1/paid-api/{id}`              | Read paid API state, transaction hash, and result             |
 | `GET`  | `/v1/jobs`                       | List workspace jobs and delivery state                        |
 | `GET`  | `/v1/jobs/{jobId}`               | Read a workspace-owned job                                    |

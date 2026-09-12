@@ -36,16 +36,35 @@ export async function executeSubmitSettlement(
     return false;
   }
 
-  // A03.2 — Submission ownership CAS: READY -> SUBMITTING
-  // The database transaction ends before calling the port!
-  const claim = await options.ledger.claimSubmission(businessIntentId);
-  if (!claim.claimed) return true;
-
   const paidApiTarget =
     typeof options.ledger.getPaidApiTarget === 'function'
       ? await options.ledger.getPaidApiTarget(businessIntentId)
       : undefined;
+  // User-funded paid API intents are submitted by the API only after it has
+  // received the browser's signed x402 payload. A stray or legacy outbox row
+  // must never route that intent to the server-wallet Circle port.
+  if (paidApiTarget?.paymentMode === 'USER_WALLET') return true;
   const settlementPort = paidApiTarget ? options.paidApiSettlementPort : options.settlementPort;
+
+  // Derive the provider identity before the database claim so the ledger can
+  // persist it in the same transaction as READY -> SUBMITTING. A database
+  // failure therefore leaves the intent READY and the outbox delivery safely
+  // retryable; no external provider boundary has been crossed.
+  const intentForIdentity =
+    settlementPort?.getSubmissionIdentity && typeof options.ledger.getIntent === 'function'
+      ? await options.ledger.getIntent(businessIntentId)
+      : undefined;
+  const providerIdentity =
+    settlementPort?.getSubmissionIdentity && intentForIdentity
+      ? settlementPort.getSubmissionIdentity(intentForIdentity)
+      : undefined;
+
+  // A03.2 — Submission ownership CAS: READY -> SUBMITTING
+  // The database transaction ends before calling the port, and now includes
+  // the provider identity required for replay/reconciliation.
+  const claim = await options.ledger.claimSubmission(businessIntentId, undefined, providerIdentity);
+  if (!claim.claimed) return true;
+
   if (!settlementPort) {
     await options.ledger.completeSubmission(businessIntentId, claim.attemptId, {
       kind: 'POSSIBLY_SUBMITTED',
@@ -62,21 +81,6 @@ export async function executeSubmitSettlement(
     attemptId: claim.attemptId,
     timestamp: new Date().toISOString(),
   });
-
-  // Persist the exact provider request identity before crossing the external
-  // effect boundary. Recovery must reuse it after a lost response or restart.
-  if (settlementPort.getSubmissionIdentity) {
-    try {
-      const identity = settlementPort.getSubmissionIdentity(claim.intent);
-      await options.ledger.persistProviderRequestIdentity(claim.attemptId, identity);
-    } catch {
-      await options.ledger.completeSubmission(businessIntentId, claim.attemptId, {
-        kind: 'DEFINITELY_NOT_SUBMITTED',
-        reason: 'Provider request identity could not be persisted before submission',
-      });
-      return true;
-    }
-  }
 
   // A03.3 — Call settlement port outside database transaction
   let result: SettlementResult;

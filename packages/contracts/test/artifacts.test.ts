@@ -40,7 +40,10 @@ describe('generated contract artifacts', () => {
       '/v1/jobs/{jobId}/user-wallet/submit',
       '/v1/paid-api',
       '/v1/paid-api/quote',
+      '/v1/paid-api/user-wallet/prepare',
       '/v1/paid-api/{id}',
+      '/v1/paid-api/{id}/user-wallet/reconcile',
+      '/v1/paid-api/{id}/user-wallet/submit',
     ]);
     expect(Object.keys(document.paths).every((path) => !path.includes('retry'))).toBe(true);
 

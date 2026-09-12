@@ -315,6 +315,7 @@ export class ArcSettlementAdapter {
           transaction_hash: asTransactionHash(receipt.transactionHash),
           block_number: asBlockNumber(receipt.blockNumber.toString(10)),
           transfer_log_index: verdict.transferLogIndex,
+          verified_by: 'ARC_RPC_EXACT_TRANSFER',
         };
       }
 

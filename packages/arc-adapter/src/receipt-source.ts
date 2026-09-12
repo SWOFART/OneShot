@@ -73,5 +73,12 @@ export function createArcReceiptSource(options: ArcReceiptSourceOptions) {
         return null;
       }
     },
+    async getTransactionInput(transactionHashValue: string): Promise<string> {
+      if (!/^0x[0-9a-fA-F]{64}$/u.test(transactionHashValue)) return '';
+      const transaction = await client.getTransaction({
+        hash: transactionHashValue.toLowerCase() as Hash,
+      });
+      return transaction.input;
+    },
   };
 }

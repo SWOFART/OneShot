@@ -101,6 +101,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@circle-fin/x402-batching':
+        specifier: 3.4.0
+        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.36.0(typescript@6.0.3)(zod@3.25.76))
       '@oneshot/brand':
         specifier: workspace:*
         version: link:../../packages/brand
@@ -116,12 +119,18 @@ importers:
       '@privy-io/react-auth':
         specifier: 3.6.1
         version: 3.6.1(@types/react@19.2.18)(encoding@0.1.13)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)(use-sync-external-store@1.4.0(react@19.2.8))(zod@3.25.76)
+      '@x402/core':
+        specifier: 2.25.0
+        version: 2.25.0
       react:
         specifier: 19.2.8
         version: 19.2.8
       react-dom:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
+      viem:
+        specifier: 2.36.0
+        version: 2.36.0(typescript@6.0.3)(zod@3.25.76)
     devDependencies:
       '@playwright/test':
         specifier: 1.63.0
@@ -5385,6 +5394,13 @@ snapshots:
   '@chainsafe/netmask@2.0.0':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
+
+  '@circle-fin/x402-batching@3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.36.0(typescript@6.0.3)(zod@3.25.76))':
+    dependencies:
+      '@x402/core': 2.25.0
+      viem: 2.36.0(typescript@6.0.3)(zod@3.25.76)
+    optionalDependencies:
+      '@x402/evm': 2.25.0(typescript@6.0.3)
 
   '@circle-fin/x402-batching@3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))':
     dependencies:

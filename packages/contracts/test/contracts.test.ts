@@ -107,6 +107,7 @@ describe('fail-closed port result parsing', () => {
         transaction_hash: `0x${'a'.repeat(64)}`,
         block_number: '100',
         transfer_log_index: 0,
+        verified_by: 'ARC_RPC_EXACT_TRANSFER',
       }).kind,
     ).toBe('CONFIRMED');
   });

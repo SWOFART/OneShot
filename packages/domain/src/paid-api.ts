@@ -17,6 +17,7 @@ function workspaceId(value: string): string {
 export function canonicalPaidApiPayload(
   request: CreatePaidApiRequest,
   resourceUrl: string,
+  payerWallet?: string,
 ): string {
   const parsed = parseCreatePaidApiRequest(request);
   return JSON.stringify({
@@ -24,12 +25,17 @@ export function canonicalPaidApiPayload(
     tool_id: parsed.tool_id,
     resource_url: resourceUrl,
     method: 'GET',
+    ...(payerWallet ? { payer_wallet: payerWallet.toLowerCase() } : {}),
   });
 }
 
-export function paidApiFingerprint(request: CreatePaidApiRequest, resourceUrl: string): string {
+export function paidApiFingerprint(
+  request: CreatePaidApiRequest,
+  resourceUrl: string,
+  payerWallet?: string,
+): string {
   return createHash('sha256')
-    .update(canonicalPaidApiPayload(request, resourceUrl), 'utf8')
+    .update(canonicalPaidApiPayload(request, resourceUrl, payerWallet), 'utf8')
     .digest('hex');
 }
 

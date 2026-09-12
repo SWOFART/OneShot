@@ -13,6 +13,8 @@ import {
   type ErrorResponse,
   type SupplierQuote,
   type ApprovePaidApiRequest,
+  type PreparePaidApiUserWalletRequest,
+  type SubmitPaidApiUserWalletRequest,
 } from '@oneshot/contracts';
 import { derivedJobId } from '@oneshot/domain';
 import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
@@ -20,7 +22,12 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { ServiceAuthenticator } from './auth.js';
 import { allowAllRateLimiter, type RateLimiter } from './rate-limit.js';
 import { UnavailableWalletActivityPort, type WalletActivityPort } from './wallet-activity.js';
-import { PaidApiQuoteChangedError, type PaidApiService } from './paid-api.js';
+import {
+  PaidApiQuoteChangedError,
+  PaidApiUserWalletConflictError,
+  PaidApiUserWalletNotReadyError,
+  type PaidApiService,
+} from './paid-api.js';
 import type { UserWalletVerificationPort } from './user-wallet.js';
 
 export interface ServiceConfig {
@@ -158,6 +165,28 @@ const approvePaidApiBodySchema = {
         x402_version: { type: 'integer', const: 2 },
         max_timeout_seconds: { type: 'integer', minimum: 1, maximum: 604900 },
       },
+    },
+  },
+} as const;
+
+const prepareUserWalletPaidApiBodySchema = {
+  ...approvePaidApiBodySchema,
+  required: ['task_key', 'tool_id', 'approved_quote', 'payer_wallet'],
+  properties: {
+    ...approvePaidApiBodySchema.properties,
+    payer_wallet: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
+  },
+} as const;
+
+const submitUserWalletPaidApiBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['payer_wallet', 'payment_payload'],
+  properties: {
+    payer_wallet: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
+    payment_payload: {
+      type: 'object',
+      additionalProperties: true,
     },
   },
 } as const;
@@ -438,6 +467,140 @@ export function buildApi(dependencies: ApiDependencies) {
     },
   );
 
+  app.post(
+    '/v1/paid-api/user-wallet/prepare',
+    { schema: { body: prepareUserWalletPaidApiBodySchema } },
+    async (request, reply) => {
+      if (!dependencies.paidApi) {
+        paidApiUnavailable(reply, request);
+        return;
+      }
+      const body = request.body as PreparePaidApiUserWalletRequest;
+      const parsed = parseCreatePaidApiRequest({ task_key: body.task_key, tool_id: body.tool_id });
+      try {
+        const result = await dependencies.paidApi.prepareUserWallet(
+          parsed,
+          correlationFor(request),
+          body.approved_quote,
+          body.payer_wallet,
+        );
+        if (result.kind === 'INTENT_PAYLOAD_CONFLICT') {
+          sendError(
+            reply,
+            409,
+            'INTENT_PAYLOAD_CONFLICT',
+            'Task key already has a different immutable quote or payer wallet',
+            correlationFor(request),
+          );
+          return;
+        }
+        return reply.code(result.kind === 'ACCEPTED' ? 202 : 200).send(result.request);
+      } catch (error) {
+        if (error instanceof PaidApiQuoteChangedError) {
+          sendError(reply, 409, 'INTENT_PAYLOAD_CONFLICT', error.message, correlationFor(request));
+          return;
+        }
+        sendError(
+          reply,
+          503,
+          'NOT_READY',
+          'User-wallet paid API request could not be prepared',
+          correlationFor(request),
+        );
+      }
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    '/v1/paid-api/:id/user-wallet/submit',
+    { schema: { body: submitUserWalletPaidApiBodySchema } },
+    async (request, reply) => {
+      if (!dependencies.paidApi) {
+        paidApiUnavailable(reply, request);
+        return;
+      }
+      const body = request.body as SubmitPaidApiUserWalletRequest;
+      try {
+        const result = await dependencies.paidApi.submitUserWallet(
+          request.params.id,
+          body.payer_wallet,
+          body.payment_payload,
+          correlationFor(request),
+        );
+        return reply
+          .code(
+            result.payment_state === 'COMMITTED' || result.payment_state === 'FAILED_SAFE'
+              ? 200
+              : 202,
+          )
+          .send(result);
+      } catch (error) {
+        if (error instanceof PaidApiUserWalletConflictError) {
+          sendError(
+            reply,
+            409,
+            'RECONCILIATION_NOT_ALLOWED',
+            error.message,
+            correlationFor(request),
+          );
+          return;
+        }
+        if (error instanceof PaidApiUserWalletNotReadyError) {
+          sendError(reply, 503, 'NOT_READY', error.message, correlationFor(request));
+          return;
+        }
+        sendError(
+          reply,
+          503,
+          'NOT_READY',
+          'User-wallet payment processing is temporarily unavailable; check the same request later',
+          correlationFor(request),
+        );
+      }
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    '/v1/paid-api/:id/user-wallet/reconcile',
+    async (request, reply) => {
+      if (!dependencies.paidApi) {
+        paidApiUnavailable(reply, request);
+        return;
+      }
+      try {
+        const result = await dependencies.paidApi.reconcileUserWallet(
+          request.params.id,
+          correlationFor(request),
+        );
+        return reply
+          .code(
+            result.payment_state === 'COMMITTED' || result.payment_state === 'FAILED_SAFE'
+              ? 200
+              : 202,
+          )
+          .send(result);
+      } catch (error) {
+        if (error instanceof PaidApiUserWalletConflictError) {
+          sendError(
+            reply,
+            409,
+            'RECONCILIATION_NOT_ALLOWED',
+            error.message,
+            correlationFor(request),
+          );
+          return;
+        }
+        sendError(
+          reply,
+          503,
+          'NOT_READY',
+          'User-wallet payment reconciliation is temporarily unavailable; no new payment was submitted',
+          correlationFor(request),
+        );
+      }
+    },
+  );
+
   app.get<{ Params: { id: string } }>('/v1/paid-api/:id', async (request, reply) => {
     if (!dependencies.paidApi) {
       paidApiUnavailable(reply, request);
@@ -590,6 +753,7 @@ export function buildApi(dependencies: ApiDependencies) {
           transaction_hash: asTransactionHash(verification.transactionHash),
           block_number: asBlockNumber(verification.blockNumber),
           transfer_log_index: verification.transferLogIndex,
+          verified_by: 'ARC_RPC_EXACT_TRANSFER',
         });
       } else if (verification.kind === 'FINAL_REVERT') {
         await dependencies.ledger.completeSubmission(job.business_intent_id, begun.attemptId, {
