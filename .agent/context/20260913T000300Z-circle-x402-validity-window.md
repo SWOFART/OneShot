@@ -40,7 +40,8 @@ The same paid-API errors continued: the user wallet signed, OneShot returned 202
 ## Commands/checks
 
 - Read-only Circle `/v1/x402/verify` - returned `authorization_validity_too_short` for the supplied historical authorization.
-- `pnpm.cmd test` - 82 files / 1086 tests passed.
+- `pnpm.cmd test` - 82 files / 1089 tests passed.
+- `pnpm.cmd test:browser` - 8/8 passed.
 - `pnpm.cmd typecheck` - passed.
 - `pnpm.cmd lint` - passed.
 - `pnpm.cmd format:check` - passed.
@@ -59,8 +60,9 @@ The same paid-API errors continued: the user wallet signed, OneShot returned 202
 ## Git and PR state
 
 - Branch: `fix/circle-x402-validity-window`
-- Base: `origin/fix/circle-x402-persistence` at the starting feature tip
-- Commit: source fix `7cc12e18e513a18029cdcc534d5dac1c1ce2b4fd`
+- Base: `origin/develop` at `bbb1052b0625f9311ecdfd3d0e5b7443322fbdbd`
+- Commit: merge `7cf0a565a4d5fbc36f3a3145797d7015876fff29`
+- Tree: `605285eed2170d6e812a8dd908b14e85ff929845`
 - PR: not created
 - CI: not run; local validation is recorded above
 
@@ -71,6 +73,6 @@ The same paid-API errors continued: the user wallet signed, OneShot returned 202
 
 ## Handoff/next steps
 
-1. Run Gate A on the exact candidate tree.
+1. Run Gate A on the exact candidate tree `605285eed2170d6e812a8dd908b14e85ff929845`.
 2. After approval, merge/push and deploy the API image plus the web bundle; the seller image has no source change for this fix.
 3. Test with one new paid-API task only after deployment; do not retry the old UNKNOWN intent blindly.
