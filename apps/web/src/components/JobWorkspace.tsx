@@ -172,12 +172,20 @@ export function JobWorkspace(props: {
       setNotice('Enter a valid recipient wallet and a positive USDC amount.');
       return;
     }
+    setStarting(true);
     const userWallet = props.userWallet;
     if (!userWallet) {
-      setNotice('Connect a Privy Ethereum wallet to pay from your own address.');
+      try {
+        const job = await props.client.start(jobRequest);
+        setApprovedJob(job);
+        setNotice('Request accepted. Payment authorization is queued.');
+      } catch {
+        setNotice('The request was not started. Keep the same request key when retrying.');
+      } finally {
+        setStarting(false);
+      }
       return;
     }
-    setStarting(true);
     setWalletAttempted(false);
     setPaymentHash(null);
     let prepared = false;
@@ -200,7 +208,6 @@ export function JobWorkspace(props: {
         throw new Error('The durable payment plan differs from the reviewed quote');
       }
       setApprovedJob(job);
-      props.onSelectIntent(job.business_intent_id);
       setNotice(
         'Review the exact recipient and amount in Privy, then confirm the wallet transaction.',
       );
@@ -356,12 +363,16 @@ export function JobWorkspace(props: {
             <pre className="response-output">{JSON.stringify(request(), null, 2)}</pre>
           </details>
           <p className="field-help">
-            Nothing has been paid yet. Approval prepares a durable intent, then your connected
-            wallet shows the exact USDC transfer for confirmation. OneShot never uses a server
-            wallet for this report.
+            {props.userWallet
+              ? 'Nothing has been paid yet. Approval prepares a durable intent, then your connected wallet shows the exact USDC transfer for confirmation. OneShot never uses a server wallet for this report.'
+              : 'Nothing has been paid yet. Approval queues the existing server-wallet payment path for this test composition.'}
           </p>
           <button type="button" onClick={() => void start()} disabled={starting || walletAttempted}>
-            Approve and pay from my wallet
+            {starting
+              ? 'Starting request…'
+              : props.userWallet
+                ? 'Approve and pay from my wallet'
+                : 'Approve and run service'}
           </button>
         </>
       )}
@@ -372,22 +383,29 @@ export function JobWorkspace(props: {
       )}
       {approvedJob && (
         <>
-          <SupplierQuotePanel heading="User-wallet payment" quote={approvedJob.supplier} />
-          <p role="status" className="field-help">
-            Payment state: <strong>{approvedJob.payment_state}</strong>. Payer:{' '}
-            <span className="mono">
-              {approvedJob.user_payment?.payer_wallet ?? 'connected wallet'}
-            </span>
-          </p>
-          {paymentHash && approvedJob.payment_state !== 'COMMITTED' && (
-            <button
-              type="button"
-              className="secondary"
-              disabled={paymentChecking}
-              onClick={() => void checkPayment()}
-            >
-              {paymentChecking ? 'Checking Arc receipt…' : 'Check payment (same transaction)'}
-            </button>
+          <SupplierQuotePanel
+            heading={props.userWallet ? 'User-wallet payment' : 'Request accepted'}
+            quote={approvedJob.supplier}
+          />
+          {props.userWallet && (
+            <>
+              <p role="status" className="field-help">
+                Payment state: <strong>{approvedJob.payment_state}</strong>. Payer:{' '}
+                <span className="mono">
+                  {approvedJob.user_payment?.payer_wallet ?? 'connected wallet'}
+                </span>
+              </p>
+              {paymentHash && approvedJob.payment_state !== 'COMMITTED' && (
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={paymentChecking}
+                  onClick={() => void checkPayment()}
+                >
+                  {paymentChecking ? 'Checking Arc receipt…' : 'Check payment (same transaction)'}
+                </button>
+              )}
+            </>
           )}
           <button
             type="button"
