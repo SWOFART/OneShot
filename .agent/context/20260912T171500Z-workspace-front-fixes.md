@@ -8,8 +8,8 @@
 
 Repair reported defects in the operator workspace: an invisible payment link
 and tab panels that appeared without the intended fade. A light page ground of
-#EAFFBC and a matching tab surface were implemented and then withdrawn at the
-user's request before merge.
+`#EAFFBC` and a matching tab surface were implemented and then withdrawn at
+the user's request before merge.
 
 ## Original prompt/request
 
