@@ -46,7 +46,12 @@ vi.mock('@privy-io/react-auth', () => ({
   useWallets: () => ({ ready: true, wallets: mocks.wallets }),
 }));
 
-const { PrivyOperatorProvider, usePrivyOperatorSession, usePrivyUserWallet } =
+const {
+  PrivyOperatorProvider,
+  circleX402SigningRequirements,
+  usePrivyOperatorSession,
+  usePrivyUserWallet,
+} =
   await import('../src/auth/privy-session.js');
 
 function ethereumWallet(walletClientType: string, address: string) {
@@ -106,6 +111,21 @@ describe('usePrivyOperatorSession — native Privy login', () => {
     expect(result.current.subject).toBe('did:privy:native-login');
     await waitFor(() => expect(result.current.accessToken).toBe('header.payload.signature'));
     expect(mocks.getAccessToken).toHaveBeenCalledOnce();
+  });
+
+  it('uses an approval buffer beyond the Gateway SDK minimum for x402 signing', () => {
+    expect(
+      circleX402SigningRequirements({
+        supplier_id: 'circle-x402-v1',
+        resource_url: '/api/premium/dataset',
+        recipient: '0xa605EE031E41f04f8e193059a39A24407f83677c',
+        amount_atomic: '10000',
+        asset: 'USDC',
+        network: 'eip155:5042002',
+        x402_version: 2,
+        max_timeout_seconds: 604900,
+      }).maxTimeoutSeconds,
+    ).toBe(605800);
   });
 
   it("reads only the connected wallet's Arc Testnet Gateway balance before x402 signing", async () => {

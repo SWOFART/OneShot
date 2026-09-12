@@ -10,7 +10,11 @@ import {
 import { BatchEvmScheme } from '@circle-fin/x402-batching/client';
 import { encodeFunctionData, erc20Abi, defineChain } from 'viem';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { PaidApiQuote, SubmitPaidApiUserWalletRequest } from '@oneshot/contracts';
+import {
+  CIRCLE_X402_USER_WALLET_VALIDITY_WINDOW_SECONDS,
+  type PaidApiQuote,
+  type SubmitPaidApiUserWalletRequest,
+} from '@oneshot/contracts';
 
 import {
   GatewayFundingError,
@@ -142,6 +146,28 @@ function jsonSafe(value: unknown): unknown {
     );
   }
   return value;
+}
+
+export function circleX402SigningRequirements(quote: PaidApiQuote) {
+  return {
+    scheme: 'exact' as const,
+    network: quote.network,
+    asset: '0x3600000000000000000000000000000000000000',
+    amount: quote.amount_atomic,
+    payTo: quote.recipient,
+    // The SDK's 100-second buffer is too narrow for a human wallet prompt
+    // plus network forwarding. This is used only inside the signed payload;
+    // the durable quote remains unchanged and is reconstructed server-side.
+    maxTimeoutSeconds: Math.max(
+      quote.max_timeout_seconds,
+      CIRCLE_X402_USER_WALLET_VALIDITY_WINDOW_SECONDS,
+    ),
+    extra: {
+      name: 'GatewayWalletBatched',
+      version: '1',
+      verifyingContract: '0x0077777d7EBA4688BDeF3E311b846F25870A19B9',
+    },
+  };
 }
 
 function isPrivyEthereumWallet(
@@ -484,19 +510,7 @@ export function usePrivyUserWallet(): UserWalletSession {
         return signature as `0x${string}`;
       },
     };
-    const requirements = {
-      scheme: 'exact' as const,
-      network: quote.network,
-      asset: '0x3600000000000000000000000000000000000000',
-      amount: quote.amount_atomic,
-      payTo: quote.recipient,
-      maxTimeoutSeconds: quote.max_timeout_seconds,
-      extra: {
-        name: 'GatewayWalletBatched',
-        version: '1',
-        verifyingContract: '0x0077777d7EBA4688BDeF3E311b846F25870A19B9',
-      },
-    };
+    const requirements = circleX402SigningRequirements(quote);
     const partial = await new BatchEvmScheme(signer).createPaymentPayload(
       quote.x402_version,
       requirements,
