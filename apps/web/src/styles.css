@@ -12,6 +12,13 @@
  */
 
 :root {
+  /* One fluid step for the whole page. Everything below is sized in rem, so
+     this is the single place type scales with the viewport — on a large
+     display the console is no longer set at laptop sizes, and the ratios
+     between headings, labels and help text stay fixed at every width. The
+     clamp bounds it so the layout never runs away at either extreme. */
+  font-size: clamp(15px, 0.35vw + 13.2px, 19px);
+
   color: var(--os-ink);
   background-color: var(--os-ground);
   font-family: var(--os-font-primary);
@@ -252,11 +259,12 @@ a:hover {
    Hero Section
    ========================================================================== */
 
+/* The hero spans the shell, like the nav above it and the tabs below it. It
+   used to cap at 820px inside a 1080px shell, which left it visibly inset from
+   everything else on the page. */
 .app-header.hero-section {
-  text-align: center;
-  padding: 2rem 1rem 3.5rem;
-  max-width: 820px;
-  margin: 0 auto;
+  padding: 0 0 3rem;
+  margin: 0;
 }
 
 .eyebrow {
@@ -729,9 +737,13 @@ a:hover {
   margin-bottom: 18px;
 }
 
+/* The tab strip sits on the page ground, not on a panel, so it takes the page
+   ink — which flips with the theme. --os-panel-ink is near-white in *both*
+   themes (it belongs to the forest panel, which never flips), so using it here
+   rendered the unselected tabs near-white on the near-white light ground. */
 .tabs button {
   min-height: 38px;
-  color: var(--os-panel-ink);
+  color: var(--os-ink);
   background: transparent;
   border: 1px solid var(--os-line-strong);
 }
@@ -751,6 +763,47 @@ a:hover {
   border-radius: var(--os-radius-lg);
   background: var(--os-panel);
   color: var(--os-panel-ink);
+}
+
+.panel > p {
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+/* Two or more panels stacked in one tab (Tools renders the report workspace
+   and the x402 demo back to back). Without this they met with no gap and the
+   lower panel's rounded corners cut into the one above. */
+.panel-stack {
+  display: grid;
+  gap: 1.25rem;
+}
+
+/* Used by every panel that pairs a title block with an action (Jobs' refresh,
+   the quote panels' badge). It had no rule at all, so the title and its button
+   stacked flush against each other with no rhythm. */
+.panel-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+
+.panel-heading > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.panel-heading h2,
+.panel-heading h3 {
+  margin: 0;
+  font-weight: 300;
+  font-size: 1.3rem;
+}
+
+.panel-heading .eyebrow {
+  margin-bottom: 0;
 }
 
 .panel header h2 {
@@ -1011,7 +1064,7 @@ a:hover {
   gap: 0.65rem;
   margin-top: 1.25rem;
   padding: 1rem;
-  border: 1px solid var(--os-panel-line);
+  border: 1px solid var(--os-line);
   border-radius: 0.75rem;
   background: var(--os-field);
 }
@@ -1020,14 +1073,64 @@ a:hover {
   margin: 0;
 }
 
+/* The lime field is the same colour in both themes, so everything on it takes
+   the field's own fixed inks. These two surfaces are the quote and payment
+   summaries, and both are nested inside .panel — without this they inherit the
+   forest panel's near-white ink and the transaction details vanish into lime. */
+.quote-panel,
+.paid-api-status {
+  color: var(--os-on-field);
+}
+
+.quote-panel h2,
+.quote-panel h3,
+.paid-api-status h2,
+.paid-api-status h3,
+.quote-panel .facts dd,
+.paid-api-status .facts dd,
+.quote-panel .mono,
+.paid-api-status .mono {
+  color: var(--os-on-field);
+}
+
+.quote-panel .facts dt,
+.paid-api-status .facts dt,
+.quote-panel .panel-lede,
+.paid-api-status .panel-lede,
+.quote-panel .field-help,
+.paid-api-status .field-help {
+  color: var(--os-on-field-muted);
+}
+
+.quote-panel .facts div,
+.paid-api-status .facts div {
+  border-bottom-color: var(--os-field-line);
+}
+
+/* Signal green on lime is about 1.7:1. Links on the field take its own ink and
+   carry an underline so they still read as links without the colour. */
+.quote-panel a,
+.paid-api-status a {
+  color: var(--os-on-field);
+  text-decoration: underline;
+}
+
+.quote-panel .badge,
+.paid-api-status .badge {
+  color: var(--os-on-field);
+  border-color: var(--os-on-field-muted);
+}
+
 .response-output {
   max-height: 260px;
   margin: 0;
   padding: 0.75rem;
   overflow: auto;
-  border: 1px solid var(--os-panel-line);
+  border: 1px solid var(--os-line);
   border-radius: 0.5rem;
-  color: var(--os-panel-ink);
+  /* --os-surface flips with the theme, so this takes the page ink. Panel ink
+     here was near-white on white in the light theme. */
+  color: var(--os-ink);
   background: var(--os-surface);
   font-family: var(--os-font-mono);
   font-size: 0.78rem;
@@ -1048,50 +1151,125 @@ a:hover {
   margin-bottom: 0.25rem;
 }
 
+/* The x402 demo and the recovery section lay their controls out the same way
+   the report workspace does. Both used to render label, input and help text in
+   plain inline flow, so the input sat on the same line as the text before it
+   and the help text ran on after it. */
+.paid-api-panel,
+.recovery-panel {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.paid-api-panel > p,
+.recovery-panel > p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Buttons and links inside these grids size to their content instead of
+   stretching the full column, and sit at the start of the row — which is where
+   the x402 runbook link belongs. */
+.paid-api-panel > button,
+.paid-api-panel > a,
+.recovery-panel > button,
+.recovery-panel > a {
+  justify-self: start;
+}
+
 .job-workspace > label,
-.advanced-fields label {
+.paid-api-panel > label,
+.recovery-panel > label {
   color: var(--os-panel-ink);
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 300;
+}
+
+/* .advanced-fields is the one control group drawn on --os-surface rather than
+   on the forest panel, so its label takes the page ink instead. */
+.advanced-fields label {
+  color: var(--os-ink);
+  font-size: 0.85rem;
+  font-weight: 300;
 }
 
 .job-workspace > input,
-.advanced-fields input {
+.advanced-fields input,
+.paid-api-panel > input,
+.recovery-panel > input {
   width: 100%;
   min-height: 42px;
   padding: 0.65rem 0.85rem;
-  border: 1px solid var(--os-panel-line);
+  border: 1px solid var(--os-line);
   border-radius: 0.6rem;
-  color: var(--os-panel-ink);
+  color: var(--os-ink);
   background: var(--os-surface);
+  font-family: var(--os-font-mono);
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease;
+}
+
+.job-workspace > input:focus,
+.advanced-fields input:focus,
+.paid-api-panel > input:focus,
+.recovery-panel > input:focus {
+  border-color: var(--os-signal);
+}
+
+/* `.secondary` was only ever styled for <button>. The x402 runbook link and
+   the evidence links carry the same class and were rendering as bare text. */
+a.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.65rem 1.25rem;
+  border: 1px solid var(--os-line-strong);
+  border-radius: 999px;
+  color: inherit;
+  letter-spacing: 0.06em;
+}
+
+a.secondary.compact {
+  min-height: 32px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+a.secondary:hover {
+  text-decoration: none;
+  border-color: var(--os-signal);
+  color: var(--os-signal);
 }
 
 .job-workspace > input[readonly] {
-  color: var(--os-panel-ink-muted);
+  color: var(--os-ink-muted);
   border-style: dashed;
 }
 
 .field-help {
   margin: 0;
   color: var(--os-panel-ink-muted);
-  font-size: 0.8rem;
-  line-height: 1.45;
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 .advanced-fields {
   display: grid;
   gap: 0.65rem;
   padding: 0.75rem;
-  border: 1px solid var(--os-panel-line);
+  border: 1px solid var(--os-line);
   border-radius: 0.65rem;
   background: var(--os-surface);
 }
 
 .advanced-fields summary {
-  color: var(--os-panel-ink-muted);
+  /* On --os-surface, so page ink. Weight 300 matches the rest of the type
+     system; 600 was the only bold left in the console. */
+  color: var(--os-ink-muted);
   cursor: pointer;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 300;
 }
 
 .job-settlement-summary {
@@ -1317,23 +1495,121 @@ a:hover {
   background: var(--os-panel);
 }
 
+/* In normal flow, not absolute: the copy sets the hero's height, so a headline
+   that wraps grows the panel instead of spilling out of a fixed 268px box.
+   Hero.tsx measures that height and hands it to the clip paths. */
 .hero-copy {
-  position: absolute;
-  inset: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 10px;
+  gap: 0.6rem;
   width: 50%;
-  padding: 26px 28px;
+  min-height: 268px;
+  padding: 2rem;
+}
+
+/* Both hero modes sit on --os-panel, which is the same forest in both themes.
+   Their copy therefore takes the panel inks rather than the page inks it would
+   otherwise inherit — in the light theme those are dark forest on dark forest. */
+.hero-copy,
+.hero-plain {
+  color: var(--os-panel-ink);
+  text-align: left;
+}
+
+.hero-copy h1,
+.hero-plain h1 {
+  margin-bottom: 0;
+  /* Sized in rem, not vw. The viewport-relative clamp this replaces made the
+     headline a different size on every monitor, which is what pushed the lead
+     paragraph out of the panel on some of them. The root font-size below is
+     what scales type with the viewport, once, for the whole page. */
+  font-size: 2rem;
+  line-height: 1.15;
   color: var(--os-panel-ink);
 }
 
+.hero-copy .eyebrow,
+.hero-plain .eyebrow {
+  margin-bottom: 0;
+}
+
+.hero-copy .hero-lead,
+.hero-plain .hero-lead,
+.hero-copy .hero-sublead,
+.hero-plain .hero-sublead {
+  margin: 0;
+  max-width: none;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--os-panel-ink-muted);
+}
+
+.hero-copy .hero-actions,
+.hero-plain .hero-actions {
+  justify-content: flex-start;
+  margin: 0.4rem 0 0;
+}
+
 .hero-plain {
-  padding: 32px;
+  padding: 2rem;
   border-radius: var(--os-radius-lg);
   background: var(--os-panel);
-  color: var(--os-panel-ink);
+}
+
+/* ==========================================================================
+   Motion
+   ========================================================================== */
+
+/**
+ * Two transitions, both opt-in under prefers-reduced-motion.
+ *
+ * Theme change: every surface and its ink cross-fade, so flipping light/dark
+ * is one settling movement rather than an instant repaint. It is driven by the
+ * `data-theme` swap on <html>, so no JS coordination is needed.
+ *
+ * Tab change: the incoming panel fades up. React remounts the panel on each
+ * switch (the section is keyed), which restarts the animation.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  body,
+  .top-nav,
+  .panel,
+  .console-container,
+  .login-gate,
+  .intent-context,
+  .job-list li,
+  .advanced-fields,
+  .composed-surface,
+  .notice,
+  .state-card,
+  .tabs button,
+  .status-badge,
+  .theme-toggle,
+  .hero-plain,
+  .hero-panel {
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  .tab-fade {
+    animation: os-tab-fade 0.24s ease both;
+  }
+}
+
+@keyframes os-tab-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* ==========================================================================

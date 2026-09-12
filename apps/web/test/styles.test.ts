@@ -36,6 +36,99 @@ describe('web stylesheet', () => {
     );
   });
 
+  /**
+   * Both themes once shipped unreadable text, from the same mistake in
+   * opposite directions: an ink chosen for a surface that never flips used on
+   * one that does, and the reverse.
+   *
+   * --os-panel and --os-field are the same colour in light and dark, so they
+   * carry their own fixed inks (--os-panel-ink, --os-on-field). --os-ink and
+   * --os-ground flip together with the theme. Pairing one family's ink with
+   * the other family's surface is invisible in exactly one of the two themes,
+   * which is why neither slipped past review.
+   */
+  it('pairs each surface with the ink family that belongs to it', async () => {
+    const css = await readFile(stylesheet, 'utf8');
+
+    // The tab strip sits on the page ground, so it flips with the theme.
+    // --os-panel-ink here rendered near-white on the near-white light ground.
+    expect(css).toMatch(/\.tabs button \{[^}]*color:\s*var\(--os-ink\)/u);
+    expect(css).not.toMatch(/\.tabs button \{[^}]*color:\s*var\(--os-panel-ink\)/u);
+
+    // The hero copy sits on --os-panel, which is forest in both themes.
+    expect(css).toMatch(/\.hero-copy,\s*\.hero-plain \{[^}]*color:\s*var\(--os-panel-ink\)/u);
+
+    // The quote and paid-API summaries sit on the lime --os-field.
+    expect(css).toMatch(/\.quote-panel,\s*\.paid-api-status \{[^}]*color:\s*var\(--os-on-field\)/u);
+    expect(css).toMatch(/var\(--os-on-field-muted\)/u);
+  });
+
+  /**
+   * The structural form of the rule above, so the whole class is caught rather
+   * than the instances that happened to be reported.
+   *
+   * --os-ground and --os-surface flip between light and dark; --os-panel and
+   * --os-field do not, and carry their own fixed inks. A fixed ink on a
+   * flipping surface is invisible in exactly one theme, so it survives any
+   * review done in the other one — which is how several shipped together.
+   */
+  it('never puts a fixed ink on a surface that flips with the theme', async () => {
+    const css = await readFile(stylesheet, 'utf8');
+
+    const FLIPPING = new Set(['--os-ground', '--os-surface']);
+    const FIXED_INK = new Set([
+      '--os-panel-ink',
+      '--os-panel-ink-muted',
+      '--os-on-field',
+      '--os-on-field-muted',
+    ]);
+
+    const rules = [...css.matchAll(/([^{}]+)\{([^}]*)\}/gu)].flatMap(([, rawSelector, body]) =>
+      (rawSelector ?? '')
+        .split(',')
+        .map((part) => part.trim().split('\n').at(-1)?.trim() ?? '')
+        .filter((selector) => selector.length > 0 && !selector.startsWith('@'))
+        .map((selector) => ({ selector, body: body ?? '' })),
+    );
+
+    // Which surface each selector paints, for the ones that paint at all.
+    const surfaceOf = new Map<string, string>();
+    for (const { selector, body } of rules) {
+      const background = /background(?:-color)?:\s*var\((--os-[\w-]+)\)/u.exec(body)?.[1];
+      if (background !== undefined) surfaceOf.set(selector, background);
+    }
+
+    /** The nearest self-or-ancestor selector that actually paints a surface. */
+    function surfaceUnder(selector: string): string | undefined {
+      const stripped = selector.replace(/\[[^\]]*\]|:{1,2}[\w-]+(\([^)]*\))?/gu, '');
+      for (const candidate of [selector, stripped]) {
+        const parts = candidate.trim().split(/\s+/u);
+        for (let index = parts.length; index > 0; index -= 1) {
+          const ancestor = parts
+            .slice(0, index)
+            .join(' ')
+            .replace(/\s*>\s*$/u, '')
+            .trim();
+          const found = surfaceOf.get(ancestor);
+          if (found !== undefined) return found;
+        }
+      }
+      return undefined;
+    }
+
+    const mismatches: string[] = [];
+    for (const { selector, body } of rules) {
+      const ink = /(?:^|[;{\s])color:\s*var\((--os-[\w-]+)\)/u.exec(body)?.[1];
+      if (ink === undefined || !FIXED_INK.has(ink)) continue;
+      const surface = surfaceUnder(selector);
+      if (surface !== undefined && FLIPPING.has(surface)) {
+        mismatches.push(`${selector} sets ${ink} on ${surface}`);
+      }
+    }
+
+    expect(mismatches).toEqual([]);
+  });
+
   it('sets the page ground and primary type from tokens', async () => {
     const css = await readFile(stylesheet, 'utf8');
     expect(css).toMatch(/body\s*\{[^}]*background:\s*var\(--os-ground\)/u);

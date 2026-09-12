@@ -45,6 +45,37 @@ describe('Gate P5 shell composition', () => {
     expect(screen.getByRole('tab', { name: 'Recovery & activity' })).toBeTruthy();
   });
 
+  it('offers only the four working cabinet sections', () => {
+    render(
+      <App
+        route="/app"
+        useOperatorSession={() => signedInSession()}
+        apiClient={
+          new OneShotApiClient({
+            fetchFn: async () =>
+              new Response(JSON.stringify({ status: 'ok' }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+              }),
+          })
+        }
+        settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
+        recoveryClient={createInMemoryRecoveryClient('lagging')}
+      />,
+    );
+
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Overview',
+      'Tools',
+      'Jobs',
+      'Recovery & activity',
+    ]);
+    // Both removed sections were read-only restatements of facts the other
+    // sections already show, and neither had a control behind it.
+    expect(screen.queryByRole('tab', { name: 'Wallet & permissions' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Developer access' })).toBeNull();
+  });
+
   it('gives Tools and Jobs distinct responsibilities', async () => {
     const user = userEvent.setup();
     const jobClient = {

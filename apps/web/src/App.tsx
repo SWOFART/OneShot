@@ -137,9 +137,7 @@ function CabinetPage(props: {
   readonly theme: Theme;
   readonly onToggleTheme: () => void;
 }) {
-  const [section, setSection] = useState<
-    'overview' | 'tools' | 'jobs' | 'recovery' | 'wallet' | 'developer'
-  >('overview');
+  const [section, setSection] = useState<'overview' | 'tools' | 'jobs' | 'recovery'>('overview');
   const [intentId, setIntentId] = useState('');
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [activityError, setActivityError] = useState<string | null>(null);
@@ -148,8 +146,6 @@ function CabinetPage(props: {
     tools: 'Tools',
     jobs: 'Jobs',
     recovery: 'Recovery & activity',
-    wallet: 'Wallet & permissions',
-    developer: 'Developer access',
   } as const;
   return (
     <main className="app-shell" aria-label="OneShot workspace cabinet">
@@ -196,120 +192,89 @@ function CabinetPage(props: {
             </button>
           ))}
         </nav>
-        {section === 'overview' && (
-          <section className="panel">
-            <h2>Work needing attention</h2>
-            <p>
-              Use Tools to start the supported report, Jobs to retrieve a result, and Recovery &
-              activity to inspect payment evidence.
-            </p>
-            <ReadinessBanner client={props.apiClient} />
-          </section>
-        )}
-        {section === 'tools' && (
-          <>
-            <JobWorkspace client={props.jobClient} onSelectIntent={setIntentId} />
-            <CircleX402DemoPanel client={props.paidApiClient} onSelectIntent={setIntentId} />
-          </>
-        )}
-        {section === 'jobs' && <JobList client={props.jobClient} onSelectIntent={setIntentId} />}
-        {section === 'recovery' && (
-          <section className="panel">
-            <h2>Recovery & activity</h2>
-            <p>
-              Refresh is read-only. Graph observations never change payment authority or permit a
-              new settlement.
-            </p>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => {
-                setActivityError(null);
-                void props.jobClient
-                  .refreshActivity()
-                  .then(setActivity)
-                  .catch(() => {
-                    setActivityError(
-                      'Activity refresh is unavailable; payment records remain unchanged.',
-                    );
-                  });
-              }}
-            >
-              Refresh activity
-            </button>
-            <p role="status">
-              {activityError ??
-                (activity
-                  ? `${activity.observation?.freshness ?? 'UNAVAILABLE'} — ${activity.observation?.coverage_note ?? 'No indexed coverage available.'}`
-                  : 'No activity refresh yet.')}
-            </p>
-            {activity && (
-              <div className="activity-summary">
-                <p>
-                  {activity.recorded_settlement_count} recorded settlement(s),{' '}
-                  {activity.uncertain_job_count} uncertain job(s),{' '}
-                  {activity.unmatched_transfer_count ?? 0} unmatched indexed transfer(s).
-                </p>
-                {(activity.transfers ?? []).filter((transfer) => transfer.match === 'UNMATCHED')
-                  .length > 0 && (
-                  <ul aria-label="Unmatched indexed transfers">
-                    {(activity.transfers ?? [])
-                      .filter((transfer) => transfer.match === 'UNMATCHED')
-                      .map((transfer) => (
-                        <li key={`${transfer.transaction_hash}:${transfer.log_index}`}>
-                          {transfer.transaction_hash.slice(0, 10)}… · log {transfer.log_index} ·{' '}
-                          {transfer.amount_atomic} atomic USDC
-                        </li>
-                      ))}
-                  </ul>
-                )}
-              </div>
-            )}
-            <label htmlFor="cabinet-intent">Selected job intent</label>
-            <input
-              id="cabinet-intent"
-              value={intentId}
-              onChange={(event) => setIntentId(event.target.value)}
-              placeholder="Select a job to inspect evidence"
-            />
-            <RecoverySurface businessIntentId={intentId} client={props.recoveryClient} />
-          </section>
-        )}
-        {section === 'wallet' && (
-          <section className="panel">
-            <h2>Wallet & permissions</h2>
-            <p>
-              The execution wallet and Privy policy remain the authorization boundary. This cabinet
-              has no policy-editing control because no enforced editing API exists.
-            </p>
-            <dl className="facts">
-              <div>
-                <dt>Settlement network</dt>
-                <dd>Arc Testnet (eip155:5042002)</dd>
-              </div>
-              <div>
-                <dt>Execution wallet</dt>
-                <dd>Server-configured Privy wallet (address withheld from browser)</dd>
-              </div>
-              <div>
-                <dt>Payment control</dt>
-                <dd>One committed settlement per business intent</dd>
-              </div>
-            </dl>
-            <ReadinessBanner client={props.apiClient} />
-          </section>
-        )}
-        {section === 'developer' && (
-          <section className="panel">
-            <h2>Developer access</h2>
-            <p>
-              Tools generates a stable task key for each run. Request a quote first, then approve
-              the exact recipient and amount. Keep the key outside URLs and browser storage when
-              automating retries. No API keys are issued in this workspace.
-            </p>
-            <code>{'POST /v1/jobs/quote → POST /v1/jobs (explicit approval)'}</code>
-          </section>
-        )}
+        {/* Keyed on the section so React remounts the panel on every switch,
+            which restarts the fade in `.tab-fade`. */}
+        <div className="tab-fade" key={section}>
+          {section === 'overview' && (
+            <section className="panel">
+              <h2>Work needing attention</h2>
+              <p>
+                Use Tools to start the supported report, Jobs to retrieve a result, and Recovery &
+                activity to inspect payment evidence.
+              </p>
+              <ReadinessBanner client={props.apiClient} />
+            </section>
+          )}
+          {section === 'tools' && (
+            <div className="panel-stack">
+              <JobWorkspace client={props.jobClient} onSelectIntent={setIntentId} />
+              <CircleX402DemoPanel client={props.paidApiClient} onSelectIntent={setIntentId} />
+            </div>
+          )}
+          {section === 'jobs' && <JobList client={props.jobClient} onSelectIntent={setIntentId} />}
+          {section === 'recovery' && (
+            <section className="panel recovery-panel">
+              <h2>Recovery & activity</h2>
+              <p>
+                Refresh is read-only. Graph observations never change payment authority or permit a
+                new settlement.
+              </p>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  setActivityError(null);
+                  void props.jobClient
+                    .refreshActivity()
+                    .then(setActivity)
+                    .catch(() => {
+                      setActivityError(
+                        'Activity refresh is unavailable; payment records remain unchanged.',
+                      );
+                    });
+                }}
+              >
+                Refresh activity
+              </button>
+              <p role="status">
+                {activityError ??
+                  (activity
+                    ? `${activity.observation?.freshness ?? 'UNAVAILABLE'} — ${activity.observation?.coverage_note ?? 'No indexed coverage available.'}`
+                    : 'No activity refresh yet.')}
+              </p>
+              {activity && (
+                <div className="activity-summary">
+                  <p>
+                    {activity.recorded_settlement_count} recorded settlement(s),{' '}
+                    {activity.uncertain_job_count} uncertain job(s),{' '}
+                    {activity.unmatched_transfer_count ?? 0} unmatched indexed transfer(s).
+                  </p>
+                  {(activity.transfers ?? []).filter((transfer) => transfer.match === 'UNMATCHED')
+                    .length > 0 && (
+                    <ul aria-label="Unmatched indexed transfers">
+                      {(activity.transfers ?? [])
+                        .filter((transfer) => transfer.match === 'UNMATCHED')
+                        .map((transfer) => (
+                          <li key={`${transfer.transaction_hash}:${transfer.log_index}`}>
+                            {transfer.transaction_hash.slice(0, 10)}… · log {transfer.log_index} ·{' '}
+                            {transfer.amount_atomic} atomic USDC
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+              <label htmlFor="cabinet-intent">Selected job intent</label>
+              <input
+                id="cabinet-intent"
+                value={intentId}
+                onChange={(event) => setIntentId(event.target.value)}
+                placeholder="Select a job to inspect evidence"
+              />
+              <RecoverySurface businessIntentId={intentId} client={props.recoveryClient} />
+            </section>
+          )}
+        </div>
         {intentId && (
           <section className="panel payment-evidence-panel" aria-label="Payment evidence">
             <h2>Payment evidence</h2>
@@ -553,7 +518,13 @@ export function App(props: AppProps = {}) {
               ))}
             </nav>
 
-            <main id={`${activeTab}-panel`} role="tabpanel" aria-labelledby={`${activeTab}-tab`}>
+            <main
+              key={activeTab}
+              className="tab-fade"
+              id={`${activeTab}-panel`}
+              role="tabpanel"
+              aria-labelledby={`${activeTab}-tab`}
+            >
               {activeTab === 'create' ? (
                 <IntentForm client={apiClient} onIntentCreatedOrSelected={selectIntent} />
               ) : activeTab === 'status' ? (

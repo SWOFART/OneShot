@@ -322,7 +322,7 @@ export function CircleX402DemoPanel(props: {
   }
 
   return (
-    <section className="panel" aria-label="Circle x402 API demo">
+    <section className="panel paid-api-panel" aria-label="Circle x402 API demo">
       <header className="panel-heading">
         <div>
           <p className="eyebrow">LIVE PAID API</p>
