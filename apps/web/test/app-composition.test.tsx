@@ -40,6 +40,7 @@ describe('Gate P5 shell composition', () => {
         recoveryClient={createInMemoryRecoveryClient('lagging')}
       />,
     );
+    expect(screen.getByRole('heading', { name: 'Your payment workspace', level: 1 })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'API services' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Requests' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Payment protection' })).toBeTruthy();
@@ -119,6 +120,7 @@ describe('Gate P5 shell composition', () => {
         useOperatorSession={() => signedInSession()}
       />,
     );
+    expect(screen.getByRole('heading', { name: 'Your payment workspace', level: 2 })).toBeTruthy();
 
     await user.type(
       screen.getByLabelText('Request identifier'),
