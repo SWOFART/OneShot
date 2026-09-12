@@ -706,4 +706,102 @@
       scroll-behavior: auto !important;
     }
   }
+
+  /* Embedded workspace presentation: the same compact rhythm as Spending Rules. */
+  .recovery-shell,
+  .route-state {
+    width: min(100% - 32px, 1080px);
+    padding: 24px 0 40px;
+  }
+
+  .hero {
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 18px;
+  }
+
+  .brand {
+    margin-bottom: 8px;
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+
+  .lede {
+    margin-top: 10px;
+    font-size: 0.95rem;
+  }
+
+  .intent-identity {
+    min-width: 230px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--cyan);
+    border-radius: 12px;
+  }
+
+  .state-banner {
+    gap: 18px;
+    padding: 20px 24px;
+    border-radius: 12px;
+  }
+
+  .state-banner h2 {
+    margin-bottom: 8px;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+  }
+
+  .lock-status {
+    min-width: 210px;
+    padding: 14px 16px;
+    border-radius: 10px;
+  }
+
+  .graph-panel {
+    margin-top: 16px;
+    padding: 18px 22px;
+    border-radius: 12px;
+  }
+
+  .graph-panel .identity-grid {
+    margin-top: 16px;
+  }
+
+  .action-row {
+    margin: 16px 0 20px;
+  }
+
+  .panel,
+  .diagnostics {
+    padding: 20px 22px;
+    border-radius: 12px;
+  }
+
+  .dashboard-grid {
+    gap: 16px;
+  }
+
+  .timeline {
+    margin-top: 20px;
+  }
+
+  .timeline li {
+    padding-bottom: 20px;
+  }
+
+  .candidate-list,
+  .evidence-grid {
+    margin-top: 16px;
+  }
+
+  @media (max-width: 620px) {
+    .recovery-shell,
+    .route-state {
+      width: min(100% - 24px, 1080px);
+      padding-top: 20px;
+    }
+  }
 }

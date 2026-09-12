@@ -32,7 +32,7 @@ export function RecoveryRoute({ businessIntentId, client }: RecoveryRouteProps) 
   if (error !== null) {
     content = (
       <main className="route-state" role="alert">
-        <p className="brand">ONESHOT / RECOVERY CONTROL</p>
+        <p className="brand">RECOVERY CONTROL</p>
         <h1>Evidence unavailable</h1>
         <p>{error}</p>
       </main>
@@ -40,7 +40,7 @@ export function RecoveryRoute({ businessIntentId, client }: RecoveryRouteProps) 
   } else if (pages.length === 0) {
     content = (
       <main className="route-state" aria-busy="true">
-        <p className="brand">ONESHOT / RECOVERY CONTROL</p>
+        <p className="brand">RECOVERY CONTROL</p>
         <h1>Loading recovery evidence…</h1>
       </main>
     );

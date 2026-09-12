@@ -101,13 +101,34 @@ function observationCopy(graph: GraphObservationSummary): string {
   return `${graph.candidateCount} candidate${graph.candidateCount === 1 ? '' : 's'} observed through block ${graph.observedThroughBlock}. Arc verification is still required.`;
 }
 
-function GraphPanel({ graph }: { readonly graph: GraphObservationSummary }) {
-  const sourceLabel =
-    graph.retrievalPath === 'STUDIO_GRAPHQL'
-      ? 'Subgraph Studio GraphQL'
-      : graph.retrievalPath === 'SUBGRAPH_MCP'
-        ? 'Subgraph MCP'
-        : 'The Graph provider';
+function graphSourceLabel(graph: GraphObservationSummary): string {
+  return graph.retrievalPath === 'STUDIO_GRAPHQL'
+    ? 'Subgraph Studio GraphQL'
+    : graph.retrievalPath === 'SUBGRAPH_MCP'
+      ? 'Subgraph MCP'
+      : 'The Graph provider';
+}
+
+function GraphPanel({ graph }: { readonly graph: GraphObservationSummary | null }) {
+  if (graph === null) {
+    return (
+      <section className="panel graph-panel graph-unavailable" aria-labelledby="graph-heading">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Candidate discovery</p>
+            <h2 id="graph-heading">The Graph</h2>
+          </div>
+          <span className="health health-unavailable">NOT REPORTED</span>
+        </div>
+        <p className="observation-copy">
+          No Graph observation was returned for this request. This is not proof that no payment
+          happened; Arc and OneShot evidence remain the authority.
+        </p>
+      </section>
+    );
+  }
+
+  const sourceLabel = graphSourceLabel(graph);
   return (
     <section className="panel graph-panel" aria-labelledby="graph-heading">
       <div className="section-heading">
@@ -231,9 +252,9 @@ export function RecoveryTimeline({
     <main className="recovery-shell" data-layout="responsive-grid">
       <header className="hero">
         <div>
-          <p className="brand">ONESHOT / RECOVERY CONTROL</p>
-          <h1>Evidence before action.</h1>
-          <p className="lede">One job. Many retries. One settlement.</p>
+          <p className="brand">RECOVERY CONTROL</p>
+          <h1>Evidence before action</h1>
+          <p className="lede">One request, one settlement, and a read-only recovery path.</p>
         </div>
         <dl className="intent-identity" aria-label="Business intent identity">
           <div>
@@ -266,6 +287,8 @@ export function RecoveryTimeline({
           remains authoritative and blocks a new settlement.
         </div>
       )}
+
+      <GraphPanel graph={current.graph} />
 
       <div className="action-row" aria-label="Safe recovery actions">
         <button
@@ -393,8 +416,6 @@ export function RecoveryTimeline({
           </section>
         </div>
       </div>
-
-      {current.graph !== null && <GraphPanel graph={current.graph} />}
 
       <section className="panel" aria-labelledby="evidence-heading">
         <div className="section-heading">

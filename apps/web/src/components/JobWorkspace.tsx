@@ -303,7 +303,7 @@ export function JobWorkspace(props: {
             className="secondary compact"
             onClick={() => props.onSelectIntent(approvedJob.business_intent_id)}
           >
-            Open payment protection
+            Open payment proof
           </button>
         </>
       )}
@@ -382,8 +382,8 @@ export function CircleX402DemoPanel(props: {
         <span className="badge tone-neutral">Arc Testnet</span>
       </header>
       <p>
-        Get a dataset result through Circle’s payment rail. OneShot keeps one request key so a
-        retry reuses the original payment instead of charging twice.
+        Get a dataset result through Circle’s payment rail. OneShot keeps one request key so a retry
+        reuses the original payment instead of charging twice.
       </p>
       <label htmlFor="paid-api-task-key">Request key</label>
       <input
@@ -517,7 +517,7 @@ export function CircleX402DemoPanel(props: {
             className="secondary compact"
             onClick={() => props.onSelectIntent(request.business_intent_id)}
           >
-            Open payment protection
+            Open payment proof
           </button>
           <details className="technical-details">
             <summary>Show technical request details</summary>
@@ -695,7 +695,7 @@ export function JobList(props: {
                   className="secondary compact"
                   onClick={() => props.onSelectIntent(job.business_intent_id)}
                 >
-                  Open payment protection
+                  Open payment proof
                 </button>
                 <details className="technical-details">
                   <summary>Show request details</summary>

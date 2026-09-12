@@ -44,14 +44,14 @@ export function RecoverySurface({
   if (!businessIntentId) {
     return (
       <EmptySurface
-        title="Select a request to inspect protection checks"
-        detail="Open a request first. Protection checks are read-only and never start a payment."
+        title="Select a request to inspect recovery control"
+        detail="Open a request first. Recovery control is read-only and never starts a payment."
       />
     );
   }
 
   return (
-    <div className="composed-surface recovery-surface" aria-label="Protection checks review">
+    <div className="composed-surface recovery-surface" aria-label="Recovery control">
       <RecoveryRoute businessIntentId={businessIntentId} client={client} />
     </div>
   );

@@ -105,14 +105,14 @@ export function SettlementDetailsRoute({
   if (state.kind === 'LOADING') {
     content = (
       <section className="route-state" aria-busy="true">
-        <p className="eyebrow">ONESHOT / AUTHORIZATION AND SETTLEMENT</p>
+        <p className="eyebrow">PAYMENT PROOF · ARC TESTNET</p>
         <h1>Loading settlement details…</h1>
       </section>
     );
   } else if (state.kind === 'FAILED') {
     content = (
       <section className="route-state" role="alert">
-        <p className="eyebrow">ONESHOT / AUTHORIZATION AND SETTLEMENT</p>
+        <p className="eyebrow">PAYMENT PROOF · ARC TESTNET</p>
         <h1>{state.heading}</h1>
         <p>{state.detail}</p>
       </section>

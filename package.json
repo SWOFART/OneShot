@@ -16,7 +16,7 @@
     "db:reset-demo": "pnpm --filter @oneshot/storage-postgres build && node scripts/reset-demo-db.mjs",
     "deploy": "wrangler deploy",
     "dev:frontend": "wrangler dev",
-    "build:frontend": "pnpm --filter @oneshot/web build && pnpm --filter @oneshot/recovery-ui build:site",
+    "build:frontend": "pnpm --filter @oneshot/web build",
     "dev:web": "pnpm --filter @oneshot/web dev",
     "format": "prettier --write \"**/*.{ts,mts,mjs,json,jsonc,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,mts,mjs,json,jsonc,yml,yaml}\"",

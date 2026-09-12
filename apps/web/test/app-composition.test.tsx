@@ -43,7 +43,7 @@ describe('Gate P5 shell composition', () => {
     expect(screen.getByRole('heading', { name: 'Your payment workspace', level: 1 })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'API services' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Requests' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Payment protection' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Payment proof' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Spending rules' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Team & access' })).toBeTruthy();
   });
@@ -134,7 +134,7 @@ describe('Gate P5 shell composition', () => {
       screen.getByLabelText('Request identifier'),
       recoveryScenarioPages.lagging[0]?.businessIntentId ?? '',
     );
-    await user.click(screen.getByRole('tab', { name: 'Protection checks' }));
+    await user.click(screen.getByRole('tab', { name: 'Recovery control' }));
     expect(await screen.findByText('Subgraph MCP')).toBeTruthy();
     expect(screen.getByText('LAGGING')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /force|pay|submit settlement/iu })).toBeNull();

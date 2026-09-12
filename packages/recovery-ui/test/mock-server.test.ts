@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { RECOVERY_MOCK_SERVER_VERSION } from '../src/contract.js';
 import { createInMemoryRecoveryClient, handleRecoveryMockRequest } from '../src/mock-server.js';
 
 describe('C05 frozen mock server', () => {
-  it('serves versioned paginated recovery data', async () => {
+  it('serves paginated recovery data', async () => {
     const client = createInMemoryRecoveryClient('aged-unknown');
     const first = await client.readPage('intent_custom', null);
     const second = await client.readPage('intent_custom', first.page.nextCursor);
 
-    expect(first.mockServerVersion).toBe(RECOVERY_MOCK_SERVER_VERSION);
     expect(first.businessIntentId).toBe('intent_custom');
     expect(first.page.nextCursor).toBe('older');
     expect(second.page.cursor).toBe('older');

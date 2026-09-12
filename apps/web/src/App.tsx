@@ -37,7 +37,7 @@ const TAB_LABELS: Readonly<Record<Tab, string>> = {
   create: 'Create request',
   status: 'Payment status',
   settlement: 'Payment proof',
-  recovery: 'Protection checks',
+  recovery: 'Recovery control',
 };
 
 export interface AppProps {
@@ -77,7 +77,7 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
         </a>
       </nav>
       <header className="app-header hero-section">
-        <Hero height={620}>
+        <Hero height={460}>
           <p className="eyebrow">RESUMABLE PAID SERVICES / ARC TESTNET</p>
           <h1>Resume the job, not the payment.</h1>
           <p className="hero-lead">
@@ -152,7 +152,7 @@ function CabinetPage(props: {
     overview: 'Overview',
     services: 'API services',
     requests: 'Requests',
-    protection: 'Payment protection',
+    protection: 'Payment proof',
     spending: 'Spending rules',
     access: 'Team & access',
   } as const;
@@ -267,7 +267,7 @@ function CabinetPage(props: {
                 View requests
               </button>
               <button type="button" className="secondary" onClick={() => setSection('protection')}>
-                See payment protection
+                See payment proof
               </button>
             </div>
             <ReadinessBanner client={props.apiClient} />
