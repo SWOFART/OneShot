@@ -96,7 +96,7 @@ p {
 }
 
 a {
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   text-decoration: none;
   transition: color 0.2s ease;
 }
@@ -138,7 +138,7 @@ a:hover {
 
 .workspace-loading-eyebrow {
   margin: 0;
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-family: var(--os-font-mono);
   font-size: 0.7rem;
   letter-spacing: 0.16em;
@@ -190,7 +190,7 @@ a:hover {
   font-size: 0.65rem;
   font-weight: 300;
   letter-spacing: 0.12em;
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-family: var(--os-font-mono);
 }
 
@@ -225,8 +225,8 @@ a:hover {
 }
 
 .status-badge.token-badge {
-  border-color: var(--os-signal);
-  color: var(--os-signal);
+  border-color: var(--os-accent-ink);
+  color: var(--os-accent-ink);
   font-family: var(--os-font-mono);
 }
 
@@ -261,7 +261,7 @@ a:hover {
 
 .eyebrow {
   margin-bottom: 1rem;
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-size: 0.8rem;
   font-weight: 300;
   letter-spacing: 0.2em;
@@ -359,13 +359,13 @@ a:hover {
 .readiness.success {
   border-color: var(--os-line);
   color: var(--os-state-committed);
-  background: var(--os-surface);
+  background: var(--os-panel);
 }
 
 .readiness.warning {
   border-color: var(--os-line);
   color: var(--os-state-unknown);
-  background: var(--os-surface);
+  background: var(--os-panel);
 }
 
 /* ==========================================================================
@@ -387,7 +387,7 @@ a:hover {
   font-size: 0.75rem;
   font-weight: 300;
   letter-spacing: 0.16em;
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-family: var(--os-font-mono);
 }
 
@@ -423,7 +423,7 @@ a:hover {
   font-size: 0.72rem;
   font-weight: 300;
   letter-spacing: 0.14em;
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   margin-bottom: 0.9rem;
 }
 
@@ -540,7 +540,7 @@ a:hover {
 }
 
 .loading-text {
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-weight: 300;
 }
 
@@ -637,7 +637,7 @@ a:hover {
 }
 
 .machine-token summary:hover {
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
 }
 
 .machine-token label {
@@ -715,7 +715,7 @@ a:hover {
 }
 
 .intent-context input:focus {
-  border-color: var(--os-signal);
+  border-color: var(--os-accent-ink);
 }
 
 /* ==========================================================================
@@ -731,7 +731,7 @@ a:hover {
 
 .tabs button {
   min-height: 38px;
-  color: var(--os-panel-ink);
+  color: var(--os-ink);
   background: transparent;
   border: 1px solid var(--os-line-strong);
 }
@@ -739,7 +739,7 @@ a:hover {
 .tabs button[aria-selected='true'] {
   color: var(--os-on-signal);
   background: var(--os-signal);
-  border-color: var(--os-signal);
+  border-color: var(--os-accent-ink);
 }
 
 /* ==========================================================================
@@ -792,7 +792,7 @@ a:hover {
 
 .form input:focus,
 .lookup input:focus {
-  border-color: var(--os-signal);
+  border-color: var(--os-accent-ink);
 }
 
 .form output {
@@ -804,7 +804,7 @@ a:hover {
   border: 1px solid var(--os-line);
   border-radius: 999px;
   background: var(--os-surface);
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-family: var(--os-font-mono);
   font-size: 0.85rem;
 }
@@ -877,7 +877,7 @@ a:hover {
 }
 
 .polling {
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-weight: 300;
 }
 
@@ -1233,7 +1233,7 @@ a:hover {
 
 .meta-code {
   font-family: var(--os-font-mono);
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   background: var(--os-surface);
   padding: 0.2rem 0.4rem;
   border-radius: 999px;
@@ -1261,7 +1261,7 @@ a:hover {
 }
 
 .footer-links a:hover {
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
 }
 
 /* ==========================================================================
@@ -1577,4 +1577,78 @@ a:hover {
   .protection-summary {
     grid-template-columns: 1fr;
   }
+}
+
+/* Match ink to its actual surface, including cards nested in dark panels. */
+.console-container,
+.login-gate,
+.invariant-card,
+.panel,
+.fixture-toolbar,
+.hero-plain,
+.hero-copy {
+  --os-accent-ink: var(--os-signal);
+}
+
+.console-container .tabs button {
+  color: var(--os-panel-ink);
+}
+
+.console-container .tabs button[aria-selected='true'] {
+  color: var(--os-on-signal);
+}
+
+.hero-plain h1,
+.hero-copy h1,
+.hero-plain .btn-hero-secondary,
+.hero-copy .btn-hero-secondary {
+  color: var(--os-panel-ink);
+}
+
+.hero-plain .hero-lead,
+.hero-copy .hero-lead,
+.hero-plain .hero-sublead,
+.hero-copy .hero-sublead {
+  color: var(--os-panel-ink-muted);
+}
+
+/* Cabinet header shares the login card's edges; multiline copy uses auto height. */
+.app-header.cabinet-header {
+  max-width: none;
+  padding: 0 0 2rem;
+}
+
+.job-list li,
+.workspace-fact-grid article,
+.protection-steps article,
+.protection-summary div,
+.advanced-fields {
+  --os-panel-ink: var(--os-ink);
+  --os-panel-ink-muted: var(--os-ink-muted);
+  --os-accent-ink: var(--os-ink);
+  color: var(--os-ink);
+}
+
+.quote-panel,
+.paid-api-status {
+  --os-panel-ink: var(--os-on-field);
+  --os-panel-ink-muted: var(--os-on-field);
+  --os-accent-ink: var(--os-on-field);
+  color: var(--os-on-field);
+}
+
+.job-settlement-summary {
+  color: var(--os-state-committed);
+}
+
+.response-output,
+.job-workspace > input,
+.advanced-fields input,
+.operator-details .operator-did,
+.operator-details summary {
+  color: var(--os-ink);
+}
+
+.job-workspace > input[readonly] {
+  color: var(--os-ink-muted);
 }

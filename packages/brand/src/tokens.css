@@ -1,8 +1,8 @@
 /**
  * OneShot brand tokens.
  *
- * The single source of truth for the product's palette. Every value is sampled
- * from the design canvas, not invented. Nothing else in the repository may
+ * The single source of truth for the product's palette. Brand fills follow
+ * the design canvas; semantic inks are adjusted for readable contrast. Nothing else in the repository may
  * introduce a literal colour: apps/web and both UI slices read these tokens.
  *
  * Hierarchy in the mark is carried by stroke weight, never opacity, so the
@@ -16,8 +16,8 @@
   color-scheme: light;
 
   /* surfaces */
-  --os-ground: #f7f9f4;
-  --os-surface: #ffffff;
+  --os-ground: #edf1e9;
+  --os-surface: #f7f9f4;
   --os-panel: #0b332c;
   --os-field: #e9ffbd;
 
@@ -29,6 +29,7 @@
 
   /* brand */
   --os-signal: #00dc5f;
+  --os-accent-ink: #007a34;
   --os-on-signal: #06231c;
   --os-attempt: #4a7a60;
 
@@ -74,6 +75,7 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
+  --os-accent-ink: #00dc5f;
   --os-ground: #0a0a0a;
   --os-surface: #12211c;
 

@@ -77,7 +77,7 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
         </a>
       </nav>
       <header className="app-header hero-section">
-        <Hero>
+        <div className="hero-plain">
           <p className="eyebrow">RESUMABLE PAID SERVICES / ARC TESTNET</p>
           <h1>Resume the job, not the payment.</h1>
           <p className="hero-lead">
@@ -96,7 +96,7 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
               How it works
             </a>
           </div>
-        </Hero>
+        </div>
       </header>
       <section id="how-it-works" className="invariants-section" aria-labelledby="how-heading">
         <div className="section-header">
@@ -184,15 +184,15 @@ function CabinetPage(props: {
         machineToken={props.machineToken}
         onMachineTokenChange={props.setMachineToken}
       >
-        <header className="app-header hero-section">
-          <Hero>
+        <header className="app-header hero-section cabinet-header">
+          <div className="hero-plain">
             <p className="eyebrow">WORKSPACE</p>
             <h1>Your payment workspace</h1>
             <p className="hero-lead">
               Run approved paid APIs, keep one payment identity per request, and recover results
               without paying twice.
             </p>
-          </Hero>
+          </div>
         </header>
         <nav className="tabs" aria-label="Cabinet sections" role="tablist">
           {Object.entries(labels).map(([key, label]) => (

@@ -1,3 +1,5 @@
+import axe from 'axe-core';
+
 import { expect, test, type Page, type Route } from '@playwright/test';
 
 const JOB_ID = `job_${'a'.repeat(64)}`;
@@ -160,3 +162,93 @@ test.describe('resumable job workspace', () => {
     ).toBe(true);
   });
 });
+
+for (const theme of ['light', 'dark'] as const) {
+  for (const width of [390, 1440]) {
+    test(`readable ${theme} surfaces and aligned cabinet at ${width}px`, async ({ page }) => {
+      test.setTimeout(60_000);
+      await page.setViewportSize({ width, height: 1000 });
+      await page.addInitScript((value) => localStorage.setItem('oneshot.theme', value), theme);
+      await mockJobApi(page);
+      const checkContrast = async () => {
+        await page.addScriptTag({ content: axe.source });
+        const violations = await page.evaluate(async () => {
+          const checker = (window as unknown as { axe: typeof axe }).axe;
+          const result = await checker.run(document, { runOnly: ['color-contrast'] });
+          return result.violations.map((item) => ({
+            id: item.id,
+            nodes: item.nodes.map((node) => ({
+              target: node.target,
+              failure: node.failureSummary,
+            })),
+          }));
+        });
+        expect(violations).toEqual([]);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true,
+        );
+      };
+      await page.goto('/');
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+      await checkContrast();
+      const hero = await page.locator('.hero-plain').boundingBox();
+      for (const selector of ['h1', '.hero-actions']) {
+        const content = await page.locator(`.hero-plain ${selector}`).boundingBox();
+        expect(content!.y).toBeGreaterThanOrEqual(hero!.y);
+        expect(content!.y + content!.height).toBeLessThanOrEqual(hero!.y + hero!.height);
+      }
+      await page.screenshot({
+        path: test.info().outputPath(`landing-${theme}-${width}.png`),
+        fullPage: true,
+      });
+      await page.goto('/app');
+      await unlockWorkspace(page);
+      const identity = await page.locator('.operator-identity').boundingBox();
+      const header = await page.locator('.cabinet-header .hero-plain').boundingBox();
+      expect(identity).not.toBeNull();
+      expect(header?.x).toBeCloseTo(identity!.x, 0);
+      expect(header?.width).toBeCloseTo(identity!.width, 0);
+      for (const label of [
+        'Overview',
+        'API services',
+        'Requests',
+        'Payment protection',
+        'Spending rules',
+        'Team & access',
+      ]) {
+        await page.getByRole('tab', { name: label, exact: true }).click();
+        await page.getByRole('tab', { name: label, exact: true }).hover();
+        await page.getByRole('tab', { name: label, exact: true }).focus();
+        if (label === 'API services') {
+          await page.getByText('Request key (advanced)').click();
+          await page.getByLabel('Company or domain').fill('acme.com');
+          await page
+            .getByLabel('Service destination wallet')
+            .fill('0x1111111111111111111111111111111111111111');
+          await page.getByLabel('Amount (USDC)').fill('2.5');
+          await page
+            .getByRole('region', { name: 'Company research service' })
+            .getByRole('button', { name: 'Check price' })
+            .click();
+          await expect(
+            page.getByRole('heading', { name: 'Review quote before approval' }),
+          ).toBeVisible();
+        }
+        if (label === 'Requests') {
+          await page.getByRole('button', { name: 'Resume result (no new payment)' }).click();
+          await expect(page.getByText('Recovered original supplier report.')).toBeVisible();
+          const results = await page
+            .getByRole('region', { name: 'Requests and results' })
+            .boundingBox();
+          expect(results?.x).toBeCloseTo(identity!.x, 0);
+          expect(results?.width).toBeCloseTo(identity!.width, 0);
+        }
+        await checkContrast();
+      }
+      await page.screenshot({
+        path: test.info().outputPath(`cabinet-${theme}-${width}.png`),
+        fullPage: true,
+      });
+    });
+  }
+}
