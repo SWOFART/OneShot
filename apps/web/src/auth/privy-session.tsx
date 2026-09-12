@@ -3,7 +3,9 @@ import {
   useActiveWallet,
   useLogin,
   usePrivy,
+  useWallets,
   type BaseConnectedWalletType,
+  type ConnectedWallet,
 } from '@privy-io/react-auth';
 import { BatchEvmScheme } from '@circle-fin/x402-batching/client';
 import { encodeFunctionData, erc20Abi, defineChain } from 'viem';
@@ -168,6 +170,12 @@ export function circleX402SigningRequirements(quote: PaidApiQuote) {
   };
 }
 
+function isPrivyEthereumWallet(
+  value: BaseConnectedWalletType | undefined,
+): value is ConnectedWallet {
+  return value?.type === 'ethereum' && value.walletClientType === 'privy';
+}
+
 function validateAddress(value: string, label: string): asserts value is `0x${string}` {
   if (!EVM_ADDRESS.test(value)) throw new Error(`${label} is invalid`);
 }
@@ -205,14 +213,25 @@ async function waitForSuccessfulReceipt(provider: EthereumProvider, transactionH
 
 export function usePrivyUserWallet(): UserWalletSession {
   const { user } = usePrivy();
-  const { wallet: activeWallet, connect: connectWallet } = useActiveWallet();
+  const { ready: walletsReady, wallets } = useWallets();
+  const { wallet: activeWallet, setActiveWallet, connect: connectWallet } = useActiveWallet();
   const explicitlyConnectedWallet = useRef<{
     readonly subject: string | null;
     readonly wallet: EthereumWallet;
   } | null>(null);
   const subject = user?.id ?? null;
-  const selectedWallet: EthereumWallet | undefined =
-    activeWallet?.type === 'ethereum' ? activeWallet : undefined;
+  const selectedWallet: ConnectedWallet | undefined =
+    walletsReady && isPrivyEthereumWallet(activeWallet)
+      ? activeWallet
+      : walletsReady
+        ? wallets.find((candidate) => isPrivyEthereumWallet(candidate))
+        : undefined;
+
+  useEffect(() => {
+    if (selectedWallet && !isPrivyEthereumWallet(activeWallet)) {
+      setActiveWallet(selectedWallet);
+    }
+  }, [activeWallet, selectedWallet, setActiveWallet]);
 
   async function selectWallet(): Promise<EthereumWallet | undefined> {
     if (selectedWallet) return selectedWallet;

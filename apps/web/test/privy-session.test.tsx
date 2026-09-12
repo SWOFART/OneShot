@@ -307,7 +307,7 @@ describe('usePrivyOperatorSession — native Privy login', () => {
   });
 });
 
-describe('usePrivyUserWallet — selected payer', () => {
+describe('usePrivyUserWallet — dedicated Privy payer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.active.wallet = undefined;
@@ -334,15 +334,15 @@ describe('usePrivyUserWallet — selected payer', () => {
     });
   });
 
-  it('signs x402 with the active MetaMask wallet', async () => {
+  it('keeps the Privy payer when MetaMask becomes active', async () => {
     const metamask = ethereumWallet('metamask', '0x1111111111111111111111111111111111111111');
     const privy = ethereumWallet('privy', '0x2222222222222222222222222222222222222222');
     mocks.active.wallet = metamask.wallet;
     mocks.wallets = [metamask.wallet, privy.wallet];
 
     const { result } = renderHook(() => usePrivyUserWallet());
-    expect(result.current.address).toBe(metamask.wallet.address);
-    expect(mocks.active.setActiveWallet).not.toHaveBeenCalled();
+    expect(result.current.address).toBe(privy.wallet.address);
+    expect(mocks.active.setActiveWallet).toHaveBeenCalledWith(privy.wallet);
 
     await result.current.signX402Payment({
       supplier_id: 'circle-x402-v1',
@@ -355,12 +355,12 @@ describe('usePrivyUserWallet — selected payer', () => {
       max_timeout_seconds: 300,
     });
 
-    expect(metamask.request).toHaveBeenCalledWith(
+    expect(privy.request).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'eth_signTypedData_v4' }),
     );
-    expect(privy.request).not.toHaveBeenCalled();
+    expect(metamask.request).not.toHaveBeenCalled();
 
-    const signingRequest = metamask.request.mock.calls.find(
+    const signingRequest = privy.request.mock.calls.find(
       ([request]) => request.method === 'eth_signTypedData_v4',
     )?.[0] as { params: [string, string] } | undefined;
     const typedData = JSON.parse(signingRequest?.params[1] ?? '{}') as {
