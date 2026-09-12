@@ -259,18 +259,18 @@ export function JobWorkspace(props: {
   return (
     <section
       className="panel job-workspace"
-      aria-label="Company research service"
+      aria-label="Direct Arc payment"
       aria-busy={quoteLoading || starting}
     >
       <header>
-        <p className="eyebrow">API SERVICE</p>
-        <h2>Company research service</h2>
+        <p className="eyebrow">DIRECT PAYMENT</p>
+        <h2>Direct Arc payment</h2>
         <p>
-          Prepare a team-operated company report request. You choose the destination and payment
-          amount; preview confirms those details before you approve a payment.
+          Send USDC directly to a reviewed recipient on Arc Testnet. OneShot keeps the payment and
+          its team-operated sample result bound to one request across retries.
         </p>
       </header>
-      <label htmlFor="report-subject">Company or domain</label>
+      <label htmlFor="report-subject">Payment purpose</label>
       <input
         id="report-subject"
         disabled={quoteLoading || starting}
@@ -279,7 +279,7 @@ export function JobWorkspace(props: {
           setSubject(event.target.value);
           clearQuote();
         }}
-        placeholder="acme.com"
+        placeholder="Q4 supplier research"
       />
       <label htmlFor="report-recipient">Service destination wallet</label>
       <input
@@ -482,17 +482,17 @@ export function CircleX402DemoPanel(props: {
   }
 
   return (
-    <section className="panel paid-api-panel" aria-label="Circle Dataset API service">
+    <section className="panel paid-api-panel" aria-label="OneShot x402 Dataset service">
       <header className="panel-heading">
         <div>
-          <p className="eyebrow">CONNECTED API SERVICE</p>
-          <h2>Circle Dataset API</h2>
+          <p className="eyebrow">TEAM-OPERATED X402 DEMO</p>
+          <h2>OneShot x402 Dataset</h2>
         </div>
         <span className="badge tone-neutral">Arc Testnet</span>
       </header>
       <p>
-        Get a dataset result through Circle’s payment rail. OneShot keeps one request key so a retry
-        reuses the original payment instead of charging twice.
+        Buy a demo dataset from OneShot’s own seller through Circle x402. OneShot keeps one request
+        key so a retry reuses the original payment instead of charging twice.
       </p>
       <label htmlFor="paid-api-task-key">Request key</label>
       <input
@@ -744,7 +744,7 @@ export function JobList(props: {
       {loading ? (
         <p role="status">Checking requests…</p>
       ) : jobs.length === 0 ? (
-        <p>No requests yet. Open API services to start a supported request.</p>
+        <p>No requests yet. Open Payment services to start a supported request.</p>
       ) : (
         <ul className="attempts job-list">
           {jobs.map((job, index) => {

@@ -98,7 +98,7 @@ async function mockJobApi(
 async function unlockWorkspace(page: Page): Promise<void> {
   await page.getByText('Machine token (advanced)').click();
   await page.getByLabel('Machine token').fill('browser-memory-token');
-  await expect(page.getByRole('tab', { name: 'API services' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Payment services' })).toBeVisible();
 }
 
 test.describe('resumable job workspace', () => {
@@ -123,8 +123,8 @@ test.describe('resumable job workspace', () => {
     const calls = await mockJobApi(page, { startDelayMs: 1000, resumeDelayMs: 1000 });
     await page.goto('/app');
     await unlockWorkspace(page);
-    await page.getByRole('tab', { name: 'API services' }).click();
-    await page.getByLabel('Company or domain').fill('acme.com');
+    await page.getByRole('tab', { name: 'Payment services' }).click();
+    await page.getByLabel('Payment purpose').fill('acme.com');
     await page
       .getByLabel('Service destination wallet')
       .fill('0x1111111111111111111111111111111111111111');
@@ -132,7 +132,7 @@ test.describe('resumable job workspace', () => {
     await page.getByText('Request key (advanced)').click();
     await expect(page.locator('#generated-task-key')).toHaveValue(/report-acme-com-/u);
     await page
-      .getByRole('region', { name: 'Company research service' })
+      .getByRole('region', { name: 'Direct Arc payment' })
       .getByRole('button', { name: 'Review payment details' })
       .click();
     await expect.poll(() => calls.filter((call) => call === 'POST /v1/jobs/quote')).toHaveLength(1);
@@ -140,7 +140,7 @@ test.describe('resumable job workspace', () => {
     await expect(page.getByRole('heading', { name: 'Review before approval' })).toBeVisible();
     await expect(page.getByText('Nothing has been paid yet.')).toBeVisible();
     const approve = page
-      .getByRole('region', { name: 'Company research service' })
+      .getByRole('region', { name: 'Direct Arc payment' })
       .locator('button')
       .last();
     await approve.click();
@@ -233,19 +233,19 @@ for (const theme of ['light', 'dark'] as const) {
       expect(identity).not.toBeNull();
       expect(header?.x).toBeCloseTo(identity!.x, 0);
       expect(header?.width).toBeCloseTo(identity!.width, 0);
-      for (const label of ['Overview', 'API services', 'Requests', 'Payment proof']) {
+      for (const label of ['Overview', 'Payment services', 'Requests', 'Payment proof']) {
         await page.getByRole('tab', { name: label, exact: true }).click();
         await page.getByRole('tab', { name: label, exact: true }).hover();
         await page.getByRole('tab', { name: label, exact: true }).focus();
-        if (label === 'API services') {
+        if (label === 'Payment services') {
           await page.getByText('Request key (advanced)').click();
-          await page.getByLabel('Company or domain').fill('acme.com');
+          await page.getByLabel('Payment purpose').fill('acme.com');
           await page
             .getByLabel('Service destination wallet')
             .fill('0x1111111111111111111111111111111111111111');
           await page.getByLabel('Amount (USDC)').fill('2.5');
           await page
-            .getByRole('region', { name: 'Company research service' })
+            .getByRole('region', { name: 'Direct Arc payment' })
             .getByRole('button', { name: 'Review payment details' })
             .click();
           await expect(page.getByRole('heading', { name: 'Review before approval' })).toBeVisible();
