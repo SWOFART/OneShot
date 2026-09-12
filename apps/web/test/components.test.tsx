@@ -171,7 +171,7 @@ describe('JobWorkspace payment inputs', () => {
     };
     render(<JobWorkspace client={client as never} onSelectIntent={() => undefined} />);
 
-    await user.type(screen.getByLabelText('Company or domain'), 'acme.com');
+    await user.type(screen.getByLabelText('Payment purpose'), 'acme.com');
     await user.type(
       screen.getByLabelText('Service destination wallet'),
       '0x2222222222222222222222222222222222222222',

@@ -41,7 +41,7 @@ describe('Gate P5 shell composition', () => {
       />,
     );
     expect(screen.getByRole('heading', { name: 'Your payment workspace', level: 1 })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'API services' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Payment services' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Requests' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Payment proof' })).toBeTruthy();
   });
@@ -67,7 +67,7 @@ describe('Gate P5 shell composition', () => {
 
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       'Overview',
-      'API services',
+      'Payment services',
       'Requests',
       'Payment proof',
     ]);
@@ -77,7 +77,7 @@ describe('Gate P5 shell composition', () => {
     expect(screen.queryByRole('tab', { name: 'Team & access' })).toBeNull();
   });
 
-  it('gives API services and Requests distinct responsibilities', async () => {
+  it('gives Payment services and Requests distinct responsibilities', async () => {
     const user = userEvent.setup();
     const jobClient = {
       async list() {
@@ -120,14 +120,14 @@ describe('Gate P5 shell composition', () => {
       />,
     );
 
-    await user.click(screen.getByRole('tab', { name: 'API services' }));
-    expect(screen.getByRole('heading', { name: 'Company research service' })).toBeTruthy();
+    await user.click(screen.getByRole('tab', { name: 'Payment services' }));
+    expect(screen.getByRole('heading', { name: 'Direct Arc payment' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Requests and results', level: 2 })).toBeNull();
     await user.click(screen.getByRole('tab', { name: 'Requests' }));
     expect(
       await screen.findByRole('heading', { name: 'Requests and results', level: 2 }),
     ).toBeTruthy();
-    expect(screen.getByText(/Open API services to start/u)).toBeTruthy();
+    expect(screen.getByText(/Open Payment services to start/u)).toBeTruthy();
   });
 
   it('mounts A05, B05, and C05 without a settlement bypass', async () => {
