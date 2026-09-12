@@ -78,9 +78,9 @@ export function deliveryStatusCopy(state: DeliveryState): StatusCopy {
 export function serviceLabel(toolId: string): string {
   switch (toolId) {
     case 'circle-x402-api-v1':
-      return 'Circle Dataset API';
+      return 'OneShot x402 Dataset';
     case 'team-report-v1':
-      return 'Company research service';
+      return 'Direct Arc payment';
     default:
       return 'Paid API service';
   }

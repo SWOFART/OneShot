@@ -18,6 +18,12 @@ const MAX_CIRCLE_X402_TIMEOUT_SECONDS = 604_900;
 const MAX_CIRCLE_X402_VALIDITY_WINDOW_SECONDS = BigInt(
   CIRCLE_X402_USER_WALLET_VALIDITY_WINDOW_SECONDS,
 );
+/**
+ * Circle's browser scheme backdates validAfter by ten minutes. Keep a bounded
+ * additional five-minute allowance for a human wallet approval before a
+ * signed authorization reaches the API.
+ */
+const MAX_CIRCLE_X402_VALID_AFTER_AGE_SECONDS = 900n;
 const TRANSACTION_HASH = /^0x[0-9a-fA-F]{64}$/u;
 const TRANSFER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const CIRCLE_GATEWAY_API = 'https://gateway-api-testnet.circle.com';
@@ -138,7 +144,7 @@ export function parseCircleX402UserWalletPayload(
   const validAfter = BigInt(authorization.validAfter);
   const validBefore = BigInt(authorization.validBefore);
   if (
-    validAfter < now - 900n ||
+    validAfter < now - MAX_CIRCLE_X402_VALID_AFTER_AGE_SECONDS ||
     validAfter > now ||
     validBefore < now ||
     validBefore > now + MAX_CIRCLE_X402_VALIDITY_WINDOW_SECONDS

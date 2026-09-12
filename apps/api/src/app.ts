@@ -17,6 +17,7 @@ import {
   type SubmitPaidApiUserWalletRequest,
 } from '@oneshot/contracts';
 import { derivedJobId } from '@oneshot/domain';
+import { CircleX402PreSubmitError } from '@oneshot/supplier-adapter';
 import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { ServiceAuthenticator } from './auth.js';
@@ -265,6 +266,24 @@ export function buildApi(dependencies: ApiDependencies) {
       'access-control-allow-headers',
       'authorization, content-type, x-correlation-id',
     );
+
+    // The browser client sends this read-only refresh as a bodyless JSON POST.
+    // Fastify rejects an empty body when `content-type` is application/json
+    // before the route handler can run. Treat the absent body as absent JSON
+    // for this endpoint only; routes with required JSON bodies keep their
+    // normal parser and validation behavior.
+    if (
+      request.method === 'POST' &&
+      request.url.split('?')[0] === '/v1/activity/refresh' &&
+      request.headers['content-type']?.split(';', 1)[0]?.trim().toLowerCase() ===
+        'application/json' &&
+      (request.headers['content-length'] === undefined ||
+        request.headers['content-length'] === '0') &&
+      request.headers['transfer-encoding'] === undefined
+    ) {
+      delete request.headers['content-type'];
+      delete request.raw.headers['content-type'];
+    }
 
     if (request.method === 'OPTIONS') {
       void reply.code(204).send();
@@ -535,6 +554,16 @@ export function buildApi(dependencies: ApiDependencies) {
           )
           .send(result);
       } catch (error) {
+        if (error instanceof CircleX402PreSubmitError) {
+          sendError(
+            reply,
+            400,
+            'INVALID_REQUEST',
+            'The Circle authorization is no longer valid. No payment was sent; sign a fresh authorization.',
+            correlationFor(request),
+          );
+          return;
+        }
         if (error instanceof PaidApiUserWalletConflictError) {
           sendError(
             reply,

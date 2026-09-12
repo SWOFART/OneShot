@@ -2,12 +2,12 @@ import type { IntentResponse, IntentState } from '@oneshot/contracts';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { OneShotApiClient } from '../src/api/client.js';
 import { IntentForm } from '../src/components/IntentForm.js';
 import { IntentStatusView } from '../src/components/IntentStatusView.js';
-import { JobWorkspace } from '../src/components/JobWorkspace.js';
+import { JobList, JobWorkspace } from '../src/components/JobWorkspace.js';
 
 afterEach(cleanup);
 
@@ -171,7 +171,7 @@ describe('JobWorkspace payment inputs', () => {
     };
     render(<JobWorkspace client={client as never} onSelectIntent={() => undefined} />);
 
-    await user.type(screen.getByLabelText('Company or domain'), 'acme.com');
+    await user.type(screen.getByLabelText('Payment purpose'), 'acme.com');
     await user.type(
       screen.getByLabelText('Service destination wallet'),
       '0x2222222222222222222222222222222222222222',
@@ -188,5 +188,119 @@ describe('JobWorkspace payment inputs', () => {
         amount_atomic: '1250000',
       }),
     );
+  });
+
+  it('does not request a replacement transfer when the durable job already has a hash', async () => {
+    const user = userEvent.setup();
+    const paymentHash = `0x${'a'.repeat(64)}`;
+    const job = {
+      job_id: 'job-user-wallet-existing',
+      task_key: 'report-existing',
+      tool_id: 'team-report-v1' as const,
+      business_intent_id: 'intent-user-wallet-existing',
+      supplier: {
+        supplier_id: 'team-report-v1' as const,
+        order_reference: 'team-report-existing',
+        recipient: '0x2222222222222222222222222222222222222222',
+        amount_atomic: '1000000',
+        asset: 'USDC' as const,
+        network: 'eip155:5042002' as const,
+        expires_at: '2026-09-12T22:00:00.000Z',
+      },
+      payment_state: 'UNKNOWN' as const,
+      payment_mode: 'USER_WALLET' as const,
+      user_payment: {
+        chain_id: 5042002 as const,
+        network: 'eip155:5042002' as const,
+        token_contract: '0x3600000000000000000000000000000000000000',
+        payer_wallet: '0x3333333333333333333333333333333333333333',
+        recipient: '0x2222222222222222222222222222222222222222',
+        amount_atomic: '1000000',
+        transaction_hash: paymentHash,
+      },
+      delivery_state: 'PENDING' as const,
+      created_at: '2026-09-12T19:00:00.000Z',
+      updated_at: '2026-09-12T19:00:00.000Z',
+    };
+    const sendTransfer = vi.fn();
+    const client = {
+      quote: vi.fn(async () => job.supplier),
+      prepareUserWalletJob: vi.fn(async () => job),
+      submitUserWalletPayment: vi.fn(),
+    };
+    render(
+      <JobWorkspace
+        client={client as never}
+        userWallet={{
+          address: job.user_payment.payer_wallet,
+          connect: vi.fn(async () => job.user_payment.payer_wallet),
+          getGatewayBalance: vi.fn(async () => '0'),
+          getGatewayPendingDeposits: vi.fn(async () => []),
+          fundGateway: vi.fn(),
+          sendTransfer,
+          signX402Payment: vi.fn(),
+        }}
+        onSelectIntent={() => undefined}
+      />,
+    );
+
+    await user.type(screen.getByLabelText('Payment purpose'), 'existing');
+    await user.type(screen.getByLabelText('Service destination wallet'), job.supplier.recipient);
+    await user.type(screen.getByLabelText('Amount (USDC)'), '1');
+    await user.click(screen.getByRole('button', { name: 'Review payment details' }));
+    await user.click(screen.getByRole('button', { name: 'Approve and pay from my wallet' }));
+
+    expect(
+      await screen.findByText(/original wallet transaction is already recorded/u),
+    ).toBeTruthy();
+    expect(sendTransfer).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: /Check payment \(same transaction\)/u }),
+    ).toBeTruthy();
+  });
+
+  it('rechecks only the stored user-wallet transaction from Requests', async () => {
+    const user = userEvent.setup();
+    const paymentHash = `0x${'b'.repeat(64)}`;
+    const unknownJob = {
+      job_id: 'job-user-wallet-unknown',
+      task_key: 'report-unknown',
+      tool_id: 'team-report-v1' as const,
+      business_intent_id: 'intent-user-wallet-unknown',
+      supplier: {
+        supplier_id: 'team-report-v1' as const,
+        order_reference: 'team-report-unknown',
+        recipient: '0x2222222222222222222222222222222222222222',
+        amount_atomic: '1000000',
+        asset: 'USDC' as const,
+        network: 'eip155:5042002' as const,
+        expires_at: '2026-09-12T22:00:00.000Z',
+      },
+      payment_state: 'UNKNOWN' as const,
+      payment_mode: 'USER_WALLET' as const,
+      user_payment: {
+        chain_id: 5042002 as const,
+        network: 'eip155:5042002' as const,
+        token_contract: '0x3600000000000000000000000000000000000000',
+        payer_wallet: '0x3333333333333333333333333333333333333333',
+        recipient: '0x2222222222222222222222222222222222222222',
+        amount_atomic: '1000000',
+        transaction_hash: paymentHash,
+      },
+      delivery_state: 'PENDING' as const,
+      created_at: '2026-09-12T19:00:00.000Z',
+      updated_at: '2026-09-12T19:00:00.000Z',
+    };
+    const client = {
+      list: vi.fn(async () => [unknownJob]),
+      submitUserWalletPayment: vi.fn(async () => unknownJob),
+    };
+    render(<JobList client={client as never} onSelectIntent={() => undefined} />);
+
+    await user.click(await screen.findByRole('button', { name: /Check recorded transaction/u }));
+    await waitFor(() =>
+      expect(client.submitUserWalletPayment).toHaveBeenCalledWith(unknownJob.job_id, paymentHash),
+    );
+    expect(client.list).toHaveBeenCalledTimes(2);
   });
 });

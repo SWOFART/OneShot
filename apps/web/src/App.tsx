@@ -79,8 +79,8 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
           <p className="eyebrow">RESUMABLE PAID SERVICES / ARC TESTNET</p>
           <h1>Resume the job, not the payment.</h1>
           <p className="hero-lead">
-            Approve one company-data report. If an agent restarts, the original task, payment
-            evidence and supplier result stay together.
+            Approve one direct Arc payment or paid x402 request. If an agent restarts, the original
+            task, payment evidence and result stay together.
           </p>
           <p className="hero-sublead">
             One job. Many retries. At most one committed settlement. Team-operated testnet
@@ -149,7 +149,7 @@ function CabinetPage(props: {
   const [activityError, setActivityError] = useState<string | null>(null);
   const labels = {
     overview: 'Overview',
-    services: 'API services',
+    services: 'Payment services',
     requests: 'Requests',
     protection: 'Payment proof',
   } as const;
@@ -203,9 +203,9 @@ function CabinetPage(props: {
               the permitted amount and recipient.
             </li>
             <li>
-              <strong>Prepare a request.</strong> Open API services. For the team report, enter a
-              subject, recipient and amount, then review payment details. Circle Dataset API gets
-              its price from the service.
+              <strong>Prepare a request.</strong> Open Payment services. For a direct Arc payment,
+              enter its purpose, recipient and amount, then review the details. OneShot x402 Dataset
+              gets its price from the team-operated demo seller.
             </li>
             <li>
               <strong>Approve deliberately.</strong> Read “Recipient receives”, the destination and
@@ -213,14 +213,14 @@ function CabinetPage(props: {
               payment request.
             </li>
             <li>
-              <strong>Read the result.</strong> Open Requests for a team report. For Circle Dataset
-              API, use Check payment status in its service card. Inspect the actual payment state
-              and result.
+              <strong>Read the result.</strong> Open Requests for a direct Arc payment. For OneShot
+              x402 Dataset, use Check payment status in its service card. Inspect the actual payment
+              state and result.
             </li>
             <li>
-              <strong>Demonstrate recovery.</strong> For a team report, resume the existing result
-              from Requests. For Circle, replay the same request only when its payment is confirmed.
-              An uncertain payment needs investigation, not a new key.
+              <strong>Demonstrate recovery.</strong> For a direct Arc payment, resume the existing
+              sample result from Requests. For x402, replay the same request only when its payment is
+              confirmed. An uncertain payment needs investigation, not a new key.
             </li>
           </ol>
           <p>
@@ -546,7 +546,15 @@ export function App(props: AppProps = {}) {
               ))}
             </nav>
 
-            <main id={`${activeTab}-panel`} role="tabpanel" aria-labelledby={`${activeTab}-tab`}>
+            {/* Keyed like the cabinet panel above, so switching tabs remounts
+                the panel and restarts the fade in `.tab-fade`. */}
+            <main
+              id={`${activeTab}-panel`}
+              className="tab-fade"
+              key={activeTab}
+              role="tabpanel"
+              aria-labelledby={`${activeTab}-tab`}
+            >
               {activeTab === 'create' ? (
                 <IntentForm client={apiClient} onIntentCreatedOrSelected={selectIntent} />
               ) : activeTab === 'status' ? (
