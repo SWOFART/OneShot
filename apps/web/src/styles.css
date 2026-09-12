@@ -741,14 +741,16 @@ a:hover {
   margin-bottom: 18px;
 }
 
-/* The tab strip sits on the page ground, not on a panel, so it takes the page
-   ink — which flips with the theme. --os-panel-ink is near-white in *both*
-   themes (it belongs to the forest panel, which never flips), so using it here
-   rendered the unselected tabs near-white on the near-white light ground. */
+/* An unselected tab paints its own surface rather than letting the ground show
+   through, so the strip reads as a row of cards against the lime page.
+   --os-surface flips with the theme, so the tabs take the page ink that flips
+   with it: --os-panel-ink is near-white in *both* themes (it belongs to the
+   forest panel, which never flips) and would be near-white on the near-white
+   light surface. */
 .tabs button {
   min-height: 38px;
   color: var(--os-ink);
-  background: transparent;
+  background: var(--os-surface);
   border: 1px solid var(--os-line-strong);
 }
 
@@ -1866,14 +1868,6 @@ a.secondary:hover {
   --os-accent-ink: var(--os-signal);
 }
 
-.console-container .tabs button {
-  color: var(--os-panel-ink);
-}
-
-.console-container .tabs button[aria-selected='true'] {
-  color: var(--os-on-signal);
-}
-
 .hero-plain h1,
 .hero-copy h1,
 .hero-plain .btn-hero-secondary,
@@ -1911,8 +1905,20 @@ a.secondary:hover {
   color: var(--os-on-field);
 }
 
+/* The settlement box repaints --os-panel inside `.job-list li`, which rebinds
+   --os-accent-ink to the page ink for the lighter card around it. That ink is
+   dark forest in the light theme, so the ArcScan link inside the forest box was
+   invisible there. Rebind the ink tokens this box's own descendants inherit,
+   exactly as .paid-api-status does for the lime field. */
 .job-settlement-summary {
+  --os-accent-ink: var(--os-state-committed);
+  --os-panel-ink: var(--os-state-committed);
   color: var(--os-state-committed);
+}
+
+.job-settlement-summary a {
+  color: var(--os-state-committed);
+  text-decoration: underline;
 }
 
 .response-output,

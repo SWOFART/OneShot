@@ -736,98 +736,106 @@ export function JobList(props: {
           {loading ? 'Refreshing…' : 'Refresh requests'}
         </button>
       </header>
-      {error && (
-        <p role="alert" className="notice error-notice">
-          {error}
-        </p>
-      )}
-      {loading ? (
-        <p role="status">Checking requests…</p>
-      ) : jobs.length === 0 ? (
-        <p>No requests yet. Open API services to start a supported request.</p>
-      ) : (
-        <ul className="attempts job-list">
-          {jobs.map((job, index) => {
-            const payment = paymentStatusCopy(job.payment_state);
-            const delivery = deliveryStatusCopy(job.delivery_state);
-            return (
-              <li key={job.job_id}>
-                <div className="job-row-heading">
+      {/* The request list arrives after the panel has mounted, so the tab's own
+          fade is long over by the time there is anything to read. Keying this
+          block on the loading state remounts it when the rows land, which runs
+          the same fade on the content the operator actually waited for. */}
+      <div className="tab-fade" key={loading ? 'loading' : 'loaded'}>
+        {error && (
+          <p role="alert" className="notice error-notice">
+            {error}
+          </p>
+        )}
+        {loading ? (
+          <p role="status">Checking requests…</p>
+        ) : jobs.length === 0 ? (
+          <p>No requests yet. Open API services to start a supported request.</p>
+        ) : (
+          <ul className="attempts job-list">
+            {jobs.map((job, index) => {
+              const payment = paymentStatusCopy(job.payment_state);
+              const delivery = deliveryStatusCopy(job.delivery_state);
+              return (
+                <li key={job.job_id}>
+                  <div className="job-row-heading">
+                    <button
+                      type="button"
+                      className="secondary compact"
+                      onClick={() => props.onSelectIntent(job.business_intent_id)}
+                    >
+                      Open request {index + 1}
+                    </button>
+                    <span className={`badge tone-${delivery.tone}`}>{delivery.label}</span>
+                  </div>
+                  <p>
+                    <strong>{serviceLabel(job.tool_id)}</strong> · {payment.label}
+                  </p>
+                  <p className="job-quote-summary">
+                    Price: <span className="mono">{quoteAmount(job.supplier)}</span> ·{' '}
+                    {delivery.description}
+                  </p>
+                  {job.settlement && (
+                    <p className="job-settlement-summary">
+                      <strong>Payment confirmed:</strong>{' '}
+                      {explorerHref(job.settlement.transaction_hash) ? (
+                        <a
+                          href={explorerHref(job.settlement.transaction_hash)}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                        >
+                          View the ArcScan transaction
+                        </a>
+                      ) : (
+                        <span className="mono">{job.settlement.transaction_hash}</span>
+                      )}
+                    </p>
+                  )}
+                  {job.result ? (
+                    <p>
+                      <strong>Result ready:</strong> {job.result.report}
+                    </p>
+                  ) : job.payment_state === 'COMMITTED' ? (
+                    <button
+                      type="button"
+                      className="secondary compact"
+                      disabled={resumingJobId !== null}
+                      onClick={() => void resume(job.job_id)}
+                    >
+                      {resumingJobId === job.job_id
+                        ? 'Resuming…'
+                        : 'Resume result (no new payment)'}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="secondary compact"
                     onClick={() => props.onSelectIntent(job.business_intent_id)}
                   >
-                    Open request {index + 1}
+                    Open payment proof
                   </button>
-                  <span className={`badge tone-${delivery.tone}`}>{delivery.label}</span>
-                </div>
-                <p>
-                  <strong>{serviceLabel(job.tool_id)}</strong> · {payment.label}
-                </p>
-                <p className="job-quote-summary">
-                  Price: <span className="mono">{quoteAmount(job.supplier)}</span> ·{' '}
-                  {delivery.description}
-                </p>
-                {job.settlement && (
-                  <p className="job-settlement-summary">
-                    <strong>Payment confirmed:</strong>{' '}
-                    {explorerHref(job.settlement.transaction_hash) ? (
-                      <a
-                        href={explorerHref(job.settlement.transaction_hash)}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                      >
-                        View the ArcScan transaction
-                      </a>
-                    ) : (
-                      <span className="mono">{job.settlement.transaction_hash}</span>
-                    )}
-                  </p>
-                )}
-                {job.result ? (
-                  <p>
-                    <strong>Result ready:</strong> {job.result.report}
-                  </p>
-                ) : job.payment_state === 'COMMITTED' ? (
-                  <button
-                    type="button"
-                    className="secondary compact"
-                    disabled={resumingJobId !== null}
-                    onClick={() => void resume(job.job_id)}
-                  >
-                    {resumingJobId === job.job_id ? 'Resuming…' : 'Resume result (no new payment)'}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="secondary compact"
-                  onClick={() => props.onSelectIntent(job.business_intent_id)}
-                >
-                  Open payment proof
-                </button>
-                <details className="technical-details">
-                  <summary>Show request details</summary>
-                  <dl className="facts">
-                    <div>
-                      <dt>Request key</dt>
-                      <dd className="mono break-all">{maskIdentifier(job.task_key)}</dd>
-                    </div>
-                    <div>
-                      <dt>Supplier order</dt>
-                      <dd className="mono break-all">{job.supplier.order_reference}</dd>
-                    </div>
-                    <div>
-                      <dt>Destination</dt>
-                      <dd className="mono break-all">{shortenAddress(job.supplier.recipient)}</dd>
-                    </div>
-                  </dl>
-                </details>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                  <details className="technical-details">
+                    <summary>Show request details</summary>
+                    <dl className="facts">
+                      <div>
+                        <dt>Request key</dt>
+                        <dd className="mono break-all">{maskIdentifier(job.task_key)}</dd>
+                      </div>
+                      <div>
+                        <dt>Supplier order</dt>
+                        <dd className="mono break-all">{job.supplier.order_reference}</dd>
+                      </div>
+                      <div>
+                        <dt>Destination</dt>
+                        <dd className="mono break-all">{shortenAddress(job.supplier.recipient)}</dd>
+                      </div>
+                    </dl>
+                  </details>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }

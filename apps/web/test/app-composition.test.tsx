@@ -130,6 +130,95 @@ describe('Gate P5 shell composition', () => {
     expect(screen.getByText(/Open API services to start/u)).toBeTruthy();
   });
 
+  /**
+   * The tab strip faded on its own while the panel behind it appeared
+   * instantly: the console panel was never wrapped, and the request list
+   * arrives from the API after the cabinet panel's own fade has finished. Both
+   * are keyed, so React remounts them and the fade runs on the content the
+   * operator is actually waiting for.
+   */
+  it('fades the panel content behind every tab, including rows that arrive late', async () => {
+    const user = userEvent.setup();
+    let releaseList: (jobs: never[]) => void = () => {};
+    const listed = new Promise<never[]>((resolve) => {
+      releaseList = resolve;
+    });
+    const jobClient = {
+      async list() {
+        return await listed;
+      },
+      async start() {
+        throw new Error('not used');
+      },
+      async resume() {
+        throw new Error('not used');
+      },
+      async result() {
+        return null;
+      },
+      async refreshActivity() {
+        return {
+          recorded_settlement_count: 0,
+          uncertain_job_count: 0,
+          unmatched_transfer_count: 0,
+          transfers: [],
+        };
+      },
+    } as unknown as JobApiClient;
+
+    const cabinet = render(
+      <App
+        route="/app"
+        useOperatorSession={() => signedInSession()}
+        jobClient={jobClient}
+        apiClient={
+          new OneShotApiClient({
+            fetchFn: async () =>
+              new Response(JSON.stringify({ status: 'ok' }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+              }),
+          })
+        }
+        settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
+        recoveryClient={createInMemoryRecoveryClient('lagging')}
+      />,
+    );
+
+    await user.click(screen.getByRole('tab', { name: 'Requests' }));
+    const waiting = await screen.findByText('Checking requests…');
+    const waitingFade = waiting.closest('.tab-fade');
+    expect(waitingFade).not.toBeNull();
+
+    releaseList([]);
+    const empty = await screen.findByText(/Open API services to start/u);
+    const loadedFade = empty.closest('.tab-fade');
+    expect(loadedFade).not.toBeNull();
+    // A different element, so the animation restarts when the rows land.
+    expect(loadedFade).not.toBe(waitingFade);
+
+    cabinet.unmount();
+
+    // The console route's own tab panel was the one that never faded at all.
+    const { container } = render(
+      <App
+        useOperatorSession={() => signedInSession()}
+        apiClient={
+          new OneShotApiClient({
+            fetchFn: async () =>
+              new Response(JSON.stringify({ status: 'ok' }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+              }),
+          })
+        }
+        settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
+        recoveryClient={createInMemoryRecoveryClient('lagging')}
+      />,
+    );
+    expect(container.querySelector('main[role="tabpanel"]')?.className).toContain('tab-fade');
+  });
+
   it('mounts A05, B05, and C05 without a settlement bypass', async () => {
     const settlementIntent = Object.values(SETTLEMENT_SCENARIO_INTENTS)[0];
     if (!settlementIntent) throw new Error('Settlement fixture missing');
