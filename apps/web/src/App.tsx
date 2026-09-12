@@ -77,7 +77,7 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
         </a>
       </nav>
       <header className="app-header hero-section">
-        <Hero>
+        <div className="hero-plain">
           <p className="eyebrow">RESUMABLE PAID SERVICES / ARC TESTNET</p>
           <h1>Resume the job, not the payment.</h1>
           <p className="hero-lead">
@@ -96,7 +96,7 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
               How it works
             </a>
           </div>
-        </Hero>
+        </div>
       </header>
       <section id="how-it-works" className="invariants-section" aria-labelledby="how-heading">
         <div className="section-header">
@@ -184,16 +184,60 @@ function CabinetPage(props: {
         machineToken={props.machineToken}
         onMachineTokenChange={props.setMachineToken}
       >
-        <header className="app-header hero-section">
-          <Hero>
+        <header className="app-header hero-section cabinet-header">
+          <div className="hero-plain">
             <p className="eyebrow">WORKSPACE</p>
             <h1>Your payment workspace</h1>
             <p className="hero-lead">
               Run approved paid APIs, keep one payment identity per request, and recover results
               without paying twice.
             </p>
-          </Hero>
+          </div>
         </header>
+        <details className="walkthrough">
+          <summary>Walk through a real request</summary>
+          <p>
+            Use the actual service, wallet and result. This guide never creates or pays a request
+            for you.
+          </p>
+          <ol>
+            <li>
+              <strong>Review controls.</strong> Check the execution wallet’s active Privy rules and
+              the permitted amount and recipient.
+            </li>
+            <li>
+              <strong>Prepare a request.</strong> Open API services. For the team report, enter a
+              subject, recipient and amount, then review payment details. Circle Dataset API gets
+              its price from the service.
+            </li>
+            <li>
+              <strong>Approve deliberately.</strong> Read “Recipient receives”, the destination and
+              Arc Testnet network. Keep the request key. Only the explicit approval button starts a
+              payment request.
+            </li>
+            <li>
+              <strong>Read the result.</strong> Open Requests for a team report. For Circle Dataset
+              API, use Check payment status in its service card. Inspect the actual payment state
+              and result.
+            </li>
+            <li>
+              <strong>Demonstrate recovery.</strong> For a team report, resume the existing result
+              from Requests. For Circle, replay the same request only when its payment is confirmed.
+              An uncertain payment needs investigation, not a new key.
+            </li>
+          </ol>
+          <p>
+            Record the actual outcome. If a service is unavailable or a payment stays uncertain,
+            explain that state instead of presenting a completed demo.
+          </p>
+          <button
+            type="button"
+            className="secondary compact"
+            onClick={() => setSection('services')}
+          >
+            Open services for walkthrough
+          </button>
+        </details>
         <nav className="tabs" aria-label="Cabinet sections" role="tablist">
           {Object.entries(labels).map(([key, label]) => (
             <button

@@ -4,7 +4,9 @@ The workspace Tools page now contains the live paid-API path. First deploy the
 seller described in [`CIRCLE_X402_SELLER.md`](CIRCLE_X402_SELLER.md), then
 configure `ONESHOT_X402_URL` and `ONESHOT_X402_MAX_AMOUNT_ATOMIC` in both the
 API and worker environments. Use the site to request a quote and approve the
-stable task key. The approval creates one durable Business Intent; the worker
+stable task key. Approval sends the exact displayed quote; if the provider quote
+changes, the API rejects the approval before creating durable payment work. The
+approval creates one durable Business Intent; the worker
 submits Circle Gateway x402 only after the existing authorization and
 submission claims.
 

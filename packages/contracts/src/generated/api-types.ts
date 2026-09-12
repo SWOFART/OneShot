@@ -95,6 +95,10 @@ export interface CreatePaidApiRequest {
   readonly tool_id: 'circle-x402-api-v1';
 }
 
+export interface ApprovePaidApiRequest extends CreatePaidApiRequest {
+  readonly approved_quote: PaidApiQuote;
+}
+
 export interface PaidApiQuote {
   readonly supplier_id: 'circle-x402-v1';
   readonly resource_url: string;

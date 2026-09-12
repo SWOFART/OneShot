@@ -14,6 +14,7 @@ import {
   type TransactionReceipt,
 } from '@oneshot/arc-adapter';
 import {
+  ARC_X402_GATEWAY_WALLET,
   ARC_X402_NETWORK,
   ARC_X402_USDC,
   type CircleX402Client,
@@ -22,7 +23,7 @@ import {
   parseCircleX402Quote,
 } from './circle-x402.js';
 
-export const ARC_X402_GATEWAY_WALLET = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9';
+export { ARC_X402_GATEWAY_WALLET } from './circle-x402.js';
 const X402_REFERENCE_PREFIX = 'circle-x402:';
 const X402_REFERENCE_SUFFIX_LENGTH = 52;
 
