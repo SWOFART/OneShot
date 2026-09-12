@@ -1123,14 +1123,12 @@ a:hover {
    the report workspace does. Both used to render label, input and help text in
    plain inline flow, so the input sat on the same line as the text before it
    and the help text ran on after it. */
-.paid-api-panel,
-.recovery-panel {
+.paid-api-panel {
   display: grid;
   gap: 0.75rem;
 }
 
-.paid-api-panel > p,
-.recovery-panel > p {
+.paid-api-panel > p {
   margin: 0;
   line-height: 1.6;
 }
@@ -1139,15 +1137,12 @@ a:hover {
    stretching the full column, and sit at the start of the row — which is where
    the x402 runbook link belongs. */
 .paid-api-panel > button,
-.paid-api-panel > a,
-.recovery-panel > button,
-.recovery-panel > a {
+.paid-api-panel > a {
   justify-self: start;
 }
 
 .job-workspace > label,
-.paid-api-panel > label,
-.recovery-panel > label {
+.paid-api-panel > label {
   color: var(--os-panel-ink);
   font-size: 0.85rem;
   font-weight: 300;
@@ -1163,8 +1158,7 @@ a:hover {
 
 .job-workspace > input,
 .advanced-fields input,
-.paid-api-panel > input,
-.recovery-panel > input {
+.paid-api-panel > input {
   width: 100%;
   min-height: 42px;
   padding: 0.65rem 0.85rem;
@@ -1179,8 +1173,7 @@ a:hover {
 
 .job-workspace > input:focus,
 .advanced-fields input:focus,
-.paid-api-panel > input:focus,
-.recovery-panel > input:focus {
+.paid-api-panel > input:focus {
   border-color: var(--os-signal);
 }
 
@@ -1913,7 +1906,7 @@ a.secondary:hover {
 
 .paid-api-status {
   --os-panel-ink: var(--os-on-field);
-  --os-panel-ink-muted: var(--os-on-field);
+  --os-panel-ink-muted: var(--os-on-field-muted);
   --os-accent-ink: var(--os-on-field);
   color: var(--os-on-field);
 }
