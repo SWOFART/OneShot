@@ -741,16 +741,14 @@ a:hover {
   margin-bottom: 18px;
 }
 
-/* An unselected tab paints its own surface rather than letting the ground show
-   through, so the strip reads as a row of cards against the lime page.
-   --os-surface flips with the theme, so the tabs take the page ink that flips
-   with it: --os-panel-ink is near-white in *both* themes (it belongs to the
-   forest panel, which never flips) and would be near-white on the near-white
-   light surface. */
+/* The tab strip sits on the page ground, not on a panel, so it takes the page
+   ink — which flips with the theme. --os-panel-ink is near-white in *both*
+   themes (it belongs to the forest panel, which never flips), so using it here
+   rendered the unselected tabs near-white on the near-white light ground. */
 .tabs button {
   min-height: 38px;
   color: var(--os-ink);
-  background: var(--os-surface);
+  background: transparent;
   border: 1px solid var(--os-line-strong);
 }
 
@@ -1866,6 +1864,14 @@ a.secondary:hover {
 .hero-plain,
 .hero-copy {
   --os-accent-ink: var(--os-signal);
+}
+
+.console-container .tabs button {
+  color: var(--os-panel-ink);
+}
+
+.console-container .tabs button[aria-selected='true'] {
+  color: var(--os-on-signal);
 }
 
 .hero-plain h1,
