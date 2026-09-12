@@ -60,9 +60,9 @@ The same paid-API errors continued: the user wallet signed, OneShot returned 202
 
 - Branch: `fix/circle-x402-validity-window`
 - Base: `origin/fix/circle-x402-persistence` at the starting feature tip
-- Commit: uncommitted
+- Commit: source fix `7cc12e18e513a18029cdcc534d5dac1c1ce2b4fd`
 - PR: not created
-- CI: not run
+- CI: not run; local validation is recorded above
 
 ## Review gates
 
