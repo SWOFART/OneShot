@@ -234,6 +234,9 @@ describePostgres('PostgreSQL intent ledger', () => {
       correlationId: 'paid-api-atomic-identity-create',
     });
     expect(created.kind).toBe('ACCEPTED');
+    await ledger.completeAuthorization(created.request.business_intent_id, 1, {
+      kind: 'AUTHORIZED',
+    });
 
     const claim = await ledger.claimSubmission(
       created.request.business_intent_id,
