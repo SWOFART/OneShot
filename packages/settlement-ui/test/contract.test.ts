@@ -270,6 +270,53 @@ describe('settlement details projection', () => {
     expect(view.transaction?.explorer.href).toBe(`https://testnet.arcscan.io/tx/${HASH}`);
   });
 
+  it('verifies a committed user-wallet settlement from its Arc-verified OneShot record', () => {
+    const intent: IntentResponse = {
+      ...COMMITTED,
+      payment_mode: 'USER_WALLET',
+      evidence: [
+        {
+          source: 'ONESHOT',
+          authority_class: 'AUTHORITATIVE',
+          retrieved_at: '2026-09-12T13:14:57.000Z',
+          digest: HASH,
+          block_number: '61734795',
+          freshness: 'FRESH',
+        },
+      ],
+    };
+    const view = toSettlementDetailsView(intent, {
+      allowedExplorerHosts: FIXTURE_EXPLORER_HOSTS,
+    });
+
+    expect(view.verification).toBe('VERIFIED');
+    expect(view.transaction?.transactionHash).toBe(HASH);
+    expect(view.policy.status).toBe('NOT_APPLICABLE');
+    expect(view.policy.settlementCapDisplay).toBeNull();
+    expect(view.policy.amountWithinCap).toBeNull();
+    expect(view.evidenceAvailable).toBe(true);
+  });
+
+  it('does not treat a OneShot observation as Arc proof for another payment mode', () => {
+    const intent: IntentResponse = {
+      ...COMMITTED,
+      evidence: [
+        {
+          source: 'ONESHOT',
+          authority_class: 'AUTHORITATIVE',
+          retrieved_at: '2026-09-12T13:14:57.000Z',
+          digest: HASH,
+          block_number: '61734795',
+          freshness: 'FRESH',
+        },
+      ],
+    };
+    const view = toSettlementDetailsView(intent);
+
+    expect(view.verification).toBe('UNVERIFIED');
+    expect(view.transaction).toBeNull();
+  });
+
   it('withholds transaction details when Arc evidence is not authoritative', () => {
     const view = toSettlementDetailsView(scenarioIntent('committed-without-arc-evidence'));
     expect(view.verification).toBe('UNVERIFIED');

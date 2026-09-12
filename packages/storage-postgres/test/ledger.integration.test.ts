@@ -257,6 +257,11 @@ describePostgres('PostgreSQL intent ledger', () => {
       payer_wallet: payer,
       authorize_jobs: '0',
     });
+
+    await expect(newLedger().getIntent(created.job.business_intent_id)).resolves.toMatchObject({
+      payment_mode: 'USER_WALLET',
+      state: 'READY',
+    });
   });
 
   it('durably binds one user-wallet hash and marks delayed verification UNKNOWN', async () => {

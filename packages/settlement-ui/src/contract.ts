@@ -289,7 +289,7 @@ export type VerificationState = 'VERIFIED' | 'UNVERIFIED' | 'NONE';
 
 export type AuthorizationDisplayStatus = AuthorizationStatus | 'NOT_REPORTED';
 
-export type PolicyDisplayStatus = PolicyStatus | 'NOT_REPORTED';
+export type PolicyDisplayStatus = PolicyStatus | 'NOT_REPORTED' | 'NOT_APPLICABLE';
 
 export interface PolicySummaryDisplay {
   readonly policyId: string | null;
@@ -386,9 +386,24 @@ function projectEvidence(evidence: readonly EvidenceView[]): readonly EvidenceDi
   }));
 }
 
-function hasAuthoritativeArcEvidence(evidence: readonly EvidenceView[]): boolean {
-  return evidence.some(
-    (entry) => entry.source === 'ARC' && entry.authority_class === 'AUTHORITATIVE',
+function hasVerifiedSettlementEvidence(intent: IntentResponse): boolean {
+  if (
+    intent.evidence.some(
+      (entry) => entry.source === 'ARC' && entry.authority_class === 'AUTHORITATIVE',
+    )
+  ) {
+    return true;
+  }
+
+  // The user-wallet endpoint verifies the exact Arc receipt before the ledger
+  // atomically commits and records its ONESHOT authoritative observation. Older
+  // committed user-wallet intents may not have a separate ARC observation, so
+  // this compatibility path is explicitly scoped to USER_WALLET only.
+  return (
+    intent.payment_mode === 'USER_WALLET' &&
+    intent.evidence.some(
+      (entry) => entry.source === 'ONESHOT' && entry.authority_class === 'AUTHORITATIVE',
+    )
   );
 }
 
@@ -441,15 +456,17 @@ export function toSettlementDetailsView(
 
   const state = intent.state;
   const phase = PHASE_BY_STATE[state];
+  const userWalletPayment = intent.payment_mode === 'USER_WALLET';
   const amountAtomic = intent.amount_atomic;
   const capAtomic =
+    !userWalletPayment &&
     typeof intent.policy?.settlement_cap_atomic === 'string' &&
     isAtomicAmount(intent.policy.settlement_cap_atomic)
       ? intent.policy.settlement_cap_atomic
       : null;
-  const allowedRecipients = (intent.policy?.allowed_recipients ?? []).filter((entry) =>
-    EVM_ADDRESS_PATTERN.test(entry),
-  );
+  const allowedRecipients = userWalletPayment
+    ? []
+    : (intent.policy?.allowed_recipients ?? []).filter((entry) => EVM_ADDRESS_PATTERN.test(entry));
   const capComparison = capAtomic === null ? null : compareAtomic(amountAtomic, capAtomic);
 
   const displayedAttempt = latestAttempt(intent.attempts);
@@ -470,7 +487,7 @@ export function toSettlementDetailsView(
     settlement !== null &&
     settlementIsWellFormed &&
     state === 'COMMITTED' &&
-    hasAuthoritativeArcEvidence(intent.evidence);
+    hasVerifiedSettlementEvidence(intent);
 
   const verification: VerificationState =
     settlement === null ? 'NONE' : verified ? 'VERIFIED' : 'UNVERIFIED';
@@ -506,14 +523,14 @@ export function toSettlementDetailsView(
     phase,
     terminal: TERMINAL_PHASES.has(phase),
     policy: {
-      policyId: sanitizeText(intent.policy?.policy_id),
-      status: intent.policy?.status ?? 'NOT_REPORTED',
+      policyId: userWalletPayment ? null : sanitizeText(intent.policy?.policy_id),
+      status: userWalletPayment ? 'NOT_APPLICABLE' : (intent.policy?.status ?? 'NOT_REPORTED'),
       network: intent.network,
       asset: intent.asset,
       recipient: intent.recipient,
       allowedRecipients,
       recipientAllowlisted:
-        allowedRecipients.length === 0
+        userWalletPayment || allowedRecipients.length === 0
           ? null
           : allowedRecipients.some(
               (entry) => entry.toLowerCase() === intent.recipient.toLowerCase(),
