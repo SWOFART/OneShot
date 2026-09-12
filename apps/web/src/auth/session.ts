@@ -17,11 +17,42 @@ export interface OperatorSession {
 
 export type UseOperatorSession = () => OperatorSession;
 
+export interface GatewayPendingDeposit {
+  readonly transaction_hash: string;
+  readonly amount: string;
+  readonly status: string;
+}
+
+export interface GatewayFundingResult {
+  readonly target_amount_atomic: string;
+  readonly deposited_amount_atomic: string;
+  readonly approval_transaction_hash: string | null;
+  readonly deposit_transaction_hash: string | null;
+}
+
+export type GatewayFundingPhase = 'APPROVAL' | 'DEPOSIT';
+
+export class GatewayFundingError extends Error {
+  readonly phase: GatewayFundingPhase;
+  readonly transaction_hash: string | null;
+
+  constructor(message: string, phase: GatewayFundingPhase, transactionHash: string | null = null) {
+    super(message);
+    this.name = 'GatewayFundingError';
+    this.phase = phase;
+    this.transaction_hash = transactionHash;
+  }
+}
+
 export interface UserWalletSession {
   readonly address: string | null;
   connect(): Promise<string | null>;
-  /** Read-only Circle Gateway USDC balance in atomic units, when the wallet supports it. */
-  getGatewayBalance?(payerWallet: string): Promise<string>;
+  /** Read-only Circle Gateway USDC balance in atomic units. */
+  getGatewayBalance(payerWallet: string): Promise<string>;
+  /** Read-only pending Circle Gateway deposits for this depositor. */
+  getGatewayPendingDeposits(payerWallet: string): Promise<readonly GatewayPendingDeposit[]>;
+  /** Top up this wallet's own Gateway balance to the requested atomic target. */
+  fundGateway(targetAmountAtomic: string): Promise<GatewayFundingResult>;
   sendTransfer(payment: {
     readonly chain_id: 5042002;
     readonly token_contract: string;

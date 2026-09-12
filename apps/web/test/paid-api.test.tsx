@@ -170,6 +170,9 @@ describe('Circle x402 paid API workspace flow', () => {
         userWallet={{
           address: payerWallet,
           connect: vi.fn(async () => payerWallet),
+          getGatewayBalance: vi.fn(async () => '10000'),
+          getGatewayPendingDeposits: vi.fn(async () => []),
+          fundGateway: vi.fn(),
           sendTransfer: vi.fn(),
           signX402Payment,
         }}
@@ -226,6 +229,8 @@ describe('Circle x402 paid API workspace flow', () => {
           address: payerWallet,
           connect: vi.fn(async () => payerWallet),
           getGatewayBalance: vi.fn(async () => '0'),
+          getGatewayPendingDeposits: vi.fn(async () => []),
+          fundGateway: vi.fn(),
           sendTransfer: vi.fn(),
           signX402Payment,
         }}
@@ -239,6 +244,45 @@ describe('Circle x402 paid API workspace flow', () => {
     expect(await screen.findByText(/Gateway balance is below this price/u)).toBeTruthy();
     expect(signX402Payment).not.toHaveBeenCalled();
     expect(submitUserWalletPayment).not.toHaveBeenCalled();
+  });
+
+  it('lets the buyer fund their own Gateway balance before signing', async () => {
+    const user = userEvent.setup();
+    const payerWallet = '0x2222222222222222222222222222222222222222';
+    const fundGateway = vi.fn(async () => ({
+      target_amount_atomic: '1000000',
+      deposited_amount_atomic: '1000000',
+      approval_transaction_hash: `0x${'a'.repeat(64)}`,
+      deposit_transaction_hash: `0x${'b'.repeat(64)}`,
+    }));
+    const client = {
+      quote: vi.fn(async () => quote),
+      start: vi.fn(async () => approved),
+      prepareUserWallet: vi.fn(async () => approved),
+      submitUserWalletPayment: vi.fn(),
+      reconcileUserWalletPayment: vi.fn(async () => approved),
+      get: vi.fn(async () => approved),
+    };
+    render(
+      <CircleX402DemoPanel
+        client={client}
+        userWallet={{
+          address: payerWallet,
+          connect: vi.fn(async () => payerWallet),
+          getGatewayBalance: vi.fn(async () => '1000000'),
+          getGatewayPendingDeposits: vi.fn(async () => []),
+          fundGateway,
+          sendTransfer: vi.fn(),
+          signX402Payment: vi.fn(),
+        }}
+        onSelectIntent={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Fund my Gateway balance' }));
+    await waitFor(() => expect(fundGateway).toHaveBeenCalledWith('1000000'));
+    expect(screen.getByText(/OneShot never pays for you/iu)).toBeTruthy();
+    expect(screen.getByText(/Gateway deposit confirmed on Arc Testnet/iu)).toBeTruthy();
   });
 
   it('shows the API-safe refusal when a wallet authorization was not forwarded', async () => {
@@ -268,6 +312,9 @@ describe('Circle x402 paid API workspace flow', () => {
         userWallet={{
           address: payerWallet,
           connect: vi.fn(async () => payerWallet),
+          getGatewayBalance: vi.fn(async () => '10000'),
+          getGatewayPendingDeposits: vi.fn(async () => []),
+          fundGateway: vi.fn(),
           sendTransfer: vi.fn(),
           signX402Payment: vi.fn(async () => ({
             x402Version: 2,

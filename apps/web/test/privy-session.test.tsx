@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   authenticated: false,
   user: null as { id: string } | null,
   active: {
-    wallet: undefined,
+    wallet: undefined as unknown,
     connect: vi.fn(),
   },
 }));
@@ -41,6 +41,7 @@ describe('usePrivyOperatorSession — native Privy login', () => {
     vi.clearAllMocks();
     mocks.authenticated = false;
     mocks.user = null;
+    mocks.active.wallet = undefined;
   });
 
   afterEach(() => {
@@ -75,7 +76,7 @@ describe('usePrivyOperatorSession — native Privy login', () => {
         new Response(
           JSON.stringify({
             token: 'USDC',
-            balances: [{ domain: 26, depositor: payerWallet, balance: '10000' }],
+            balances: [{ domain: 26, depositor: payerWallet, balance: '0.010000' }],
           }),
           { status: 200, headers: { 'content-type': 'application/json' } },
         ),
@@ -83,7 +84,7 @@ describe('usePrivyOperatorSession — native Privy login', () => {
     vi.stubGlobal('fetch', fetchMock);
     const { result } = renderHook(() => usePrivyUserWallet());
 
-    await expect(result.current.getGatewayBalance?.(payerWallet)).resolves.toBe('10000');
+    await expect(result.current.getGatewayBalance(payerWallet)).resolves.toBe('10000');
     expect(fetchMock).toHaveBeenCalledWith(
       'https://gateway-api-testnet.circle.com/v1/balances',
       expect.objectContaining({
@@ -91,5 +92,158 @@ describe('usePrivyOperatorSession — native Privy login', () => {
         body: JSON.stringify({ token: 'USDC', sources: [{ depositor: payerWallet, domain: 26 }] }),
       }),
     );
+  });
+
+  it('funds the connected wallet own Gateway balance with approve then deposit', async () => {
+    const payerWallet = '0x2222222222222222222222222222222222222222';
+    let submitted = 0;
+    const request = vi.fn(async ({ method }: { method: string }) => {
+      if (method === 'eth_call') return '0x0';
+      if (method === 'eth_sendTransaction') {
+        submitted += 1;
+        return `0x${(submitted === 1 ? 'a' : 'b').repeat(64)}`;
+      }
+      if (method === 'eth_getTransactionReceipt') return { status: '0x1' };
+      throw new Error(`Unexpected method ${method}`);
+    });
+    mocks.active.wallet = {
+      type: 'ethereum',
+      address: payerWallet,
+      chainId: 'eip155:5042002',
+      switchChain: vi.fn(),
+      getEthereumProvider: vi.fn(async () => ({ request })),
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      return new Response(
+        JSON.stringify(
+          url.endsWith('/deposits')
+            ? { deposits: [] }
+            : { balances: [{ domain: 26, depositor: payerWallet, balance: '0' }] },
+        ),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { result } = renderHook(() => usePrivyUserWallet());
+
+    await expect(result.current.fundGateway('1000000')).resolves.toMatchObject({
+      target_amount_atomic: '1000000',
+      deposited_amount_atomic: '1000000',
+      approval_transaction_hash: expect.stringMatching(/^0x/u),
+      deposit_transaction_hash: expect.stringMatching(/^0x/u),
+    });
+    expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: 'eth_call' }));
+    const sends = request.mock.calls.filter(([call]) => call.method === 'eth_sendTransaction');
+    expect(sends).toHaveLength(2);
+    expect(sends[0]?.[0]).toEqual(
+      expect.objectContaining({
+        method: 'eth_sendTransaction',
+        params: [
+          expect.objectContaining({
+            from: payerWallet,
+            to: '0x3600000000000000000000000000000000000000',
+          }),
+        ],
+      }),
+    );
+    expect(sends[1]?.[0]).toEqual(
+      expect.objectContaining({
+        method: 'eth_sendTransaction',
+        params: [
+          expect.objectContaining({
+            from: payerWallet,
+            to: '0x0077777d7EBA4688BDeF3E311b846F25870A19B9',
+          }),
+        ],
+      }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://gateway-api-testnet.circle.com/v1/deposits',
+      expect.anything(),
+    );
+  });
+
+  it('refuses a second deposit while Circle reports one as pending', async () => {
+    const payerWallet = '0x2222222222222222222222222222222222222222';
+    const pendingHash = `0x${'c'.repeat(64)}`;
+    const request = vi.fn();
+    mocks.active.wallet = {
+      type: 'ethereum',
+      address: payerWallet,
+      chainId: 'eip155:5042002',
+      switchChain: vi.fn(),
+      getEthereumProvider: vi.fn(async () => ({ request })),
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async (input: RequestInfo | URL) =>
+          new Response(
+            JSON.stringify(
+              String(input).endsWith('/deposits')
+                ? {
+                    deposits: [
+                      {
+                        domain: 26,
+                        depositor: payerWallet,
+                        status: 'pending',
+                        transactionHash: pendingHash,
+                        amount: '1.000000',
+                      },
+                    ],
+                  }
+                : { balances: [{ domain: 26, depositor: payerWallet, balance: '0' }] },
+            ),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          ),
+      ),
+    );
+    const { result } = renderHook(() => usePrivyUserWallet());
+
+    await expect(result.current.fundGateway('1000000')).rejects.toThrow(/already pending/u);
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('stops before deposit when the approval transaction reverts', async () => {
+    const payerWallet = '0x2222222222222222222222222222222222222222';
+    let submitted = 0;
+    const request = vi.fn(async ({ method }: { method: string }) => {
+      if (method === 'eth_call') return '0x0';
+      if (method === 'eth_sendTransaction') {
+        submitted += 1;
+        return `0x${'d'.repeat(64)}`;
+      }
+      if (method === 'eth_getTransactionReceipt') return { status: '0x0' };
+      throw new Error(`Unexpected method ${method}`);
+    });
+    mocks.active.wallet = {
+      type: 'ethereum',
+      address: payerWallet,
+      chainId: 'eip155:5042002',
+      switchChain: vi.fn(),
+      getEthereumProvider: vi.fn(async () => ({ request })),
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async (input: RequestInfo | URL) =>
+          new Response(
+            JSON.stringify(
+              String(input).endsWith('/deposits')
+                ? { deposits: [] }
+                : { balances: [{ domain: 26, depositor: payerWallet, balance: '0' }] },
+            ),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          ),
+      ),
+    );
+    const { result } = renderHook(() => usePrivyUserWallet());
+
+    await expect(result.current.fundGateway('1000000')).rejects.toThrow(/reverted/u);
+    expect(submitted).toBe(1);
+    expect(
+      request.mock.calls.filter(([call]) => call.method === 'eth_sendTransaction'),
+    ).toHaveLength(1);
   });
 });

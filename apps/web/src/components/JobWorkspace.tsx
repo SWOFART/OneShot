@@ -2,7 +2,7 @@ import { formatAtomicUsdcWithAsset } from '@oneshot/settlement-ui';
 import { useEffect, useState } from 'react';
 import type { JobView, PaidApiQuote, PaidApiResponse, SupplierQuote } from '@oneshot/contracts';
 import type { JobApiClient } from '../api/job-client.js';
-import type { UserWalletSession } from '../auth/session.js';
+import { GatewayFundingError, type UserWalletSession } from '../auth/session.js';
 import { PaidApiUserWalletSubmissionError, type PaidApiClient } from '../api/paid-api-client.js';
 import { usdcToAtomicUnits } from '../utils/money.js';
 import {
@@ -435,8 +435,13 @@ export function CircleX402DemoPanel(props: {
   const [taskKey, setTaskKey] = useState(() => `circle-api-${crypto.randomUUID().slice(0, 8)}`);
   const [quote, setQuote] = useState<PaidApiQuote | null>(null);
   const [request, setRequest] = useState<PaidApiResponse | null>(null);
-  const [loading, setLoading] = useState<'quote' | 'start' | 'sign' | 'refresh' | null>(null);
+  const [loading, setLoading] = useState<
+    'quote' | 'start' | 'sign' | 'refresh' | 'fund' | 'balance' | null
+  >(null);
   const [notice, setNotice] = useState('');
+  const [gatewayTarget, setGatewayTarget] = useState('1');
+  const [gatewayBalance, setGatewayBalance] = useState<string | null>(null);
+  const [gatewayFundingHash, setGatewayFundingHash] = useState<string | null>(null);
   const paidApiRequest = { task_key: taskKey.trim(), tool_id: 'circle-x402-api-v1' as const };
 
   function clear(): void {
@@ -505,11 +510,10 @@ export function CircleX402DemoPanel(props: {
   ): Promise<void> {
     if (!props.client || !props.userWallet) return;
     setLoading('sign');
-    const gatewayBalance = await props.userWallet.getGatewayBalance?.(payerWallet);
+    const gatewayBalance = await props.userWallet.getGatewayBalance(payerWallet);
     if (
-      gatewayBalance !== undefined &&
-      (!/^\d+$/u.test(gatewayBalance) ||
-        BigInt(gatewayBalance) < BigInt(approvedQuote.amount_atomic))
+      !/^\d+$/u.test(gatewayBalance) ||
+      BigInt(gatewayBalance) < BigInt(approvedQuote.amount_atomic)
     ) {
       throw new PaidApiUserWalletSubmissionError(
         'Your Arc Testnet Circle Gateway balance is below this price. Fund the Gateway balance, then sign this same prepared request.',
@@ -529,6 +533,69 @@ export function CircleX402DemoPanel(props: {
           ? 'The signed payment was recorded but is not final. Check the same request; do not sign another payment.'
           : `Payment state: ${submitted.payment_state}.`,
     );
+  }
+
+  async function refreshGatewayBalance(): Promise<void> {
+    if (!props.userWallet) return;
+    setLoading('balance');
+    setNotice('');
+    try {
+      const payerWallet = props.userWallet.address ?? (await props.userWallet.connect());
+      if (!payerWallet) throw new Error('No Ethereum wallet is connected');
+      setGatewayBalance(await props.userWallet.getGatewayBalance(payerWallet));
+      setNotice('Gateway balance refreshed.');
+    } catch {
+      setNotice('The Gateway balance could not be checked. No payment was submitted.');
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function fundGateway(): Promise<void> {
+    if (!props.userWallet) return;
+    let targetAmountAtomic: string;
+    try {
+      targetAmountAtomic = usdcToAtomicUnits(gatewayTarget);
+      if (targetAmountAtomic === '0') throw new Error('Gateway target must be positive');
+    } catch {
+      setNotice('Enter a positive Gateway balance target with up to 6 decimal places.');
+      return;
+    }
+    setLoading('fund');
+    setNotice('Your wallet may ask for approval, then a Gateway deposit.');
+    try {
+      const payerWallet = props.userWallet.address ?? (await props.userWallet.connect());
+      if (!payerWallet) throw new Error('No Ethereum wallet is connected');
+      const result = await props.userWallet.fundGateway(targetAmountAtomic);
+      setGatewayFundingHash(result.deposit_transaction_hash);
+      try {
+        setGatewayBalance(await props.userWallet.getGatewayBalance(payerWallet));
+      } catch {
+        setGatewayBalance(null);
+      }
+      setNotice(
+        result.deposit_transaction_hash
+          ? 'Gateway deposit confirmed on Arc Testnet. Wait for Circle balance processing, then sign the API payment.'
+          : 'Your Gateway balance already meets the requested target.',
+      );
+    } catch (error) {
+      if (error instanceof GatewayFundingError && error.transaction_hash) {
+        setGatewayFundingHash(error.transaction_hash);
+      }
+      if (error instanceof GatewayFundingError && error.phase === 'DEPOSIT') {
+        setNotice(
+          'The Gateway deposit result is not fully resolved. Do not fund again; refresh the Gateway balance and check the same transaction first.',
+        );
+      } else if (error instanceof GatewayFundingError && error.phase === 'APPROVAL') {
+        setNotice(
+          'The Gateway approval result is not fully resolved. No deposit was submitted by OneShot; check the same approval before trying again.',
+        );
+      } else {
+        setNotice('Gateway funding was not completed. No API payment was submitted.');
+      }
+    } finally {
+      setLoading(null);
+    }
   }
 
   async function signPrepared(): Promise<void> {
@@ -585,10 +652,58 @@ export function CircleX402DemoPanel(props: {
         own wallet.
       </p>
       {props.userWallet && (
-        <p className="field-help">
-          Circle Gateway requires this wallet to have a funded Arc Testnet Gateway balance. OneShot
-          does not deposit or move funds automatically; approval only signs the reviewed payment.
-        </p>
+        <section className="quote-panel gateway-funding-panel" aria-label="Circle Gateway balance">
+          <header className="panel-heading">
+            <div>
+              <h3>Your Circle Gateway balance</h3>
+              <span className="badge tone-neutral">Buyer-funded</span>
+            </div>
+            <span className="mono">
+              {gatewayBalance === null
+                ? 'Not checked'
+                : `${formatAtomicUsdcWithAsset(gatewayBalance, 'USDC') ?? 'Invalid'} USDC`}
+            </span>
+          </header>
+          <p className="panel-lede">
+            This is your wallet&apos;s own Arc Testnet balance for gas-free Circle payments. OneShot
+            never pays for you and never deposits into another user&apos;s balance.
+          </p>
+          <label htmlFor="gateway-target-amount">Target Gateway balance (USDC)</label>
+          <input
+            id="gateway-target-amount"
+            value={gatewayTarget}
+            disabled={loading !== null}
+            onChange={(event) => setGatewayTarget(event.target.value)}
+            inputMode="decimal"
+            autoComplete="off"
+          />
+          <p className="field-help">
+            Funding may show up to two wallet confirmations: allowance approval and Gateway deposit.
+            Use testnet USDC only. A confirmed deposit may take a moment to appear in Circle&apos;s
+            available balance.
+          </p>
+          <div className="proof-controls">
+            <button type="button" disabled={loading !== null} onClick={() => void fundGateway()}>
+              {loading === 'fund' ? 'Funding Gateway…' : 'Fund my Gateway balance'}
+            </button>
+            <button
+              type="button"
+              className="secondary compact"
+              disabled={loading !== null}
+              onClick={() => void refreshGatewayBalance()}
+            >
+              {loading === 'balance' ? 'Checking…' : 'Refresh Gateway balance'}
+            </button>
+          </div>
+          {gatewayFundingHash && (
+            <p className="field-help">
+              Funding transaction:{' '}
+              <a href={explorerHref(gatewayFundingHash)} target="_blank" rel="noreferrer noopener">
+                View on ArcScan
+              </a>
+            </p>
+          )}
+        </section>
       )}
       <label htmlFor="paid-api-task-key">Request key</label>
       <input

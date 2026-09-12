@@ -1068,6 +1068,36 @@ a:hover {
   margin-bottom: 0.5rem;
 }
 
+.gateway-funding-panel {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+  padding: 1rem;
+}
+
+.gateway-funding-panel > p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.gateway-funding-panel > label {
+  color: var(--os-panel-ink);
+  font-size: 0.85rem;
+  font-weight: 300;
+}
+
+.gateway-funding-panel > input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--os-line);
+  border-radius: 0.6rem;
+  color: var(--os-ink);
+  background: var(--os-surface);
+  font-family: var(--os-font-mono);
+  font-size: 0.9rem;
+}
+
 .paid-api-status {
   display: grid;
   gap: 0.65rem;
