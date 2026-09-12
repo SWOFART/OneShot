@@ -11,17 +11,32 @@ import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
  * so the hero becomes the same content on a plain rounded panel.
  */
 
-const HERO_HEIGHT = 320;
+/**
+ * Floor for the cut's height. The copy sits in normal flow and sets the real
+ * height, so a long headline grows the hero instead of overflowing it — which
+ * is what clipped the lead paragraph at narrow desktop widths, and what made
+ * the clipping differ between monitors. jsdom reports zero for every layout
+ * box, so this floor is also the height the Hero tests measure against.
+ */
+const HERO_MIN_HEIGHT = 268;
 
 export function Hero({
   children,
-  height = HERO_HEIGHT,
+  height: fixedHeight,
 }: {
   readonly children: ReactNode;
+  /**
+   * Pins the cut to an exact height. The landing page uses this because its
+   * hero is a composed marketing block sized to a layout, not to its copy.
+   * Left off, the hero measures itself, which is what keeps the workspace copy
+   * from clipping at widths where the headline wraps.
+   */
   readonly height?: number;
 }) {
   const box = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
+  const [measuredHeight, setMeasuredHeight] = useState(HERO_MIN_HEIGHT);
+  const height = fixedHeight ?? measuredHeight;
   const id = useId();
 
   // `useLayoutEffect`, not `useEffect`: this app is pure client-side render
@@ -34,7 +49,12 @@ export function Hero({
     const element = box.current;
     if (element === null) return;
 
-    const measure = (): void => setWidth(element.clientWidth);
+    const measure = (): void => {
+      setWidth(element.clientWidth);
+      // The clip only paints; it never changes layout, so feeding the measured
+      // height back in cannot loop the observer.
+      setMeasuredHeight(Math.max(HERO_MIN_HEIGHT, element.clientHeight));
+    };
     measure();
 
     if (typeof ResizeObserver === 'undefined') return;
@@ -55,7 +75,10 @@ export function Hero({
       {cut === null ? (
         <div className="hero-plain">{children}</div>
       ) : (
-        <div className="hero-cut" style={{ height: `${height}px` }}>
+        <div
+          className="hero-cut"
+          style={fixedHeight === undefined ? undefined : { height: `${fixedHeight}px` }}
+        >
           <svg width="0" height="0" aria-hidden="true" style={{ position: 'absolute' }}>
             <clipPath id={panelClip} clipPathUnits="userSpaceOnUse">
               <path d={cut.panel} />

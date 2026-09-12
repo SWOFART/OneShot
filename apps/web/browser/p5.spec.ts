@@ -233,14 +233,7 @@ for (const theme of ['light', 'dark'] as const) {
       expect(identity).not.toBeNull();
       expect(header?.x).toBeCloseTo(identity!.x, 0);
       expect(header?.width).toBeCloseTo(identity!.width, 0);
-      for (const label of [
-        'Overview',
-        'API services',
-        'Requests',
-        'Payment proof',
-        'Spending rules',
-        'Team & access',
-      ]) {
+      for (const label of ['Overview', 'API services', 'Requests', 'Payment proof']) {
         await page.getByRole('tab', { name: label, exact: true }).click();
         await page.getByRole('tab', { name: label, exact: true }).hover();
         await page.getByRole('tab', { name: label, exact: true }).focus();

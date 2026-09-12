@@ -544,7 +544,7 @@ export function CircleX402DemoPanel(props: {
   }
 
   return (
-    <section className="panel" aria-label="Circle Dataset API service">
+    <section className="panel paid-api-panel" aria-label="Circle Dataset API service">
       <header className="panel-heading">
         <div>
           <p className="eyebrow">CONNECTED API SERVICE</p>

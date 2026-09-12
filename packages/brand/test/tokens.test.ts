@@ -68,6 +68,7 @@ const AUDITED_PAIRS: readonly (readonly [ink: string, surface: string])[] = [
   ['signal', 'panel'],
   ['on-signal', 'signal'],
   ['on-field', 'field'],
+  ['on-field-muted', 'field'],
 ];
 
 describe('brand palette', () => {
@@ -94,6 +95,7 @@ describe('brand palette', () => {
         'signal',
         'on-signal',
         'on-field',
+        'on-field-muted',
         'attempt',
         'ink',
         'ink-muted',

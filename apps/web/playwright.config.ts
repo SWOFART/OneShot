@@ -19,6 +19,14 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:4173',
     trace: 'retain-on-failure',
+    // Audit the settled page. The contrast checks run immediately after
+    // navigation, so with motion enabled axe samples mid-transition and reads
+    // every colour composited against whatever sits behind it — a panel still
+    // fading in reports its ink as a blend rather than the colour it settles
+    // on. All motion in styles.css sits behind `prefers-reduced-motion:
+    // no-preference`, so reducing it here removes the sampling race instead of
+    // hiding a real contrast failure.
+    reducedMotion: 'reduce',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer,

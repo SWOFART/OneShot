@@ -24,11 +24,7 @@ import { LoginGate } from './components/LoginGate.js';
 import { ReadinessBanner } from './components/ReadinessBanner.js';
 import { CircleX402DemoPanel, JobList, JobWorkspace } from './components/JobWorkspace.js';
 import { RecoverySurface, SettlementSurface } from './components/FrontendSurfaces.js';
-import {
-  PaymentProtectionPanel,
-  SpendingRulesPanel,
-  TeamAccessPanel,
-} from './components/WorkspacePanels.js';
+import { PaymentProtectionPanel } from './components/WorkspacePanels.js';
 import { applyTheme, readStoredTheme, type Theme } from './theme.js';
 import './styles.css';
 
@@ -145,9 +141,9 @@ function CabinetPage(props: {
   readonly onToggleTheme: () => void;
   readonly userWallet?: UserWalletSession;
 }) {
-  const [section, setSection] = useState<
-    'overview' | 'services' | 'requests' | 'protection' | 'spending' | 'access'
-  >('overview');
+  const [section, setSection] = useState<'overview' | 'services' | 'requests' | 'protection'>(
+    'overview',
+  );
   const [intentId, setIntentId] = useState('');
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [activityError, setActivityError] = useState<string | null>(null);
@@ -156,8 +152,6 @@ function CabinetPage(props: {
     services: 'API services',
     requests: 'Requests',
     protection: 'Payment proof',
-    spending: 'Spending rules',
-    access: 'Team & access',
   } as const;
 
   function selectRequest(id: string): void {
@@ -254,67 +248,73 @@ function CabinetPage(props: {
             </button>
           ))}
         </nav>
-        {section === 'overview' && (
-          <section className="panel workspace-overview">
-            <p className="eyebrow">ONE JOB · ONE PAYMENT</p>
-            <h2>What would you like to do?</h2>
-            <p>
-              Choose a connected API service, review its exact quote, and follow the result from one
-              durable request. Technical evidence stays available when you need it.
-            </p>
-            <div className="workspace-action-grid">
-              <button type="button" onClick={() => setSection('services')}>
-                Run an API service
-              </button>
-              <button type="button" className="secondary" onClick={() => setSection('requests')}>
-                View requests
-              </button>
-              <button type="button" className="secondary" onClick={() => setSection('protection')}>
-                See payment proof
-              </button>
+        {/* Keyed on the section so React remounts the panel on every
+            switch, which restarts the fade in `.tab-fade`. */}
+        <div className="tab-fade" key={section}>
+          {section === 'overview' && (
+            <section className="panel workspace-overview">
+              <p className="eyebrow">ONE JOB · ONE PAYMENT</p>
+              <h2>What would you like to do?</h2>
+              <p>
+                Choose a connected API service, review its exact quote, and follow the result from
+                one durable request. Technical evidence stays available when you need it.
+              </p>
+              <div className="workspace-action-grid">
+                <button type="button" onClick={() => setSection('services')}>
+                  Run an API service
+                </button>
+                <button type="button" className="secondary" onClick={() => setSection('requests')}>
+                  View requests
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setSection('protection')}
+                >
+                  See payment proof
+                </button>
+              </div>
+              <ReadinessBanner client={props.apiClient} />
+            </section>
+          )}
+          {section === 'services' && (
+            <div className="panel-stack">
+              <JobWorkspace
+                client={props.jobClient}
+                {...(props.userWallet ? { userWallet: props.userWallet } : {})}
+                onSelectIntent={selectRequest}
+              />
+              <CircleX402DemoPanel
+                client={props.paidApiClient}
+                {...(props.userWallet ? { userWallet: props.userWallet } : {})}
+                onSelectIntent={selectRequest}
+              />
             </div>
-            <ReadinessBanner client={props.apiClient} />
-          </section>
-        )}
-        {section === 'services' && (
-          <>
-            <JobWorkspace
-              client={props.jobClient}
-              {...(props.userWallet ? { userWallet: props.userWallet } : {})}
-              onSelectIntent={selectRequest}
+          )}
+          {section === 'requests' && (
+            <JobList client={props.jobClient} onSelectIntent={selectRequest} />
+          )}
+          {section === 'protection' && (
+            <PaymentProtectionPanel
+              activity={activity}
+              activityError={activityError}
+              intentId={intentId}
+              recoveryClient={props.recoveryClient}
+              settlementClient={props.settlementClient}
+              onRefresh={() => {
+                setActivityError(null);
+                void props.jobClient
+                  .refreshActivity()
+                  .then(setActivity)
+                  .catch(() => {
+                    setActivityError(
+                      'Payment activity is unavailable right now. Existing payment records are unchanged.',
+                    );
+                  });
+              }}
             />
-            <CircleX402DemoPanel
-              client={props.paidApiClient}
-              {...(props.userWallet ? { userWallet: props.userWallet } : {})}
-              onSelectIntent={selectRequest}
-            />
-          </>
-        )}
-        {section === 'requests' && (
-          <JobList client={props.jobClient} onSelectIntent={selectRequest} />
-        )}
-        {section === 'protection' && (
-          <PaymentProtectionPanel
-            activity={activity}
-            activityError={activityError}
-            intentId={intentId}
-            recoveryClient={props.recoveryClient}
-            settlementClient={props.settlementClient}
-            onRefresh={() => {
-              setActivityError(null);
-              void props.jobClient
-                .refreshActivity()
-                .then(setActivity)
-                .catch(() => {
-                  setActivityError(
-                    'Payment activity is unavailable right now. Existing payment records are unchanged.',
-                  );
-                });
-            }}
-          />
-        )}
-        {section === 'spending' && <SpendingRulesPanel />}
-        {section === 'access' && <TeamAccessPanel status={props.session.status} />}
+          )}
+        </div>
       </LoginGate>
     </main>
   );
