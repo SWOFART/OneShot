@@ -307,7 +307,7 @@ describe('usePrivyOperatorSession — native Privy login', () => {
   });
 });
 
-describe('usePrivyUserWallet — embedded Privy payer', () => {
+describe('usePrivyUserWallet — selected payer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.active.wallet = undefined;
@@ -328,18 +328,21 @@ describe('usePrivyUserWallet — embedded Privy payer', () => {
       embeddedWallets: { ethereum: { createOnLogin: 'off' } },
       defaultChain: { id: 5042002 },
       supportedChains: [{ id: 5042002 }],
+      appearance: {
+        walletList: ['detected_ethereum_wallets', 'wallet_connect'],
+      },
     });
   });
 
-  it('signs x402 with the existing Privy wallet when MetaMask is active', async () => {
+  it('signs x402 with the active MetaMask wallet', async () => {
     const metamask = ethereumWallet('metamask', '0x1111111111111111111111111111111111111111');
     const privy = ethereumWallet('privy', '0x2222222222222222222222222222222222222222');
     mocks.active.wallet = metamask.wallet;
     mocks.wallets = [metamask.wallet, privy.wallet];
 
     const { result } = renderHook(() => usePrivyUserWallet());
-    expect(result.current.address).toBe(privy.wallet.address);
-    expect(mocks.active.setActiveWallet).toHaveBeenCalledWith(privy.wallet);
+    expect(result.current.address).toBe(metamask.wallet.address);
+    expect(mocks.active.setActiveWallet).not.toHaveBeenCalled();
 
     await result.current.signX402Payment({
       supplier_id: 'circle-x402-v1',
@@ -352,10 +355,24 @@ describe('usePrivyUserWallet — embedded Privy payer', () => {
       max_timeout_seconds: 300,
     });
 
-    expect(privy.request).toHaveBeenCalledWith(
+    expect(metamask.request).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'eth_signTypedData_v4' }),
     );
-    expect(metamask.request).not.toHaveBeenCalled();
+    expect(privy.request).not.toHaveBeenCalled();
+
+    const signingRequest = metamask.request.mock.calls.find(
+      ([request]) => request.method === 'eth_signTypedData_v4',
+    )?.[0] as { params: [string, string] } | undefined;
+    const typedData = JSON.parse(signingRequest?.params[1] ?? '{}') as {
+      types?: Record<string, unknown>;
+    };
+    expect(typedData.types?.EIP712Domain).toEqual([
+      { name: 'name', type: 'string' },
+      { name: 'version', type: 'string' },
+      { name: 'chainId', type: 'uint256' },
+      { name: 'verifyingContract', type: 'address' },
+    ]);
+    expect(typedData.types?.TransferWithAuthorization).toBeDefined();
   });
 
   it('honors the embedded wallet selected in Privy', async () => {
@@ -379,11 +396,8 @@ describe('usePrivyUserWallet — embedded Privy payer', () => {
     expect(first.request).not.toHaveBeenCalled();
   });
 
-  it('opens the Privy wallet picker instead of silently using active MetaMask', async () => {
-    const metamask = ethereumWallet('metamask', '0x1111111111111111111111111111111111111111');
+  it('opens the Privy wallet picker when no wallet is active', async () => {
     const selected = ethereumWallet('rainbow', '0x2222222222222222222222222222222222222222');
-    mocks.active.wallet = metamask.wallet;
-    mocks.wallets = [metamask.wallet];
     mocks.active.connect.mockResolvedValue({ wallet: selected.wallet, network: 'ethereum' });
 
     const { result } = renderHook(() => usePrivyUserWallet());
@@ -415,17 +429,13 @@ describe('usePrivyUserWallet — embedded Privy payer', () => {
     expect(selected.request).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'eth_sendTransaction' }),
     );
-    expect(metamask.request).not.toHaveBeenCalled();
   });
 
   it('forgets a picker wallet when the signed-in Privy user changes', async () => {
-    const metamask = ethereumWallet('metamask', '0x1111111111111111111111111111111111111111');
     const first = ethereumWallet('rainbow', '0x2222222222222222222222222222222222222222');
     const second = ethereumWallet('coinbase_wallet', '0x3333333333333333333333333333333333333333');
     mocks.authenticated = true;
     mocks.user = { id: 'did:privy:first' };
-    mocks.active.wallet = metamask.wallet;
-    mocks.wallets = [metamask.wallet];
     mocks.active.connect.mockResolvedValueOnce({ wallet: first.wallet, network: 'ethereum' });
 
     const { result, rerender } = renderHook(() => usePrivyUserWallet());
