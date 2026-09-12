@@ -15,6 +15,18 @@ export interface OperatorSession {
 
 export type UseOperatorSession = () => OperatorSession;
 
+export interface UserWalletSession {
+  readonly address: string | null;
+  connect(): Promise<string | null>;
+  sendTransfer(payment: {
+    readonly chain_id: 5042002;
+    readonly token_contract: string;
+    readonly payer_wallet: string;
+    readonly recipient: string;
+    readonly amount_atomic: string;
+  }): Promise<string>;
+}
+
 export const unconfiguredOperatorSession: UseOperatorSession = () => ({
   status: 'UNCONFIGURED',
   subject: null,

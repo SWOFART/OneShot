@@ -44,6 +44,7 @@ const authorizationStatuses = [
 ];
 const policyStatuses = ['CONFIGURED', 'EXCEEDED', 'NOT_CONFIGURED', 'UNKNOWN'];
 const deliveryStates = ['NOT_REQUESTED', 'PENDING', 'AVAILABLE', 'RETRIEVAL_FAILED'];
+const paymentModes = ['SERVER_PRIVY', 'USER_WALLET'];
 
 const boundedId = {
   type: 'string',
@@ -159,6 +160,7 @@ const schemas = {
       purpose: { type: 'string', minLength: 1, maxLength: 256 },
       state: { type: 'string', enum: intentStates },
       version: { type: 'integer', minimum: 1 },
+      payment_mode: { type: 'string', enum: paymentModes },
       policy: { $ref: '#/$defs/PolicySummary' },
       attempts: { type: 'array', maxItems: 100, items: { $ref: '#/$defs/Attempt' } },
       settlement: { $ref: '#/$defs/Settlement' },
@@ -185,6 +187,47 @@ const schemas = {
       report_subject: { type: 'string', minLength: 1, maxLength: 256 },
       recipient: evmAddress,
       amount_atomic: amountAtomic,
+    },
+  },
+  CreateUserWalletJobRequest: {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'task_key',
+      'tool_id',
+      'report_subject',
+      'recipient',
+      'amount_atomic',
+      'payer_wallet',
+    ],
+    properties: {
+      task_key: boundedId,
+      tool_id: { type: 'string', const: 'team-report-v1' },
+      report_subject: { type: 'string', minLength: 1, maxLength: 256 },
+      recipient: evmAddress,
+      amount_atomic: amountAtomic,
+      payer_wallet: evmAddress,
+    },
+  },
+  UserWalletPayment: {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'chain_id',
+      'network',
+      'token_contract',
+      'payer_wallet',
+      'recipient',
+      'amount_atomic',
+    ],
+    properties: {
+      chain_id: { type: 'integer', const: 5042002 },
+      network: { type: 'string', const: 'eip155:5042002' },
+      token_contract: evmAddress,
+      payer_wallet: evmAddress,
+      recipient: evmAddress,
+      amount_atomic: amountAtomic,
+      transaction_hash: { type: 'string', pattern: '^0x[0-9a-fA-F]{64}$' },
     },
   },
   CreatePaidApiRequest: {
@@ -299,6 +342,7 @@ const schemas = {
       'business_intent_id',
       'supplier',
       'payment_state',
+      'payment_mode',
       'delivery_state',
       'created_at',
       'updated_at',
@@ -310,6 +354,8 @@ const schemas = {
       business_intent_id: boundedId,
       supplier: { $ref: '#/$defs/SupplierQuote' },
       payment_state: { type: 'string', enum: intentStates },
+      payment_mode: { type: 'string', enum: paymentModes },
+      user_payment: { $ref: '#/$defs/UserWalletPayment' },
       delivery_state: { type: 'string', enum: deliveryStates },
       settlement: { $ref: '#/$defs/Settlement' },
       result: { $ref: '#/$defs/SupplierResult' },
@@ -625,6 +671,23 @@ const openapi = {
         },
       },
     },
+    '/v1/jobs/user-wallet/prepare': {
+      post: {
+        operationId: 'prepareUserWalletJob',
+        summary: 'Prepare a durable job for payment from the connected user wallet',
+        security: serviceSecurity,
+        requestBody: { required: true, content: jsonContent('CreateUserWalletJobRequest') },
+        responses: {
+          200: response('Existing user-wallet job.', 'JobResponse'),
+          202: response('User-wallet job prepared.', 'JobResponse'),
+          400: errorResponse('INVALID_REQUEST'),
+          401: errorResponse('UNAUTHORIZED'),
+          403: errorResponse('FORBIDDEN'),
+          409: errorResponse('Task payload or payer conflict'),
+          503: errorResponse('NOT_READY'),
+        },
+      },
+    },
     '/v1/paid-api/quote': {
       post: {
         operationId: 'quotePaidApi',
@@ -697,6 +760,42 @@ const openapi = {
           404: errorResponse('INTENT_NOT_FOUND'),
           401: errorResponse('UNAUTHORIZED'),
           403: errorResponse('FORBIDDEN'),
+        },
+      },
+    },
+    '/v1/jobs/{jobId}/user-wallet/submit': {
+      post: {
+        operationId: 'submitUserWalletPayment',
+        summary: 'Verify one transaction signed by the connected user wallet',
+        security: serviceSecurity,
+        parameters: [{ name: 'jobId', in: 'path', required: true, schema: boundedId }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['transaction_hash'],
+                properties: {
+                  transaction_hash: { type: 'string', pattern: '^0x[0-9a-fA-F]{64}$' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: response('Payment state after receipt verification.', 'JobResponse'),
+          202: response(
+            'Payment remains non-final; use the same hash to check again.',
+            'JobResponse',
+          ),
+          400: errorResponse('INVALID_REQUEST'),
+          401: errorResponse('UNAUTHORIZED'),
+          403: errorResponse('FORBIDDEN'),
+          404: errorResponse('INTENT_NOT_FOUND'),
+          409: errorResponse('RECONCILIATION_NOT_ALLOWED'),
+          503: errorResponse('NOT_READY'),
         },
       },
     },
@@ -805,6 +904,9 @@ export type PolicyStatus = (typeof POLICY_STATUSES)[number];
 export const DELIVERY_STATES = ${JSON.stringify(deliveryStates)} as const;
 export type DeliveryState = (typeof DELIVERY_STATES)[number];
 
+export const PAYMENT_MODES = ${JSON.stringify(paymentModes)} as const;
+export type PaymentMode = (typeof PAYMENT_MODES)[number];
+
 export interface CreateIntentRequest {
   readonly business_intent_id: string;
   readonly recipient: string;
@@ -825,6 +927,7 @@ export interface IntentResponse extends CreateIntentRequest {
   readonly payload_fingerprint: string;
   readonly state: IntentState;
   readonly version: number;
+  readonly payment_mode?: PaymentMode;
   readonly policy?: PolicySummaryView;
   readonly attempts: readonly AttemptView[];
   readonly settlement?: SettlementView;
@@ -869,6 +972,20 @@ export interface CreateJobRequest {
   readonly report_subject: string;
   readonly recipient: string;
   readonly amount_atomic: string;
+}
+
+export interface CreateUserWalletJobRequest extends CreateJobRequest {
+  readonly payer_wallet: string;
+}
+
+export interface UserWalletPayment {
+  readonly chain_id: 5042002;
+  readonly network: 'eip155:5042002';
+  readonly token_contract: string;
+  readonly payer_wallet: string;
+  readonly recipient: string;
+  readonly amount_atomic: string;
+  readonly transaction_hash?: string;
 }
 
 export interface CreatePaidApiRequest {
@@ -928,6 +1045,8 @@ export interface JobResponse {
   readonly business_intent_id: string;
   readonly supplier: SupplierQuote;
   readonly payment_state: IntentState;
+  readonly payment_mode: PaymentMode;
+  readonly user_payment?: UserWalletPayment;
   readonly delivery_state: DeliveryState;
   readonly settlement?: SettlementView;
   readonly result?: SupplierResult;

@@ -10,6 +10,7 @@ const POLICY_STATUS_LABELS: Readonly<Record<PolicyDisplayStatus, string>> = {
   NOT_CONFIGURED: 'Not configured',
   UNKNOWN: 'Unknown',
   NOT_REPORTED: 'Not reported',
+  NOT_APPLICABLE: 'Not applicable',
 };
 
 const POLICY_STATUS_TONE: Readonly<Record<PolicyDisplayStatus, string>> = {
@@ -18,6 +19,7 @@ const POLICY_STATUS_TONE: Readonly<Record<PolicyDisplayStatus, string>> = {
   NOT_CONFIGURED: 'danger',
   UNKNOWN: 'warning',
   NOT_REPORTED: 'warning',
+  NOT_APPLICABLE: 'neutral',
 };
 
 const POLICY_STATUS_EXPLANATIONS: Readonly<Record<PolicyDisplayStatus, string>> = {
@@ -26,6 +28,8 @@ const POLICY_STATUS_EXPLANATIONS: Readonly<Record<PolicyDisplayStatus, string>> 
   NOT_CONFIGURED: 'No matching Privy policy is configured, so no settlement can be authorized.',
   UNKNOWN: 'Privy policy state could not be read. Unknown is not treated as permitted.',
   NOT_REPORTED: 'The API returned no policy summary for this intent.',
+  NOT_APPLICABLE:
+    'This request is paid directly by the connected wallet; no server-side Privy spending policy applies.',
 };
 
 function capLabel(policy: PolicySummaryDisplay): string {

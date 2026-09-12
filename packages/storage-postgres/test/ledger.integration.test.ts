@@ -51,7 +51,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const versions = await pool.query<{ version: number }>(
       'SELECT version FROM schema_versions ORDER BY version',
     );
-    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(await migrationDigest()).toMatch(/^[0-9a-f]{64}$/u);
   });
 
@@ -59,7 +59,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const directory = await mkdtemp(join(tmpdir(), 'oneshot-migration-'));
     try {
       await writeFile(
-        join(directory, '009_broken.sql'),
+        join(directory, '010_broken.sql'),
         'CREATE TABLE must_rollback (id integer); SELECT missing_function();',
         'utf8',
       );
@@ -68,7 +68,7 @@ describePostgres('PostgreSQL intent ledger', () => {
         "SELECT to_regclass('public.must_rollback')::text AS name",
       );
       expect(table.rows[0]?.name).toBeNull();
-      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 9');
+      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 10');
       expect(version.rowCount).toBe(0);
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -100,7 +100,7 @@ describePostgres('PostgreSQL intent ledger', () => {
       resourceUrl: 'https://x402.example.test/api/dataset',
       x402Version: 2,
       maxTimeoutSeconds: 60,
-      recipient: '0x1111111111111111111111111111111111111111',
+      recipient: `0x${'1'.repeat(40)}`,
       amountAtomic: '10000',
       quotePayload: {
         url: 'https://x402.example.test/api/dataset',
@@ -174,6 +174,196 @@ describePostgres('PostgreSQL intent ledger', () => {
       'SELECT (SELECT count(*) FROM resumable_jobs)::text AS jobs, (SELECT count(*) FROM business_intents)::text AS intents, (SELECT count(*) FROM settlements)::text AS payments',
     );
     expect(counts.rows[0]).toEqual({ jobs: '1', intents: '1', payments: '0' });
+  });
+
+  it('creates a payer-bound user-wallet job without server authorization work', async () => {
+    const jobs = new JobLedger(pool, {
+      now: () => new Date('2026-09-07T12:00:00.000Z'),
+      nextAttemptId: () => `user-wallet-attempt-${++nextAttempt}`,
+    });
+    const jobRequest = {
+      task_key: 'report-user-wallet-2026',
+      tool_id: 'team-report-v1' as const,
+      report_subject: 'User Wallet Acme',
+      recipient: `0x${'1'.repeat(40)}`,
+      amount_atomic: '1000000',
+    };
+    const payer = `0x${'a'.repeat(40)}`;
+    const order = {
+      supplier_id: 'team-report-v1' as const,
+      order_reference: 'team_report_user_wallet_2026',
+      recipient: jobRequest.recipient,
+      amount_atomic: jobRequest.amount_atomic,
+      asset: 'USDC' as const,
+      network: 'eip155:5042002' as const,
+      expires_at: '2026-09-07T13:00:00.000Z',
+      supplier_payload_fingerprint: jobFingerprint(jobRequest),
+    };
+
+    const created = await jobs.createUserWalletOrReplay({
+      workspaceId: 'workspace-user-wallet',
+      request: { ...jobRequest, payer_wallet: payer },
+      supplierOrder: order,
+      correlationId: 'user-wallet-create',
+    });
+    expect(created.kind).toBe('ACCEPTED');
+    expect(created.job).toMatchObject({
+      payment_mode: 'USER_WALLET',
+      payment_state: 'READY',
+      user_payment: { payer_wallet: payer, amount_atomic: '1000000' },
+    });
+
+    const replay = await jobs.createUserWalletOrReplay({
+      workspaceId: 'workspace-user-wallet',
+      request: { ...jobRequest, payer_wallet: payer },
+      supplierOrder: order,
+      correlationId: 'user-wallet-replay',
+    });
+    expect(replay.kind).toBe('REPLAYED');
+
+    const payerConflict = await jobs.createUserWalletOrReplay({
+      workspaceId: 'workspace-user-wallet',
+      request: {
+        ...jobRequest,
+        payer_wallet: `0x${'b'.repeat(40)}`,
+      },
+      supplierOrder: order,
+      correlationId: 'user-wallet-payer-conflict',
+    });
+    expect(payerConflict.kind).toBe('TASK_PAYLOAD_CONFLICT');
+
+    const durable = await pool.query<{
+      intent_state: string;
+      attempt_stage: string;
+      payment_mode: string;
+      payer_wallet: string;
+      authorize_jobs: string;
+    }>(
+      `SELECT i.state AS intent_state, a.stage AS attempt_stage,
+              j.payment_mode, j.payer_wallet,
+              (SELECT count(*)::text FROM outbox_jobs o
+               WHERE o.business_intent_id = i.business_intent_id
+                 AND o.task_identifier = 'authorize_intent') AS authorize_jobs
+       FROM business_intents i
+       JOIN resumable_jobs j ON j.business_intent_id = i.business_intent_id
+       JOIN attempts a ON a.business_intent_id = i.business_intent_id
+       WHERE i.business_intent_id = $1`,
+      [created.job.business_intent_id],
+    );
+    expect(durable.rows[0]).toEqual({
+      intent_state: 'READY',
+      attempt_stage: 'READY',
+      payment_mode: 'USER_WALLET',
+      payer_wallet: payer,
+      authorize_jobs: '0',
+    });
+
+    await expect(newLedger().getIntent(created.job.business_intent_id)).resolves.toMatchObject({
+      payment_mode: 'USER_WALLET',
+      state: 'READY',
+    });
+  });
+
+  it('durably binds one user-wallet hash and marks delayed verification UNKNOWN', async () => {
+    const jobs = new JobLedger(pool, {
+      now: () => new Date('2026-09-07T12:00:00.000Z'),
+      nextAttemptId: () => `user-wallet-transition-${++nextAttempt}`,
+    });
+    const ledger = newLedger();
+    const jobRequest = {
+      task_key: 'report-user-wallet-transition',
+      tool_id: 'team-report-v1' as const,
+      report_subject: 'Transition Acme',
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount_atomic: '1000000',
+    };
+    const payer = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const transactionHash = `0x${'c'.repeat(64)}`;
+    const differentHash = `0x${'d'.repeat(64)}`;
+    const order = {
+      supplier_id: 'team-report-v1' as const,
+      order_reference: 'team_report_user_wallet_transition',
+      recipient: jobRequest.recipient,
+      amount_atomic: jobRequest.amount_atomic,
+      asset: 'USDC' as const,
+      network: 'eip155:5042002' as const,
+      expires_at: '2026-09-07T13:00:00.000Z',
+      supplier_payload_fingerprint: jobFingerprint(jobRequest),
+    };
+
+    const created = await jobs.createUserWalletOrReplay({
+      workspaceId: 'workspace-user-wallet-transition',
+      request: { ...jobRequest, payer_wallet: payer },
+      supplierOrder: order,
+      correlationId: 'user-wallet-transition-create',
+    });
+    expect(created.kind).toBe('ACCEPTED');
+
+    const begun = await ledger.beginUserWalletSubmission(
+      created.job.business_intent_id,
+      payer,
+      'user-wallet-transition-submit',
+    );
+    expect(begun).toMatchObject({ begun: true, state: 'SUBMITTING' });
+    if (!begun.begun) return;
+
+    await expect(
+      ledger.recordUserWalletTransaction(begun.attemptId, transactionHash),
+    ).resolves.toBe('RECORDED');
+    await expect(
+      ledger.beginUserWalletSubmission(
+        created.job.business_intent_id,
+        payer,
+        'user-wallet-transition-recheck',
+      ),
+    ).resolves.toMatchObject({ begun: true, state: 'SUBMITTING', transactionHash });
+
+    await expect(
+      ledger.markUserWalletUnknown(
+        created.job.business_intent_id,
+        begun.attemptId,
+        'receipt not indexed yet',
+      ),
+    ).resolves.toMatchObject({ completed: true, state: 'UNKNOWN' });
+    await expect(
+      ledger.markUserWalletUnknown(
+        created.job.business_intent_id,
+        begun.attemptId,
+        'same delayed receipt',
+      ),
+    ).resolves.toMatchObject({ completed: true, state: 'UNKNOWN' });
+    await expect(ledger.recordUserWalletTransaction(begun.attemptId, differentHash)).resolves.toBe(
+      'CONFLICT',
+    );
+
+    await expect(ledger.getIntent(created.job.business_intent_id)).resolves.toMatchObject({
+      state: 'UNKNOWN',
+      attempts: [{ stage: 'UNKNOWN' }],
+    });
+    const persisted = await pool.query<{
+      payment_transaction_hash: string;
+      attempt_transaction_hash: string;
+      reconcile_jobs: string;
+      metric_events: string;
+    }>(
+      `SELECT j.payment_transaction_hash, a.provider_transaction_hash AS attempt_transaction_hash,
+              (SELECT count(*)::text FROM outbox_jobs o
+               WHERE o.business_intent_id = j.business_intent_id
+                 AND o.task_identifier = 'reconcile_intent') AS reconcile_jobs,
+              (SELECT count(*)::text FROM operational_metric_events m
+               WHERE m.business_intent_id = j.business_intent_id
+                 AND m.outcome = 'USER_WALLET_UNKNOWN') AS metric_events
+       FROM resumable_jobs j
+       JOIN attempts a ON a.business_intent_id = j.business_intent_id
+       WHERE j.business_intent_id = $1`,
+      [created.job.business_intent_id],
+    );
+    expect(persisted.rows[0]).toEqual({
+      payment_transaction_hash: transactionHash,
+      attempt_transaction_hash: transactionHash,
+      reconcile_jobs: '0',
+      metric_events: '1',
+    });
   });
 
   it('resumes a failed paid delivery with a new fenced outbox task and no second settlement', async () => {

@@ -25,6 +25,8 @@ export interface ApiRuntimeConfig {
     readonly wallet: string;
     readonly apiKey?: string;
   };
+  /** Credential-free read-only RPC used to verify user-submitted receipts. */
+  readonly userWalletRpcUrl?: string;
   readonly paidApi?: {
     readonly url: string;
     readonly maxAmountAtomic: bigint;
@@ -81,6 +83,10 @@ function optionalAtomicAmount(environment: NodeJS.ProcessEnv, name: string): big
     throw new Error(`Invalid environment variable: ${name}`);
   }
   return BigInt(raw);
+}
+
+function optionalRpcUrl(environment: NodeJS.ProcessEnv, name: string): string | undefined {
+  return optionalHttpsUrl(environment, name);
 }
 
 function databaseConfig(environment: NodeJS.ProcessEnv): PoolConfig {
@@ -172,6 +178,7 @@ export function loadApiRuntimeConfig(
   const activityWallet = environment.ONESHOT_ACTIVITY_WALLET_ADDRESS?.trim();
   const paidApiUrl = optionalHttpsUrl(environment, 'ONESHOT_X402_URL');
   const paidApiMaxAmount = optionalAtomicAmount(environment, 'ONESHOT_X402_MAX_AMOUNT_ATOMIC');
+  const userWalletRpcUrl = optionalRpcUrl(environment, 'ONESHOT_ARC_RPC_URL');
   if ((activityEndpoint && !activityWallet) || (!activityEndpoint && activityWallet)) {
     throw new Error(
       'ONESHOT_GRAPH_QUERY_URL and ONESHOT_ACTIVITY_WALLET_ADDRESS must be configured together',
@@ -210,5 +217,6 @@ export function loadApiRuntimeConfig(
         }
       : {}),
     ...(paidApiUrl ? { paidApi: { url: paidApiUrl, maxAmountAtomic: paidApiMaxAmount } } : {}),
+    ...(userWalletRpcUrl ? { userWalletRpcUrl } : {}),
   };
 }

@@ -8,6 +8,7 @@ import { userEvent } from '@testing-library/user-event';
 import axe from 'axe-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { IntentResponse } from '@oneshot/contracts';
 
 import { toSettlementDetailsView } from '../src/contract.js';
 import { FIXTURE_EXPLORER_HOSTS, SETTLEMENT_SCENARIOS } from '../src/fixtures.js';
@@ -23,6 +24,16 @@ function renderScenario(name: string) {
   return render(
     createElement(SettlementDetailsPanel, {
       view: toSettlementDetailsView(scenario.intent, {
+        allowedExplorerHosts: FIXTURE_EXPLORER_HOSTS,
+      }),
+    }),
+  );
+}
+
+function renderIntent(intent: IntentResponse) {
+  return render(
+    createElement(SettlementDetailsPanel, {
+      view: toSettlementDetailsView(intent, {
         allowedExplorerHosts: FIXTURE_EXPLORER_HOSTS,
       }),
     }),
@@ -102,6 +113,15 @@ describe('policy summary', () => {
     const policy = screen.getByRole('region', { name: 'Policy' });
     expect(within(policy).queryByText('No allowlist reported')).toBeNull();
     expect(within(policy).queryByText('On the allowlist')).toBeNull();
+  });
+
+  it('explains that connected-wallet payments have no server policy', () => {
+    const committed = SETTLEMENT_SCENARIOS['authorized-committed'];
+    if (committed === undefined) throw new Error('Missing fixture: authorized-committed');
+    renderIntent({ ...committed.intent, payment_mode: 'USER_WALLET' });
+    const policy = screen.getByRole('region', { name: 'Policy' });
+    expect(within(policy).getByText('Not applicable')).toBeTruthy();
+    expect(within(policy).getByText(/paid directly by the connected wallet/u)).toBeTruthy();
   });
 });
 

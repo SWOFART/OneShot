@@ -49,6 +49,43 @@ describe('PrivyArcWalletProvider', () => {
     );
   });
 
+  it('accepts the REST envelope shape returned by Privy', async () => {
+    const send = vi.fn(async () => ({
+      data: {
+        caip2: 'eip155:5042002',
+        hash: HASH,
+        transaction_id: 'privy-transaction-envelope-1',
+      },
+    }));
+    const provider = new PrivyArcWalletProvider({
+      appId: 'app-test',
+      appSecret: 'secret-test',
+      walletId: 'wallet-test',
+      walletAddress: WALLET,
+      chainId: 5042002,
+      rpcUrl: 'https://rpc.example.invalid',
+      sendTransaction: send,
+      getTransactionReceipt: async () => {
+        throw new Error('not used');
+      },
+      getBlockNumber: async () => 1n,
+    });
+
+    await expect(
+      provider.sendTransaction({
+        chainId: 5042002,
+        to: '0x2222222222222222222222222222222222222222',
+        value: 0n,
+        data: '0x1234',
+        idempotencyKey: 'intent-key-envelope-1',
+        referenceId: 'intent-reference-envelope-1',
+      }),
+    ).resolves.toMatchObject({
+      transactionHash: HASH,
+      providerReferenceId: 'privy-transaction-envelope-1',
+    });
+  });
+
   it('maps an Arc JSON-RPC receipt into the strict verification shape', async () => {
     const provider = new PrivyArcWalletProvider({
       appId: 'app-test',

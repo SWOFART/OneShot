@@ -1,9 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import {
   asCorrelationId,
+  asBlockNumber,
+  asProviderReferenceId,
+  asTransactionHash,
   ContractValidationError,
   parseCreatePaidApiRequest,
   parseCreateJobRequest,
+  parseCreateUserWalletJobRequest,
   type SupplierPort,
   type ErrorCode,
   type ErrorResponse,
@@ -17,6 +21,7 @@ import type { ServiceAuthenticator } from './auth.js';
 import { allowAllRateLimiter, type RateLimiter } from './rate-limit.js';
 import { UnavailableWalletActivityPort, type WalletActivityPort } from './wallet-activity.js';
 import { PaidApiQuoteChangedError, type PaidApiService } from './paid-api.js';
+import type { UserWalletVerificationPort } from './user-wallet.js';
 
 export interface ServiceConfig {
   readonly submissionsDisabled?: boolean;
@@ -42,14 +47,25 @@ export interface ApiDependencies {
     | 'getRecoveryView'
     | 'getSystemMetrics'
     | 'ping'
+    | 'beginUserWalletSubmission'
+    | 'recordUserWalletTransaction'
+    | 'completeSubmission'
+    | 'markUserWalletUnknown'
   >;
   readonly jobs?: Pick<
     JobLedger,
-    'createOrReplay' | 'get' | 'list' | 'resumeDelivery' | 'recordActivityObservation' | 'activity'
+    | 'createOrReplay'
+    | 'createUserWalletOrReplay'
+    | 'get'
+    | 'list'
+    | 'resumeDelivery'
+    | 'recordActivityObservation'
+    | 'activity'
   >;
   readonly supplier?: SupplierPort;
   readonly paidApi?: PaidApiService;
   readonly walletActivity?: WalletActivityPort;
+  readonly userWalletVerifier?: UserWalletVerificationPort;
   readonly authenticator: ServiceAuthenticator;
   readonly rateLimiter?: RateLimiter;
   readonly nextCorrelationId?: () => string;
@@ -93,6 +109,24 @@ const createPaidApiBodySchema = {
   properties: {
     task_key: { type: 'string', minLength: 1, maxLength: 128 },
     tool_id: { type: 'string', const: 'circle-x402-api-v1' },
+  },
+} as const;
+
+const createUserWalletJobBodySchema = {
+  ...createJobBodySchema,
+  required: [...createJobBodySchema.required, 'payer_wallet'],
+  properties: {
+    ...createJobBodySchema.properties,
+    payer_wallet: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
+  },
+} as const;
+
+const userWalletPaymentBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['transaction_hash'],
+  properties: {
+    transaction_hash: { type: 'string', pattern: '^0x[0-9a-fA-F]{64}$' },
   },
 } as const;
 
@@ -160,6 +194,14 @@ export function buildApi(dependencies: ApiDependencies) {
       503,
       'NOT_READY',
       'Paid API integration is not configured',
+      correlationFor(request),
+    );
+  const userWalletUnavailable = (reply: FastifyReply, request: FastifyRequest): void =>
+    sendError(
+      reply,
+      503,
+      'NOT_READY',
+      'User-wallet payment verification is not configured',
       correlationFor(request),
     );
   const onError =
@@ -293,6 +335,44 @@ export function buildApi(dependencies: ApiDependencies) {
   });
 
   app.post(
+    '/v1/jobs/user-wallet/prepare',
+    { schema: { body: createUserWalletJobBodySchema } },
+    async (request, reply) => {
+      if (!dependencies.jobs || !dependencies.supplier) {
+        jobsUnavailable(reply, request);
+        return;
+      }
+      const parsed = parseCreateUserWalletJobRequest(request.body);
+      const jobRequest = {
+        task_key: parsed.task_key,
+        tool_id: parsed.tool_id,
+        report_subject: parsed.report_subject,
+        recipient: parsed.recipient,
+        amount_atomic: parsed.amount_atomic,
+      } as const;
+      const jobId = derivedJobId(workspaceId, jobRequest);
+      const order = await dependencies.supplier.createOrder(jobRequest, jobId);
+      const result = await dependencies.jobs.createUserWalletOrReplay({
+        workspaceId,
+        request: parsed,
+        supplierOrder: order,
+        correlationId: correlationFor(request),
+      });
+      if (result.kind === 'TASK_PAYLOAD_CONFLICT') {
+        sendError(
+          reply,
+          409,
+          'INTENT_PAYLOAD_CONFLICT',
+          'Task key already has a different immutable payer or payload',
+          correlationFor(request),
+        );
+        return;
+      }
+      return reply.code(result.kind === 'ACCEPTED' ? 202 : 200).send(result.job);
+    },
+  );
+
+  app.post(
     '/v1/paid-api/quote',
     { schema: { body: createPaidApiBodySchema } },
     async (request, reply) => {
@@ -403,6 +483,142 @@ export function buildApi(dependencies: ApiDependencies) {
     }
     return job;
   });
+
+  app.post<{ Params: { jobId: string } }>(
+    '/v1/jobs/:jobId/user-wallet/submit',
+    { schema: { body: userWalletPaymentBodySchema } },
+    async (request, reply) => {
+      if (!dependencies.jobs || !dependencies.userWalletVerifier) {
+        userWalletUnavailable(reply, request);
+        return;
+      }
+      const job = await dependencies.jobs.get(workspaceId, request.params.jobId);
+      if (!job) {
+        sendError(
+          reply,
+          404,
+          'INTENT_NOT_FOUND',
+          'Job was not found in this workspace',
+          correlationFor(request),
+        );
+        return;
+      }
+      if (job.payment_mode !== 'USER_WALLET' || !job.user_payment) {
+        sendError(
+          reply,
+          409,
+          'RECONCILIATION_NOT_ALLOWED',
+          'This job is not configured for a user-wallet payment',
+          correlationFor(request),
+        );
+        return;
+      }
+      const transactionHash = asTransactionHash(
+        (request.body as { readonly transaction_hash: string }).transaction_hash,
+      );
+      const begun = await dependencies.ledger.beginUserWalletSubmission(
+        job.business_intent_id,
+        job.user_payment.payer_wallet,
+        correlationFor(request),
+      );
+      if (!begun.begun) {
+        if (begun.currentState === 'COMMITTED' || begun.currentState === 'FAILED_SAFE') {
+          const current = await dependencies.jobs.get(workspaceId, request.params.jobId);
+          if (current) return reply.code(200).send(current);
+        }
+        sendError(
+          reply,
+          begun.reason === 'NOT_FOUND' ? 404 : 409,
+          begun.reason === 'NOT_FOUND' ? 'INTENT_NOT_FOUND' : 'RECONCILIATION_NOT_ALLOWED',
+          begun.reason === 'NOT_USER_WALLET'
+            ? 'The payer wallet does not match the durable user-wallet authorization'
+            : 'This user-wallet payment is no longer available for a new submission',
+          correlationFor(request),
+        );
+        return;
+      }
+      if (begun.transactionHash && begun.transactionHash !== transactionHash) {
+        sendError(
+          reply,
+          409,
+          'RECONCILIATION_NOT_ALLOWED',
+          'A different transaction hash is already bound to this payment intent',
+          correlationFor(request),
+        );
+        return;
+      }
+      const recorded = await dependencies.ledger.recordUserWalletTransaction(
+        begun.attemptId,
+        transactionHash,
+      );
+      if (recorded === 'CONFLICT' || recorded === 'NOT_FOUND') {
+        sendError(
+          reply,
+          409,
+          'RECONCILIATION_NOT_ALLOWED',
+          'The transaction could not be bound to the durable payment attempt',
+          correlationFor(request),
+        );
+        return;
+      }
+
+      let verification;
+      try {
+        verification = await dependencies.userWalletVerifier.verify({
+          transactionHash,
+          walletAddress: job.user_payment.payer_wallet,
+          recipient: job.user_payment.recipient,
+          amountAtomic: job.user_payment.amount_atomic,
+        });
+      } catch {
+        // Do not classify an RPC outage as no payment. The attempt remains
+        // durable and the same hash can be submitted to this endpoint again.
+        sendError(
+          reply,
+          503,
+          'NOT_READY',
+          'Arc receipt verification is temporarily unavailable; no retry was submitted',
+          correlationFor(request),
+        );
+        return;
+      }
+
+      if (verification.kind === 'CONFIRMED') {
+        await dependencies.ledger.completeSubmission(job.business_intent_id, begun.attemptId, {
+          kind: 'CONFIRMED',
+          provider_reference_id: asProviderReferenceId(`user-wallet:${transactionHash}`),
+          transaction_hash: asTransactionHash(verification.transactionHash),
+          block_number: asBlockNumber(verification.blockNumber),
+          transfer_log_index: verification.transferLogIndex,
+        });
+      } else if (verification.kind === 'FINAL_REVERT') {
+        await dependencies.ledger.completeSubmission(job.business_intent_id, begun.attemptId, {
+          kind: 'DEFINITELY_NOT_SUBMITTED',
+          reason: verification.reason,
+        });
+      } else {
+        await dependencies.ledger.markUserWalletUnknown(
+          job.business_intent_id,
+          begun.attemptId,
+          verification.kind === 'PENDING'
+            ? 'User wallet transaction is not final; receipt is not available yet'
+            : verification.reason,
+        );
+      }
+      const updated = await dependencies.jobs.get(workspaceId, request.params.jobId);
+      if (!updated) {
+        sendError(
+          reply,
+          500,
+          'INTERNAL_ERROR',
+          'Updated job could not be read',
+          correlationFor(request),
+        );
+        return;
+      }
+      return reply.code(updated.payment_state === 'UNKNOWN' ? 202 : 200).send(updated);
+    },
+  );
 
   app.post<{ Params: { jobId: string } }>('/v1/jobs/:jobId/resume', async (request, reply) => {
     if (!dependencies.jobs) {
