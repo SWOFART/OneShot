@@ -64,6 +64,14 @@ describe('web stylesheet', () => {
     // The paid-API summary sits on the lime --os-field and rebinds the ink
     // tokens its descendants inherit.
     expect(css).toMatch(/\.paid-api-status \{[^}]*--os-panel-ink:\s*var\(--os-on-field\)/u);
+
+    // The settlement box paints --os-panel inside `.job-list li`, which rebinds
+    // --os-accent-ink to the page ink for the card around it. Without its own
+    // rebind, the ArcScan link was forest ink on the forest box: invisible in
+    // the light theme, correct in the dark one.
+    expect(css).toMatch(
+      /\.job-settlement-summary \{[^}]*--os-accent-ink:\s*var\(--os-state-committed\)/u,
+    );
   });
 
   /**
