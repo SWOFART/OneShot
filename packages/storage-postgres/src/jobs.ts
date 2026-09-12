@@ -5,9 +5,11 @@ import {
   type ActivityResponse,
   type ActivityTransferView,
   parseCreateJobRequest,
+  parseCreateUserWalletJobRequest,
   validateSupplierOrder,
   type DeliveryState,
   type JobView,
+  type PaymentMode,
   type SettlementView,
   type SupplierOrder,
   type SupplierResult,
@@ -17,6 +19,7 @@ import {
   derivedJobId,
   fingerprintIntent,
   jobFingerprint,
+  userWalletJobFingerprint,
 } from '@oneshot/domain';
 import type { Pool, PoolClient } from 'pg';
 
@@ -42,6 +45,9 @@ interface JobRow {
   readonly delivery_attempt: number;
   readonly result_reference: string | null;
   readonly result_payload: SupplierResult | null;
+  readonly payment_mode?: PaymentMode;
+  readonly payer_wallet?: string | null;
+  readonly payment_transaction_hash?: string | null;
   readonly created_at: Date;
   readonly updated_at: Date;
   readonly payment_state: JobView['payment_state'];
@@ -84,6 +90,21 @@ function settlementForView(row: JobRow): SettlementView | undefined {
 
 function asView(row: JobRow): JobView {
   const settlement = settlementForView(row);
+  const paymentMode = row.payment_mode ?? 'SERVER_PRIVY';
+  const userPayment =
+    paymentMode === 'USER_WALLET' && row.payer_wallet
+      ? {
+          chain_id: 5042002 as const,
+          network: 'eip155:5042002' as const,
+          token_contract: '0x3600000000000000000000000000000000000000',
+          payer_wallet: row.payer_wallet,
+          recipient: row.supplier_quote.recipient,
+          amount_atomic: row.supplier_quote.amount_atomic,
+          ...(row.payment_transaction_hash
+            ? { transaction_hash: row.payment_transaction_hash }
+            : {}),
+        }
+      : undefined;
   return {
     job_id: row.job_id,
     task_key: row.task_key,
@@ -91,6 +112,8 @@ function asView(row: JobRow): JobView {
     business_intent_id: row.business_intent_id,
     supplier: quoteForView(row.supplier_quote),
     payment_state: row.payment_state,
+    payment_mode: paymentMode,
+    ...(userPayment ? { user_payment: userPayment } : {}),
     delivery_state: row.delivery_state,
     ...(settlement ? { settlement } : {}),
     ...(row.delivery_state === 'AVAILABLE' && row.result_payload
@@ -145,8 +168,9 @@ function activityTransferKey(transactionHash: string, logIndex: number): string 
 /**
  * Owns the task-to-intent and delivery projection. It deliberately does not
  * grant settlement ownership: it atomically creates the existing intent/outbox
- * records and the job binding, then the ordinary settlement worker remains the
- * only component that can move the payment state.
+ * records and the job binding. Server-wallet jobs enter the ordinary worker
+ * path; user-wallet jobs enter READY and can only be completed by the API after
+ * an exact browser-submitted Arc receipt is verified.
  */
 export class JobLedger {
   readonly #pool: Pool;
@@ -163,6 +187,33 @@ export class JobLedger {
     readonly supplierOrder: SupplierOrder;
     readonly correlationId: string;
   }): Promise<CreateJobResult> {
+    return this.#createOrReplay({ ...params, paymentMode: 'SERVER_PRIVY' });
+  }
+
+  async createUserWalletOrReplay(params: {
+    readonly workspaceId: string;
+    readonly request: unknown;
+    readonly supplierOrder: SupplierOrder;
+    readonly correlationId: string;
+  }): Promise<CreateJobResult> {
+    const request = parseCreateUserWalletJobRequest(params.request);
+    const { payer_wallet: payerWallet, ...baseRequest } = request;
+    return this.#createOrReplay({
+      ...params,
+      request: baseRequest,
+      paymentMode: 'USER_WALLET',
+      payerWallet,
+    });
+  }
+
+  async #createOrReplay(params: {
+    readonly workspaceId: string;
+    readonly request: unknown;
+    readonly supplierOrder: SupplierOrder;
+    readonly correlationId: string;
+    readonly paymentMode: PaymentMode;
+    readonly payerWallet?: string;
+  }): Promise<CreateJobResult> {
     const request = parseCreateJobRequest(params.request);
     const supplierOrder = validateSupplierOrder(params.supplierOrder);
     if (Date.parse(supplierOrder.expires_at) <= this.#dependencies.now().getTime()) {
@@ -170,7 +221,11 @@ export class JobLedger {
     }
     const jobId = derivedJobId(params.workspaceId, request);
     const businessIntentId = derivedBusinessIntentId(params.workspaceId, request);
-    const requestFingerprint = jobFingerprint(request);
+    const supplierRequestFingerprint = jobFingerprint(request);
+    const requestFingerprint =
+      params.paymentMode === 'USER_WALLET'
+        ? userWalletJobFingerprint(request, params.payerWallet)
+        : jobFingerprint(request);
     const now = this.#dependencies.now();
     const client = await this.#pool.connect();
     try {
@@ -187,7 +242,7 @@ export class JobLedger {
         };
       }
 
-      if (supplierOrder.supplier_payload_fingerprint !== requestFingerprint) {
+      if (supplierOrder.supplier_payload_fingerprint !== supplierRequestFingerprint) {
         throw new Error('Supplier order payload does not bind the approved task');
       }
 
@@ -204,7 +259,7 @@ export class JobLedger {
         `INSERT INTO business_intents (
           business_intent_id, payload_fingerprint, recipient, amount_atomic,
           asset, network, purpose, state, version, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'AUTHORIZING', 1, $8, $8)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9, $9)
         ON CONFLICT (business_intent_id) DO NOTHING`,
         [
           businessIntentId,
@@ -214,6 +269,7 @@ export class JobLedger {
           intent.request.asset,
           intent.request.network,
           intent.request.purpose,
+          params.paymentMode === 'USER_WALLET' ? 'READY' : 'AUTHORIZING',
           now,
         ],
       );
@@ -237,8 +293,8 @@ export class JobLedger {
         `INSERT INTO resumable_jobs (
           job_id, workspace_id, tool_id, task_key, request_fingerprint,
           business_intent_id, supplier_order_reference, supplier_quote,
-          delivery_state, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'NOT_REQUESTED', $9, $9)`,
+          delivery_state, payment_mode, payer_wallet, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'NOT_REQUESTED', $9, $10, $11, $11)`,
         [
           jobId,
           params.workspaceId,
@@ -248,6 +304,8 @@ export class JobLedger {
           businessIntentId,
           supplierOrder.order_reference,
           JSON.stringify(supplierOrder),
+          params.paymentMode,
+          params.payerWallet ?? null,
           now,
         ],
       );
@@ -256,27 +314,30 @@ export class JobLedger {
           attempt_id, business_intent_id, attempt_sequence, stage,
           correlation_id, request_body_fingerprint, token_contract,
           method, native_value_atomic, created_at
-        ) VALUES ($1, $2, 1, 'AUTHORIZING', $3, $4,
-                  '0x3600000000000000000000000000000000000000', 'transfer', '0', $5)`,
+        ) VALUES ($1, $2, 1, $3, $4, $5,
+                  '0x3600000000000000000000000000000000000000', 'transfer', '0', $6)`,
         [
           this.#dependencies.nextAttemptId(),
           businessIntentId,
+          params.paymentMode === 'USER_WALLET' ? 'READY' : 'AUTHORIZING',
           params.correlationId,
           intent.payload_fingerprint,
           now,
         ],
       );
-      await client.query(
-        `INSERT INTO outbox_jobs (
-          business_intent_id, job_key, task_identifier, payload, available_at, created_at
-        ) VALUES ($1, $2, 'authorize_intent', $3::jsonb, $4, $4)`,
-        [
-          businessIntentId,
-          `authorize:${businessIntentId}:1`,
-          JSON.stringify({ business_intent_id: businessIntentId }),
-          now,
-        ],
-      );
+      if (params.paymentMode === 'SERVER_PRIVY') {
+        await client.query(
+          `INSERT INTO outbox_jobs (
+            business_intent_id, job_key, task_identifier, payload, available_at, created_at
+          ) VALUES ($1, $2, 'authorize_intent', $3::jsonb, $4, $4)`,
+          [
+            businessIntentId,
+            `authorize:${businessIntentId}:1`,
+            JSON.stringify({ business_intent_id: businessIntentId }),
+            now,
+          ],
+        );
+      }
       const created = await this.#readJob(client, params.workspaceId, jobId, false);
       await client.query('COMMIT');
       if (!created) throw new Error('Created job was not readable');
@@ -510,7 +571,9 @@ export class JobLedger {
   #selectJob(): string {
     return `SELECT j.job_id, j.request_fingerprint, j.task_key, j.tool_id, j.business_intent_id,
       j.supplier_order_reference, j.supplier_quote, j.delivery_state, j.delivery_attempt,
-      j.result_reference, j.result_payload, j.created_at, j.updated_at, i.state AS payment_state,
+      j.result_reference, j.result_payload, j.payment_mode, j.payer_wallet,
+      j.payment_transaction_hash,
+      j.created_at, j.updated_at, i.state AS payment_state,
       s.provider_reference_id AS settlement_provider_reference_id,
       s.transaction_hash AS settlement_transaction_hash,
       s.block_number AS settlement_block_number,

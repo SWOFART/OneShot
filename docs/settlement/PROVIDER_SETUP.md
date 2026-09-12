@@ -28,11 +28,18 @@ committed secret must be rotated, not deleted.
 
 ## 3. Execution wallet
 
-1. Create a server wallet. This is the only wallet that will sign settlement.
+1. Create a server wallet. This is the wallet that signs server-owned
+   settlement paths.
 2. Record the **wallet ID** and the **wallet address**.
 3. Configure the owner or key quorum according to your organisation's rules. A
    single-owner wallet is acceptable for a testnet demo and is not acceptable
    for anything holding real value.
+
+The Team Report browser flow is user-funded and does not use this wallet. The
+connected Privy Ethereum wallet signs the reviewed ERC-20 transfer in the
+browser; the API verifies its Arc receipt through the credential-free
+`ONESHOT_ARC_RPC_URL` read-only endpoint. This runbook still applies to the
+worker-owned and Circle x402 integrations.
 
 ## 4. Recipient and cap
 
@@ -49,14 +56,14 @@ These are the two values that bound the blast radius if everything else fails.
 
 Attach a policy to the execution wallet constraining all six dimensions:
 
-| Dimension | Constraint |
-| --- | --- |
-| Chain | equals `5042002` |
+| Dimension            | Constraint                                                             |
+| -------------------- | ---------------------------------------------------------------------- |
+| Chain                | equals `5042002`                                                       |
 | Destination contract | equals the USDC interface `0x3600000000000000000000000000000000000000` |
-| Native value | equals `0` |
-| Method | `transfer` |
-| Recipient | in your allowlist |
-| Amount | at or below your cap |
+| Native value         | equals `0`                                                             |
+| Method               | `transfer`                                                             |
+| Recipient            | in your allowlist                                                      |
+| Amount               | at or below your cap                                                   |
 
 The policy must end with a **default deny**. Without it, anything the rules do
 not mention is permitted.
@@ -101,20 +108,20 @@ responses:
 
 Note that `npm run check` is a different thing: it runs lint, typecheck, and
 the unit tests against stubbed endpoints. It proves the probe's logic is
-correct and tells you nothing about whether *your* setup is correct. Only
+correct and tells you nothing about whether _your_ setup is correct. Only
 `npm run probe` does that.
 
 ## 8. Storing the values
 
-| Value | Classification | Where it goes |
-| --- | --- | --- |
-| App ID | public | configuration |
-| App secret | **secret** | secret store only |
-| Wallet ID | public | configuration |
-| Wallet address | public | configuration and evidence |
-| Policy ID | public | configuration |
-| Recipient allowlist | human-only | configuration |
-| Cap | human-only | configuration |
+| Value               | Classification | Where it goes              |
+| ------------------- | -------------- | -------------------------- |
+| App ID              | public         | configuration              |
+| App secret          | **secret**     | secret store only          |
+| Wallet ID           | public         | configuration              |
+| Wallet address      | public         | configuration and evidence |
+| Policy ID           | public         | configuration              |
+| Recipient allowlist | human-only     | configuration              |
+| Cap                 | human-only     | configuration              |
 
 Never commit a real value. `packages/arc-adapter/.env.example` holds
 placeholders only and is generated from the config schema.

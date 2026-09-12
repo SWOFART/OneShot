@@ -55,6 +55,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@oneshot/arc-adapter':
+        specifier: workspace:*
+        version: link:../../packages/arc-adapter
       '@oneshot/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts

@@ -2,6 +2,7 @@ import { formatAtomicUsdcWithAsset } from '@oneshot/settlement-ui';
 import { useEffect, useState } from 'react';
 import type { JobView, PaidApiQuote, PaidApiResponse, SupplierQuote } from '@oneshot/contracts';
 import type { JobApiClient } from '../api/job-client.js';
+import type { UserWalletSession } from '../auth/session.js';
 import type { PaidApiClient } from '../api/paid-api-client.js';
 import { usdcToAtomicUnits } from '../utils/money.js';
 
@@ -72,6 +73,7 @@ export function SupplierQuotePanel({
 
 export function JobWorkspace(props: {
   readonly client: JobApiClient;
+  readonly userWallet?: UserWalletSession;
   readonly onSelectIntent: (id: string) => void;
 }) {
   const [subject, setSubject] = useState('');
@@ -82,6 +84,9 @@ export function JobWorkspace(props: {
   const [quote, setQuote] = useState<SupplierQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [approvedJob, setApprovedJob] = useState<JobView | null>(null);
+  const [paymentHash, setPaymentHash] = useState<string | null>(null);
+  const [walletAttempted, setWalletAttempted] = useState(false);
+  const [paymentChecking, setPaymentChecking] = useState(false);
   const [notice, setNotice] = useState('');
   const generatedTaskKey = subject.trim() ? `report-${subjectSlug(subject)}-${runSuffix}` : '';
   const taskKey = customTaskKey.trim() || generatedTaskKey;
@@ -110,6 +115,9 @@ export function JobWorkspace(props: {
   function clearQuote(): void {
     setQuote(null);
     setApprovedJob(null);
+    setPaymentHash(null);
+    setWalletAttempted(false);
+    setPaymentChecking(false);
     setNotice('');
   }
 
@@ -142,13 +150,76 @@ export function JobWorkspace(props: {
       setNotice('Enter a valid recipient wallet and a positive USDC amount.');
       return;
     }
+    if (!props.userWallet) {
+      setNotice('Connect a Privy Ethereum wallet to pay from your own address.');
+      return;
+    }
+    setWalletAttempted(false);
+    setPaymentHash(null);
+    let prepared = false;
+    let submittedHash: string | null = null;
     try {
-      const job = await props.client.start(jobRequest);
+      const payerWallet = props.userWallet.address ?? (await props.userWallet.connect());
+      if (!payerWallet) {
+        setNotice('No Ethereum wallet is connected. Nothing was paid.');
+        return;
+      }
+      const job = await props.client.prepareUserWalletJob({
+        ...jobRequest,
+        payer_wallet: payerWallet,
+      });
+      if (!job.user_payment) throw new Error('The API did not return a user-wallet payment plan');
+      if (
+        job.user_payment.recipient.toLowerCase() !== jobRequest.recipient.toLowerCase() ||
+        job.user_payment.amount_atomic !== jobRequest.amount_atomic
+      ) {
+        throw new Error('The durable payment plan differs from the reviewed quote');
+      }
       setApprovedJob(job);
-      setNotice(`Job ${job.job_id} is approved. Payment authorization is queued.`);
       props.onSelectIntent(job.business_intent_id);
+      setNotice(
+        'Review the exact recipient and amount in Privy, then confirm the wallet transaction.',
+      );
+      prepared = true;
+      setWalletAttempted(true);
+      const transactionHash = await props.userWallet.sendTransfer(job.user_payment);
+      submittedHash = transactionHash;
+      setPaymentHash(transactionHash);
+      const updated = await props.client.submitUserWalletPayment(job.job_id, transactionHash);
+      setApprovedJob(updated);
+      setNotice(
+        updated.payment_state === 'COMMITTED'
+          ? 'Payment confirmed from your connected wallet. Supplier delivery can now continue.'
+          : updated.payment_state === 'UNKNOWN'
+            ? 'Transaction recorded but not final. Check the same transaction later; do not pay again.'
+            : `Payment state: ${updated.payment_state}.`,
+      );
     } catch {
-      setNotice('The job was not started. Keep the same task key when retrying this request.');
+      setNotice(
+        submittedHash || paymentHash
+          ? 'The transaction hash is recorded. Use Check payment to verify it; do not submit another transaction.'
+          : prepared
+            ? 'No transaction hash was returned. Do not click pay again until you confirm whether the wallet submitted it.'
+            : 'The payment was not prepared. Keep the same task key if you need to inspect it.',
+      );
+    }
+  }
+
+  async function checkPayment(): Promise<void> {
+    if (!approvedJob || !paymentHash) return;
+    setPaymentChecking(true);
+    try {
+      const updated = await props.client.submitUserWalletPayment(approvedJob.job_id, paymentHash);
+      setApprovedJob(updated);
+      setNotice(
+        updated.payment_state === 'COMMITTED'
+          ? 'Payment confirmed from your connected wallet.'
+          : 'The same transaction is not final yet. No new payment was submitted.',
+      );
+    } catch {
+      setNotice('Receipt verification is temporarily unavailable. No new payment was submitted.');
+    } finally {
+      setPaymentChecking(false);
     }
   }
 
@@ -186,7 +257,7 @@ export function JobWorkspace(props: {
         aria-describedby="report-recipient-help"
       />
       <small id="report-recipient-help" className="field-help">
-        Use an Arc Testnet wallet allowed by the active Privy policy.
+        The connected Privy Ethereum wallet will pay this exact recipient on Arc Testnet.
       </small>
       <label htmlFor="report-amount">Amount (USDC)</label>
       <input
@@ -241,11 +312,12 @@ export function JobWorkspace(props: {
         <>
           <SupplierQuotePanel heading="Review quote before approval" quote={quote} />
           <p className="field-help">
-            Nothing has been paid yet. Approval sends the quoted USDC from the Privy wallet to the
-            recipient you entered, subject to the active wallet policy.
+            Nothing has been paid yet. Approval prepares a durable intent, then your connected
+            wallet shows the exact USDC transfer for confirmation. OneShot never uses a server
+            wallet for this report.
           </p>
-          <button type="button" onClick={() => void start()}>
-            Approve payment and start job
+          <button type="button" onClick={() => void start()} disabled={walletAttempted}>
+            Approve and pay from my wallet
           </button>
         </>
       )}
@@ -255,7 +327,25 @@ export function JobWorkspace(props: {
         </p>
       )}
       {approvedJob && (
-        <SupplierQuotePanel heading="Approved payment" quote={approvedJob.supplier} />
+        <>
+          <SupplierQuotePanel heading="User-wallet payment" quote={approvedJob.supplier} />
+          <p role="status" className="field-help">
+            Payment state: <strong>{approvedJob.payment_state}</strong>. Payer:{' '}
+            <span className="mono">
+              {approvedJob.user_payment?.payer_wallet ?? 'connected wallet'}
+            </span>
+          </p>
+          {paymentHash && approvedJob.payment_state !== 'COMMITTED' && (
+            <button
+              type="button"
+              className="secondary"
+              disabled={paymentChecking}
+              onClick={() => void checkPayment()}
+            >
+              {paymentChecking ? 'Checking Arc receipt…' : 'Check payment (same transaction)'}
+            </button>
+          )}
+        </>
       )}
     </section>
   );

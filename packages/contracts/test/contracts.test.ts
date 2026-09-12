@@ -8,6 +8,7 @@ import {
   atomicAmountToBigInt,
   canonicalJobPayload,
   parseCreateJobRequest,
+  parseCreateUserWalletJobRequest,
   parseAuthorizationResult,
   parseEvidenceResultKind,
   parseIndexHealth,
@@ -67,6 +68,28 @@ describe('resumable job request contract', () => {
     { ...request, recipient: 'not-an-address' },
   ])('rejects an unsafe requested payment %j', (value) => {
     expect(() => parseCreateJobRequest(value)).toThrow();
+  });
+
+  it('binds a user-wallet payer without changing the supplier payload shape', () => {
+    expect(
+      parseCreateUserWalletJobRequest({
+        ...request,
+        payer_wallet: '0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+      }),
+    ).toEqual({
+      ...parseCreateJobRequest(request),
+      payer_wallet: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    });
+  });
+
+  it('rejects a user-wallet request with an unexpected field', () => {
+    expect(() =>
+      parseCreateUserWalletJobRequest({
+        ...request,
+        payer_wallet: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        transaction_hash: `0x${'a'.repeat(64)}`,
+      }),
+    ).toThrow();
   });
 });
 

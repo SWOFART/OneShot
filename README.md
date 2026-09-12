@@ -197,6 +197,13 @@ variables together: `PRIVY_AUTH_APP_ID`, `PRIVY_AUTH_VERIFICATION_KEY`, and
 start. With none set, the API accepts only `SERVICE_BEARER_TOKEN`; worker and
 agent clients continue to use that service credential.
 
+The Team Report browser flow uses a separate user-funded path: after the quote,
+the connected Privy Ethereum wallet is shown the exact Arc Testnet USDC
+transfer and signs it in the browser. The API stores the payer binding and
+accepts the job only after verifying the submitted receipt. The server-side
+Privy execution wallet remains for worker-owned integrations such as the
+Circle x402 demo; it is not the payer for a Team Report started from Tools.
+
 Bootstrap an operator by setting `VITE_PRIVY_APP_ID`, starting the web app,
 signing in, copying the DID shown by the console, adding that DID to
 `PRIVY_AUTH_ALLOWED_SUBJECTS`, and then starting the API. Copy the public ES256

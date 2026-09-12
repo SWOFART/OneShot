@@ -11,10 +11,21 @@ const appId =
 
 const PrivyConsole = lazy(async () => {
   const module = await import('./auth/privy-session.js');
+  function AuthenticatedApp() {
+    const session = module.usePrivyOperatorSession();
+    const userWallet = module.usePrivyUserWallet();
+    return (
+      <App
+        route={window.location.pathname}
+        useOperatorSession={() => session}
+        userWallet={userWallet}
+      />
+    );
+  }
   return {
     default: () => (
       <module.PrivyOperatorProvider appId={appId}>
-        <App route={window.location.pathname} useOperatorSession={module.usePrivyOperatorSession} />
+        <AuthenticatedApp />
       </module.PrivyOperatorProvider>
     ),
   };

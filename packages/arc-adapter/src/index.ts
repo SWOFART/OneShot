@@ -4,6 +4,7 @@ export * from './redaction.js';
 export * from './config.js';
 export * from './readiness.js';
 export * from './receipt.js';
+export * from './receipt-source.js';
 export * from './outcome.js';
 export * from './viem-probe.js';
 export * from './probe-cli.js';

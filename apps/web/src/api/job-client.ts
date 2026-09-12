@@ -1,6 +1,7 @@
 import type {
   ActivityResponse,
   CreateJobRequest,
+  CreateUserWalletJobRequest,
   JobListResponse,
   JobView,
   SupplierQuote,
@@ -49,6 +50,31 @@ export class JobApiClient {
     });
     const body = await responseJson<JobView>(response);
     if (!response.ok || !body) throw new Error('Could not start the approved job');
+    return body;
+  }
+
+  async prepareUserWalletJob(request: CreateUserWalletJobRequest): Promise<JobView> {
+    const response = await this.#fetch(`${this.#baseUrl}/v1/jobs/user-wallet/prepare`, {
+      method: 'POST',
+      headers: this.#headers(),
+      body: JSON.stringify(request),
+    });
+    const body = await responseJson<JobView>(response);
+    if (!response.ok || !body) throw new Error('Could not prepare the user-wallet payment');
+    return body;
+  }
+
+  async submitUserWalletPayment(jobId: string, transactionHash: string): Promise<JobView> {
+    const response = await this.#fetch(
+      `${this.#baseUrl}/v1/jobs/${encodeURIComponent(jobId)}/user-wallet/submit`,
+      {
+        method: 'POST',
+        headers: this.#headers(),
+        body: JSON.stringify({ transaction_hash: transactionHash }),
+      },
+    );
+    const body = await responseJson<JobView>(response);
+    if (!response.ok || !body) throw new Error('Could not verify the user-wallet payment');
     return body;
   }
 

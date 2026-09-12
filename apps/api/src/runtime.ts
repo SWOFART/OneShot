@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { IntentLedger, JobLedger, migrate } from '@oneshot/storage-postgres';
+import { createUserWalletVerificationPort } from './user-wallet.js';
 import { TeamReportSupplier } from '@oneshot/supplier-adapter';
 import { Pool } from 'pg';
 import { buildApi } from './app.js';
@@ -72,6 +73,13 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
         : {}),
       ...(config.walletActivity
         ? { walletActivity: new StudioWalletActivityPort(config.walletActivity) }
+        : {}),
+      ...(config.userWalletRpcUrl
+        ? {
+            userWalletVerifier: createUserWalletVerificationPort({
+              rpcUrl: config.userWalletRpcUrl,
+            }),
+          }
         : {}),
       authenticator: buildApiAuthenticator(config),
       rateLimiter: new PostgresRateLimiter(pool, config.rateLimit),

@@ -14,6 +14,7 @@ import {
   selectCredential,
   unconfiguredOperatorSession,
   type UseOperatorSession,
+  type UserWalletSession,
 } from './auth/session.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { Hero } from './components/Hero.js';
@@ -42,6 +43,7 @@ export interface AppProps {
   readonly settlementClient?: SettlementClient;
   readonly recoveryClient?: RecoveryClient;
   readonly useOperatorSession?: UseOperatorSession;
+  readonly userWallet?: UserWalletSession;
   /** main.tsx passes the browser route; omitted preserves legacy test composition. */
   readonly route?: string;
 }
@@ -136,6 +138,7 @@ function CabinetPage(props: {
   readonly recoveryClient: RecoveryClient;
   readonly theme: Theme;
   readonly onToggleTheme: () => void;
+  readonly userWallet?: UserWalletSession;
 }) {
   const [section, setSection] = useState<
     'overview' | 'tools' | 'jobs' | 'recovery' | 'wallet' | 'developer'
@@ -208,7 +211,11 @@ function CabinetPage(props: {
         )}
         {section === 'tools' && (
           <>
-            <JobWorkspace client={props.jobClient} onSelectIntent={setIntentId} />
+            <JobWorkspace
+              client={props.jobClient}
+              {...(props.userWallet ? { userWallet: props.userWallet } : {})}
+              onSelectIntent={setIntentId}
+            />
             <CircleX402DemoPanel client={props.paidApiClient} onSelectIntent={setIntentId} />
           </>
         )}
@@ -279,8 +286,8 @@ function CabinetPage(props: {
           <section className="panel">
             <h2>Wallet & permissions</h2>
             <p>
-              The execution wallet and Privy policy remain the authorization boundary. This cabinet
-              has no policy-editing control because no enforced editing API exists.
+              Your connected Privy wallet signs the reviewed USDC transfer. OneShot only verifies
+              the receipt and keeps the durable at-most-once record; it does not custody the funds.
             </p>
             <dl className="facts">
               <div>
@@ -288,8 +295,8 @@ function CabinetPage(props: {
                 <dd>Arc Testnet (eip155:5042002)</dd>
               </div>
               <div>
-                <dt>Execution wallet</dt>
-                <dd>Server-configured Privy wallet (address withheld from browser)</dd>
+                <dt>Payment wallet</dt>
+                <dd>Connected user wallet (shown in the wallet confirmation)</dd>
               </div>
               <div>
                 <dt>Payment control</dt>
@@ -304,10 +311,12 @@ function CabinetPage(props: {
             <h2>Developer access</h2>
             <p>
               Tools generates a stable task key for each run. Request a quote first, then approve
-              the exact recipient and amount. Keep the key outside URLs and browser storage when
-              automating retries. No API keys are issued in this workspace.
+              the exact recipient and amount in your connected wallet. Keep the key outside URLs and
+              browser storage when automating retries. No API keys are issued in this workspace.
             </p>
-            <code>{'POST /v1/jobs/quote → POST /v1/jobs (explicit approval)'}</code>
+            <code>
+              {'POST /v1/jobs/quote → POST /v1/jobs/user-wallet/prepare → wallet confirmation'}
+            </code>
           </section>
         )}
         {intentId && (
@@ -381,6 +390,7 @@ export function App(props: AppProps = {}) {
         paidApiClient={paidApiClient}
         settlementClient={settlementClient}
         recoveryClient={recoveryClient}
+        {...(props.userWallet ? { userWallet: props.userWallet } : {})}
         theme={theme}
         onToggleTheme={toggleTheme}
       />

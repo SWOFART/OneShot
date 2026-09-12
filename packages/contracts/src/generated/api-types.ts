@@ -24,6 +24,9 @@ export type PolicyStatus = (typeof POLICY_STATUSES)[number];
 export const DELIVERY_STATES = ["NOT_REQUESTED","PENDING","AVAILABLE","RETRIEVAL_FAILED"] as const;
 export type DeliveryState = (typeof DELIVERY_STATES)[number];
 
+export const PAYMENT_MODES = ["SERVER_PRIVY","USER_WALLET"] as const;
+export type PaymentMode = (typeof PAYMENT_MODES)[number];
+
 export interface CreateIntentRequest {
   readonly business_intent_id: string;
   readonly recipient: string;
@@ -90,6 +93,20 @@ export interface CreateJobRequest {
   readonly amount_atomic: string;
 }
 
+export interface CreateUserWalletJobRequest extends CreateJobRequest {
+  readonly payer_wallet: string;
+}
+
+export interface UserWalletPayment {
+  readonly chain_id: 5042002;
+  readonly network: 'eip155:5042002';
+  readonly token_contract: string;
+  readonly payer_wallet: string;
+  readonly recipient: string;
+  readonly amount_atomic: string;
+  readonly transaction_hash?: string;
+}
+
 export interface CreatePaidApiRequest {
   readonly task_key: string;
   readonly tool_id: 'circle-x402-api-v1';
@@ -143,6 +160,8 @@ export interface JobResponse {
   readonly business_intent_id: string;
   readonly supplier: SupplierQuote;
   readonly payment_state: IntentState;
+  readonly payment_mode: PaymentMode;
+  readonly user_payment?: UserWalletPayment;
   readonly delivery_state: DeliveryState;
   readonly settlement?: SettlementView;
   readonly result?: SupplierResult;
