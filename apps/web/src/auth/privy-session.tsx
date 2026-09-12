@@ -3,10 +3,12 @@ import {
   useActiveWallet,
   useLogin,
   usePrivy,
+  useWallets,
   type BaseConnectedWalletType,
+  type ConnectedWallet,
 } from '@privy-io/react-auth';
 import { BatchEvmScheme } from '@circle-fin/x402-batching/client';
-import { encodeFunctionData, erc20Abi } from 'viem';
+import { encodeFunctionData, erc20Abi, defineChain } from 'viem';
 import { useEffect, useState, type ReactNode } from 'react';
 import type { PaidApiQuote, SubmitPaidApiUserWalletRequest } from '@oneshot/contracts';
 
@@ -27,6 +29,14 @@ const CIRCLE_GATEWAY_DEPOSITS_URL = 'https://gateway-api-testnet.circle.com/v1/d
 const ARC_TESTNET_USDC = '0x3600000000000000000000000000000000000000' as const;
 const ARC_TESTNET_GATEWAY_WALLET = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9' as const;
 const ARC_TESTNET_CHAIN_ID = 'eip155:5042002' as const;
+const ARC_TESTNET = defineChain({
+  id: 5042002,
+  name: 'Arc Testnet',
+  testnet: true,
+  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+  rpcUrls: { default: { http: ['https://rpc.testnet.arc.network'] } },
+  blockExplorers: { default: { name: 'Arcscan', url: 'https://testnet.arcscan.app' } },
+});
 const GATEWAY_DEPOSIT_ABI = [
   {
     type: 'function',
@@ -53,6 +63,8 @@ export function PrivyOperatorProvider(props: {
       config={{
         loginMethods: ['email', 'wallet'],
         embeddedWallets: { ethereum: { createOnLogin: 'off' } },
+        defaultChain: ARC_TESTNET,
+        supportedChains: [ARC_TESTNET],
         appearance: {
           theme: '#0a0a0a',
           accentColor: '#00dc5f',
@@ -132,6 +144,12 @@ function jsonSafe(value: unknown): unknown {
   return value;
 }
 
+function isPrivyEthereumWallet(
+  value: BaseConnectedWalletType | undefined,
+): value is ConnectedWallet {
+  return value?.type === 'ethereum' && value.walletClientType === 'privy';
+}
+
 function validateAddress(value: string, label: string): asserts value is `0x${string}` {
   if (!EVM_ADDRESS.test(value)) throw new Error(`${label} is invalid`);
 }
@@ -168,23 +186,30 @@ async function waitForSuccessfulReceipt(provider: EthereumProvider, transactionH
 }
 
 export function usePrivyUserWallet(): UserWalletSession {
-  const active = useActiveWallet();
-  const wallet: EthereumWallet | undefined =
-    active.wallet?.type === 'ethereum' ? active.wallet : undefined;
+  const { ready: walletsReady, wallets } = useWallets();
+  const { wallet: activeWallet, setActiveWallet } = useActiveWallet();
+  const selectedWallet: ConnectedWallet | undefined =
+    walletsReady && isPrivyEthereumWallet(activeWallet)
+      ? activeWallet
+      : walletsReady
+        ? wallets.find((candidate) => isPrivyEthereumWallet(candidate))
+        : undefined;
+
+  useEffect(() => {
+    if (selectedWallet && !isPrivyEthereumWallet(activeWallet)) {
+      setActiveWallet(selectedWallet);
+    }
+  }, [activeWallet, selectedWallet, setActiveWallet]);
 
   async function connect(): Promise<string | null> {
-    const result = await active.connect();
-    return result.wallet?.type === 'ethereum' ? result.wallet.address : null;
+    return selectedWallet?.address ?? null;
   }
 
   async function resolveWallet(): Promise<EthereumWallet> {
-    let current = wallet;
-    if (!current) {
-      const result = await active.connect();
-      current = result.wallet?.type === 'ethereum' ? (result.wallet as EthereumWallet) : undefined;
+    if (!selectedWallet) {
+      throw new Error('Select your Privy wallet before approving payment');
     }
-    if (!current) throw new Error('Connect an Ethereum wallet before approving payment');
-    return current;
+    return selectedWallet;
   }
 
   async function resolveArcWallet(): Promise<EthereumWallet> {
@@ -464,7 +489,7 @@ export function usePrivyUserWallet(): UserWalletSession {
   }
 
   return {
-    address: wallet?.address ?? null,
+    address: selectedWallet?.address ?? null,
     connect,
     getGatewayBalance,
     getGatewayPendingDeposits,
