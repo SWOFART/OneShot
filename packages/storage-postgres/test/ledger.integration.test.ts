@@ -259,7 +259,10 @@ describePostgres('PostgreSQL intent ledger', () => {
     }>(
       `SELECT stage, provider_kind, privy_idempotency_key,
               privy_reference_id, request_body_fingerprint
-       FROM attempts WHERE business_intent_id = $1`,
+       FROM attempts
+       WHERE business_intent_id = $1
+       ORDER BY attempt_sequence DESC
+       LIMIT 1`,
       [created.request.business_intent_id],
     );
     expect(durable.rows[0]).toEqual({
