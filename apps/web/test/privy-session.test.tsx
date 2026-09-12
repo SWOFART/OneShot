@@ -54,7 +54,7 @@ const {
 } =
   await import('../src/auth/privy-session.js');
 
-function ethereumWallet(walletClientType: 'metamask' | 'privy', address: string) {
+function ethereumWallet(walletClientType: string, address: string) {
   const request = vi.fn(async ({ method }: { method: string }) =>
     method === 'eth_signTypedData_v4' ? `0x${'a'.repeat(130)}` : `0x${'a'.repeat(64)}`,
   );
@@ -379,26 +379,64 @@ describe('usePrivyUserWallet — embedded Privy payer', () => {
     expect(first.request).not.toHaveBeenCalled();
   });
 
-  it('does not fall back to an external wallet', async () => {
+  it('opens the Privy wallet picker instead of silently using active MetaMask', async () => {
     const metamask = ethereumWallet('metamask', '0x1111111111111111111111111111111111111111');
+    const selected = ethereumWallet('rainbow', '0x2222222222222222222222222222222222222222');
     mocks.active.wallet = metamask.wallet;
     mocks.wallets = [metamask.wallet];
+    mocks.active.connect.mockResolvedValue({ wallet: selected.wallet, network: 'ethereum' });
 
     const { result } = renderHook(() => usePrivyUserWallet());
     expect(result.current.address).toBeNull();
-    await expect(result.current.connect()).resolves.toBeNull();
-    await expect(
-      result.current.signX402Payment({
-        supplier_id: 'circle-x402-v1',
-        resource_url: 'https://api.example.test/premium/dataset',
-        recipient: '0x2222222222222222222222222222222222222222',
-        amount_atomic: '10000',
-        asset: 'USDC',
-        network: 'eip155:5042002',
-        x402_version: 2,
-        max_timeout_seconds: 300,
-      }),
-    ).rejects.toThrow('Select your Privy wallet before approving payment');
+    await expect(result.current.connect()).resolves.toBe(selected.wallet.address);
+    expect(mocks.active.connect).toHaveBeenCalledWith({ reset: true });
+
+    await result.current.sendTransfer({
+      chain_id: 5042002,
+      token_contract: '0x3600000000000000000000000000000000000000',
+      payer_wallet: selected.wallet.address,
+      recipient: '0x3333333333333333333333333333333333333333',
+      amount_atomic: '10000',
+    });
+    await result.current.signX402Payment({
+      supplier_id: 'circle-x402-v1',
+      resource_url: 'https://api.example.test/premium/dataset',
+      recipient: '0x3333333333333333333333333333333333333333',
+      amount_atomic: '10000',
+      asset: 'USDC',
+      network: 'eip155:5042002',
+      x402_version: 2,
+      max_timeout_seconds: 300,
+    });
+
+    expect(selected.request).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'eth_signTypedData_v4' }),
+    );
+    expect(selected.request).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'eth_sendTransaction' }),
+    );
     expect(metamask.request).not.toHaveBeenCalled();
+  });
+
+  it('forgets a picker wallet when the signed-in Privy user changes', async () => {
+    const metamask = ethereumWallet('metamask', '0x1111111111111111111111111111111111111111');
+    const first = ethereumWallet('rainbow', '0x2222222222222222222222222222222222222222');
+    const second = ethereumWallet('coinbase_wallet', '0x3333333333333333333333333333333333333333');
+    mocks.authenticated = true;
+    mocks.user = { id: 'did:privy:first' };
+    mocks.active.wallet = metamask.wallet;
+    mocks.wallets = [metamask.wallet];
+    mocks.active.connect.mockResolvedValueOnce({ wallet: first.wallet, network: 'ethereum' });
+
+    const { result, rerender } = renderHook(() => usePrivyUserWallet());
+    await expect(result.current.connect()).resolves.toBe(first.wallet.address);
+
+    mocks.user = { id: 'did:privy:second' };
+    mocks.active.connect.mockResolvedValueOnce({ wallet: second.wallet, network: 'ethereum' });
+    rerender();
+
+    expect(result.current.address).toBeNull();
+    await expect(result.current.connect()).resolves.toBe(second.wallet.address);
+    expect(mocks.active.connect).toHaveBeenCalledTimes(2);
   });
 });

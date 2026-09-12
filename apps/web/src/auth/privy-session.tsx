@@ -9,7 +9,7 @@ import {
 } from '@privy-io/react-auth';
 import { BatchEvmScheme } from '@circle-fin/x402-batching/client';
 import { encodeFunctionData, erc20Abi, defineChain } from 'viem';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   CIRCLE_X402_USER_WALLET_VALIDITY_WINDOW_SECONDS,
   type PaidApiQuote,
@@ -212,8 +212,14 @@ async function waitForSuccessfulReceipt(provider: EthereumProvider, transactionH
 }
 
 export function usePrivyUserWallet(): UserWalletSession {
+  const { user } = usePrivy();
   const { ready: walletsReady, wallets } = useWallets();
-  const { wallet: activeWallet, setActiveWallet } = useActiveWallet();
+  const { wallet: activeWallet, setActiveWallet, connect: connectWallet } = useActiveWallet();
+  const explicitlyConnectedWallet = useRef<{
+    readonly subject: string | null;
+    readonly wallet: EthereumWallet;
+  } | null>(null);
+  const subject = user?.id ?? null;
   const selectedWallet: ConnectedWallet | undefined =
     walletsReady && isPrivyEthereumWallet(activeWallet)
       ? activeWallet
@@ -227,15 +233,25 @@ export function usePrivyUserWallet(): UserWalletSession {
     }
   }, [activeWallet, selectedWallet, setActiveWallet]);
 
+  async function selectWallet(): Promise<EthereumWallet | undefined> {
+    if (selectedWallet) return selectedWallet;
+    if (explicitlyConnectedWallet.current?.subject === subject) {
+      return explicitlyConnectedWallet.current.wallet;
+    }
+    const result = await connectWallet({ reset: true });
+    if (result.wallet?.type !== 'ethereum') return undefined;
+    explicitlyConnectedWallet.current = { subject, wallet: result.wallet };
+    return result.wallet;
+  }
+
   async function connect(): Promise<string | null> {
-    return selectedWallet?.address ?? null;
+    return (await selectWallet())?.address ?? null;
   }
 
   async function resolveWallet(): Promise<EthereumWallet> {
-    if (!selectedWallet) {
-      throw new Error('Select your Privy wallet before approving payment');
-    }
-    return selectedWallet;
+    const wallet = await selectWallet();
+    if (!wallet) throw new Error('Select a wallet in Privy before approving payment');
+    return wallet;
   }
 
   async function resolveArcWallet(): Promise<EthereumWallet> {
@@ -503,7 +519,11 @@ export function usePrivyUserWallet(): UserWalletSession {
   }
 
   return {
-    address: selectedWallet?.address ?? null,
+    address:
+      selectedWallet?.address ??
+      (explicitlyConnectedWallet.current?.subject === subject
+        ? explicitlyConnectedWallet.current.wallet.address
+        : null),
     connect,
     getGatewayBalance,
     getGatewayPendingDeposits,
