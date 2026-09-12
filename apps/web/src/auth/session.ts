@@ -20,6 +20,8 @@ export type UseOperatorSession = () => OperatorSession;
 export interface UserWalletSession {
   readonly address: string | null;
   connect(): Promise<string | null>;
+  /** Read-only Circle Gateway USDC balance in atomic units, when the wallet supports it. */
+  getGatewayBalance?(payerWallet: string): Promise<string>;
   sendTransfer(payment: {
     readonly chain_id: 5042002;
     readonly token_contract: string;

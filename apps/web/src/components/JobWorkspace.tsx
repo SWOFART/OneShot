@@ -3,10 +3,7 @@ import { useEffect, useState } from 'react';
 import type { JobView, PaidApiQuote, PaidApiResponse, SupplierQuote } from '@oneshot/contracts';
 import type { JobApiClient } from '../api/job-client.js';
 import type { UserWalletSession } from '../auth/session.js';
-import {
-  PaidApiUserWalletSubmissionError,
-  type PaidApiClient,
-} from '../api/paid-api-client.js';
+import { PaidApiUserWalletSubmissionError, type PaidApiClient } from '../api/paid-api-client.js';
 import { usdcToAtomicUnits } from '../utils/money.js';
 import {
   deliveryStatusCopy,
@@ -211,6 +208,13 @@ export function JobWorkspace(props: {
         throw new Error('The durable payment plan differs from the reviewed quote');
       }
       setApprovedJob(job);
+      if (job.user_payment.transaction_hash) {
+        setPaymentHash(job.user_payment.transaction_hash);
+        setNotice(
+          'The original wallet transaction is already recorded. Check that same transaction; do not approve another payment.',
+        );
+        return;
+      }
       setNotice(
         'Review the exact recipient and amount in Privy, then confirm the wallet transaction.',
       );
@@ -462,7 +466,10 @@ export function CircleX402DemoPanel(props: {
     setNotice('');
     try {
       if (!props.userWallet) {
-        const result = await props.client.start({ ...paidApiRequest, approved_quote: approvedQuote });
+        const result = await props.client.start({
+          ...paidApiRequest,
+          approved_quote: approvedQuote,
+        });
         setRequest(result);
         setNotice('Request accepted. OneShot now owns the payment attempt.');
         return;
@@ -484,7 +491,7 @@ export function CircleX402DemoPanel(props: {
           ? error.message
           : props.userWallet
             ? 'The payment was not completed. If your wallet showed a signature request, check the same request status before trying again.'
-          : 'The API request was not accepted. Keep the same request key before retrying.',
+            : 'The API request was not accepted. Keep the same request key before retrying.',
       );
     } finally {
       setLoading(null);
@@ -498,6 +505,16 @@ export function CircleX402DemoPanel(props: {
   ): Promise<void> {
     if (!props.client || !props.userWallet) return;
     setLoading('sign');
+    const gatewayBalance = await props.userWallet.getGatewayBalance?.(payerWallet);
+    if (
+      gatewayBalance !== undefined &&
+      (!/^\d+$/u.test(gatewayBalance) ||
+        BigInt(gatewayBalance) < BigInt(approvedQuote.amount_atomic))
+    ) {
+      throw new PaidApiUserWalletSubmissionError(
+        'Your Arc Testnet Circle Gateway balance is below this price. Fund the Gateway balance, then sign this same prepared request.',
+      );
+    }
     const paymentPayload = await props.userWallet.signX402Payment(approvedQuote);
     const submitted = await props.client.submitUserWalletPayment(
       prepared.business_intent_id,
@@ -780,6 +797,7 @@ export function JobList(props: {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [resumingJobId, setResumingJobId] = useState<string | null>(null);
+  const [checkingPaymentJobId, setCheckingPaymentJobId] = useState<string | null>(null);
 
   async function refresh(): Promise<void> {
     setLoading(true);
@@ -806,6 +824,21 @@ export function JobList(props: {
     }
   }
 
+  async function checkRecordedPayment(job: JobView): Promise<void> {
+    const transactionHash = job.user_payment?.transaction_hash;
+    if (job.payment_mode !== 'USER_WALLET' || !transactionHash) return;
+    setCheckingPaymentJobId(job.job_id);
+    setError('');
+    try {
+      await props.client.submitUserWalletPayment(job.job_id, transactionHash);
+      await refresh();
+    } catch {
+      setError('The recorded transaction could not be verified. No new payment was submitted.');
+    } finally {
+      setCheckingPaymentJobId(null);
+    }
+  }
+
   useEffect(() => {
     void refresh();
   }, []);
@@ -814,7 +847,7 @@ export function JobList(props: {
     <section
       className="panel"
       aria-label="Requests and results"
-      aria-busy={loading || resumingJobId !== null}
+      aria-busy={loading || resumingJobId !== null || checkingPaymentJobId !== null}
     >
       <header className="panel-heading">
         <div>
@@ -824,7 +857,7 @@ export function JobList(props: {
         <button
           type="button"
           className="secondary compact"
-          disabled={loading || resumingJobId !== null}
+          disabled={loading || resumingJobId !== null || checkingPaymentJobId !== null}
           onClick={() => void refresh()}
         >
           {loading ? 'Refreshing…' : 'Refresh requests'}
@@ -900,6 +933,22 @@ export function JobList(props: {
                         : 'Resume result (no new payment)'}
                     </button>
                   ) : null}
+                  {job.payment_mode === 'USER_WALLET' &&
+                    job.payment_state === 'UNKNOWN' &&
+                    job.user_payment?.transaction_hash && (
+                      <button
+                        type="button"
+                        className="secondary compact"
+                        disabled={
+                          loading || resumingJobId !== null || checkingPaymentJobId !== null
+                        }
+                        onClick={() => void checkRecordedPayment(job)}
+                      >
+                        {checkingPaymentJobId === job.job_id
+                          ? 'Checking recorded transaction...'
+                          : 'Check recorded transaction (no payment)'}
+                      </button>
+                    )}
                   <button
                     type="button"
                     className="secondary compact"

@@ -12,6 +12,8 @@ import type { PaidApiQuote, SubmitPaidApiUserWalletRequest } from '@oneshot/cont
 import type { OperatorSession, OperatorSessionStatus, UserWalletSession } from './session.js';
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const ARC_TESTNET_GATEWAY_DOMAIN = 26;
+const CIRCLE_GATEWAY_BALANCES_URL = 'https://gateway-api-testnet.circle.com/v1/balances';
 
 export function PrivyOperatorProvider(props: {
   readonly appId: string;
@@ -142,6 +144,39 @@ export function usePrivyUserWallet(): UserWalletSession {
     return result.toLowerCase();
   }
 
+  async function getGatewayBalance(payerWallet: string): Promise<string> {
+    if (!/^0x[0-9a-fA-F]{40}$/u.test(payerWallet)) {
+      throw new Error('Gateway balance payer wallet is invalid');
+    }
+    const response = await fetch(CIRCLE_GATEWAY_BALANCES_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        token: 'USDC',
+        sources: [{ depositor: payerWallet, domain: ARC_TESTNET_GATEWAY_DOMAIN }],
+      }),
+    });
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok || body === null || typeof body !== 'object' || Array.isArray(body)) {
+      throw new Error('Circle Gateway balance lookup failed');
+    }
+    const balances = (body as Record<string, unknown>).balances;
+    if (!Array.isArray(balances)) throw new Error('Circle Gateway balance response is invalid');
+    const matching = balances.find(
+      (entry): entry is Record<string, unknown> =>
+        entry !== null &&
+        typeof entry === 'object' &&
+        !Array.isArray(entry) &&
+        entry.domain === ARC_TESTNET_GATEWAY_DOMAIN &&
+        typeof entry.depositor === 'string' &&
+        entry.depositor.toLowerCase() === payerWallet.toLowerCase(),
+    );
+    if (!matching || typeof matching.balance !== 'string' || !/^\d+$/u.test(matching.balance)) {
+      throw new Error('Circle Gateway balance response is invalid');
+    }
+    return matching.balance;
+  }
+
   async function signX402Payment(
     quote: PaidApiQuote,
   ): Promise<SubmitPaidApiUserWalletRequest['payment_payload']> {
@@ -209,6 +244,7 @@ export function usePrivyUserWallet(): UserWalletSession {
   return {
     address: wallet?.address ?? null,
     connect,
+    getGatewayBalance,
     sendTransfer,
     signX402Payment,
   };
