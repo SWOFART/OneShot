@@ -60,10 +60,10 @@ The same paid-API errors continued: the user wallet signed, OneShot returned 202
 ## Git and PR state
 
 - Branch: `fix/circle-x402-validity-window`
-- Base: `origin/develop` at `bbb1052b0625f9311ecdfd3d0e5b7443322fbdbd`
-- Commit: merge `7cf0a565a4d5fbc36f3a3145797d7015876fff29`
-- Tree: `605285eed2170d6e812a8dd908b14e85ff929845`
-- PR: not created
+- Base: `origin/develop` at `fd515729ddba8516073ac598cf588bedb9291500`
+- Commit: merge `f7482378c9d5c7af30f880b54e03eb9d0e8409d1`
+- Tree: `aaf5b4a6f6c7844f7f17314ae9e969d16a10b235`
+- PR: #110, pending updated remote head
 - CI: not run; local validation is recorded above
 
 ## Review gates
@@ -73,6 +73,6 @@ The same paid-API errors continued: the user wallet signed, OneShot returned 202
 
 ## Handoff/next steps
 
-1. Run Gate A on the exact candidate tree `605285eed2170d6e812a8dd908b14e85ff929845`.
+1. Run Gate A on the exact candidate tree `aaf5b4a6f6c7844f7f17314ae9e969d16a10b235`.
 2. After approval, merge/push and deploy the API image plus the web bundle; the seller image has no source change for this fix.
 3. Test with one new paid-API task only after deployment; do not retry the old UNKNOWN intent blindly.
