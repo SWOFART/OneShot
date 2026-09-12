@@ -1330,6 +1330,27 @@ a:hover {
   color: var(--os-panel-ink);
 }
 
+.hero-copy h1 {
+  margin-bottom: 0.5rem;
+  font-size: clamp(2.2rem, 4vw, 3rem);
+}
+
+.hero-copy .hero-lead {
+  max-width: 34rem;
+  margin-bottom: 0.25rem;
+  font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+  line-height: 1.45;
+}
+
+.hero-copy .hero-sublead {
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+}
+
+.hero-copy .hero-actions {
+  margin-bottom: 0;
+}
+
 .hero-plain {
   padding: 32px;
   border-radius: var(--os-radius-lg);

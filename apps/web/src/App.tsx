@@ -77,7 +77,7 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
         </a>
       </nav>
       <header className="app-header hero-section">
-        <Hero height={620}>
+        <Hero height={460}>
           <p className="eyebrow">RESUMABLE PAID SERVICES / ARC TESTNET</p>
           <h1>Resume the job, not the payment.</h1>
           <p className="hero-lead">
