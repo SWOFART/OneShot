@@ -3,8 +3,7 @@
 Gate P5 operator UI composing intent creation/status, Privy and Arc settlement
 details, and Recovery Agent/Subgraph MCP evidence.
 
-The Cloudflare asset deployment serves this app at the domain root and the
-recovery fixture viewer from `@oneshot/recovery-ui` at `/recovery/`. Deploy it
+The Cloudflare asset deployment serves this app at the domain root. Deploy it
 only after `VITE_ONESHOT_API_BASE_URL` points to a reachable OneShot API. The
 Worker also proxies `/api/premium/*` to the separately deployed Circle seller
 when `SELLER_BACKEND_URL` is configured. An assets-only Worker cannot serve
@@ -26,8 +25,10 @@ The combined production asset tree is built with:
 pnpm build:frontend
 ```
 
-This emits the main app to `apps/web/dist` and the recovery viewer to
-`apps/web/dist/recovery`, matching the Wrangler asset directory.
+This emits the main app to `apps/web/dist`, matching the Wrangler asset
+directory. Recovery evidence is composed inside the authenticated workspace;
+the synthetic standalone fixture viewer is a local package test surface and is
+not deployed.
 
 The clients consume generated `@oneshot/contracts` types from frozen OpenAPI v1.
 The service token remains in React memory and is never written to browser

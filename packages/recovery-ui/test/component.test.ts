@@ -73,9 +73,11 @@ describe('RecoveryTimeline', () => {
     expect(document.body.textContent?.toLowerCase()).not.toContain('not paid');
   });
 
-  it('hides Subgraph MCP cleanly when fallback is selected', () => {
+  it('keeps Graph status visible when fallback is selected', () => {
     renderScenario('fallback-disabled');
     expect(screen.queryByRole('heading', { name: 'Subgraph MCP' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'The Graph' })).toBeTruthy();
+    expect(screen.getByText('NOT REPORTED')).toBeTruthy();
   });
 
   it('offers no retry, force-pay, or settlement action', () => {

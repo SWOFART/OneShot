@@ -1,5 +1,4 @@
 export const RECOVERY_TIMELINE_VERSION = 'recovery-timeline-v1' as const;
-export const RECOVERY_MOCK_SERVER_VERSION = 'c05-mock-v1' as const;
 
 export type RecoveryState = 'SUBMITTING' | 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE';
 export type RecoveryAction = 'WAIT' | 'RECONCILE' | 'ESCALATE' | 'RETURN_EXISTING_RESULT';
@@ -94,7 +93,6 @@ export interface CoreDispositionSummary {
 
 export interface RecoveryTimelinePage {
   readonly schemaVersion: typeof RECOVERY_TIMELINE_VERSION;
-  readonly mockServerVersion: typeof RECOVERY_MOCK_SERVER_VERSION;
   readonly businessIntentId: string;
   readonly authoritativeState: RecoveryState;
   readonly stateVersion: string;
@@ -357,11 +355,6 @@ export function parseRecoveryTimelinePage(value: unknown): RecoveryTimelinePage 
   const page = requireRecord(input.page, '$.page');
   const parsed: RecoveryTimelinePage = {
     schemaVersion: requireEnum(input.schemaVersion, [RECOVERY_TIMELINE_VERSION], '$.schemaVersion'),
-    mockServerVersion: requireEnum(
-      input.mockServerVersion,
-      [RECOVERY_MOCK_SERVER_VERSION],
-      '$.mockServerVersion',
-    ),
     businessIntentId: requireString(input.businessIntentId, '$.businessIntentId'),
     authoritativeState: requireEnum(
       input.authoritativeState,

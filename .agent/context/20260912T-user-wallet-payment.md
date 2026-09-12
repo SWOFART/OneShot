@@ -22,7 +22,7 @@ durable one-intent/at-most-one-settlement invariant.
 ## Scope and non-goals
 
 In scope: contracts/OpenAPI, Postgres job binding, API receipt verification,
-Privy browser transaction submission, focused tests, and migration 008.
+Privy browser transaction submission, focused tests, and migration 009 (after syncing develop's migration 008).
 
 Out of scope: deployment, live payment submission, automatic retry of any
 existing job, and changing the server-wallet path used by other demos.

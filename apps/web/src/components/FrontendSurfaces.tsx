@@ -21,8 +21,8 @@ export function SettlementSurface({
   if (!businessIntentId) {
     return (
       <EmptySurface
-        title="Select an intent to inspect settlement evidence"
-        detail="Create or replay an intent first. This read-only view never creates a payment."
+        title="Select a request to inspect payment proof"
+        detail="Open a request first. This read-only view never creates or retries a payment."
       />
     );
   }
@@ -44,14 +44,14 @@ export function RecoverySurface({
   if (!businessIntentId) {
     return (
       <EmptySurface
-        title="Select an intent to inspect recovery evidence"
-        detail="The recovery view is read-only and always displays settlement permission as NEVER."
+        title="Select a request to inspect recovery control"
+        detail="Open a request first. Recovery control is read-only and never starts a payment."
       />
     );
   }
 
   return (
-    <div className="composed-surface recovery-surface" aria-label="Recovery evidence review">
+    <div className="composed-surface recovery-surface" aria-label="Recovery control">
       <RecoveryRoute businessIntentId={businessIntentId} client={client} />
     </div>
   );

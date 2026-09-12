@@ -88,6 +88,7 @@ export interface PrivyArcWalletProviderOptions {
       readonly logIndex: number | null;
     }[];
   }>;
+  readonly getTransaction?: (hash: Hex) => Promise<{ readonly input: Hex }>;
   readonly getBlockNumber?: () => Promise<bigint>;
 }
 
@@ -111,6 +112,7 @@ export class PrivyArcWalletProvider implements WalletProvider {
   readonly #options: PrivyArcWalletProviderOptions;
   readonly #send: NonNullable<PrivyArcWalletProviderOptions['sendTransaction']>;
   readonly #getReceipt: NonNullable<PrivyArcWalletProviderOptions['getTransactionReceipt']>;
+  readonly #getTransaction: NonNullable<PrivyArcWalletProviderOptions['getTransaction']>;
   readonly #getBlock: NonNullable<PrivyArcWalletProviderOptions['getBlockNumber']>;
   readonly #getNativeBalance: NonNullable<PrivyArcWalletProviderOptions['getNativeBalance']>;
   readonly #getGasPrice: NonNullable<PrivyArcWalletProviderOptions['getGasPrice']>;
@@ -282,6 +284,7 @@ export class PrivyArcWalletProvider implements WalletProvider {
           hash,
           timeout: options.rpcTimeoutMs ?? 15_000,
         }));
+    this.#getTransaction = options.getTransaction ?? ((hash) => publicClient.getTransaction({ hash }));
     this.#getBlock = options.getBlockNumber ?? (() => publicClient.getBlockNumber());
     this.#getNativeBalance =
       options.getNativeBalance ?? ((address) => publicClient.getBalance({ address }));
@@ -377,5 +380,12 @@ export class PrivyArcWalletProvider implements WalletProvider {
       }
       throw error;
     }
+  }
+
+  async getTransactionInput(transactionHash: string): Promise<string> {
+    if (!TRANSACTION_HASH.test(transactionHash)) {
+      throw new Error('Refusing to query a malformed transaction hash');
+    }
+    return (await this.#getTransaction(transactionHash as Hex)).input;
   }
 }

@@ -27,6 +27,7 @@ export interface ProviderRequestIdentity {
   readonly policyId?: string | undefined;
   readonly providerKind?: 'DIRECT_ARC' | 'CIRCLE_X402' | undefined;
   readonly transactionHash?: string | undefined;
+  readonly providerTransferId?: string | undefined;
 }
 
 export interface SettlementPort {

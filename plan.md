@@ -1,5 +1,9 @@
 # OneShot Product Delivery Plan
 
+Current 24-hour execution priority: [One-day rescue plan](docs/ONE_DAY_RESCUE.md)
+(2026-09-12). It records current code, sponsor research, demo cutoffs and UI fixes;
+the R0–R5 text below remains the historical planning baseline.
+
 Revision: 2026-09-10. Planning baseline: `develop` at `86c8f86`.
 This PR changes documentation only; new runtime and UX capabilities remain planned.
 

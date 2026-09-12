@@ -74,7 +74,7 @@ function localState(providerKind: 'DIRECT_ARC' | 'CIRCLE_X402') {
 }
 
 describe('x402 recovery bridge', () => {
-  it('accepts a Gateway candidate only for a durably identified Circle intent', async () => {
+  it('does not treat Graph token-transfer candidates as Circle Gateway proof', async () => {
     const bridge = new PrivyArcEvidenceBridge({
       walletAddress: payer,
       gatewayWalletAddress: ARC_X402_GATEWAY_WALLET,
@@ -82,10 +82,7 @@ describe('x402 recovery bridge', () => {
       localStatePort: { read: async () => localState('CIRCLE_X402') },
     });
 
-    const evidence = await bridge.verifyCandidate(binding, candidate);
-
-    expect(evidence?.arc?.receiptStatus).toBe('SUCCESS');
-    expect(evidence?.arc?.transfer?.recipient).toBe(recipient);
+    await expect(bridge.verifyCandidate(binding, candidate)).resolves.toBeNull();
   });
 
   it('does not let a Gateway Graph candidate establish a direct intent settlement', async () => {

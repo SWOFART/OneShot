@@ -238,6 +238,16 @@ const schemas = {
       tool_id: { type: 'string', const: 'circle-x402-api-v1' },
     },
   },
+  ApprovePaidApiRequest: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['task_key', 'tool_id', 'approved_quote'],
+    properties: {
+      task_key: boundedId,
+      tool_id: { type: 'string', const: 'circle-x402-api-v1' },
+      approved_quote: { $ref: '#/$defs/PaidApiQuote' },
+    },
+  },
   PaidApiQuote: {
     type: 'object',
     additionalProperties: false,
@@ -697,7 +707,7 @@ const openapi = {
         operationId: 'startPaidApi',
         summary: 'Create or replay one paid x402 API Business Intent',
         security: serviceSecurity,
-        requestBody: { required: true, content: jsonContent('CreatePaidApiRequest') },
+        requestBody: { required: true, content: jsonContent('ApprovePaidApiRequest') },
         responses: {
           200: response('Identical replay; existing paid API request returned.', 'PaidApiResponse'),
           202: response('Paid API request accepted.', 'PaidApiResponse'),
@@ -979,6 +989,10 @@ export interface UserWalletPayment {
 export interface CreatePaidApiRequest {
   readonly task_key: string;
   readonly tool_id: 'circle-x402-api-v1';
+}
+
+export interface ApprovePaidApiRequest extends CreatePaidApiRequest {
+  readonly approved_quote: PaidApiQuote;
 }
 
 export interface PaidApiQuote {

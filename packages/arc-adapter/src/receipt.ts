@@ -13,9 +13,15 @@
  * evidence establishes committed settlement."
  */
 
+import { decodeAbiParameters, decodeFunctionData, parseAbi, parseAbiParameters } from 'viem';
+
 /** keccak256("Transfer(address,address,uint256)"). */
 export const TRANSFER_EVENT_TOPIC =
   '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+
+/** keccak256("BatchProcessed(bytes32,address,address)"). */
+export const CIRCLE_BATCH_PROCESSED_TOPIC =
+  '0x8e9878875610f80a970e0cea1889a4c7de3012c1a52ae169d9d5d3ab2c08b670';
 
 export interface ReceiptLog {
   readonly address: string;
@@ -59,6 +65,16 @@ export type ReceiptVerdict =
    * treated as failure: something happened on-chain and it must be reconciled.
    */
   | { readonly result: 'NOT_CONFIRMED'; readonly detail: string };
+
+export interface ExpectedCircleGatewaySettlement {
+  readonly chainId: number;
+  readonly gatewayWalletAddress: string;
+  readonly tokenContract: string;
+  readonly payer: string;
+  readonly recipient: string;
+  readonly amountAtomic: bigint;
+  readonly gatewayDomain: number;
+}
 
 function sameAddress(left: string, right: string): boolean {
   return left.trim().toLowerCase() === right.trim().toLowerCase();
@@ -156,4 +172,77 @@ export function verifyReceipt(
   }
 
   return { result: 'CONFIRMED', transferLogIndex: match.logIndex };
+}
+
+/** Verify the balance deltas and BatchProcessed event produced by Circle Gateway batching. */
+export function verifyCircleGatewayBatchReceipt(
+  receipt: TransactionReceipt,
+  transactionInput: string,
+  expected: ExpectedCircleGatewaySettlement,
+): ReceiptVerdict {
+  if (receipt.chainId !== expected.chainId) {
+    return { result: 'NOT_CONFIRMED', detail: 'Circle Gateway receipt is from the wrong chain.' };
+  }
+  if (!sameAddress(receipt.to, expected.gatewayWalletAddress)) {
+    return { result: 'NOT_CONFIRMED', detail: 'Receipt did not call the Circle Gateway wallet.' };
+  }
+  if (receipt.status === 0) {
+    return { result: 'FINAL_REVERT', detail: 'Circle Gateway batch transaction reverted.' };
+  }
+  if (sameAddress(expected.payer, expected.recipient)) {
+    return { result: 'NOT_CONFIRMED', detail: 'Circle Gateway payer and recipient must differ.' };
+  }
+
+  try {
+    const decoded = decodeFunctionData({
+      abi: parseAbi(['function submitBatch(bytes calldataBytes, bytes signature)']),
+      data: transactionInput as `0x${string}`,
+    });
+    if (decoded.functionName !== 'submitBatch') throw new Error('wrong function');
+    const [calldataBytes] = decoded.args;
+    const [deltas, batchId, domain, tokenAddress, gatewayWalletAddress] = decodeAbiParameters(
+      parseAbiParameters(
+        '(address depositor,int256 value)[] deltas, bytes32 batchId, uint32 domain, address tokenAddress, address gatewayWalletAddress',
+      ),
+      calldataBytes,
+    );
+    if (
+      domain !== expected.gatewayDomain ||
+      !sameAddress(tokenAddress, expected.tokenContract) ||
+      !sameAddress(gatewayWalletAddress, expected.gatewayWalletAddress)
+    ) {
+      return { result: 'NOT_CONFIRMED', detail: 'Circle Gateway batch identity does not match.' };
+    }
+    const payerDeltas = deltas.filter(
+      (delta) =>
+        sameAddress(delta.depositor, expected.payer) && delta.value === -expected.amountAtomic,
+    );
+    const recipientDeltas = deltas.filter(
+      (delta) =>
+        sameAddress(delta.depositor, expected.recipient) && delta.value === expected.amountAtomic,
+    );
+    if (payerDeltas.length !== 1 || recipientDeltas.length !== 1) {
+      return {
+        result: 'NOT_CONFIRMED',
+        detail: 'Circle Gateway batch does not contain exactly the expected payer debit and recipient credit.',
+      };
+    }
+    const events = receipt.logs.filter(
+      (log) =>
+        sameAddress(log.address, expected.gatewayWalletAddress) &&
+        log.topics[0]?.toLowerCase() === CIRCLE_BATCH_PROCESSED_TOPIC &&
+        log.topics[1]?.toLowerCase() === batchId.toLowerCase() &&
+        log.topics[3] !== undefined &&
+        sameAddress(addressFromTopic(log.topics[3]), expected.tokenContract),
+    );
+    if (events.length !== 1) {
+      return {
+        result: 'NOT_CONFIRMED',
+        detail: `Circle Gateway receipt contains ${events.length} matching BatchProcessed events; expected exactly one.`,
+      };
+    }
+    return { result: 'CONFIRMED', transferLogIndex: events[0]!.logIndex };
+  } catch {
+    return { result: 'NOT_CONFIRMED', detail: 'Circle Gateway submitBatch calldata is malformed.' };
+  }
 }

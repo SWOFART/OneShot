@@ -4,7 +4,9 @@ The workspace Tools page now contains the live paid-API path. First deploy the
 seller described in [`CIRCLE_X402_SELLER.md`](CIRCLE_X402_SELLER.md), then
 configure `ONESHOT_X402_URL` and `ONESHOT_X402_MAX_AMOUNT_ATOMIC` in both the
 API and worker environments. Use the site to request a quote and approve the
-stable task key. The approval creates one durable Business Intent; the worker
+stable task key. Approval sends the exact displayed quote; if the provider quote
+changes, the API rejects the approval before creating durable payment work. The
+approval creates one durable Business Intent; the worker
 submits Circle Gateway x402 only after the existing authorization and
 submission claims.
 
@@ -50,16 +52,21 @@ An HTML `200` response means the Cloudflare Worker is serving the SPA instead of
 the seller proxy; a `503 SELLER_NOT_READY` response means
 `SELLER_BACKEND_URL` has not been configured on the Worker.
 
-The script performs one paid HTTP request. If the response is lost, malformed,
-or lacks a confirmed `PAYMENT-RESPONSE` transaction hash, the result is treated
-as `UNKNOWN` and the process exits without retrying. The in-process guard
-collapses duplicate calls for one Business Intent; the production job adapter
-must persist the claim and evidence in OneShot's PostgreSQL ledger before using
-this rail across restarts or workers.
+The script performs one paid HTTP request. Circle's `PAYMENT-RESPONSE` may carry
+a transfer UUID instead of an Arc transaction hash. OneShot persists that UUID
+and the paid response first, then reads Circle's transfer status and transaction
+hash and verifies the Arc Gateway `submitBatch` calldata plus its
+`BatchProcessed` event. A lost or malformed response remains `UNKNOWN` and the
+process exits without retrying. The in-process guard collapses duplicate calls
+for one Business Intent; the production job adapter persists the claim and
+evidence in OneShot's PostgreSQL ledger before using this rail across restarts
+or workers.
 
-This runbook does not claim that the x402 request is the direct Arc settlement
-path. Circle Gateway batches the signed authorization, while the direct Arc
-transfer demo remains the canonical OneShot settlement proof.
+This runbook does not claim that the x402 request is a direct ERC-20 transfer.
+Circle Gateway batches the signed authorization, so a Graph token-transfer
+candidate is discovery-only and may be absent. The Circle transfer record plus
+the authoritative Arc Gateway batch receipt are the proof for this mode; the
+direct Arc transfer demo remains the simpler canonical settlement proof.
 
 Official references:
 

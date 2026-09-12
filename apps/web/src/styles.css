@@ -57,7 +57,11 @@ button {
   font-weight: 300;
   letter-spacing: 0.06em;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
 }
 
 button:hover:not(:disabled) {
@@ -96,7 +100,7 @@ p {
 }
 
 a {
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   text-decoration: none;
   transition: color 0.2s ease;
 }
@@ -138,7 +142,7 @@ a:hover {
 
 .workspace-loading-eyebrow {
   margin: 0;
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-family: var(--os-font-mono);
   font-size: 0.7rem;
   letter-spacing: 0.16em;
@@ -190,7 +194,7 @@ a:hover {
   font-size: 0.65rem;
   font-weight: 300;
   letter-spacing: 0.12em;
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-family: var(--os-font-mono);
 }
 
@@ -225,8 +229,8 @@ a:hover {
 }
 
 .status-badge.token-badge {
-  border-color: var(--os-signal);
-  color: var(--os-signal);
+  border-color: var(--os-accent-ink);
+  color: var(--os-accent-ink);
   font-family: var(--os-font-mono);
 }
 
@@ -261,7 +265,7 @@ a:hover {
 
 .eyebrow {
   margin-bottom: 1rem;
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-size: 0.8rem;
   font-weight: 300;
   letter-spacing: 0.2em;
@@ -359,13 +363,13 @@ a:hover {
 .readiness.success {
   border-color: var(--os-line);
   color: var(--os-state-committed);
-  background: var(--os-surface);
+  background: var(--os-panel);
 }
 
 .readiness.warning {
   border-color: var(--os-line);
   color: var(--os-state-unknown);
-  background: var(--os-surface);
+  background: var(--os-panel);
 }
 
 /* ==========================================================================
@@ -387,7 +391,7 @@ a:hover {
   font-size: 0.75rem;
   font-weight: 300;
   letter-spacing: 0.16em;
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-family: var(--os-font-mono);
 }
 
@@ -423,7 +427,7 @@ a:hover {
   font-size: 0.72rem;
   font-weight: 300;
   letter-spacing: 0.14em;
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   margin-bottom: 0.9rem;
 }
 
@@ -540,7 +544,7 @@ a:hover {
 }
 
 .loading-text {
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-weight: 300;
 }
 
@@ -637,7 +641,7 @@ a:hover {
 }
 
 .machine-token summary:hover {
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
 }
 
 .machine-token label {
@@ -715,7 +719,7 @@ a:hover {
 }
 
 .intent-context input:focus {
-  border-color: var(--os-signal);
+  border-color: var(--os-accent-ink);
 }
 
 /* ==========================================================================
@@ -731,7 +735,7 @@ a:hover {
 
 .tabs button {
   min-height: 38px;
-  color: var(--os-panel-ink);
+  color: var(--os-ink);
   background: transparent;
   border: 1px solid var(--os-line-strong);
 }
@@ -739,7 +743,11 @@ a:hover {
 .tabs button[aria-selected='true'] {
   color: var(--os-on-signal);
   background: var(--os-signal);
-  border-color: var(--os-signal);
+  border-color: var(--os-accent-ink);
+}
+
+.tabs button[aria-selected='true']:hover:not(:disabled) {
+  opacity: 1;
 }
 
 /* ==========================================================================
@@ -792,7 +800,7 @@ a:hover {
 
 .form input:focus,
 .lookup input:focus {
-  border-color: var(--os-signal);
+  border-color: var(--os-accent-ink);
 }
 
 .form output {
@@ -804,7 +812,7 @@ a:hover {
   border: 1px solid var(--os-line);
   border-radius: 999px;
   background: var(--os-surface);
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-family: var(--os-font-mono);
   font-size: 0.85rem;
 }
@@ -877,7 +885,7 @@ a:hover {
 }
 
 .polling {
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   font-weight: 300;
 }
 
@@ -999,7 +1007,8 @@ a:hover {
 
 .quote-panel {
   margin-top: 1.25rem;
-  background: var(--os-field);
+  border: 1px solid var(--os-line-strong);
+  background: var(--os-surface);
 }
 
 .quote-panel .panel-lede {
@@ -1100,10 +1109,6 @@ a:hover {
   border-radius: 0.6rem;
   color: var(--os-state-committed);
   background: var(--os-panel);
-}
-
-.payment-evidence-panel {
-  margin-top: 1.5rem;
 }
 
 .sr-only {
@@ -1237,7 +1242,7 @@ a:hover {
 
 .meta-code {
   font-family: var(--os-font-mono);
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
   background: var(--os-surface);
   padding: 0.2rem 0.4rem;
   border-radius: 999px;
@@ -1265,7 +1270,7 @@ a:hover {
 }
 
 .footer-links a:hover {
-  color: var(--os-signal);
+  color: var(--os-accent-ink);
 }
 
 /* ==========================================================================
@@ -1327,6 +1332,27 @@ a:hover {
   width: 50%;
   padding: 26px 28px;
   color: var(--os-panel-ink);
+}
+
+.hero-copy h1 {
+  margin-bottom: 0.5rem;
+  font-size: clamp(2.2rem, 4vw, 3rem);
+}
+
+.hero-copy .hero-lead {
+  max-width: 34rem;
+  margin-bottom: 0.25rem;
+  font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+  line-height: 1.45;
+}
+
+.hero-copy .hero-sublead {
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+}
+
+.hero-copy .hero-actions {
+  margin-bottom: 0;
 }
 
 .hero-plain {
@@ -1407,5 +1433,356 @@ a:hover {
   .footer-bottom {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* ========================================================================
+   User-facing workspace language
+   ======================================================================== */
+
+.workspace-overview {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.workspace-overview h2,
+.workspace-panel h2 {
+  margin: 0;
+}
+
+.workspace-overview > p:not(.eyebrow),
+.workspace-panel > .panel-lede {
+  max-width: 760px;
+  margin: 0;
+  color: var(--os-panel-ink-muted);
+  line-height: 1.55;
+}
+
+.workspace-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.workspace-fact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.workspace-fact-grid article {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid var(--os-panel-line);
+  border-radius: 0.75rem;
+  background: var(--os-surface);
+}
+
+.workspace-fact-grid span {
+  color: var(--os-panel-ink-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workspace-fact-grid strong {
+  color: var(--os-panel-ink);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.workspace-fact-grid p {
+  margin: 0;
+  color: var(--os-panel-ink-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.proof-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+}
+
+.proof-metrics article {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--os-panel-line);
+  border-radius: 0.75rem;
+  background: var(--os-surface);
+}
+
+.proof-metrics span,
+.proof-metrics small {
+  color: var(--os-ink-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.proof-metrics strong {
+  color: var(--os-ink);
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+.proof-metrics small {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.proof-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.proof-controls .workspace-status {
+  margin: 0;
+}
+
+.proof-request {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--os-panel-line);
+}
+
+.proof-request-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.proof-request-heading .eyebrow {
+  margin-bottom: 0.35rem;
+}
+
+.proof-request-heading h3 {
+  margin: 0;
+  color: var(--os-panel-ink);
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.proof-request-id {
+  margin: 0.35rem 0 0;
+  color: var(--os-panel-ink-muted);
+  font-family: var(--os-font-mono);
+  font-size: 0.78rem;
+}
+
+.proof-read-only {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--os-panel-line);
+  border-radius: 999px;
+  color: var(--os-panel-ink-muted);
+  font-family: var(--os-font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+}
+
+.proof-surface {
+  overflow: hidden;
+  border: 1px solid var(--os-panel-line);
+  border-radius: 0.75rem;
+}
+
+.workspace-status {
+  margin: 0.75rem 0;
+  color: var(--os-panel-ink-muted);
+  font-size: 0.82rem;
+}
+
+.technical-details {
+  margin-top: 0.9rem;
+  border-top: 1px solid var(--os-panel-line);
+  padding-top: 0.75rem;
+}
+
+.technical-details summary {
+  color: var(--os-panel-ink-muted);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.technical-details > p {
+  max-width: 760px;
+  color: var(--os-panel-ink-muted);
+  line-height: 1.5;
+}
+
+.operator-details {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.operator-details[open] {
+  display: grid;
+}
+
+.operator-details .operator-did {
+  color: var(--os-panel-ink-muted);
+}
+
+@media (max-width: 768px) {
+  .workspace-action-grid,
+  .workspace-fact-grid,
+  .proof-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Match ink to its actual surface, including cards nested in dark panels. */
+.console-container,
+.login-gate,
+.invariant-card,
+.panel,
+.fixture-toolbar,
+.hero-plain,
+.hero-copy {
+  --os-accent-ink: var(--os-signal);
+}
+
+.console-container .tabs button {
+  color: var(--os-panel-ink);
+}
+
+.console-container .tabs button[aria-selected='true'] {
+  color: var(--os-on-signal);
+}
+
+.hero-plain h1,
+.hero-copy h1,
+.hero-plain .btn-hero-secondary,
+.hero-copy .btn-hero-secondary {
+  color: var(--os-panel-ink);
+}
+
+.hero-plain .hero-lead,
+.hero-copy .hero-lead,
+.hero-plain .hero-sublead,
+.hero-copy .hero-sublead {
+  color: var(--os-panel-ink-muted);
+}
+
+/* Cabinet header shares the login card's edges; multiline copy uses auto height. */
+.app-header.cabinet-header {
+  max-width: none;
+  padding: 0 0 2rem;
+}
+
+.quote-panel,
+.job-list li,
+.workspace-fact-grid article,
+.advanced-fields {
+  --os-panel-ink: var(--os-ink);
+  --os-panel-ink-muted: var(--os-ink-muted);
+  --os-accent-ink: var(--os-ink);
+  color: var(--os-ink);
+}
+
+.paid-api-status {
+  --os-panel-ink: var(--os-on-field);
+  --os-panel-ink-muted: var(--os-on-field);
+  --os-accent-ink: var(--os-on-field);
+  color: var(--os-on-field);
+}
+
+.job-settlement-summary {
+  color: var(--os-state-committed);
+}
+
+.response-output,
+.job-workspace > input,
+.advanced-fields input,
+.operator-details .operator-did,
+.operator-details summary {
+  color: var(--os-ink);
+}
+
+.job-workspace > input[readonly] {
+  color: var(--os-ink-muted);
+}
+
+/* Small feedback on every action; respect the operator's motion preference. */
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.panel-heading h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.quote-panel .facts div,
+.quote-panel .technical-details {
+  border-color: var(--os-line);
+}
+
+.quote-panel .facts dd {
+  font-family: var(--os-font-primary);
+  font-weight: 400;
+}
+
+.quote-panel .facts div:first-child dd {
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.walkthrough {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--os-line-strong);
+  border-radius: var(--os-radius);
+  background: var(--os-surface);
+  color: var(--os-ink);
+}
+
+.walkthrough summary { cursor: pointer; font-weight: 500; }
+.walkthrough p { margin: 0.75rem 0; line-height: 1.5; }
+.walkthrough ol { padding-left: 1.25rem; line-height: 1.6; }
+.walkthrough li { margin-bottom: 0.65rem; }
+.walkthrough a { text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  button:hover:not(:disabled),
+  button:active:not(:disabled),
+  .invariant-card:hover {
+    transform: none;
   }
 }

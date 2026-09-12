@@ -32,7 +32,7 @@ describe('LoginGate', () => {
     expect(login).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the console and the operator DID when signed in', () => {
+  it('shows the console and masks the session identifier when signed in', () => {
     render(
       <LoginGate
         session={signedInSession('did:privy:abc123')}
@@ -43,7 +43,9 @@ describe('LoginGate', () => {
       </LoginGate>,
     );
     expect(screen.getByText(CONSOLE_TEXT)).toBeTruthy();
-    expect(screen.getByText('did:privy:abc123')).toBeTruthy();
+    expect(screen.getByText('PRIVY CONNECTED')).toBeTruthy();
+    expect(screen.getByText('Workspace session active')).toBeTruthy();
+    expect(screen.queryByText('did:privy:abc123')).toBeNull();
   });
 
   it('never renders the access token', () => {
