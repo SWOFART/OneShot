@@ -3,7 +3,10 @@ import { useEffect, useState } from 'react';
 import type { JobView, PaidApiQuote, PaidApiResponse, SupplierQuote } from '@oneshot/contracts';
 import type { JobApiClient } from '../api/job-client.js';
 import type { UserWalletSession } from '../auth/session.js';
-import type { PaidApiClient } from '../api/paid-api-client.js';
+import {
+  PaidApiUserWalletSubmissionError,
+  type PaidApiClient,
+} from '../api/paid-api-client.js';
 import { usdcToAtomicUnits } from '../utils/money.js';
 import {
   deliveryStatusCopy,
@@ -474,11 +477,13 @@ export function CircleX402DemoPanel(props: {
       setRequest(result);
       setNotice('Request prepared. Your wallet will now ask you to sign the exact Circle payment.');
       await signAndSubmit(result, approvedQuote, payerWallet);
-    } catch {
+    } catch (error) {
       if (!props.userWallet) setQuote(null);
       setNotice(
-        props.userWallet
-          ? 'The payment was not completed. If your wallet showed a signature request, check the same request status before trying again.'
+        props.userWallet && error instanceof PaidApiUserWalletSubmissionError
+          ? error.message
+          : props.userWallet
+            ? 'The payment was not completed. If your wallet showed a signature request, check the same request status before trying again.'
           : 'The API request was not accepted. Keep the same request key before retrying.',
       );
     } finally {
@@ -519,8 +524,12 @@ export function CircleX402DemoPanel(props: {
     setNotice('');
     try {
       await signAndSubmit(request, quote, payerWallet);
-    } catch {
-      setNotice('The payment was not completed. Check the same request status before trying again.');
+    } catch (error) {
+      setNotice(
+        error instanceof PaidApiUserWalletSubmissionError
+          ? error.message
+          : 'The payment was not completed. Check the same request status before trying again.',
+      );
     } finally {
       setLoading(null);
     }

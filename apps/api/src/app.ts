@@ -17,6 +17,7 @@ import {
   type SubmitPaidApiUserWalletRequest,
 } from '@oneshot/contracts';
 import { derivedJobId } from '@oneshot/domain';
+import { CircleX402PreSubmitError } from '@oneshot/supplier-adapter';
 import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { ServiceAuthenticator } from './auth.js';
@@ -553,6 +554,16 @@ export function buildApi(dependencies: ApiDependencies) {
           )
           .send(result);
       } catch (error) {
+        if (error instanceof CircleX402PreSubmitError) {
+          sendError(
+            reply,
+            400,
+            'INVALID_REQUEST',
+            'The Circle authorization is no longer valid. No payment was sent; sign a fresh authorization.',
+            correlationFor(request),
+          );
+          return;
+        }
         if (error instanceof PaidApiUserWalletConflictError) {
           sendError(
             reply,
