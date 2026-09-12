@@ -266,6 +266,24 @@ export function buildApi(dependencies: ApiDependencies) {
       'authorization, content-type, x-correlation-id',
     );
 
+    // The browser client sends this read-only refresh as a bodyless JSON POST.
+    // Fastify rejects an empty body when `content-type` is application/json
+    // before the route handler can run. Treat the absent body as absent JSON
+    // for this endpoint only; routes with required JSON bodies keep their
+    // normal parser and validation behavior.
+    if (
+      request.method === 'POST' &&
+      request.url.split('?')[0] === '/v1/activity/refresh' &&
+      request.headers['content-type']?.split(';', 1)[0]?.trim().toLowerCase() ===
+        'application/json' &&
+      (request.headers['content-length'] === undefined ||
+        request.headers['content-length'] === '0') &&
+      request.headers['transfer-encoding'] === undefined
+    ) {
+      delete request.headers['content-type'];
+      delete request.raw.headers['content-type'];
+    }
+
     if (request.method === 'OPTIONS') {
       void reply.code(204).send();
       return reply;

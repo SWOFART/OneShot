@@ -803,7 +803,13 @@ describe('resumable job API boundary', () => {
       (await app.inject({ method: 'GET', url: `/v1/jobs/${job.job_id}/result`, headers })).json(),
     ).toEqual(job.result);
     expect(
-      (await app.inject({ method: 'POST', url: '/v1/activity/refresh', headers })).statusCode,
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/v1/activity/refresh',
+          headers: { ...headers, 'content-type': 'application/json' },
+        })
+      ).statusCode,
     ).toBe(202);
     expect((await app.inject({ method: 'GET', url: '/v1/activity', headers })).json()).toEqual({
       recorded_settlement_count: 1,
