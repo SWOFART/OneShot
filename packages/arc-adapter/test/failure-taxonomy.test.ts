@@ -78,6 +78,18 @@ describe('errors that may have followed a sent request', () => {
       kind: 'SERVER_ERROR_5XX',
     });
   });
+
+  it('finds nested provider HTTP status without trusting arbitrary error text', () => {
+    expect(
+      classifyTransportError({
+        name: 'PrivyAPIError',
+        cause: { response: { statusCode: 403 } },
+      }),
+    ).toEqual({
+      phase: 'PRE_BROADCAST',
+      kind: 'LOCAL_VALIDATION_FAILED',
+    });
+  });
 });
 
 describe('http status classification', () => {

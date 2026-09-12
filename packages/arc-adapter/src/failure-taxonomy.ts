@@ -88,6 +88,35 @@ function errorCodeOf(error: unknown): string | undefined {
   return typeof code === 'string' ? code : undefined;
 }
 
+function httpStatusOf(error: unknown): number | undefined {
+  const seen = new Set<object>();
+
+  const visit = (value: unknown, depth: number): number | undefined => {
+    if (depth > 3 || typeof value !== 'object' || value === null) return undefined;
+    if (seen.has(value)) return undefined;
+    seen.add(value);
+
+    for (const key of ['status', 'statusCode', 'httpStatus']) {
+      const candidate = (value as Record<string, unknown>)[key];
+      const status =
+        typeof candidate === 'number'
+          ? candidate
+          : typeof candidate === 'string' && /^\d{3}$/u.test(candidate)
+            ? Number(candidate)
+            : undefined;
+      if (status !== undefined && status >= 100 && status <= 599) return status;
+    }
+
+    for (const key of ['response', 'cause', 'error', 'body', 'data']) {
+      const status = visit((value as Record<string, unknown>)[key], depth + 1);
+      if (status !== undefined) return status;
+    }
+    return undefined;
+  };
+
+  return visit(error, 0);
+}
+
 /**
  * Classify a thrown transport error.
  *
@@ -96,12 +125,9 @@ function errorCodeOf(error: unknown): string | undefined {
  * failure mode that pays twice.
  */
 export function classifyTransportError(error: unknown): TransportFailure {
-  if (typeof error === 'object' && error !== null) {
-    const status =
-      (error as { status?: unknown }).status ?? (error as { statusCode?: unknown }).statusCode;
-    if (typeof status === 'number') {
-      return classifyHttpStatus(status);
-    }
+  const status = httpStatusOf(error);
+  if (status !== undefined) {
+    return classifyHttpStatus(status);
   }
 
   const code = errorCodeOf(error);

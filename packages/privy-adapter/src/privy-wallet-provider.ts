@@ -10,6 +10,14 @@ interface PrivyTransactionResult {
   readonly transaction_id?: string;
 }
 
+interface PrivyTransactionEnvelope {
+  readonly data?: PrivyTransactionResult;
+  readonly caip2?: string;
+  readonly hash?: string;
+  readonly reference_id?: string | null;
+  readonly transaction_id?: string;
+}
+
 export interface PrivyArcWalletProviderOptions {
   readonly appId: string;
   readonly appSecret: string;
@@ -34,7 +42,7 @@ export interface PrivyArcWalletProviderOptions {
         };
       };
     },
-  ) => Promise<PrivyTransactionResult>;
+  ) => Promise<PrivyTransactionResult | { readonly data: PrivyTransactionResult }>;
   readonly signTransaction?: (
     walletId: string,
     input: {
@@ -84,6 +92,19 @@ export interface PrivyArcWalletProviderOptions {
 }
 
 const TRANSACTION_HASH = /^0x[0-9a-fA-F]{64}$/;
+
+function normalizeTransactionResult(result: unknown, expectedCaip2: string): PrivyTransactionResult {
+  if (typeof result !== 'object' || result === null) {
+    throw new Error('Privy returned a non-object settlement response');
+  }
+
+  const envelope = result as PrivyTransactionEnvelope;
+  const candidate = envelope.data ?? envelope;
+  if (candidate.caip2 !== expectedCaip2 || !TRANSACTION_HASH.test(candidate.hash ?? '')) {
+    throw new Error('Privy returned settlement identity that does not match the request');
+  }
+  return candidate as PrivyTransactionResult;
+}
 
 /** Real Privy signing plus read-only Arc receipt observation. */
 export class PrivyArcWalletProvider implements WalletProvider {
@@ -308,12 +329,11 @@ export class PrivyArcWalletProvider implements WalletProvider {
         },
       },
     });
-    if (result.caip2 !== caip2 || !TRANSACTION_HASH.test(result.hash)) {
-      throw new Error('Privy returned settlement identity that does not match the request');
-    }
+    const normalized = normalizeTransactionResult(result, caip2);
     return {
-      transactionHash: result.hash,
-      providerReferenceId: result.transaction_id ?? result.reference_id ?? input.referenceId,
+      transactionHash: normalized.hash,
+      providerReferenceId:
+        normalized.transaction_id ?? normalized.reference_id ?? input.referenceId,
       walletAddress: this.#options.walletAddress,
     };
   }
