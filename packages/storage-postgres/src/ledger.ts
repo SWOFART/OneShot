@@ -64,6 +64,8 @@ export interface PaidApiTarget {
   readonly resourceUrl: string;
   readonly method: 'GET';
   readonly quotePayload: unknown;
+  readonly paymentMode: PaymentMode;
+  readonly payerWallet?: string;
 }
 
 export type CreatePaidApiResult =
@@ -205,6 +207,8 @@ interface PaidApiRow {
   readonly response_payload: unknown;
   readonly provider_transaction_hash: string | null;
   readonly provider_transfer_id: string | null;
+  readonly payment_mode: PaymentMode;
+  readonly payer_wallet: string | null;
   readonly created_at: Date;
   readonly updated_at: Date;
   readonly payment_state: IntentState;
@@ -247,6 +251,8 @@ function paidApiView(row: PaidApiRow): PaidApiResponse {
     tool_id: row.tool_id,
     resource_url: row.resource_url,
     payment_state: row.payment_state,
+    ...(row.payment_mode ? { payment_mode: row.payment_mode } : {}),
+    ...(row.payer_wallet ? { payer_wallet: row.payer_wallet } : {}),
     quote: paidApiQuoteForView(row),
     ...(row.provider_transaction_hash
       ? { provider_transaction_hash: row.provider_transaction_hash }
@@ -600,12 +606,23 @@ export class IntentLedger {
     readonly request: unknown;
     readonly quote: PaidApiQuoteSnapshot;
     readonly correlationId: string;
+    readonly paymentMode?: PaymentMode;
+    readonly payerWallet?: string;
   }): Promise<CreatePaidApiResult> {
     const request = parseCreatePaidApiRequest(params.request);
+    const paymentMode = params.paymentMode ?? 'SERVER_PRIVY';
+    const payerWallet =
+      params.payerWallet === undefined ? undefined : asEvmAddress(params.payerWallet);
+    if (paymentMode === 'USER_WALLET' && !payerWallet) {
+      throw new ContractValidationError('User-wallet paid API requests require a payer wallet');
+    }
+    if (paymentMode === 'SERVER_PRIVY' && payerWallet) {
+      throw new ContractValidationError('Server-paid API requests cannot bind a payer wallet');
+    }
     const businessIntentId = asBusinessIntentId(
       derivedPaidApiBusinessIntentId(params.workspaceId, request),
     );
-    const requestFingerprint = paidApiFingerprint(request, params.quote.resourceUrl);
+    const requestFingerprint = paidApiFingerprint(request, params.quote.resourceUrl, payerWallet);
     const recipient = asEvmAddress(params.quote.recipient);
     const amountAtomic = asAtomicAmount(params.quote.amountAtomic);
     const quotePayload = jsonPayload(params.quote.quotePayload, 'x402 quote');
@@ -642,7 +659,7 @@ export class IntentLedger {
         `INSERT INTO business_intents (
           business_intent_id, payload_fingerprint, recipient, amount_atomic,
           asset, network, purpose, state, version, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, 'USDC', 'eip155:5042002', $5, 'AUTHORIZING', 1, $6, $6)
+        ) VALUES ($1, $2, $3, $4, 'USDC', 'eip155:5042002', $5, $6, 1, $7, $7)
         ON CONFLICT (business_intent_id) DO NOTHING`,
         [
           businessIntentId,
@@ -650,6 +667,7 @@ export class IntentLedger {
           intent.request.recipient,
           intent.request.amount_atomic,
           intent.request.purpose,
+          paymentMode === 'USER_WALLET' ? 'READY' : 'AUTHORIZING',
           now,
         ],
       );
@@ -667,8 +685,9 @@ export class IntentLedger {
         `INSERT INTO paid_api_requests (
           business_intent_id, workspace_id, task_key, tool_id, request_fingerprint,
           resource_url, method, quote_payload, quote_recipient, quote_amount_atomic,
-          quote_x402_version, quote_max_timeout_seconds, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'GET', $7::jsonb, $8, $9, $10, $11, $12, $12)
+          quote_x402_version, quote_max_timeout_seconds, created_at, updated_at,
+          payment_mode, payer_wallet
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'GET', $7::jsonb, $8, $9, $10, $11, $12, $12, $13, $14)
         ON CONFLICT (workspace_id, task_key) DO NOTHING
         RETURNING business_intent_id`,
         [
@@ -684,6 +703,8 @@ export class IntentLedger {
           params.quote.x402Version,
           params.quote.maxTimeoutSeconds,
           now,
+          paymentMode,
+          payerWallet ?? null,
         ],
       );
       if (insertedRequest.rowCount !== 1) {
@@ -723,22 +744,31 @@ export class IntentLedger {
           attempt_id, business_intent_id, attempt_sequence, stage,
           correlation_id, request_body_fingerprint, token_contract,
           method, native_value_atomic, provider_kind, created_at
-        ) VALUES ($1, $2, 1, 'AUTHORIZING', $3, $4,
-                  '0x3600000000000000000000000000000000000000', 'x402', '0', 'CIRCLE_X402', $5)`,
-        [attemptId, businessIntentId, params.correlationId, intent.payload_fingerprint, now],
-      );
-      await client.query(
-        `INSERT INTO outbox_jobs (
-          business_intent_id, job_key, task_identifier, payload,
-          available_at, created_at
-        ) VALUES ($1, $2, 'authorize_intent', $3::jsonb, $4, $4)`,
+        ) VALUES ($1, $2, 1, $3, $4, $5,
+                  '0x3600000000000000000000000000000000000000', 'x402', '0', 'CIRCLE_X402', $6)`,
         [
+          attemptId,
           businessIntentId,
-          `authorize:${businessIntentId}:1`,
-          JSON.stringify({ business_intent_id: businessIntentId }),
+          paymentMode === 'USER_WALLET' ? 'READY' : 'AUTHORIZING',
+          params.correlationId,
+          intent.payload_fingerprint,
           now,
         ],
       );
+      if (paymentMode === 'SERVER_PRIVY') {
+        await client.query(
+          `INSERT INTO outbox_jobs (
+            business_intent_id, job_key, task_identifier, payload,
+            available_at, created_at
+          ) VALUES ($1, $2, 'authorize_intent', $3::jsonb, $4, $4)`,
+          [
+            businessIntentId,
+            `authorize:${businessIntentId}:1`,
+            JSON.stringify({ business_intent_id: businessIntentId }),
+            now,
+          ],
+        );
+      }
       const view = await this.#readPaidApi(client, params.workspaceId, businessIntentId);
       if (!view) throw new Error('Created paid API request was not readable');
       await client.query('COMMIT');
@@ -785,8 +815,10 @@ export class IntentLedger {
       resource_url: string;
       method: 'GET';
       quote_payload: unknown;
+      payment_mode: PaymentMode;
+      payer_wallet: string | null;
     }>(
-      `SELECT business_intent_id, resource_url, method, quote_payload
+      `SELECT business_intent_id, resource_url, method, quote_payload, payment_mode, payer_wallet
        FROM paid_api_requests WHERE business_intent_id = $1`,
       [businessIntentId],
     );
@@ -797,6 +829,8 @@ export class IntentLedger {
           resourceUrl: row.resource_url,
           method: row.method,
           quotePayload: row.quote_payload,
+          paymentMode: row.payment_mode,
+          ...(row.payer_wallet ? { payerWallet: row.payer_wallet } : {}),
         }
       : undefined;
   }
@@ -1082,6 +1116,7 @@ export class IntentLedger {
   async claimSubmission(
     idValue: unknown,
     correlationIdValue?: unknown,
+    providerIdentity?: ProviderRequestIdentity,
   ): Promise<ClaimSubmissionResult> {
     const id = asBusinessIntentId(idValue);
     const correlationId = correlationIdValue
@@ -1130,7 +1165,9 @@ export class IntentLedger {
         `INSERT INTO attempts (
           attempt_id, business_intent_id, attempt_sequence, stage,
           correlation_id, request_body_fingerprint, token_contract,
-          method, native_value_atomic, provider_kind, created_at
+          method, native_value_atomic, provider_kind,
+          privy_idempotency_key, privy_reference_id, wallet_id, policy_id,
+          created_at
         )
         SELECT $1, $2, $3, 'SUBMITTING', $4, $5,
           '0x3600000000000000000000000000000000000000',
@@ -1138,11 +1175,24 @@ export class IntentLedger {
             SELECT 1 FROM paid_api_requests WHERE business_intent_id = $2
           ) THEN 'x402' ELSE 'transfer' END,
           '0',
-          CASE WHEN EXISTS (
+          COALESCE($7::text, CASE WHEN EXISTS (
             SELECT 1 FROM paid_api_requests WHERE business_intent_id = $2
-          ) THEN 'CIRCLE_X402' ELSE 'DIRECT_ARC' END,
+          ) THEN 'CIRCLE_X402' ELSE 'DIRECT_ARC' END),
+          $8::text, $9::text, $10::text, $11::text,
           $6`,
-        [attemptId, id, attemptSequence, correlationId, row.payload_fingerprint, now],
+        [
+          attemptId,
+          id,
+          attemptSequence,
+          correlationId,
+          providerIdentity?.requestFingerprint ?? row.payload_fingerprint,
+          now,
+          providerIdentity?.providerKind ?? null,
+          providerIdentity?.idempotencyKey ?? null,
+          providerIdentity?.referenceId ?? null,
+          providerIdentity?.walletId ?? null,
+          providerIdentity?.policyId ?? null,
+        ],
       );
       const intent = await this.#readIntent(client, id);
       await client.query('COMMIT');
@@ -1511,6 +1561,15 @@ export class IntentLedger {
           ) VALUES ($1, 'ONESHOT', 'AUTHORITATIVE', $2, $3, $4, 'FRESH')`,
           [id, now, result.transaction_hash, result.block_number],
         );
+        if (result.verified_by === 'ARC_RPC_EXACT_TRANSFER') {
+          await client.query(
+            `INSERT INTO evidence_observations (
+              business_intent_id, source, authority_class, retrieved_at,
+              digest, block_number, freshness
+            ) VALUES ($1, 'ARC', 'AUTHORITATIVE', $2, $3, $4, 'FRESH')`,
+            [id, now, result.transaction_hash, result.block_number],
+          );
+        }
         await client.query('UPDATE attempts SET stage = $1 WHERE attempt_id = $2', [
           'COMMITTED',
           attemptId,
@@ -1723,7 +1782,8 @@ export class IntentLedger {
       `SELECT p.business_intent_id, p.task_key, p.tool_id, p.resource_url,
           p.quote_recipient, p.quote_amount_atomic, p.quote_x402_version,
           p.quote_max_timeout_seconds, p.quote_payload, p.response_payload,
-          p.provider_transaction_hash, p.provider_transfer_id, p.created_at, p.updated_at,
+          p.provider_transaction_hash, p.provider_transfer_id, p.payment_mode, p.payer_wallet,
+          p.created_at, p.updated_at,
           i.state AS payment_state,
           s.provider_reference_id AS settlement_provider_reference_id,
           s.transaction_hash AS settlement_transaction_hash,
@@ -1746,9 +1806,11 @@ export class IntentLedger {
   ): Promise<IntentResponse | undefined> {
     const intentResult = await client.query<IntentRow>(
       `SELECT i.business_intent_id, i.payload_fingerprint, i.recipient, i.amount_atomic,
-        i.asset, i.network, i.purpose, i.state, i.version, j.payment_mode
+        i.asset, i.network, i.purpose, i.state, i.version,
+        COALESCE(j.payment_mode, p.payment_mode) AS payment_mode
       FROM business_intents i
       LEFT JOIN resumable_jobs j ON j.business_intent_id = i.business_intent_id
+      LEFT JOIN paid_api_requests p ON p.business_intent_id = i.business_intent_id
       WHERE i.business_intent_id = $1`,
       [id],
     );

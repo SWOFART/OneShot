@@ -284,7 +284,11 @@ function CabinetPage(props: {
                 {...(props.userWallet ? { userWallet: props.userWallet } : {})}
                 onSelectIntent={selectRequest}
               />
-              <CircleX402DemoPanel client={props.paidApiClient} onSelectIntent={selectRequest} />
+              <CircleX402DemoPanel
+                client={props.paidApiClient}
+                {...(props.userWallet ? { userWallet: props.userWallet } : {})}
+                onSelectIntent={selectRequest}
+              />
             </div>
           )}
           {section === 'requests' && (

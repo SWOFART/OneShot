@@ -145,7 +145,7 @@ export function verifyCircleX402Receipt(
   };
 }
 
-function safeResponse(value: unknown): unknown {
+export function safeCircleX402Response(value: unknown): unknown {
   let serialized: string;
   try {
     serialized = JSON.stringify(value) ?? 'null';
@@ -243,7 +243,7 @@ export class CircleX402SettlementPort {
       if (providerTransferId) {
         await this.#options.recordTransfer?.(
           request.business_intent_id,
-          safeResponse(result.data),
+          safeCircleX402Response(result.data),
           providerTransferId,
         );
         const transfer = await this.#options.client.getTransfer(providerTransferId);
@@ -262,7 +262,7 @@ export class CircleX402SettlementPort {
       } else if (transactionHash) {
         await this.#options.recordResponse?.(
           request.business_intent_id,
-          safeResponse(result.data),
+          safeCircleX402Response(result.data),
           transactionHash,
         );
       }
@@ -306,6 +306,7 @@ export class CircleX402SettlementPort {
       transaction_hash: asTransactionHash(transactionHash),
       block_number: asBlockNumber(receipt.blockNumber.toString()),
       transfer_log_index: verdict.transferLogIndex,
+      verified_by: 'ARC_RPC_EXACT_TRANSFER',
     };
   }
 }

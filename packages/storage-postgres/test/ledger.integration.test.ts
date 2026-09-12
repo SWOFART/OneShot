@@ -51,7 +51,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const versions = await pool.query<{ version: number }>(
       'SELECT version FROM schema_versions ORDER BY version',
     );
-    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(versions.rows.map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     expect(await migrationDigest()).toMatch(/^[0-9a-f]{64}$/u);
   });
 
@@ -59,7 +59,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const directory = await mkdtemp(join(tmpdir(), 'oneshot-migration-'));
     try {
       await writeFile(
-        join(directory, '010_broken.sql'),
+        join(directory, '011_broken.sql'),
         'CREATE TABLE must_rollback (id integer); SELECT missing_function();',
         'utf8',
       );
@@ -68,7 +68,7 @@ describePostgres('PostgreSQL intent ledger', () => {
         "SELECT to_regclass('public.must_rollback')::text AS name",
       );
       expect(table.rows[0]?.name).toBeNull();
-      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 10');
+      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 11');
       expect(version.rowCount).toBe(0);
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -134,6 +134,164 @@ describePostgres('PostgreSQL intent ledger', () => {
         (SELECT count(*) FROM outbox_jobs)::text AS jobs`,
     );
     expect(counts.rows[0]).toEqual({ intents: '1', paid: '1', attempts: '1', jobs: '1' });
+  });
+
+  it('binds a user-funded paid API request to its payer without an authorization outbox', async () => {
+    const ledger = newLedger();
+    const paidRequest = {
+      task_key: 'circle-api-user-wallet-2026',
+      tool_id: 'circle-x402-api-v1' as const,
+    };
+    const payer = `0x${'a'.repeat(40)}`;
+    const created = await ledger.createPaidApiOrReplay({
+      workspaceId: 'workspace-paid-api-user-wallet',
+      request: paidRequest,
+      quote: {
+        resourceUrl: 'https://x402.example.test/api/dataset',
+        x402Version: 2,
+        maxTimeoutSeconds: 60,
+        recipient: request.recipient,
+        amountAtomic: '10000',
+        quotePayload: { resource: 'dataset' },
+      },
+      correlationId: 'paid-api-user-wallet-create',
+      paymentMode: 'USER_WALLET',
+      payerWallet: payer,
+    });
+    expect(created.kind).toBe('ACCEPTED');
+    expect(created.request).toMatchObject({
+      payment_state: 'READY',
+      payment_mode: 'USER_WALLET',
+      payer_wallet: payer,
+    });
+
+    const payerConflict = await ledger.createPaidApiOrReplay({
+      workspaceId: 'workspace-paid-api-user-wallet',
+      request: paidRequest,
+      quote: {
+        resourceUrl: 'https://x402.example.test/api/dataset',
+        x402Version: 2,
+        maxTimeoutSeconds: 60,
+        recipient: request.recipient,
+        amountAtomic: '10000',
+        quotePayload: { resource: 'dataset' },
+      },
+      correlationId: 'paid-api-user-wallet-conflict',
+      paymentMode: 'USER_WALLET',
+      payerWallet: `0x${'b'.repeat(40)}`,
+    });
+    expect(payerConflict.kind).toBe('INTENT_PAYLOAD_CONFLICT');
+
+    const durable = await pool.query<{
+      intent_state: string;
+      attempt_stage: string;
+      payment_mode: string;
+      payer_wallet: string;
+      authorize_jobs: string;
+    }>(
+      `SELECT i.state AS intent_state, a.stage AS attempt_stage,
+              p.payment_mode, p.payer_wallet,
+              (SELECT count(*)::text FROM outbox_jobs o
+               WHERE o.business_intent_id = i.business_intent_id
+                 AND o.task_identifier = 'authorize_intent') AS authorize_jobs
+       FROM business_intents i
+       JOIN paid_api_requests p ON p.business_intent_id = i.business_intent_id
+       JOIN attempts a ON a.business_intent_id = i.business_intent_id
+       WHERE i.business_intent_id = $1`,
+      [created.request.business_intent_id],
+    );
+    expect(durable.rows[0]).toEqual({
+      intent_state: 'READY',
+      attempt_stage: 'READY',
+      payment_mode: 'USER_WALLET',
+      payer_wallet: payer,
+      authorize_jobs: '0',
+    });
+  });
+
+  it('atomically persists the provider identity with the x402 submission claim', async () => {
+    const ledger = newLedger();
+    const paidRequest = {
+      task_key: 'circle-api-atomic-identity',
+      tool_id: 'circle-x402-api-v1' as const,
+    };
+    const created = await ledger.createPaidApiOrReplay({
+      workspaceId: 'workspace-paid-api',
+      request: paidRequest,
+      quote: {
+        resourceUrl: 'https://x402.example.test/api/dataset',
+        x402Version: 2,
+        maxTimeoutSeconds: 60,
+        recipient: request.recipient,
+        amountAtomic: '10000',
+        quotePayload: {
+          url: 'https://x402.example.test/api/dataset',
+          x402Version: 2,
+          resourceUrl: 'https://x402.example.test/api/dataset',
+          requirements: { scheme: 'exact', network: 'eip155:5042002', amount: '10000' },
+        },
+      },
+      correlationId: 'paid-api-atomic-identity-create',
+    });
+    expect(created.kind).toBe('ACCEPTED');
+    await ledger.completeAuthorization(created.request.business_intent_id, 1, {
+      kind: 'AUTHORIZED',
+    });
+
+    const claim = await ledger.claimSubmission(
+      created.request.business_intent_id,
+      'paid-api-atomic-identity-submit',
+      {
+        idempotencyKey: 'circle-x402:atomic-identity',
+        referenceId: 'circle-x402:atomic-identity',
+        requestFingerprint: 'a'.repeat(64),
+        providerKind: 'CIRCLE_X402',
+      },
+    );
+    expect(claim.claimed).toBe(true);
+
+    const durable = await pool.query<{
+      stage: string;
+      provider_kind: string;
+      privy_idempotency_key: string;
+      privy_reference_id: string;
+      request_body_fingerprint: string;
+    }>(
+      `SELECT stage, provider_kind, privy_idempotency_key,
+              privy_reference_id, request_body_fingerprint
+       FROM attempts
+       WHERE business_intent_id = $1
+       ORDER BY attempt_sequence DESC
+       LIMIT 1`,
+      [created.request.business_intent_id],
+    );
+    expect(durable.rows[0]).toEqual({
+      stage: 'SUBMITTING',
+      provider_kind: 'CIRCLE_X402',
+      privy_idempotency_key: 'circle-x402:atomic-identity',
+      privy_reference_id: 'circle-x402:atomic-identity',
+      request_body_fingerprint: 'a'.repeat(64),
+    });
+
+    await ledger.completeSubmission(created.request.business_intent_id, claim.attemptId, {
+      kind: 'CONFIRMED',
+      provider_reference_id: 'circle-x402:atomic-identity',
+      transaction_hash: `0x${'b'.repeat(64)}`,
+      block_number: '123',
+      transfer_log_index: 4,
+      verified_by: 'ARC_RPC_EXACT_TRANSFER',
+    });
+    const evidence = await pool.query<{ source: string; authority_class: string }>(
+      `SELECT source, authority_class
+       FROM evidence_observations
+       WHERE business_intent_id = $1
+       ORDER BY evidence_id`,
+      [created.request.business_intent_id],
+    );
+    expect(evidence.rows).toEqual([
+      { source: 'ONESHOT', authority_class: 'AUTHORITATIVE' },
+      { source: 'ARC', authority_class: 'AUTHORITATIVE' },
+    ]);
   });
 
   it('binds ten concurrent agents to one job, one supplier order and one payment right', async () => {
