@@ -8,6 +8,16 @@ import type {
 } from '@oneshot/contracts';
 import type { ApiClientConfig } from './client.js';
 
+const CIRCLE_AUTHORIZATION_REFUSED_MESSAGE =
+  'The Circle authorization is no longer valid. No payment was sent; sign a fresh authorization.';
+
+export class PaidApiUserWalletSubmissionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PaidApiUserWalletSubmissionError';
+  }
+}
+
 async function responseJson<T>(response: Response): Promise<T | null> {
   if (!response.headers.get('content-type')?.includes('application/json')) return null;
   try {
@@ -15,6 +25,20 @@ async function responseJson<T>(response: Response): Promise<T | null> {
   } catch {
     return null;
   }
+}
+
+function submitErrorMessage(body: unknown): string {
+  if (
+    body !== null &&
+    typeof body === 'object' &&
+    'code' in body &&
+    body.code === 'INVALID_REQUEST' &&
+    'message' in body &&
+    body.message === CIRCLE_AUTHORIZATION_REFUSED_MESSAGE
+  ) {
+    return body.message;
+  }
+  return 'Could not verify the user-wallet paid API payment';
 }
 
 export class PaidApiClient {
@@ -87,9 +111,15 @@ export class PaidApiClient {
         body: JSON.stringify({ payer_wallet: payerWallet, payment_payload: paymentPayload }),
       },
     );
-    const body = await responseJson<PaidApiResponse>(response);
-    if (!response.ok || !body) throw new Error('Could not verify the user-wallet paid API payment');
-    return body;
+    const body = await responseJson<unknown>(response);
+    if (!response.ok) {
+      throw new PaidApiUserWalletSubmissionError(submitErrorMessage(body));
+    }
+    if (!body)
+      throw new PaidApiUserWalletSubmissionError(
+        'Could not verify the user-wallet paid API payment',
+      );
+    return body as PaidApiResponse;
   }
 
   async get(businessIntentId: string): Promise<PaidApiResponse> {
