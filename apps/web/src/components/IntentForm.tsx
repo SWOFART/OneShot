@@ -39,43 +39,43 @@ function outcomeFor(result: CreateIntentResult): Outcome {
     case 'ACCEPTED':
       return {
         kind: 'accepted',
-        title: 'ACCEPTED — new intent',
-        message: `Authoritative state: ${result.intent.state}.`,
+        title: 'Request created',
+        message: 'OneShot stored the request. The payment worker can now continue it safely.',
       };
     case 'REPLAYED':
       return {
         kind: 'replayed',
-        title: 'REPLAYED — identical payload',
-        message: 'Existing intent returned. No duplicate settlement was created.',
+        title: 'Existing request reused',
+        message: 'The same request was returned. No duplicate payment was created.',
       };
     case 'PAYLOAD_CONFLICT':
       return {
         kind: 'conflict',
-        title: 'PAYLOAD CONFLICT',
+        title: 'Request details changed',
         message:
           'This ID already belongs to another immutable payload. Use a new ID only for a new obligation.',
       };
     case 'UNAUTHORIZED':
       return {
         kind: 'denied',
-        title: 'AUTHORIZATION DENIED',
+        title: 'Request not approved',
         message:
           'The service rejected this intent. No settlement was created and no bypass is available.',
       };
     case 'RATE_LIMITED':
       return {
         kind: 'rate-limited',
-        title: 'RATE LIMITED',
+        title: 'Please slow down',
         message: 'The service asked for a slower retry. No settlement action was taken.',
       };
     case 'NOT_READY':
       return {
         kind: 'not-ready',
-        title: 'SERVICE UNAVAILABLE',
+        title: 'Service unavailable',
         message: 'The service is not ready. No settlement action was taken.',
       };
     default:
-      return { kind: 'error', title: 'REQUEST FAILED', message: result.message };
+      return { kind: 'error', title: 'Request failed', message: result.message };
   }
 }
 
@@ -128,12 +128,13 @@ export function IntentForm({ client, onIntentCreatedOrSelected }: Props) {
   return (
     <form
       className="panel form"
-      aria-label="Create or replay business intent"
+      aria-label="Create request"
       onSubmit={(event) => void submit(event)}
     >
       <header>
-        <h2>Create or replay intent</h2>
-        <p>Same ID and payload returns the existing intent. A changed payload fails closed.</p>
+        <p className="eyebrow">SAFE REQUEST CREATION</p>
+        <h2>Create a request</h2>
+        <p>Use the same request key when retrying. OneShot keeps one payment identity.</p>
       </header>
 
       {validationError && (
@@ -148,22 +149,25 @@ export function IntentForm({ client, onIntentCreatedOrSelected }: Props) {
         </div>
       )}
 
-      <div className="label-row">
-        <label htmlFor="intent-id-input">Business Intent ID</label>
-        <button className="secondary compact" type="button" onClick={newObligation}>
-          New obligation ID
-        </button>
-      </div>
-      <input
-        id="intent-id-input"
-        value={intentId}
-        onChange={(event) => setIntentId(event.target.value)}
-        maxLength={128}
-        required
-      />
-      <small>Keep this ID unchanged for every retry of the same job.</small>
+      <details className="advanced-fields">
+        <summary>Request key (advanced)</summary>
+        <div className="label-row">
+          <label htmlFor="intent-id-input">Request key</label>
+          <button className="secondary compact" type="button" onClick={newObligation}>
+            New request key
+          </button>
+        </div>
+        <input
+          id="intent-id-input"
+          value={intentId}
+          onChange={(event) => setIntentId(event.target.value)}
+          maxLength={128}
+          required
+        />
+        <small>Keep this key unchanged when retrying the same request.</small>
+      </details>
 
-      <label htmlFor="recipient-input">Recipient</label>
+      <label htmlFor="recipient-input">Service destination</label>
       <input
         id="recipient-input"
         value={recipient}
@@ -175,7 +179,7 @@ export function IntentForm({ client, onIntentCreatedOrSelected }: Props) {
 
       <div className="payment-grid">
         <div>
-          <label htmlFor="amount-input">Amount in USDC</label>
+          <label htmlFor="amount-input">Amount (USDC)</label>
           <input
             id="amount-input"
             inputMode="decimal"
@@ -183,12 +187,12 @@ export function IntentForm({ client, onIntentCreatedOrSelected }: Props) {
             onChange={(event) => setAmount(event.target.value)}
             required
           />
-          <small>{atomicPreview} atomic units</small>
+          <small>{atomicPreview} internal units</small>
         </div>
         <div>
           <span className="field-label">Settlement profile</span>
-          <output>Arc Testnet · USDC · eip155:5042002</output>
-          <small>Fixed by OpenAPI v1. Payment amount is USDC; native value is separate.</small>
+          <output>Arc Testnet · USDC</output>
+          <small>Fixed by the active workspace settlement profile.</small>
         </div>
       </div>
 
@@ -202,7 +206,7 @@ export function IntentForm({ client, onIntentCreatedOrSelected }: Props) {
       />
 
       <button type="submit" disabled={submitting}>
-        {submitting ? 'Submitting…' : 'Submit Intent (or Replay)'}
+        {submitting ? 'Creating request…' : 'Create request'}
       </button>
     </form>
   );

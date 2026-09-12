@@ -87,7 +87,7 @@ async function mockJobApi(page: Page): Promise<string[]> {
 async function unlockWorkspace(page: Page): Promise<void> {
   await page.getByText('Machine token (advanced)').click();
   await page.getByLabel('Machine token').fill('browser-memory-token');
-  await expect(page.getByRole('tab', { name: 'Tools' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'API services' })).toBeVisible();
 }
 
 test.describe('resumable job workspace', () => {
@@ -103,37 +103,44 @@ test.describe('resumable job workspace', () => {
 
     await page.goto('/app');
     await unlockWorkspace(page);
-    await expect(page.getByRole('heading', { name: 'Jobs and results' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Requests' }).click();
+    await expect(page.getByRole('heading', { name: 'Requests and results' })).toBeVisible();
+    await expect(page.getByText('Payment evidence', { exact: true })).toHaveCount(0);
   });
 
   test('starts one job and resumes only its original supplier delivery', async ({ page }) => {
     const calls = await mockJobApi(page);
     await page.goto('/app');
     await unlockWorkspace(page);
-    await page.getByRole('tab', { name: 'Tools' }).click();
+    await page.getByRole('tab', { name: 'API services' }).click();
     await page.getByLabel('Company or domain').fill('acme.com');
-    await page.getByLabel('Recipient wallet').fill('0x1111111111111111111111111111111111111111');
+    await page
+      .getByLabel('Service destination wallet')
+      .fill('0x1111111111111111111111111111111111111111');
     await page.getByLabel('Amount (USDC)').fill('2.5');
-    await expect(page.getByLabel('Task key for retries')).toHaveValue(/report-acme-com-/u);
-    await page.getByRole('button', { name: 'Get live quote' }).click();
+    await page.getByText('Request key (advanced)').click();
+    await expect(page.locator('#generated-task-key')).toHaveValue(/report-acme-com-/u);
+    await page
+      .getByRole('region', { name: 'Company research service' })
+      .getByRole('button', { name: 'Check price' })
+      .click();
     await expect.poll(() => calls.filter((call) => call === 'POST /v1/jobs/quote')).toHaveLength(1);
     expect(calls).not.toContain('POST /v1/jobs');
     await expect(page.getByRole('heading', { name: 'Review quote before approval' })).toBeVisible();
     await expect(page.getByText('Nothing has been paid yet.')).toBeVisible();
-    await page.getByRole('button', { name: 'Approve payment and start job' }).click();
+    await page.getByRole('button', { name: 'Approve and run service' }).click();
     await expect.poll(() => calls.filter((call) => call === 'POST /v1/jobs')).toHaveLength(1);
     await expect(page.getByRole('status')).toContainText('Payment authorization is queued');
-    await expect(page.getByRole('heading', { name: 'Approved payment' })).toBeVisible();
-    await expect(
-      page.getByRole('region', { name: 'Approved payment' }).getByText('2.500000 USDC'),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Request accepted' })).toBeVisible();
+    await expect(page.getByText('2.500000 USDC')).toBeVisible();
+    await page.getByText('Show supplier details').click();
     await expect(page.getByText('team_report_order_browser')).toBeVisible();
-    await page.getByRole('tab', { name: 'Jobs' }).click();
+    await page.getByRole('tab', { name: 'Requests' }).click();
     await expect(page.getByRole('link', { name: 'View the ArcScan transaction' })).toHaveAttribute(
       'href',
       `https://testnet.arcscan.app/tx/0x${'c'.repeat(64)}`,
     );
-    await page.getByRole('button', { name: 'Resume delivery (never pays)' }).click();
+    await page.getByRole('button', { name: 'Resume result (no new payment)' }).click();
     await expect(page.getByText('Recovered original supplier report.')).toBeVisible();
   });
 
@@ -143,10 +150,10 @@ test.describe('resumable job workspace', () => {
     await mockJobApi(page);
     await page.goto('/app');
     await unlockWorkspace(page);
-    await page.getByRole('tab', { name: 'Recovery & activity' }).click();
-    await page.getByRole('button', { name: 'Refresh activity' }).click();
-    await expect(page.locator('p[role="status"]')).toContainText('FRESH');
-    await expect(page.getByText(/never change payment authority/u)).toBeVisible();
+    await page.getByRole('tab', { name: 'Payment protection' }).click();
+    await page.getByRole('button', { name: 'Check payment activity' }).click();
+    await expect(page.locator('.workspace-status')).toContainText('FRESH');
+    await expect(page.getByText(/payment records unchanged/u)).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),

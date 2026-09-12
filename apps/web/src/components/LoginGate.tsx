@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { OperatorSession } from '../auth/session.js';
+import { maskIdentifier } from './workspace-copy.js';
 
 export interface LoginGateProps {
   readonly session: OperatorSession;
@@ -60,7 +61,7 @@ export function LoginGate(props: LoginGateProps) {
           <div className="gate-action-box">
             <h2>Operator sign-in</h2>
             <p className="gate-subtitle">
-              The console reads authoritative payment state. Sign in to continue.
+              The workspace reads trusted payment status. Sign in to continue.
             </p>
             <button type="button" className="btn-privy" onClick={() => props.session.login()}>
               Sign in with Privy
@@ -79,17 +80,22 @@ export function LoginGate(props: LoginGateProps) {
       <section className="operator-identity" aria-label="Operator identity">
         {props.session.status === 'SIGNED_IN' && props.session.subject ? (
           <>
-            <span className="operator-badge">OPERATOR</span>
-            <span>Signed in as</span>
-            <code className="operator-did">{props.session.subject}</code>
-            <button
-              type="button"
-              className="btn-copy"
-              onClick={() => void copySubject(props.session.subject ?? '')}
-            >
-              {copied ? 'Copied' : 'Copy DID'}
-            </button>
-            <small className="operator-note">Authenticated via Privy Web3 wallet.</small>
+            <span className="operator-badge">PRIVY CONNECTED</span>
+            <span>Workspace session active</span>
+            <details className="technical-details operator-details">
+              <summary>Session details</summary>
+              <code className="operator-did" title="Technical session identifier">
+                {maskIdentifier(props.session.subject, 8)}
+              </code>
+              <button
+                type="button"
+                className="btn-copy"
+                onClick={() => void copySubject(props.session.subject ?? '')}
+              >
+                {copied ? 'Copied' : 'Copy session ID'}
+              </button>
+            </details>
+            <small className="operator-note">Authenticated through a Privy wallet session.</small>
             <button type="button" className="btn-signout" onClick={() => props.session.logout()}>
               Sign out
             </button>

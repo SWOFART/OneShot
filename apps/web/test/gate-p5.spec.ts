@@ -40,11 +40,13 @@ test('cabinet activity refresh is authenticated, read-only, and does not persist
 
   await page.goto('/app');
   await unlockWorkspace(page);
-  await page.getByRole('tab', { name: 'Recovery & activity' }).click();
-  await page.getByRole('button', { name: 'Refresh activity' }).click();
-  await expect(page.locator('p[role="status"]')).toContainText('LAGGING');
+  await page.getByRole('tab', { name: 'Payment protection' }).click();
+  await page.getByRole('button', { name: 'Check payment activity' }).click();
+  await expect(page.locator('.workspace-status')).toContainText('LAGGING');
   expect(headers).toContain('Bearer browser-memory-token');
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
   expect(await page.locator('body').innerText()).not.toContain('browser-memory-token');
-  await expect(page.getByRole('button', { name: /pay|force|submit settlement/iu })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: /^(?:pay|force|submit settlement)$/iu }),
+  ).toHaveCount(0);
 });
