@@ -90,6 +90,24 @@ export type ClaimSubmissionResult =
       readonly version?: number;
     };
 
+export type BeginUserWalletSubmissionResult =
+  | {
+      readonly begun: true;
+      readonly intent: IntentResponse;
+      readonly attemptId: string;
+      readonly transactionHash?: string;
+      readonly state: 'SUBMITTING' | 'UNKNOWN';
+      readonly version: number;
+    }
+  | {
+      readonly begun: false;
+      readonly reason: 'NOT_FOUND' | 'NOT_USER_WALLET' | 'NOT_READY';
+      readonly currentState?: IntentState;
+      readonly version?: number;
+      readonly attemptId?: string;
+      readonly transactionHash?: string;
+    };
+
 export type CompleteSubmissionResult =
   | {
       readonly completed: true;
@@ -1204,6 +1222,234 @@ export class IntentLedger {
       ...(row.provider_transaction_hash ? { transactionHash: row.provider_transaction_hash } : {}),
       ...(row.provider_transfer_id ? { providerTransferId: row.provider_transfer_id } : {}),
     };
+  }
+
+  /**
+   * Claims the already-created user-wallet intent after the browser has
+   * obtained a transaction hash. The task's payer binding is checked inside
+   * the same transaction that owns the submission attempt.
+   */
+  async beginUserWalletSubmission(
+    idValue: unknown,
+    payerWalletValue: unknown,
+    correlationIdValue: unknown,
+  ): Promise<BeginUserWalletSubmissionResult> {
+    const id = asBusinessIntentId(idValue);
+    const payerWallet = asEvmAddress(payerWalletValue);
+    const correlationId = asCorrelationId(correlationIdValue);
+    const client = await this.#pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await client.query<{
+        state: IntentState;
+        version: number;
+        payment_mode: 'SERVER_PRIVY' | 'USER_WALLET';
+        payer_wallet: string | null;
+        payment_transaction_hash: string | null;
+        attempt_id: string | null;
+      }>(
+        `SELECT i.state, i.version, j.payment_mode, j.payer_wallet,
+                j.payment_transaction_hash, a.attempt_id
+         FROM business_intents i
+         JOIN resumable_jobs j ON j.business_intent_id = i.business_intent_id
+         LEFT JOIN LATERAL (
+           SELECT attempt_id
+           FROM attempts
+           WHERE business_intent_id = i.business_intent_id
+           ORDER BY attempt_sequence DESC
+           LIMIT 1
+         ) a ON true
+         WHERE i.business_intent_id = $1
+         FOR UPDATE OF i, j`,
+        [id],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        await client.query('ROLLBACK');
+        return { begun: false, reason: 'NOT_FOUND' };
+      }
+      if (
+        row.payment_mode !== 'USER_WALLET' ||
+        !row.payer_wallet ||
+        row.payer_wallet.toLowerCase() !== payerWallet.toLowerCase()
+      ) {
+        await client.query('ROLLBACK');
+        return { begun: false, reason: 'NOT_USER_WALLET', currentState: row.state };
+      }
+      if (row.state === 'READY') {
+        if (!row.attempt_id) {
+          await client.query('ROLLBACK');
+          return { begun: false, reason: 'NOT_READY', currentState: row.state };
+        }
+        const now = this.#dependencies.now();
+        const newVersion = row.version + 1;
+        const updated = await client.query(
+          `UPDATE business_intents
+           SET state = 'SUBMITTING', version = $1, updated_at = $2
+           WHERE business_intent_id = $3 AND state = 'READY' AND version = $4`,
+          [newVersion, now, id, row.version],
+        );
+        if (updated.rowCount !== 1) {
+          await client.query('ROLLBACK');
+          return { begun: false, reason: 'NOT_READY', currentState: row.state };
+        }
+        await client.query(
+          `UPDATE attempts SET stage = 'SUBMITTING', correlation_id = $1
+           WHERE attempt_id = $2 AND stage = 'READY'`,
+          [correlationId, row.attempt_id],
+        );
+        const intent = await this.#readIntent(client, id);
+        await client.query('COMMIT');
+        return {
+          begun: true,
+          intent: intent!,
+          attemptId: asAttemptId(row.attempt_id),
+          state: 'SUBMITTING',
+          version: newVersion,
+        };
+      }
+      if (row.state === 'SUBMITTING' || row.state === 'UNKNOWN') {
+        if (!row.attempt_id) {
+          await client.query('ROLLBACK');
+          return { begun: false, reason: 'NOT_READY', currentState: row.state };
+        }
+        const intent = await this.#readIntent(client, id);
+        await client.query('COMMIT');
+        return {
+          begun: true,
+          intent: intent!,
+          attemptId: asAttemptId(row.attempt_id),
+          ...(row.payment_transaction_hash
+            ? { transactionHash: asTransactionHash(row.payment_transaction_hash) }
+            : {}),
+          state: row.state,
+          version: row.version,
+        };
+      }
+      await client.query('COMMIT');
+      return {
+        begun: false,
+        reason: 'NOT_READY',
+        currentState: row.state,
+        version: row.version,
+        ...(row.attempt_id ? { attemptId: row.attempt_id } : {}),
+        ...(row.payment_transaction_hash
+          ? { transactionHash: asTransactionHash(row.payment_transaction_hash) }
+          : {}),
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async recordUserWalletTransaction(
+    attemptIdValue: unknown,
+    transactionHashValue: unknown,
+  ): Promise<'RECORDED' | 'REPLAYED' | 'CONFLICT' | 'NOT_FOUND'> {
+    const attemptId = asAttemptId(attemptIdValue);
+    const transactionHash = asTransactionHash(transactionHashValue);
+    const client = await this.#pool.connect();
+    try {
+      await client.query('BEGIN');
+      const existing = await client.query<{
+        business_intent_id: string;
+        provider_transaction_hash: string | null;
+        stage: IntentState;
+      }>(
+        `SELECT business_intent_id, provider_transaction_hash, stage
+         FROM attempts WHERE attempt_id = $1 FOR UPDATE`,
+        [attemptId],
+      );
+      const row = existing.rows[0];
+      if (!row) {
+        await client.query('ROLLBACK');
+        return 'NOT_FOUND';
+      }
+      if (row.provider_transaction_hash && row.provider_transaction_hash !== transactionHash) {
+        await client.query('ROLLBACK');
+        return 'CONFLICT';
+      }
+      if (row.stage !== 'SUBMITTING' && row.stage !== 'UNKNOWN') {
+        await client.query('ROLLBACK');
+        return row.provider_transaction_hash === transactionHash ? 'REPLAYED' : 'NOT_FOUND';
+      }
+      const wasRecorded = row.provider_transaction_hash === transactionHash;
+      if (!wasRecorded) {
+        await client.query(
+          'UPDATE attempts SET provider_transaction_hash = $1 WHERE attempt_id = $2',
+          [transactionHash, attemptId],
+        );
+        const jobUpdate = await client.query(
+          `UPDATE resumable_jobs SET payment_transaction_hash = $1, updated_at = $2
+           WHERE business_intent_id = $3`,
+          [transactionHash, this.#dependencies.now(), row.business_intent_id],
+        );
+        if (jobUpdate.rowCount !== 1) {
+          await client.query('ROLLBACK');
+          return 'NOT_FOUND';
+        }
+      }
+      await client.query('COMMIT');
+      return wasRecorded ? 'REPLAYED' : 'RECORDED';
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /** Mark a browser-submitted payment UNKNOWN without handing it to the server-wallet recovery path. */
+  async markUserWalletUnknown(
+    idValue: unknown,
+    attemptIdValue: unknown,
+    reason: string,
+  ): Promise<CompleteSubmissionResult> {
+    const id = asBusinessIntentId(idValue);
+    const attemptId = asAttemptId(attemptIdValue);
+    const client = await this.#pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await client.query<{ state: IntentState; version: number }>(
+        'SELECT state, version FROM business_intents WHERE business_intent_id = $1 FOR UPDATE',
+        [id],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        await client.query('ROLLBACK');
+        return { completed: false, reason: 'NOT_FOUND' };
+      }
+      if (row.state === 'UNKNOWN') {
+        await client.query('COMMIT');
+        return { completed: true, state: 'UNKNOWN', version: row.version };
+      }
+      if (row.state !== 'SUBMITTING') {
+        await client.query('ROLLBACK');
+        return { completed: false, reason: 'INVALID_STATE', currentState: row.state };
+      }
+      const now = this.#dependencies.now();
+      const newVersion = row.version + 1;
+      await client.query(
+        `UPDATE business_intents SET state = 'UNKNOWN', version = $1, updated_at = $2
+         WHERE business_intent_id = $3 AND state = 'SUBMITTING' AND version = $4`,
+        [newVersion, now, id, row.version],
+      );
+      await client.query(
+        "UPDATE attempts SET stage = 'UNKNOWN', sanitized_error = $1 WHERE attempt_id = $2",
+        [reason.slice(0, 256), attemptId],
+      );
+      await this.#recordMetricEventOnClient(client, id, 'PROVIDER_ERROR', 'USER_WALLET_UNKNOWN');
+      await client.query('COMMIT');
+      return { completed: true, state: 'UNKNOWN', version: newVersion };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async completeSubmission(

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
   canonicalJobPayload,
+  asEvmAddress,
   parseCreateJobRequest,
   type CreateJobRequest,
 } from '@oneshot/contracts';
@@ -22,6 +23,18 @@ function workspaceId(value: string): string {
 
 export function jobFingerprint(request: CreateJobRequest): string {
   return createHash('sha256').update(canonicalJobPayload(request), 'utf8').digest('hex');
+}
+
+/**
+ * Binds a user-funded job to the wallet that was reviewed before signing.
+ * The task identity remains stable by task key, while a different payer is a
+ * payload conflict rather than permission to reuse the same payment intent.
+ */
+export function userWalletJobFingerprint(request: CreateJobRequest, payerWallet: unknown): string {
+  const payer = asEvmAddress(payerWallet);
+  return createHash('sha256')
+    .update(`${canonicalJobPayload(request)}\u0000${payer}`, 'utf8')
+    .digest('hex');
 }
 
 export function derivedJobId(value: string, request: CreateJobRequest): string {

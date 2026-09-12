@@ -34,6 +34,41 @@ const intent: IntentResponse = {
   evidence: [],
 };
 
+const USER_WALLET_PAYER = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const USER_WALLET_HASH = `0x${'f'.repeat(64)}`;
+
+function userWalletJobFixture(overrides: Partial<JobView> = {}): JobView {
+  return {
+    job_id: `job_${'e'.repeat(64)}`,
+    task_key: 'report-user-wallet',
+    tool_id: 'team-report-v1',
+    business_intent_id: `intent_${'f'.repeat(64)}`,
+    supplier: {
+      supplier_id: 'team-report-v1',
+      order_reference: 'team_report_user_wallet',
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount_atomic: '1000000',
+      asset: 'USDC',
+      network: 'eip155:5042002',
+      expires_at: '2026-09-12T12:00:00.000Z',
+    },
+    payment_state: 'READY',
+    payment_mode: 'USER_WALLET',
+    user_payment: {
+      chain_id: 5042002,
+      network: 'eip155:5042002',
+      token_contract: '0x3600000000000000000000000000000000000000',
+      payer_wallet: USER_WALLET_PAYER,
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount_atomic: '1000000',
+    },
+    delivery_state: 'NOT_REQUESTED',
+    created_at: '2026-09-12T11:00:00.000Z',
+    updated_at: '2026-09-12T11:00:00.000Z',
+    ...overrides,
+  };
+}
+
 function createMockLedger(
   overrides: Partial<IntentLedger> = {},
 ): Pick<
@@ -535,6 +570,7 @@ describe('resumable job API boundary', () => {
         expires_at: '2026-09-08T12:00:00.000Z',
       },
       payment_state: 'COMMITTED',
+      payment_mode: 'SERVER_PRIVY',
       delivery_state: 'RETRIEVAL_FAILED',
       created_at: '2026-09-07T12:00:00.000Z',
       updated_at: '2026-09-07T12:01:00.000Z',
@@ -670,6 +706,301 @@ describe('resumable job API boundary', () => {
         (call) => call.workspaceId === undefined || call.workspaceId === 'workspace-api-test',
       ),
     ).toBe(true);
+    await app.close();
+  });
+
+  it('prepares and confirms a user-wallet payment without invoking the server wallet', async () => {
+    const payer = USER_WALLET_PAYER;
+    const hash = USER_WALLET_HASH;
+    let job: JobView = userWalletJobFixture();
+    const calls: string[] = [];
+    const jobs = {
+      async createUserWalletOrReplay() {
+        calls.push('prepare');
+        return { kind: 'ACCEPTED' as const, job };
+      },
+      async get(_workspaceId: string, jobId: string) {
+        return jobId === job.job_id ? job : undefined;
+      },
+    } as unknown as ApiDependencies['jobs'];
+    const ledger = {
+      ...createMockLedger(),
+      async beginUserWalletSubmission() {
+        calls.push('begin');
+        return {
+          begun: true as const,
+          intent,
+          attemptId: 'attempt-user-wallet',
+          state: 'SUBMITTING' as const,
+          version: 2,
+        };
+      },
+      async recordUserWalletTransaction() {
+        calls.push('record');
+        return 'RECORDED' as const;
+      },
+      async completeSubmission() {
+        calls.push('complete');
+        job = {
+          ...job,
+          payment_state: 'COMMITTED',
+          settlement: {
+            provider_reference_id: `user-wallet:${hash}`,
+            transaction_hash: hash,
+            block_number: '123',
+            transfer_log_index: 0,
+          },
+        };
+        return { completed: true as const, state: 'COMMITTED' as const, version: 3 };
+      },
+      async markUserWalletUnknown() {
+        calls.push('unknown');
+        return { completed: true as const, state: 'UNKNOWN' as const, version: 3 };
+      },
+    } as unknown as ApiDependencies['ledger'];
+    const app = buildApi({
+      ledger,
+      jobs,
+      supplier: {
+        async createOrder() {
+          return { ...job.supplier, supplier_payload_fingerprint: 'a'.repeat(64) };
+        },
+        async fulfillOrder() {
+          throw new Error('API must not fulfill supplier orders');
+        },
+        async getResult() {
+          return null;
+        },
+      },
+      userWalletVerifier: {
+        async verify() {
+          calls.push('verify');
+          return {
+            kind: 'CONFIRMED' as const,
+            transactionHash: hash,
+            blockNumber: '123',
+            transferLogIndex: 0,
+          };
+        },
+      },
+      authenticator: staticBearerAuthenticator('test-token'),
+      config: { workspaceId: 'workspace-user-wallet' },
+    });
+    const headers = { authorization: 'Bearer test-token' };
+    const payload = {
+      task_key: 'report-user-wallet',
+      tool_id: 'team-report-v1',
+      report_subject: 'Acme',
+      recipient: job.supplier.recipient,
+      amount_atomic: job.supplier.amount_atomic,
+      payer_wallet: payer,
+    };
+
+    const prepared = await app.inject({
+      method: 'POST',
+      url: '/v1/jobs/user-wallet/prepare',
+      headers,
+      payload,
+    });
+    expect(prepared.statusCode).toBe(202);
+    expect(prepared.json()).toMatchObject({ payment_mode: 'USER_WALLET' });
+
+    const submitted = await app.inject({
+      method: 'POST',
+      url: `/v1/jobs/${job.job_id}/user-wallet/submit`,
+      headers,
+      payload: { transaction_hash: hash },
+    });
+    expect(submitted.statusCode).toBe(200);
+    expect(submitted.json()).toMatchObject({ payment_state: 'COMMITTED' });
+    expect(calls).toEqual(['prepare', 'begin', 'record', 'verify', 'complete']);
+    await app.close();
+  });
+
+  it.each([
+    {
+      label: 'a pending receipt',
+      verification: { kind: 'PENDING' as const },
+    },
+    {
+      label: 'a receipt without the expected Transfer',
+      verification: { kind: 'NOT_CONFIRMED' as const, reason: 'recipient or amount mismatch' },
+    },
+  ])('marks $label UNKNOWN without completing or retrying payment', async ({ verification }) => {
+    let job = userWalletJobFixture();
+    const calls: string[] = [];
+    const jobs = {
+      async get(_workspaceId: string, jobId: string) {
+        return jobId === job.job_id ? job : undefined;
+      },
+    } as unknown as ApiDependencies['jobs'];
+    const ledger = {
+      ...createMockLedger(),
+      async beginUserWalletSubmission() {
+        calls.push('begin');
+        return {
+          begun: true as const,
+          intent,
+          attemptId: 'attempt-user-wallet-unknown',
+          state: 'SUBMITTING' as const,
+          version: 2,
+        };
+      },
+      async recordUserWalletTransaction() {
+        calls.push('record');
+        return 'RECORDED' as const;
+      },
+      async completeSubmission() {
+        calls.push('complete');
+        throw new Error('UNKNOWN must not complete');
+      },
+      async markUserWalletUnknown() {
+        calls.push('unknown');
+        job = { ...job, payment_state: 'UNKNOWN' };
+        return { completed: true as const, state: 'UNKNOWN' as const, version: 3 };
+      },
+    } as unknown as ApiDependencies['ledger'];
+    const app = buildApi({
+      ledger,
+      jobs,
+      userWalletVerifier: {
+        async verify() {
+          return verification;
+        },
+      },
+      authenticator: staticBearerAuthenticator('test-token'),
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/jobs/${job.job_id}/user-wallet/submit`,
+      headers: { authorization: 'Bearer test-token' },
+      payload: { transaction_hash: USER_WALLET_HASH },
+    });
+    expect(response.statusCode).toBe(202);
+    expect(response.json()).toMatchObject({ payment_state: 'UNKNOWN' });
+    expect(calls).toEqual(['begin', 'record', 'unknown']);
+    await app.close();
+  });
+
+  it('refuses a different transaction hash after one hash is durably bound', async () => {
+    const durableHash = `0x${'a'.repeat(64)}`;
+    const differentHash = `0x${'b'.repeat(64)}`;
+    const job = userWalletJobFixture({ payment_state: 'UNKNOWN' });
+    let recorded = false;
+    const ledger = {
+      ...createMockLedger(),
+      async beginUserWalletSubmission() {
+        return {
+          begun: true as const,
+          intent,
+          attemptId: 'attempt-user-wallet-bound',
+          transactionHash: durableHash,
+          state: 'UNKNOWN' as const,
+          version: 3,
+        };
+      },
+      async recordUserWalletTransaction() {
+        recorded = true;
+        return 'CONFLICT' as const;
+      },
+    } as unknown as ApiDependencies['ledger'];
+    const app = buildApi({
+      ledger,
+      jobs: {
+        async get(_workspaceId: string, jobId: string) {
+          return jobId === job.job_id ? job : undefined;
+        },
+      } as unknown as ApiDependencies['jobs'],
+      userWalletVerifier: {
+        async verify() {
+          throw new Error('must not verify');
+        },
+      },
+      authenticator: staticBearerAuthenticator('test-token'),
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/jobs/${job.job_id}/user-wallet/submit`,
+      headers: { authorization: 'Bearer test-token' },
+      payload: { transaction_hash: differentHash },
+    });
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'RECONCILIATION_NOT_ALLOWED' });
+    expect(recorded).toBe(false);
+    await app.close();
+  });
+
+  it('refuses submission for a non-user-wallet job', async () => {
+    const job = userWalletJobFixture({
+      payment_mode: 'SERVER_PRIVY',
+      payment_state: 'AUTHORIZING',
+    });
+    const app = buildApi({
+      ledger: createMockLedger(),
+      jobs: {
+        async get(_workspaceId: string, jobId: string) {
+          return jobId === job.job_id ? job : undefined;
+        },
+      } as unknown as ApiDependencies['jobs'],
+      userWalletVerifier: {
+        async verify() {
+          throw new Error('must not verify');
+        },
+      },
+      authenticator: staticBearerAuthenticator('test-token'),
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/jobs/${job.job_id}/user-wallet/submit`,
+      headers: { authorization: 'Bearer test-token' },
+      payload: { transaction_hash: USER_WALLET_HASH },
+    });
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'RECONCILIATION_NOT_ALLOWED' });
+    await app.close();
+  });
+
+  it('returns 409 when preparation detects a different payer for the task key', async () => {
+    const job = userWalletJobFixture();
+    const app = buildApi({
+      ledger: createMockLedger(),
+      jobs: {
+        async createUserWalletOrReplay() {
+          return { kind: 'TASK_PAYLOAD_CONFLICT' as const, job };
+        },
+      } as unknown as ApiDependencies['jobs'],
+      supplier: {
+        async createOrder() {
+          return { ...job.supplier, supplier_payload_fingerprint: 'a'.repeat(64) };
+        },
+        async fulfillOrder() {
+          throw new Error('must not fulfill');
+        },
+        async getResult() {
+          return null;
+        },
+      },
+      authenticator: staticBearerAuthenticator('test-token'),
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/jobs/user-wallet/prepare',
+      headers: { authorization: 'Bearer test-token' },
+      payload: {
+        task_key: job.task_key,
+        tool_id: job.tool_id,
+        report_subject: 'Acme',
+        recipient: job.supplier.recipient,
+        amount_atomic: job.supplier.amount_atomic,
+        payer_wallet: `0x${'b'.repeat(40)}`,
+      },
+    });
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({ code: 'INTENT_PAYLOAD_CONFLICT' });
     await app.close();
   });
 });

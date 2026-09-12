@@ -14,6 +14,7 @@ import {
   selectCredential,
   unconfiguredOperatorSession,
   type UseOperatorSession,
+  type UserWalletSession,
 } from './auth/session.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { Hero } from './components/Hero.js';
@@ -47,6 +48,7 @@ export interface AppProps {
   readonly settlementClient?: SettlementClient;
   readonly recoveryClient?: RecoveryClient;
   readonly useOperatorSession?: UseOperatorSession;
+  readonly userWallet?: UserWalletSession;
   /** main.tsx passes the browser route; omitted preserves legacy test composition. */
   readonly route?: string;
 }
@@ -141,6 +143,7 @@ function CabinetPage(props: {
   readonly recoveryClient: RecoveryClient;
   readonly theme: Theme;
   readonly onToggleTheme: () => void;
+  readonly userWallet?: UserWalletSession;
 }) {
   const [section, setSection] = useState<
     'overview' | 'services' | 'requests' | 'protection' | 'spending' | 'access'
@@ -275,7 +278,11 @@ function CabinetPage(props: {
         )}
         {section === 'services' && (
           <>
-            <JobWorkspace client={props.jobClient} onSelectIntent={selectRequest} />
+            <JobWorkspace
+              client={props.jobClient}
+              {...(props.userWallet ? { userWallet: props.userWallet } : {})}
+              onSelectIntent={selectRequest}
+            />
             <CircleX402DemoPanel client={props.paidApiClient} onSelectIntent={selectRequest} />
           </>
         )}
@@ -365,6 +372,7 @@ export function App(props: AppProps = {}) {
         paidApiClient={paidApiClient}
         settlementClient={settlementClient}
         recoveryClient={recoveryClient}
+        {...(props.userWallet ? { userWallet: props.userWallet } : {})}
         theme={theme}
         onToggleTheme={toggleTheme}
       />

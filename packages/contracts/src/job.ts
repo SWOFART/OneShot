@@ -2,11 +2,13 @@ import { asAtomicAmount } from './money.js';
 import { asEvmAddress, ContractValidationError } from './ids.js';
 import type {
   CreateJobRequest,
+  CreateUserWalletJobRequest,
   DeliveryState,
   IntentState,
   SettlementView,
   SupplierQuote,
   SupplierResult,
+  UserWalletPayment,
 } from './generated/api-types.js';
 
 export interface SupplierOrder extends SupplierQuote {
@@ -26,6 +28,8 @@ export interface JobView {
   readonly business_intent_id: string;
   readonly supplier: SupplierQuote;
   readonly payment_state: IntentState;
+  readonly payment_mode: 'SERVER_PRIVY' | 'USER_WALLET';
+  readonly user_payment?: UserWalletPayment;
   readonly delivery_state: DeliveryState;
   readonly settlement?: SettlementView;
   readonly result?: SupplierResult;
@@ -75,6 +79,31 @@ export function parseCreateJobRequest(value: unknown): CreateJobRequest {
     report_subject: boundedText(candidate.report_subject, 'report_subject', 256),
     recipient: asEvmAddress(candidate.recipient),
     amount_atomic: positiveAtomicAmount(candidate.amount_atomic),
+  };
+}
+
+export function parseCreateUserWalletJobRequest(value: unknown): CreateUserWalletJobRequest {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new ContractValidationError('user-wallet job request must be an object');
+  }
+  const candidate = value as Record<string, unknown>;
+  const keys = Object.keys(candidate).sort();
+  const expected = [
+    'amount_atomic',
+    'payer_wallet',
+    'recipient',
+    'report_subject',
+    'task_key',
+    'tool_id',
+  ];
+  if (keys.length !== expected.length || keys.some((key, index) => key !== expected[index])) {
+    throw new ContractValidationError('user-wallet job request has missing or unexpected fields');
+  }
+  const { payer_wallet: payerWallet, ...job } = candidate;
+  const parsed = parseCreateJobRequest(job);
+  return {
+    ...parsed,
+    payer_wallet: asEvmAddress(payerWallet),
   };
 }
 

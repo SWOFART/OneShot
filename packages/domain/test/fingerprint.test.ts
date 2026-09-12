@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ContractValidationError } from '@oneshot/contracts';
-import { fingerprintIntent } from '../src/index.js';
+import { fingerprintIntent, userWalletJobFingerprint } from '../src/index.js';
 
 const base = {
   business_intent_id: 'intent-golden-1',
@@ -43,4 +43,23 @@ describe('fingerprintIntent', () => {
       );
     },
   );
+});
+
+describe('userWalletJobFingerprint', () => {
+  const job = {
+    task_key: 'report-acme',
+    tool_id: 'team-report-v1' as const,
+    report_subject: 'Acme',
+    recipient: '0x1111111111111111111111111111111111111111',
+    amount_atomic: '10000',
+  };
+
+  it('binds the payer address into the task payload fingerprint', () => {
+    expect(userWalletJobFingerprint(job, '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')).toBe(
+      userWalletJobFingerprint(job, '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'),
+    );
+    expect(userWalletJobFingerprint(job, '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')).not.toBe(
+      userWalletJobFingerprint(job, '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'),
+    );
+  });
 });

@@ -22,6 +22,7 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "@oneshot/arc-adapter": "workspace:*",
     "@oneshot/contracts": "workspace:*",
     "@oneshot/domain": "workspace:*",
     "@oneshot/storage-postgres": "workspace:*",
