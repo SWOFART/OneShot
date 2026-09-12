@@ -13,6 +13,7 @@ import {
   type EvidenceView,
   type IntentResponse,
   type IntentState,
+  type PaymentMode,
   type PaidApiResponse,
   type RecoveryView,
   type ReconcileResponse,
@@ -156,6 +157,7 @@ interface IntentRow {
   readonly purpose: string;
   readonly state: IntentState;
   readonly version: number;
+  readonly payment_mode: PaymentMode | null;
 }
 
 function object(value: unknown): Record<string, unknown> | null {
@@ -1743,9 +1745,11 @@ export class IntentLedger {
     limits: { readonly attempts?: number; readonly evidence?: number } = {},
   ): Promise<IntentResponse | undefined> {
     const intentResult = await client.query<IntentRow>(
-      `SELECT business_intent_id, payload_fingerprint, recipient, amount_atomic,
-        asset, network, purpose, state, version
-      FROM business_intents WHERE business_intent_id = $1`,
+      `SELECT i.business_intent_id, i.payload_fingerprint, i.recipient, i.amount_atomic,
+        i.asset, i.network, i.purpose, i.state, i.version, j.payment_mode
+      FROM business_intents i
+      LEFT JOIN resumable_jobs j ON j.business_intent_id = i.business_intent_id
+      WHERE i.business_intent_id = $1`,
       [id],
     );
     const intent = intentResult.rows[0];
@@ -1812,6 +1816,7 @@ export class IntentLedger {
       purpose: intent.purpose,
       state: intent.state,
       version: intent.version,
+      ...(intent.payment_mode ? { payment_mode: intent.payment_mode } : {}),
       attempts,
       ...(settlement ? { settlement } : {}),
       evidence,

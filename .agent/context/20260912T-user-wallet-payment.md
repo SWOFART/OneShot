@@ -50,3 +50,42 @@ The user-wallet feature is staged as a candidate delta pending fresh Gate A
 review and commit. Local non-container validation passes; PostgreSQL integration
 execution is unavailable on this workstation because no container runtime is
 available.
+
+## Follow-up: live proof projection
+
+The live user-wallet job reached `COMMITTED`, the supplier result became
+available, and the public Arc explorer showed a successful 1 USDC transfer from
+the connected wallet to the reviewed recipient. The API submit and subsequent
+intent/recovery reads returned HTTP 200 on the active API revision.
+
+The Payment Proof panel still displayed `Needs verification` because its
+projection only accepted `ARC` authoritative evidence. The user-wallet submit
+path durably inserts an `ONESHOT` authoritative observation after the direct Arc
+receipt verifier confirms the exact transfer. The same response also omitted
+payment mode, so the generic policy panel rendered `Policy: Not reported`.
+
+Follow-up goal: expose the existing durable payment mode on intent reads, treat
+an authoritative OneShot observation as verified only for a committed
+`USER_WALLET` intent (preserving the strict Arc-evidence path for other modes),
+and render user-wallet policy as not applicable. No payment or deployment action
+is part of this code change.
+
+## Follow-up implementation state
+
+Implemented locally: generated contracts expose optional `IntentResponse.payment_mode`;
+PostgreSQL intent projection loads it from the existing job binding; the
+settlement proof projection recognizes the user-wallet commit's authoritative
+OneShot observation; and the policy panel says `Not applicable` for direct
+connected-wallet payments. Existing server-wallet verification remains
+Arc-authoritative only. Added UI, contract, and PostgreSQL-gated regression
+coverage; no migration or external payment behavior changed.
+
+Validation: focused settlement UI 211/211, contracts 39/39, full suite
+82 files/1075 tests, browser acceptance 8/8, typecheck, lint, format, generated
+contract check, and diff check pass. The PostgreSQL-gated suite remains
+environment-dependent on a container runtime as documented above.
+
+Gate A: a fresh `npx.cmd free-pi-cli` process was started for the staged
+candidate, but it emitted an unbounded interactive trace and exited without
+the required structured verdict. No Gate A PASS is claimed; no push, PR, or
+deployment was performed.

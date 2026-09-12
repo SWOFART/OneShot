@@ -51,7 +51,7 @@ P5 composition stays a single-editor change in the shell.
   `f639e2d2729cd061d606cd35eb83961c58067a3660ecc5437c0f4596c88edc2c`.
 - Mock server: `@oneshot/contracts` `OPENAPI_MOCK_SERVER_VERSION` `1.0.0`,
   re-exported here as `SETTLEMENT_UI_MOCK_SERVER_VERSION`.
-- Fields consumed: `IntentResponse.policy`, `AttemptView.authorization_status`,
+- Fields consumed: `IntentResponse.payment_mode`, `IntentResponse.policy`, `AttemptView.authorization_status`,
   `SettlementView.token_contract`, `SettlementView.explorer_url`, plus the
   base intent, attempt, settlement, and evidence fields.
 - View contract version: `settlement-details-v1`.
@@ -63,8 +63,15 @@ P5 composition stays a single-editor change in the shell.
 - **`UNKNOWN` is not terminal.** It renders as not final, with no settlement
   action and no confirmation count. Arc is shown as pending or final only.
 - **Verified evidence only.** Transaction details render when the durable state
-  is `COMMITTED`, the Arc identity is well formed, and an authoritative Arc
-  observation exists. Anything less renders as unverified with details withheld.
+  is `COMMITTED`, the settlement identity is well formed, and authoritative
+  evidence exists. Normal server-wallet intents require an authoritative Arc
+  observation. A `USER_WALLET` intent may use its authoritative OneShot
+  observation because the API records that observation only after its exact Arc
+  receipt and Transfer-log verification succeeds. Anything less renders as
+  unverified with details withheld.
+- **Policy scope is explicit.** User-wallet intents display policy as not
+  applicable: the connected wallet signs the reviewed transfer directly, so no
+  server-side Privy spending policy governs that payment.
 - **Validated outbound links.** An explorer URL becomes an `href` only if it is
   https, carries no embedded credentials, sits on the host allowlist, and
   references the exact transaction hash being displayed. Hash binding alone is

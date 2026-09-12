@@ -47,6 +47,7 @@ export interface IntentResponse extends CreateIntentRequest {
   readonly payload_fingerprint: string;
   readonly state: IntentState;
   readonly version: number;
+  readonly payment_mode?: PaymentMode;
   readonly policy?: PolicySummaryView;
   readonly attempts: readonly AttemptView[];
   readonly settlement?: SettlementView;

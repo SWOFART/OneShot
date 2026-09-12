@@ -160,6 +160,7 @@ const schemas = {
       purpose: { type: 'string', minLength: 1, maxLength: 256 },
       state: { type: 'string', enum: intentStates },
       version: { type: 'integer', minimum: 1 },
+      payment_mode: { type: 'string', enum: paymentModes },
       policy: { $ref: '#/$defs/PolicySummary' },
       attempts: { type: 'array', maxItems: 100, items: { $ref: '#/$defs/Attempt' } },
       settlement: { $ref: '#/$defs/Settlement' },
@@ -926,6 +927,7 @@ export interface IntentResponse extends CreateIntentRequest {
   readonly payload_fingerprint: string;
   readonly state: IntentState;
   readonly version: number;
+  readonly payment_mode?: PaymentMode;
   readonly policy?: PolicySummaryView;
   readonly attempts: readonly AttemptView[];
   readonly settlement?: SettlementView;

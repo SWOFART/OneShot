@@ -326,6 +326,13 @@
           "type": "integer",
           "minimum": 1
         },
+        "payment_mode": {
+          "type": "string",
+          "enum": [
+            "SERVER_PRIVY",
+            "USER_WALLET"
+          ]
+        },
         "policy": {
           "$ref": "#/$defs/PolicySummary"
         },
