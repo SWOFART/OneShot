@@ -11,9 +11,15 @@ import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
  * so the hero becomes the same content on a plain rounded panel.
  */
 
-const HERO_HEIGHT = 268;
+const HERO_HEIGHT = 320;
 
-export function Hero({ children }: { readonly children: ReactNode }) {
+export function Hero({
+  children,
+  height = HERO_HEIGHT,
+}: {
+  readonly children: ReactNode;
+  readonly height?: number;
+}) {
   const box = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
   const id = useId();
@@ -37,7 +43,7 @@ export function Hero({ children }: { readonly children: ReactNode }) {
     return () => observer.disconnect();
   }, []);
 
-  const cut = width >= HERO_MIN_WIDTH ? heroClipPaths(width, HERO_HEIGHT) : null;
+  const cut = width >= HERO_MIN_WIDTH ? heroClipPaths(width, height) : null;
   // useId's punctuation varies by React version and ends up inside a `url(#…)`
   // reference. Strip it; the uniqueness still comes from React.
   const safeId = id.replace(/[^a-zA-Z0-9]/gu, '');
@@ -49,7 +55,7 @@ export function Hero({ children }: { readonly children: ReactNode }) {
       {cut === null ? (
         <div className="hero-plain">{children}</div>
       ) : (
-        <div className="hero-cut" style={{ height: `${HERO_HEIGHT}px` }}>
+        <div className="hero-cut" style={{ height: `${height}px` }}>
           <svg width="0" height="0" aria-hidden="true" style={{ position: 'absolute' }}>
             <clipPath id={panelClip} clipPathUnits="userSpaceOnUse">
               <path d={cut.panel} />

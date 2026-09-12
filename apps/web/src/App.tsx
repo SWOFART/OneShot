@@ -77,7 +77,7 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
         </a>
       </nav>
       <header className="app-header hero-section">
-        <div className="hero-plain">
+        <Hero height={620}>
           <p className="eyebrow">RESUMABLE PAID SERVICES / ARC TESTNET</p>
           <h1>Resume the job, not the payment.</h1>
           <p className="hero-lead">
@@ -96,7 +96,7 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
               How it works
             </a>
           </div>
-        </div>
+        </Hero>
       </header>
       <section id="how-it-works" className="invariants-section" aria-labelledby="how-heading">
         <div className="section-header">
@@ -185,14 +185,14 @@ function CabinetPage(props: {
         onMachineTokenChange={props.setMachineToken}
       >
         <header className="app-header hero-section cabinet-header">
-          <div className="hero-plain">
+          <Hero>
             <p className="eyebrow">WORKSPACE</p>
             <h1>Your payment workspace</h1>
             <p className="hero-lead">
               Run approved paid APIs, keep one payment identity per request, and recover results
               without paying twice.
             </p>
-          </div>
+          </Hero>
         </header>
         <details className="walkthrough">
           <summary>Walk through a real request</summary>
@@ -490,9 +490,10 @@ export function App(props: AppProps = {}) {
         <section className="console-container" id="console" aria-label="Payment workspace">
           <div className="console-header">
             <span className="section-eyebrow">WORKSPACE</span>
-            <h2>Run and protect API payments</h2>
+            <h2>Your payment workspace</h2>
             <p className="console-subtitle">
-              Create a request, review the exact payment, and inspect proof only when you need it.
+              Run and protect API payments: create a request, review the exact payment, and inspect
+              proof only when you need it.
             </p>
           </div>
 

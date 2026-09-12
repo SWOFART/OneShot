@@ -100,6 +100,7 @@ export function JobWorkspace(props: {
   const [runSuffix] = useState(() => crypto.randomUUID().slice(0, 8));
   const [quote, setQuote] = useState<SupplierQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [approvedJob, setApprovedJob] = useState<JobView | null>(null);
   const [notice, setNotice] = useState('');
   const generatedTaskKey = subject.trim() ? `report-${subjectSlug(subject)}-${runSuffix}` : '';
@@ -163,17 +164,24 @@ export function JobWorkspace(props: {
       setNotice('Enter a valid recipient wallet and a positive USDC amount.');
       return;
     }
+    setStarting(true);
     try {
       const job = await props.client.start(jobRequest);
       setApprovedJob(job);
       setNotice('Request accepted. Payment authorization is queued.');
     } catch {
       setNotice('The request was not started. Keep the same request key when retrying.');
+    } finally {
+      setStarting(false);
     }
   }
 
   return (
-    <section className="panel job-workspace" aria-label="Company research service">
+    <section
+      className="panel job-workspace"
+      aria-label="Company research service"
+      aria-busy={quoteLoading || starting}
+    >
       <header>
         <p className="eyebrow">API SERVICE</p>
         <h2>Company research service</h2>
@@ -185,6 +193,7 @@ export function JobWorkspace(props: {
       <label htmlFor="report-subject">Company or domain</label>
       <input
         id="report-subject"
+        disabled={quoteLoading || starting}
         value={subject}
         onChange={(event) => {
           setSubject(event.target.value);
@@ -195,6 +204,7 @@ export function JobWorkspace(props: {
       <label htmlFor="report-recipient">Service destination wallet</label>
       <input
         id="report-recipient"
+        disabled={quoteLoading || starting}
         value={recipient}
         onChange={(event) => {
           setRecipient(event.target.value);
@@ -212,6 +222,7 @@ export function JobWorkspace(props: {
       <label htmlFor="report-amount">Amount (USDC)</label>
       <input
         id="report-amount"
+        disabled={quoteLoading || starting}
         value={amount}
         onChange={(event) => {
           setAmount(event.target.value);
@@ -241,6 +252,7 @@ export function JobWorkspace(props: {
         <label htmlFor="custom-task-key">Custom request key (optional)</label>
         <input
           id="custom-task-key"
+          disabled={quoteLoading || starting}
           value={customTaskKey}
           onChange={(event) => {
             setCustomTaskKey(event.target.value);
@@ -273,8 +285,8 @@ export function JobWorkspace(props: {
             Nothing has been paid yet. Approval sends the exact quote through the active Privy
             spending rule.
           </p>
-          <button type="button" onClick={() => void start()}>
-            Approve and run service
+          <button type="button" disabled={starting} onClick={() => void start()}>
+            {starting ? 'Starting request…' : 'Approve and run service'}
           </button>
         </>
       )}
@@ -324,7 +336,7 @@ export function CircleX402DemoPanel(props: {
       setQuote(await props.client.quote(paidApiRequest));
     } catch {
       setQuote(null);
-      setNotice('A live price is unavailable. Check the connected service and try again.');
+      setNotice('A current price is unavailable. Check the connected service and try again.');
     } finally {
       setLoading(null);
     }
@@ -370,7 +382,7 @@ export function CircleX402DemoPanel(props: {
         <span className="badge tone-neutral">Arc Testnet</span>
       </header>
       <p>
-        Get a live dataset result through Circle’s payment rail. OneShot keeps one request key so a
+        Get a dataset result through Circle’s payment rail. OneShot keeps one request key so a
         retry reuses the original payment instead of charging twice.
       </p>
       <label htmlFor="paid-api-task-key">Request key</label>
@@ -564,6 +576,7 @@ export function JobList(props: {
   const [jobs, setJobs] = useState<readonly JobView[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [resumingJobId, setResumingJobId] = useState<string | null>(null);
 
   async function refresh(): Promise<void> {
     setLoading(true);
@@ -577,19 +590,41 @@ export function JobList(props: {
     }
   }
 
+  async function resume(jobId: string): Promise<void> {
+    setResumingJobId(jobId);
+    setError('');
+    try {
+      await props.client.resume(jobId);
+      await refresh();
+    } catch {
+      setError('The result could not be resumed. No new payment was submitted.');
+    } finally {
+      setResumingJobId(null);
+    }
+  }
+
   useEffect(() => {
     void refresh();
   }, []);
 
   return (
-    <section className="panel" aria-label="Requests and results">
+    <section
+      className="panel"
+      aria-label="Requests and results"
+      aria-busy={loading || resumingJobId !== null}
+    >
       <header className="panel-heading">
         <div>
           <p className="eyebrow">API REQUESTS</p>
           <h2>Requests and results</h2>
         </div>
-        <button type="button" className="secondary compact" onClick={() => void refresh()}>
-          Refresh requests
+        <button
+          type="button"
+          className="secondary compact"
+          disabled={loading || resumingJobId !== null}
+          onClick={() => void refresh()}
+        >
+          {loading ? 'Refreshing…' : 'Refresh requests'}
         </button>
       </header>
       {error && (
@@ -649,9 +684,10 @@ export function JobList(props: {
                   <button
                     type="button"
                     className="secondary compact"
-                    onClick={() => void props.client.resume(job.job_id).then(refresh)}
+                    disabled={resumingJobId !== null}
+                    onClick={() => void resume(job.job_id)}
                   >
-                    Resume result (no new payment)
+                    {resumingJobId === job.job_id ? 'Resuming…' : 'Resume result (no new payment)'}
                   </button>
                 ) : null}
                 <button

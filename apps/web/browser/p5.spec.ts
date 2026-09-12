@@ -47,7 +47,10 @@ async function json(route: Route, status: number, body: unknown): Promise<void> 
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function mockJobApi(page: Page): Promise<string[]> {
+async function mockJobApi(
+  page: Page,
+  options: { readonly startDelayMs?: number; readonly resumeDelayMs?: number } = {},
+): Promise<string[]> {
   const calls: string[] = [];
   let current = job();
   await page.route('**/health/ready', (route) => json(route, 200, { status: 'ok' }));
@@ -59,8 +62,14 @@ async function mockJobApi(page: Page): Promise<string[]> {
       return json(route, 200, { jobs: [current] });
     if (pathname === '/v1/jobs/quote' && request.method() === 'POST')
       return json(route, 200, current.supplier);
-    if (pathname === '/v1/jobs' && request.method() === 'POST') return json(route, 202, current);
+    if (pathname === '/v1/jobs' && request.method() === 'POST') {
+      if (options.startDelayMs)
+        await new Promise((resolve) => setTimeout(resolve, options.startDelayMs));
+      return json(route, 202, current);
+    }
     if (pathname === `/v1/jobs/${JOB_ID}/resume` && request.method() === 'POST') {
+      if (options.resumeDelayMs)
+        await new Promise((resolve) => setTimeout(resolve, options.resumeDelayMs));
       current = job('AVAILABLE');
       return json(route, 202, current);
     }
@@ -111,7 +120,7 @@ test.describe('resumable job workspace', () => {
   });
 
   test('starts one job and resumes only its original supplier delivery', async ({ page }) => {
-    const calls = await mockJobApi(page);
+    const calls = await mockJobApi(page, { startDelayMs: 1000, resumeDelayMs: 1000 });
     await page.goto('/app');
     await unlockWorkspace(page);
     await page.getByRole('tab', { name: 'API services' }).click();
@@ -130,7 +139,13 @@ test.describe('resumable job workspace', () => {
     expect(calls).not.toContain('POST /v1/jobs');
     await expect(page.getByRole('heading', { name: 'Review before approval' })).toBeVisible();
     await expect(page.getByText('Nothing has been paid yet.')).toBeVisible();
-    await page.getByRole('button', { name: 'Approve and run service' }).click();
+    const approve = page
+      .getByRole('region', { name: 'Company research service' })
+      .locator('button')
+      .last();
+    await approve.click();
+    await expect(approve).toBeDisabled();
+    await expect(approve).toHaveText('Starting request…');
     await expect.poll(() => calls.filter((call) => call === 'POST /v1/jobs')).toHaveLength(1);
     await expect(page.getByRole('status')).toContainText('Payment authorization is queued');
     await expect(page.getByRole('heading', { name: 'Request accepted' })).toBeVisible();
@@ -142,7 +157,10 @@ test.describe('resumable job workspace', () => {
       'href',
       `https://testnet.arcscan.app/tx/0x${'c'.repeat(64)}`,
     );
-    await page.getByRole('button', { name: 'Resume result (no new payment)' }).click();
+    const resume = page.locator('.job-list li').first().locator('button').nth(1);
+    await resume.click();
+    await expect(resume).toBeDisabled();
+    await expect(resume).toHaveText('Resuming…');
     await expect(page.getByText('Recovered original supplier report.')).toBeVisible();
   });
 
@@ -191,11 +209,18 @@ for (const theme of ['light', 'dark'] as const) {
       await page.goto('/');
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
       await checkContrast();
-      const hero = await page.locator('.hero-plain').boundingBox();
-      for (const selector of ['h1', '.hero-actions']) {
-        const content = await page.locator(`.hero-plain ${selector}`).boundingBox();
-        expect(content!.y).toBeGreaterThanOrEqual(hero!.y);
-        expect(content!.y + content!.height).toBeLessThanOrEqual(hero!.y + hero!.height);
+      const heroPlain = page.locator('.hero-plain');
+      if (await heroPlain.count()) {
+        const hero = await heroPlain.first().boundingBox();
+        for (const selector of ['h1', '.hero-actions']) {
+          const content = await heroPlain.locator(selector).first().boundingBox();
+          expect(content!.y).toBeGreaterThanOrEqual(hero!.y);
+          expect(content!.y + content!.height).toBeLessThanOrEqual(hero!.y + hero!.height);
+        }
+      } else {
+        await expect(page.locator('.hero-cut')).toBeVisible();
+        await expect(page.locator('.hero-copy h1')).toBeVisible();
+        await expect(page.locator('.hero-copy .hero-actions')).toBeVisible();
       }
       await page.screenshot({
         path: test.info().outputPath(`landing-${theme}-${width}.png`),
@@ -204,7 +229,7 @@ for (const theme of ['light', 'dark'] as const) {
       await page.goto('/app');
       await unlockWorkspace(page);
       const identity = await page.locator('.operator-identity').boundingBox();
-      const header = await page.locator('.cabinet-header .hero-plain').boundingBox();
+      const header = await page.locator('.cabinet-header').boundingBox();
       expect(identity).not.toBeNull();
       expect(header?.x).toBeCloseTo(identity!.x, 0);
       expect(header?.width).toBeCloseTo(identity!.width, 0);
