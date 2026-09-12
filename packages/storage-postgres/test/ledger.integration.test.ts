@@ -59,7 +59,7 @@ describePostgres('PostgreSQL intent ledger', () => {
     const directory = await mkdtemp(join(tmpdir(), 'oneshot-migration-'));
     try {
       await writeFile(
-        join(directory, '009_broken.sql'),
+        join(directory, '010_broken.sql'),
         'CREATE TABLE must_rollback (id integer); SELECT missing_function();',
         'utf8',
       );
@@ -68,7 +68,7 @@ describePostgres('PostgreSQL intent ledger', () => {
         "SELECT to_regclass('public.must_rollback')::text AS name",
       );
       expect(table.rows[0]?.name).toBeNull();
-      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 9');
+      const version = await pool.query('SELECT 1 FROM schema_versions WHERE version = 10');
       expect(version.rowCount).toBe(0);
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -100,7 +100,7 @@ describePostgres('PostgreSQL intent ledger', () => {
       resourceUrl: 'https://x402.example.test/api/dataset',
       x402Version: 2,
       maxTimeoutSeconds: 60,
-      recipient: '0x1111111111111111111111111111111111111111',
+      recipient: `0x${'1'.repeat(40)}`,
       amountAtomic: '10000',
       quotePayload: {
         url: 'https://x402.example.test/api/dataset',
@@ -185,10 +185,10 @@ describePostgres('PostgreSQL intent ledger', () => {
       task_key: 'report-user-wallet-2026',
       tool_id: 'team-report-v1' as const,
       report_subject: 'User Wallet Acme',
-      recipient: '0x1111111111111111111111111111111111111111',
+      recipient: `0x${'1'.repeat(40)}`,
       amount_atomic: '1000000',
     };
-    const payer = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const payer = `0x${'a'.repeat(40)}`;
     const order = {
       supplier_id: 'team-report-v1' as const,
       order_reference: 'team_report_user_wallet_2026',
@@ -225,7 +225,7 @@ describePostgres('PostgreSQL intent ledger', () => {
       workspaceId: 'workspace-user-wallet',
       request: {
         ...jobRequest,
-        payer_wallet: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        payer_wallet: `0x${'b'.repeat(40)}`,
       },
       supplierOrder: order,
       correlationId: 'user-wallet-payer-conflict',
