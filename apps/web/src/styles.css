@@ -742,6 +742,10 @@ a:hover {
   border-color: var(--os-accent-ink);
 }
 
+.tabs button[aria-selected='true']:hover:not(:disabled) {
+  opacity: 1;
+}
+
 /* ==========================================================================
    Panels & Form Controls
    ========================================================================== */
