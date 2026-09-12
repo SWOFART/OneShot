@@ -53,8 +53,8 @@ describe('web stylesheet', () => {
 
     // The tab strip sits on the page ground, so it flips with the theme.
     // --os-panel-ink here rendered near-white on the near-white light ground.
-    // Anchored: `.console-container .tabs button` legitimately takes panel ink,
-    // because that container paints --os-panel.
+    // The console strip takes the same page ink: its buttons paint
+    // --os-surface themselves rather than showing the forest container.
     expect(css).toMatch(/^\.tabs button \{[^}]*color:\s*var\(--os-ink\)/mu);
     expect(css).not.toMatch(/^\.tabs button \{[^}]*color:\s*var\(--os-panel-ink\)/mu);
 
