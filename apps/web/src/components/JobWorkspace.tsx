@@ -49,10 +49,12 @@ export function SupplierQuotePanel({
         <h3>{heading}</h3>
         <span className="badge tone-neutral">Payment preview</span>
       </header>
-      <p className="panel-lede">Review the exact amount and service destination before approval.</p>
+      <p className="panel-lede">
+        Confirm the recipient and the USDC amount they will receive. Network fees are separate.
+      </p>
       <dl className="facts">
         <div>
-          <dt>Amount</dt>
+          <dt>Recipient receives</dt>
           <dd className="mono">{quoteAmount(quote)}</dd>
         </div>
         <div>
@@ -146,7 +148,9 @@ export function JobWorkspace(props: {
       );
     } catch {
       setQuote(null);
-      setNotice('A live price is not available. Check service readiness and try again.');
+      setNotice(
+        'The service could not prepare a payment preview. No payment was requested. Check the connection and try again.',
+      );
     } finally {
       setQuoteLoading(false);
     }
@@ -174,8 +178,8 @@ export function JobWorkspace(props: {
         <p className="eyebrow">API SERVICE</p>
         <h2>Company research service</h2>
         <p>
-          Request a company report. OneShot gets a live quote first, then asks for approval before
-          any payment authorization is requested.
+          Prepare a team-operated company report request. You choose the destination and payment
+          amount; preview confirms those details before you approve a payment.
         </p>
       </header>
       <label htmlFor="report-subject">Company or domain</label>
@@ -219,7 +223,7 @@ export function JobWorkspace(props: {
         aria-describedby="report-amount-help"
       />
       <small id="report-amount-help" className="field-help">
-        Up to 6 decimal places. OneShot sends integer USDC units to the API.
+        This is the amount the recipient receives, excluding network fees. Up to 6 decimal places.
       </small>
       <details className="advanced-fields">
         <summary>Request key (advanced)</summary>
@@ -251,12 +255,20 @@ export function JobWorkspace(props: {
           disabled={quoteLoading || !request()}
           onClick={() => void loadQuote()}
         >
-          {quoteLoading ? 'Checking price…' : 'Check price'}
+          {quoteLoading ? 'Preparing preview…' : 'Review payment details'}
         </button>
       )}
       {quote && !approvedJob && (
         <>
-          <SupplierQuotePanel heading="Review quote before approval" quote={quote} />
+          <SupplierQuotePanel heading="Review before approval" quote={quote} />
+          <details className="technical-details agent-handoff">
+            <summary>Request for your agent</summary>
+            <p>
+              Send this exact request to POST /v1/jobs only after approval. Reuse its task key when
+              resuming. The amount is in USDC atomic units, not dollars; network fees are separate.
+            </p>
+            <pre className="response-output">{JSON.stringify(request(), null, 2)}</pre>
+          </details>
           <p className="field-help">
             Nothing has been paid yet. Approval sends the exact quote through the active Privy
             spending rule.
@@ -319,14 +331,16 @@ export function CircleX402DemoPanel(props: {
   }
 
   async function approve(): Promise<void> {
-    if (!props.client) return;
+    const approvedQuote = request?.quote ?? quote;
+    if (!props.client || !approvedQuote) return;
     setLoading('start');
     setNotice('');
     try {
-      const result = await props.client.start(paidApiRequest);
+      const result = await props.client.start({ ...paidApiRequest, approved_quote: approvedQuote });
       setRequest(result);
       setNotice('Request accepted. OneShot now owns the payment attempt.');
     } catch {
+      setQuote(null);
       setNotice('The API request was not accepted. Keep the same request key before retrying.');
     } finally {
       setLoading(null);
@@ -362,6 +376,7 @@ export function CircleX402DemoPanel(props: {
       <label htmlFor="paid-api-task-key">Request key</label>
       <input
         id="paid-api-task-key"
+        disabled={loading !== null || request !== null}
         value={taskKey}
         onChange={(event) => {
           setTaskKey(event.target.value);
@@ -396,7 +411,7 @@ export function CircleX402DemoPanel(props: {
             </header>
             <dl className="facts">
               <div>
-                <dt>Amount</dt>
+                <dt>Recipient receives</dt>
                 <dd className="mono">
                   {formatAtomicUsdcWithAsset(quote.amount_atomic, quote.asset) ?? 'Unavailable'}
                 </dd>

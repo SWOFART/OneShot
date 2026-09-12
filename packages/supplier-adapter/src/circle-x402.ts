@@ -8,6 +8,7 @@ import type {
   SettleResponse,
 } from '@x402/core/types';
 
+export const ARC_X402_GATEWAY_WALLET = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9';
 export const ARC_X402_NETWORK = 'eip155:5042002';
 export const ARC_X402_USDC = '0x3600000000000000000000000000000000000000';
 const DEFAULT_MAX_AMOUNT_ATOMIC = 10_000n;
@@ -138,6 +139,8 @@ function asRequirements(value: PaymentRequirements): PaymentRequirements {
     value.network !== ARC_X402_NETWORK ||
     value.asset.toLowerCase() !== ARC_X402_USDC ||
     !supportsBatching(value) ||
+    typeof value.extra?.verifyingContract !== 'string' ||
+    value.extra.verifyingContract.toLowerCase() !== ARC_X402_GATEWAY_WALLET.toLowerCase() ||
     !Number.isSafeInteger(value.maxTimeoutSeconds) ||
     value.maxTimeoutSeconds <= 0 ||
     value.maxTimeoutSeconds > MAX_CIRCLE_X402_TIMEOUT_SECONDS ||

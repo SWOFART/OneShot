@@ -124,11 +124,11 @@ test.describe('resumable job workspace', () => {
     await expect(page.locator('#generated-task-key')).toHaveValue(/report-acme-com-/u);
     await page
       .getByRole('region', { name: 'Company research service' })
-      .getByRole('button', { name: 'Check price' })
+      .getByRole('button', { name: 'Review payment details' })
       .click();
     await expect.poll(() => calls.filter((call) => call === 'POST /v1/jobs/quote')).toHaveLength(1);
     expect(calls).not.toContain('POST /v1/jobs');
-    await expect(page.getByRole('heading', { name: 'Review quote before approval' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Review before approval' })).toBeVisible();
     await expect(page.getByText('Nothing has been paid yet.')).toBeVisible();
     await page.getByRole('button', { name: 'Approve and run service' }).click();
     await expect.poll(() => calls.filter((call) => call === 'POST /v1/jobs')).toHaveLength(1);
@@ -228,11 +228,9 @@ for (const theme of ['light', 'dark'] as const) {
           await page.getByLabel('Amount (USDC)').fill('2.5');
           await page
             .getByRole('region', { name: 'Company research service' })
-            .getByRole('button', { name: 'Check price' })
+            .getByRole('button', { name: 'Review payment details' })
             .click();
-          await expect(
-            page.getByRole('heading', { name: 'Review quote before approval' }),
-          ).toBeVisible();
+          await expect(page.getByRole('heading', { name: 'Review before approval' })).toBeVisible();
         }
         if (label === 'Requests') {
           await page.getByRole('button', { name: 'Resume result (no new payment)' }).click();

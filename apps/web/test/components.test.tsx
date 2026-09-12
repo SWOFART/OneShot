@@ -177,7 +177,7 @@ describe('JobWorkspace payment inputs', () => {
       '0x2222222222222222222222222222222222222222',
     );
     await user.type(screen.getByLabelText('Amount (USDC)'), '1.25');
-    await user.click(screen.getByRole('button', { name: 'Check price' }));
+    await user.click(screen.getByRole('button', { name: 'Review payment details' }));
 
     await waitFor(() =>
       expect(quotedRequest).toEqual({

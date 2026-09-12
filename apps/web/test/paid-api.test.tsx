@@ -47,7 +47,11 @@ describe('Circle x402 paid API workspace flow', () => {
       client.quote({ task_key: 'circle-api-test', tool_id: 'circle-x402-api-v1' }),
     ).resolves.toEqual(quote);
     await expect(
-      client.start({ task_key: 'circle-api-test', tool_id: 'circle-x402-api-v1' }),
+      client.start({
+        task_key: 'circle-api-test',
+        tool_id: 'circle-x402-api-v1',
+        approved_quote: quote,
+      }),
     ).resolves.toEqual(approved);
     await expect(client.get(approved.business_intent_id)).resolves.toEqual(approved);
     expect(calls).toEqual([
@@ -80,5 +84,22 @@ describe('Circle x402 paid API workspace flow', () => {
       `https://testnet.arcscan.app/tx/${approved.provider_transaction_hash}`,
     );
     expect(screen.getByText(/do not start a new request/iu)).toBeTruthy();
+  });
+
+  it('clears a stale quote so approval can be reviewed again', async () => {
+    const user = userEvent.setup();
+    const start = vi.fn().mockRejectedValue(new Error('quote changed'));
+    const client = {
+      quote: vi.fn(async () => quote),
+      start,
+      get: vi.fn(async () => approved),
+    };
+    render(<CircleX402DemoPanel client={client} onSelectIntent={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Check price' }));
+    await user.click(screen.getByRole('button', { name: 'Approve and get result' }));
+    await waitFor(() => expect(start).toHaveBeenCalledOnce());
+    expect(screen.queryByText('Review payment')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Check price' })).toBeTruthy();
   });
 });

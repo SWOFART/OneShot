@@ -8,6 +8,7 @@ import {
   type ErrorCode,
   type ErrorResponse,
   type SupplierQuote,
+  type ApprovePaidApiRequest,
 } from '@oneshot/contracts';
 import { derivedJobId } from '@oneshot/domain';
 import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
@@ -15,7 +16,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { ServiceAuthenticator } from './auth.js';
 import { allowAllRateLimiter, type RateLimiter } from './rate-limit.js';
 import { UnavailableWalletActivityPort, type WalletActivityPort } from './wallet-activity.js';
-import type { PaidApiService } from './paid-api.js';
+import { PaidApiQuoteChangedError, type PaidApiService } from './paid-api.js';
 
 export interface ServiceConfig {
   readonly submissionsDisabled?: boolean;
@@ -92,6 +93,38 @@ const createPaidApiBodySchema = {
   properties: {
     task_key: { type: 'string', minLength: 1, maxLength: 128 },
     tool_id: { type: 'string', const: 'circle-x402-api-v1' },
+  },
+} as const;
+
+const approvePaidApiBodySchema = {
+  ...createPaidApiBodySchema,
+  required: ['task_key', 'tool_id', 'approved_quote'],
+  properties: {
+    ...createPaidApiBodySchema.properties,
+    approved_quote: {
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'supplier_id',
+        'resource_url',
+        'recipient',
+        'amount_atomic',
+        'asset',
+        'network',
+        'x402_version',
+        'max_timeout_seconds',
+      ],
+      properties: {
+        supplier_id: { type: 'string', const: 'circle-x402-v1' },
+        resource_url: { type: 'string', minLength: 1, maxLength: 2048 },
+        recipient: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
+        amount_atomic: { type: 'string', pattern: '^(0|[1-9][0-9]*)$', maxLength: 78 },
+        asset: { type: 'string', const: 'USDC' },
+        network: { type: 'string', const: 'eip155:5042002' },
+        x402_version: { type: 'integer', const: 2 },
+        max_timeout_seconds: { type: 'integer', minimum: 1, maximum: 604900 },
+      },
+    },
   },
 } as const;
 
@@ -284,15 +317,20 @@ export function buildApi(dependencies: ApiDependencies) {
 
   app.post(
     '/v1/paid-api',
-    { schema: { body: createPaidApiBodySchema } },
+    { schema: { body: approvePaidApiBodySchema } },
     async (request, reply) => {
       if (!dependencies.paidApi) {
         paidApiUnavailable(reply, request);
         return;
       }
-      const parsed = parseCreatePaidApiRequest(request.body);
+      const body = request.body as ApprovePaidApiRequest;
+      const parsed = parseCreatePaidApiRequest({ task_key: body.task_key, tool_id: body.tool_id });
       try {
-        const result = await dependencies.paidApi.start(parsed, correlationFor(request));
+        const result = await dependencies.paidApi.start(
+          parsed,
+          correlationFor(request),
+          body.approved_quote,
+        );
         if (result.kind === 'INTENT_PAYLOAD_CONFLICT') {
           sendError(
             reply,
@@ -304,7 +342,11 @@ export function buildApi(dependencies: ApiDependencies) {
           return;
         }
         return reply.code(result.kind === 'ACCEPTED' ? 202 : 200).send(result.request);
-      } catch {
+      } catch (error) {
+        if (error instanceof PaidApiQuoteChangedError) {
+          sendError(reply, 409, 'INTENT_PAYLOAD_CONFLICT', error.message, correlationFor(request));
+          return;
+        }
         sendError(
           reply,
           503,

@@ -1,4 +1,9 @@
-import type { CreatePaidApiRequest, PaidApiQuote, PaidApiResponse } from '@oneshot/contracts';
+import type {
+  ApprovePaidApiRequest,
+  CreatePaidApiRequest,
+  PaidApiQuote,
+  PaidApiResponse,
+} from '@oneshot/contracts';
 import type { ApiClientConfig } from './client.js';
 
 async function responseJson<T>(response: Response): Promise<T | null> {
@@ -40,7 +45,7 @@ export class PaidApiClient {
     return body;
   }
 
-  async start(request: CreatePaidApiRequest): Promise<PaidApiResponse> {
+  async start(request: ApprovePaidApiRequest): Promise<PaidApiResponse> {
     const response = await this.#fetch(`${this.#baseUrl}/v1/paid-api`, {
       method: 'POST',
       headers: this.#headers(),

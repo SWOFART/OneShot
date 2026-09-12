@@ -57,7 +57,7 @@ button {
   font-weight: 300;
   letter-spacing: 0.06em;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: background-color 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease;
 }
 
 button:hover:not(:disabled) {
@@ -999,7 +999,8 @@ a:hover {
 
 .quote-panel {
   margin-top: 1.25rem;
-  background: var(--os-field);
+  border: 1px solid var(--os-line-strong);
+  background: var(--os-surface);
 }
 
 .quote-panel .panel-lede {
@@ -1618,6 +1619,7 @@ a:hover {
   padding: 0 0 2rem;
 }
 
+.quote-panel,
 .job-list li,
 .workspace-fact-grid article,
 .protection-steps article,
@@ -1629,7 +1631,6 @@ a:hover {
   color: var(--os-ink);
 }
 
-.quote-panel,
 .paid-api-status {
   --os-panel-ink: var(--os-on-field);
   --os-panel-ink-muted: var(--os-on-field);
@@ -1651,4 +1652,71 @@ a:hover {
 
 .job-workspace > input[readonly] {
   color: var(--os-ink-muted);
+}
+
+/* Small feedback on every action; respect the operator's motion preference. */
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.panel-heading h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.quote-panel .facts div,
+.quote-panel .technical-details {
+  border-color: var(--os-line);
+}
+
+.quote-panel .facts dd {
+  font-family: var(--os-font-primary);
+  font-weight: 400;
+}
+
+.quote-panel .facts div:first-child dd {
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.walkthrough {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--os-line-strong);
+  border-radius: var(--os-radius);
+  background: var(--os-surface);
+  color: var(--os-ink);
+}
+
+.walkthrough summary { cursor: pointer; font-weight: 500; }
+.walkthrough p { margin: 0.75rem 0; line-height: 1.5; }
+.walkthrough ol { padding-left: 1.25rem; line-height: 1.6; }
+.walkthrough li { margin-bottom: 0.65rem; }
+.walkthrough a { text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  button:hover:not(:disabled),
+  button:active:not(:disabled),
+  .invariant-card:hover {
+    transform: none;
+  }
 }

@@ -14,22 +14,24 @@ export function SpendingRulesPanel() {
           <p className="eyebrow">PAYMENT CONTROLS</p>
           <h2>Spending rules</h2>
         </div>
-        <span className="badge tone-success">Protected</span>
+        <span className="badge tone-neutral">Live policy not loaded</span>
       </header>
       <p className="panel-lede">
-        These rules describe what the connected Privy wallet may pay. OneShot checks them before a
-        payment starts.
+        This page explains the payment controls. It does not currently read the active Privy policy,
+        so it cannot confirm your wallet’s limit or permitted destinations.
       </p>
       <div className="workspace-fact-grid">
         <article>
           <span>Per request</span>
-          <strong>Privy policy limit</strong>
-          <p>Requests above the approved amount stop before signing.</p>
+          <strong>Check the active policy</strong>
+          <p>
+            The wallet limit and OneShot’s configured limit both apply. No $1 limit is assumed here.
+          </p>
         </article>
         <article>
           <span>Allowed destination</span>
-          <strong>Approved API services</strong>
-          <p>Recipient and network must match the active policy.</p>
+          <strong>Review the full recipient</strong>
+          <p>Preview shows who receives the payment. The worker checks the configured allowlist.</p>
         </article>
         <article>
           <span>Settlement network</span>
@@ -45,8 +47,9 @@ export function SpendingRulesPanel() {
       <details className="technical-details">
         <summary>Why can’t I edit the rule here?</summary>
         <p>
-          Policy changes are managed by the workspace owner in Privy. This view is intentionally
-          read-only and never bypasses wallet authorization.
+          The policy owner manages the active rules in Privy. Site access does not grant permission
+          to change wallet rules. A site editor needs owner authorization and confirmation from
+          Privy before it can show a change as applied.
         </p>
       </details>
     </section>

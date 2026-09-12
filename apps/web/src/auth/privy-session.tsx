@@ -18,7 +18,7 @@ export function PrivyOperatorProvider(props: {
         appearance: {
           theme: '#0a0a0a',
           accentColor: '#00dc5f',
-          walletList: ['detected_ethereum_wallets', 'wallet_connect'],
+          walletList: ['detected_ethereum_wallets'],
         },
       }}
     >
