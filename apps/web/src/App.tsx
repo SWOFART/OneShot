@@ -23,11 +23,7 @@ import { LoginGate } from './components/LoginGate.js';
 import { ReadinessBanner } from './components/ReadinessBanner.js';
 import { CircleX402DemoPanel, JobList, JobWorkspace } from './components/JobWorkspace.js';
 import { RecoverySurface, SettlementSurface } from './components/FrontendSurfaces.js';
-import {
-  PaymentProtectionPanel,
-  SpendingRulesPanel,
-  TeamAccessPanel,
-} from './components/WorkspacePanels.js';
+import { PaymentProtectionPanel } from './components/WorkspacePanels.js';
 import { applyTheme, readStoredTheme, type Theme } from './theme.js';
 import './styles.css';
 
@@ -142,15 +138,17 @@ function CabinetPage(props: {
   readonly theme: Theme;
   readonly onToggleTheme: () => void;
 }) {
-  const [section, setSection] = useState<'overview' | 'tools' | 'jobs' | 'recovery'>('overview');
+  const [section, setSection] = useState<'overview' | 'services' | 'requests' | 'protection'>(
+    'overview',
+  );
   const [intentId, setIntentId] = useState('');
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [activityError, setActivityError] = useState<string | null>(null);
   const labels = {
     overview: 'Overview',
-    tools: 'Tools',
-    jobs: 'Jobs',
-    recovery: 'Recovery & activity',
+    services: 'API services',
+    requests: 'Requests',
+    protection: 'Payment proof',
   } as const;
 
   function selectRequest(id: string): void {
@@ -247,101 +245,65 @@ function CabinetPage(props: {
             </button>
           ))}
         </nav>
-        {/* Keyed on the section so React remounts the panel on every switch,
-            which restarts the fade in `.tab-fade`. */}
+        {/* Keyed on the section so React remounts the panel on every
+            switch, which restarts the fade in `.tab-fade`. */}
         <div className="tab-fade" key={section}>
           {section === 'overview' && (
-            <section className="panel">
-              <h2>Work needing attention</h2>
+            <section className="panel workspace-overview">
+              <p className="eyebrow">ONE JOB · ONE PAYMENT</p>
+              <h2>What would you like to do?</h2>
               <p>
-                Use Tools to start the supported report, Jobs to retrieve a result, and Recovery &
-                activity to inspect payment evidence.
+                Choose a connected API service, review its exact quote, and follow the result from
+                one durable request. Technical evidence stays available when you need it.
               </p>
+              <div className="workspace-action-grid">
+                <button type="button" onClick={() => setSection('services')}>
+                  Run an API service
+                </button>
+                <button type="button" className="secondary" onClick={() => setSection('requests')}>
+                  View requests
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setSection('protection')}
+                >
+                  See payment proof
+                </button>
+              </div>
               <ReadinessBanner client={props.apiClient} />
             </section>
           )}
-          {section === 'tools' && (
+          {section === 'services' && (
             <div className="panel-stack">
-              <JobWorkspace client={props.jobClient} onSelectIntent={setIntentId} />
-              <CircleX402DemoPanel client={props.paidApiClient} onSelectIntent={setIntentId} />
+              <JobWorkspace client={props.jobClient} onSelectIntent={selectRequest} />
+              <CircleX402DemoPanel client={props.paidApiClient} onSelectIntent={selectRequest} />
             </div>
           )}
-          {section === 'jobs' && <JobList client={props.jobClient} onSelectIntent={setIntentId} />}
-          {section === 'recovery' && (
-            <section className="panel recovery-panel">
-              <h2>Recovery & activity</h2>
-              <p>
-                Refresh is read-only. Graph observations never change payment authority or permit a
-                new settlement.
-              </p>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => {
-                  setActivityError(null);
-                  void props.jobClient
-                    .refreshActivity()
-                    .then(setActivity)
-                    .catch(() => {
-                      setActivityError(
-                        'Activity refresh is unavailable; payment records remain unchanged.',
-                      );
-                    });
-                }}
-              >
-                Refresh activity
-              </button>
-              <p role="status">
-                {activityError ??
-                  (activity
-                    ? `${activity.observation?.freshness ?? 'UNAVAILABLE'} — ${activity.observation?.coverage_note ?? 'No indexed coverage available.'}`
-                    : 'No activity refresh yet.')}
-              </p>
-              {activity && (
-                <div className="activity-summary">
-                  <p>
-                    {activity.recorded_settlement_count} recorded settlement(s),{' '}
-                    {activity.uncertain_job_count} uncertain job(s),{' '}
-                    {activity.unmatched_transfer_count ?? 0} unmatched indexed transfer(s).
-                  </p>
-                  {(activity.transfers ?? []).filter((transfer) => transfer.match === 'UNMATCHED')
-                    .length > 0 && (
-                    <ul aria-label="Unmatched indexed transfers">
-                      {(activity.transfers ?? [])
-                        .filter((transfer) => transfer.match === 'UNMATCHED')
-                        .map((transfer) => (
-                          <li key={`${transfer.transaction_hash}:${transfer.log_index}`}>
-                            {transfer.transaction_hash.slice(0, 10)}… · log {transfer.log_index} ·{' '}
-                            {transfer.amount_atomic} atomic USDC
-                          </li>
-                        ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-              <label htmlFor="cabinet-intent">Selected job intent</label>
-              <input
-                id="cabinet-intent"
-                value={intentId}
-                onChange={(event) => setIntentId(event.target.value)}
-                placeholder="Select a job to inspect evidence"
-              />
-              <RecoverySurface businessIntentId={intentId} client={props.recoveryClient} />
-            </section>
+          {section === 'requests' && (
+            <JobList client={props.jobClient} onSelectIntent={selectRequest} />
+          )}
+          {section === 'protection' && (
+            <PaymentProtectionPanel
+              activity={activity}
+              activityError={activityError}
+              intentId={intentId}
+              recoveryClient={props.recoveryClient}
+              settlementClient={props.settlementClient}
+              onRefresh={() => {
+                setActivityError(null);
+                void props.jobClient
+                  .refreshActivity()
+                  .then(setActivity)
+                  .catch(() => {
+                    setActivityError(
+                      'Payment activity is unavailable right now. Existing payment records are unchanged.',
+                    );
+                  });
+              }}
+            />
           )}
         </div>
-        {intentId && (
-          <section className="panel payment-evidence-panel" aria-label="Payment evidence">
-            <h2>Payment evidence</h2>
-            <p>
-              Read-only Arc and Privy evidence for the selected job. This view never creates or
-              retries a payment.
-            </p>
-            <SettlementSurface businessIntentId={intentId} client={props.settlementClient} />
-          </section>
-        )}
-        {section === 'spending' && <SpendingRulesPanel />}
-        {section === 'access' && <TeamAccessPanel status={props.session.status} />}
       </LoginGate>
     </main>
   );
@@ -572,13 +534,7 @@ export function App(props: AppProps = {}) {
               ))}
             </nav>
 
-            <main
-              key={activeTab}
-              className="tab-fade"
-              id={`${activeTab}-panel`}
-              role="tabpanel"
-              aria-labelledby={`${activeTab}-tab`}
-            >
+            <main id={`${activeTab}-panel`} role="tabpanel" aria-labelledby={`${activeTab}-tab`}>
               {activeTab === 'create' ? (
                 <IntentForm client={apiClient} onIntentCreatedOrSelected={selectIntent} />
               ) : activeTab === 'status' ? (

@@ -22,14 +22,21 @@ const HERO_MIN_HEIGHT = 268;
 
 export function Hero({
   children,
-  height = HERO_HEIGHT,
+  height: fixedHeight,
 }: {
   readonly children: ReactNode;
+  /**
+   * Pins the cut to an exact height. The landing page uses this because its
+   * hero is a composed marketing block sized to a layout, not to its copy.
+   * Left off, the hero measures itself, which is what keeps the workspace copy
+   * from clipping at widths where the headline wraps.
+   */
   readonly height?: number;
 }) {
   const box = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
-  const [height, setHeight] = useState(HERO_MIN_HEIGHT);
+  const [measuredHeight, setMeasuredHeight] = useState(HERO_MIN_HEIGHT);
+  const height = fixedHeight ?? measuredHeight;
   const id = useId();
 
   // `useLayoutEffect`, not `useEffect`: this app is pure client-side render
@@ -46,7 +53,7 @@ export function Hero({
       setWidth(element.clientWidth);
       // The clip only paints; it never changes layout, so feeding the measured
       // height back in cannot loop the observer.
-      setHeight(Math.max(HERO_MIN_HEIGHT, element.clientHeight));
+      setMeasuredHeight(Math.max(HERO_MIN_HEIGHT, element.clientHeight));
     };
     measure();
 
@@ -68,7 +75,10 @@ export function Hero({
       {cut === null ? (
         <div className="hero-plain">{children}</div>
       ) : (
-        <div className="hero-cut" style={{ height: `${height}px` }}>
+        <div
+          className="hero-cut"
+          style={fixedHeight === undefined ? undefined : { height: `${fixedHeight}px` }}
+        >
           <svg width="0" height="0" aria-hidden="true" style={{ position: 'absolute' }}>
             <clipPath id={panelClip} clipPathUnits="userSpaceOnUse">
               <path d={cut.panel} />

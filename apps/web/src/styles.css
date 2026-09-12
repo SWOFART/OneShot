@@ -1082,52 +1082,11 @@ a:hover {
   margin: 0;
 }
 
-/* The lime field is the same colour in both themes, so everything on it takes
-   the field's own fixed inks. These two surfaces are the quote and payment
-   summaries, and both are nested inside .panel — without this they inherit the
-   forest panel's near-white ink and the transaction details vanish into lime. */
-.quote-panel,
-.paid-api-status {
-  color: var(--os-on-field);
-}
-
-.quote-panel h2,
-.quote-panel h3,
-.paid-api-status h2,
-.paid-api-status h3,
-.quote-panel .facts dd,
-.paid-api-status .facts dd,
-.quote-panel .mono,
-.paid-api-status .mono {
-  color: var(--os-on-field);
-}
-
-.quote-panel .facts dt,
-.paid-api-status .facts dt,
-.quote-panel .panel-lede,
-.paid-api-status .panel-lede,
-.quote-panel .field-help,
-.paid-api-status .field-help {
-  color: var(--os-on-field-muted);
-}
-
-.quote-panel .facts div,
+/* The lime field never flips, so its fact rows need a border that does not
+   either. Everything else about ink on these two surfaces is handled by the
+   token rebinding further down, which is the general form of this. */
 .paid-api-status .facts div {
   border-bottom-color: var(--os-field-line);
-}
-
-/* Signal green on lime is about 1.7:1. Links on the field take its own ink and
-   carry an underline so they still read as links without the colour. */
-.quote-panel a,
-.paid-api-status a {
-  color: var(--os-on-field);
-  text-decoration: underline;
-}
-
-.quote-panel .badge,
-.paid-api-status .badge {
-  color: var(--os-on-field);
-  border-color: var(--os-on-field-muted);
 }
 
 .response-output {
@@ -2023,14 +1982,29 @@ button:active:not(:disabled) {
   color: var(--os-ink);
 }
 
-.walkthrough summary { cursor: pointer; font-weight: 500; }
-.walkthrough p { margin: 0.75rem 0; line-height: 1.5; }
-.walkthrough ol { padding-left: 1.25rem; line-height: 1.6; }
-.walkthrough li { margin-bottom: 0.65rem; }
-.walkthrough a { text-decoration: underline; }
+.walkthrough summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+.walkthrough p {
+  margin: 0.75rem 0;
+  line-height: 1.5;
+}
+.walkthrough ol {
+  padding-left: 1.25rem;
+  line-height: 1.6;
+}
+.walkthrough li {
+  margin-bottom: 0.65rem;
+}
+.walkthrough a {
+  text-decoration: underline;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation: none !important;
     transition: none !important;
   }

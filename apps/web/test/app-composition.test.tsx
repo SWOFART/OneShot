@@ -44,8 +44,6 @@ describe('Gate P5 shell composition', () => {
     expect(screen.getByRole('tab', { name: 'API services' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Requests' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Payment proof' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Spending rules' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Team & access' })).toBeTruthy();
   });
 
   it('offers only the four working cabinet sections', () => {
@@ -69,17 +67,17 @@ describe('Gate P5 shell composition', () => {
 
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       'Overview',
-      'Tools',
-      'Jobs',
-      'Recovery & activity',
+      'API services',
+      'Requests',
+      'Payment proof',
     ]);
-    // Both removed sections were read-only restatements of facts the other
-    // sections already show, and neither had a control behind it.
-    expect(screen.queryByRole('tab', { name: 'Wallet & permissions' })).toBeNull();
-    expect(screen.queryByRole('tab', { name: 'Developer access' })).toBeNull();
+    // Spending rules and Team & access were read-only restatements of facts the
+    // other sections already show, and neither had a control behind it.
+    expect(screen.queryByRole('tab', { name: 'Spending rules' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Team & access' })).toBeNull();
   });
 
-  it('gives Tools and Jobs distinct responsibilities', async () => {
+  it('gives API services and Requests distinct responsibilities', async () => {
     const user = userEvent.setup();
     const jobClient = {
       async list() {

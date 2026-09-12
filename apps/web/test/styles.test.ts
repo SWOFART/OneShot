@@ -52,15 +52,17 @@ describe('web stylesheet', () => {
 
     // The tab strip sits on the page ground, so it flips with the theme.
     // --os-panel-ink here rendered near-white on the near-white light ground.
-    expect(css).toMatch(/\.tabs button \{[^}]*color:\s*var\(--os-ink\)/u);
-    expect(css).not.toMatch(/\.tabs button \{[^}]*color:\s*var\(--os-panel-ink\)/u);
+    // Anchored: `.console-container .tabs button` legitimately takes panel ink,
+    // because that container paints --os-panel.
+    expect(css).toMatch(/^\.tabs button \{[^}]*color:\s*var\(--os-ink\)/mu);
+    expect(css).not.toMatch(/^\.tabs button \{[^}]*color:\s*var\(--os-panel-ink\)/mu);
 
     // The hero copy sits on --os-panel, which is forest in both themes.
     expect(css).toMatch(/\.hero-copy,\s*\.hero-plain \{[^}]*color:\s*var\(--os-panel-ink\)/u);
 
-    // The quote and paid-API summaries sit on the lime --os-field.
-    expect(css).toMatch(/\.quote-panel,\s*\.paid-api-status \{[^}]*color:\s*var\(--os-on-field\)/u);
-    expect(css).toMatch(/var\(--os-on-field-muted\)/u);
+    // The paid-API summary sits on the lime --os-field and rebinds the ink
+    // tokens its descendants inherit.
+    expect(css).toMatch(/\.paid-api-status \{[^}]*--os-panel-ink:\s*var\(--os-on-field\)/u);
   });
 
   /**
