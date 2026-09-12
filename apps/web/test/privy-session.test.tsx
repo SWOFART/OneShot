@@ -14,11 +14,16 @@ const mocks = vi.hoisted(() => ({
   getAccessToken: vi.fn(async (): Promise<string | null> => null),
   authenticated: false,
   user: null as { id: string } | null,
+  active: {
+    wallet: undefined,
+    connect: vi.fn(),
+  },
 }));
 
 vi.mock('@privy-io/react-auth', () => ({
   PrivyProvider: ({ children }: { children: ReactNode }) => children,
   useLogin: () => ({ login: mocks.login }),
+  useActiveWallet: () => mocks.active,
   usePrivy: () => ({
     ready: true,
     authenticated: mocks.authenticated,
@@ -28,7 +33,8 @@ vi.mock('@privy-io/react-auth', () => ({
   }),
 }));
 
-const { usePrivyOperatorSession } = await import('../src/auth/privy-session.js');
+const { usePrivyOperatorSession, usePrivyUserWallet } =
+  await import('../src/auth/privy-session.js');
 
 describe('usePrivyOperatorSession — native Privy login', () => {
   beforeEach(() => {
@@ -38,6 +44,7 @@ describe('usePrivyOperatorSession — native Privy login', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     cleanup();
   });
 
@@ -59,5 +66,30 @@ describe('usePrivyOperatorSession — native Privy login', () => {
     expect(result.current.subject).toBe('did:privy:native-login');
     await waitFor(() => expect(result.current.accessToken).toBe('header.payload.signature'));
     expect(mocks.getAccessToken).toHaveBeenCalledOnce();
+  });
+
+  it("reads only the connected wallet's Arc Testnet Gateway balance before x402 signing", async () => {
+    const payerWallet = '0x2222222222222222222222222222222222222222';
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            token: 'USDC',
+            balances: [{ domain: 26, depositor: payerWallet, balance: '10000' }],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const { result } = renderHook(() => usePrivyUserWallet());
+
+    await expect(result.current.getGatewayBalance?.(payerWallet)).resolves.toBe('10000');
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://gateway-api-testnet.circle.com/v1/balances',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ token: 'USDC', sources: [{ depositor: payerWallet, domain: 26 }] }),
+      }),
+    );
   });
 });
