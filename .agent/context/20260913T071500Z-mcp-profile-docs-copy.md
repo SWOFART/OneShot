@@ -64,9 +64,14 @@ the bearer token.
 - Branch: `feat/mcp-profile-docs-copy`
 - Base: `fix/privy-browser-buffer` at
   `dcc730792440e3f90cb5e96fe0597f80072a51d0`
-- Commit: uncommitted
-- PR: not created
-- CI: not run
+- Implementation commit: `8dbbf16f6c3f3682693d7d5bde55dcfaf2b984cb`
+- PR: [#127](https://github.com/SWOFART/OneShot/pull/127), draft, stacked
+  on `fix/privy-browser-buffer`
+- CI: repository policy, Markdown/Mermaid, frontend browser acceptance, and
+  Cloudflare Workers build passed; ESLint/TypeScript was pending at this snapshot.
+- Production frontend: Cloudflare Worker version
+  `11981c12-6a81-4e4a-9ec9-819d6b52d458`; the public entry bundle contains the
+  documentation link, bearer-copy action, and the preceding Buffer polyfill.
 
 ## Review gates
 
@@ -76,5 +81,5 @@ the bearer token.
 
 ## Handoff/next steps
 
-1. Inspect the focused diff, commit, push, open a stacked PR, and deploy the
-   frontend.
+1. Wait for the final PR check and leave both stacked PRs for human review;
+   agents do not merge.
