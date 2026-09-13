@@ -5,7 +5,7 @@ import {
   usePrivy,
   useWallets,
 } from '@privy-io/react-auth';
-import type { BaseConnectedWalletType, ConnectedWallet } from '@privy-io/react-auth';
+import type { BaseConnectedWalletType } from '@privy-io/react-auth';
 import { defineChain } from 'viem';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { OperatorSession, OperatorSessionStatus, UserWalletSession } from './session.js';
@@ -30,13 +30,14 @@ export function PrivyOperatorProvider(props: {
       appId={props.appId}
       config={{
         loginMethods: ['email', 'wallet'],
-        embeddedWallets: { ethereum: { createOnLogin: 'off' } },
+        embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
         defaultChain: ARC_TESTNET,
         supportedChains: [ARC_TESTNET],
         appearance: {
           theme: '#0a0a0a',
           accentColor: '#00dc5f',
           walletList: ['detected_ethereum_wallets', 'wallet_connect'],
+          walletChainType: 'ethereum-only',
         },
       }}
     >
@@ -96,10 +97,8 @@ function transferData(recipient: string, amountAtomic: string): `0x${string}` {
 }
 
 type EthereumWallet = Extract<BaseConnectedWalletType, { readonly type: 'ethereum' }>;
-function isPrivyEthereumWallet(
-  value: BaseConnectedWalletType | undefined,
-): value is ConnectedWallet {
-  return value?.type === 'ethereum' && value.walletClientType === 'privy';
+function isEthereumWallet(value: BaseConnectedWalletType | undefined): value is EthereumWallet {
+  return value?.type === 'ethereum';
 }
 
 export function usePrivyUserWallet(): UserWalletSession {
@@ -115,7 +114,7 @@ export function usePrivyUserWallet(): UserWalletSession {
     activeWallet?.type === 'ethereum'
       ? activeWallet
       : walletsReady
-        ? wallets.find((candidate) => isPrivyEthereumWallet(candidate))
+        ? wallets.find((candidate) => isEthereumWallet(candidate))
         : undefined;
 
   async function selectWallet(): Promise<EthereumWallet | undefined> {

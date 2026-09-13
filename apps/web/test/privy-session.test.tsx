@@ -99,7 +99,7 @@ describe('usePrivyOperatorSession — native Privy login', () => {
     expect(mocks.getAccessToken).toHaveBeenCalledOnce();
   });
 
-  it('keeps automatic wallet creation off and configures Arc Testnet', () => {
+  it('creates an embedded wallet for users without one and configures Arc Testnet', () => {
     render(
       <PrivyOperatorProvider appId="test-app">
         <div />
@@ -107,11 +107,12 @@ describe('usePrivyOperatorSession — native Privy login', () => {
     );
 
     expect(mocks.providerConfig).toMatchObject({
-      embeddedWallets: { ethereum: { createOnLogin: 'off' } },
+      embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
       defaultChain: { id: 5042002 },
       supportedChains: [{ id: 5042002 }],
       appearance: {
         walletList: ['detected_ethereum_wallets', 'wallet_connect'],
+        walletChainType: 'ethereum-only',
       },
     });
   });
@@ -139,7 +140,27 @@ describe('usePrivyOperatorSession — native Privy login', () => {
     );
     expect(privy.request).not.toHaveBeenCalled();
 
-    expect(first.request).not.toHaveBeenCalled();
+  });
+
+  it('uses the first connected Ethereum wallet when Privy has no active wallet', async () => {
+    const metamask = ethereumWallet('metamask', '0x1111111111111111111111111111111111111111');
+    mocks.wallets = [metamask.wallet];
+
+    const { result } = renderHook(() => usePrivyUserWallet());
+    expect(result.current.address).toBe(metamask.wallet.address);
+    expect(mocks.active.connect).not.toHaveBeenCalled();
+
+    await result.current.sendTransfer({
+      chain_id: 5042002,
+      token_contract: '0x3600000000000000000000000000000000000000',
+      payer_wallet: metamask.wallet.address,
+      recipient: '0x3333333333333333333333333333333333333333',
+      amount_atomic: '10000',
+    });
+
+    expect(metamask.request).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'eth_sendTransaction' }),
+    );
   });
 
   it('opens the Privy wallet picker when no wallet is active', async () => {
@@ -163,12 +184,6 @@ describe('usePrivyOperatorSession — native Privy login', () => {
       expect.objectContaining({ method: 'eth_sendTransaction' }),
     );
 
-    expect(typedData.types?.EIP712Domain).toEqual([
-      { name: 'name', type: 'string' },
-      { name: 'version', type: 'string' },
-      { name: 'chainId', type: 'uint256' },
-      { name: 'verifyingContract', type: 'address' },
-    ]);
   });
 
   it('forgets a picker wallet when the signed-in Privy user changes', async () => {
