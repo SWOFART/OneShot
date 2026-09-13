@@ -1,8 +1,35 @@
-import type { AuthorizationResult, SettlementResult } from '@oneshot/contracts';
+import {
+  asBlockNumber,
+  asTransactionHash,
+  type AuthorizationResult,
+  type SettlementResult,
+} from '@oneshot/contracts';
 import { formatStateTransitionLog } from '@oneshot/domain';
 import { RECOVERY_JOB_VERSION, type RecoveryJob } from '@oneshot/reconciliation';
 import type { TaskList } from 'graphile-worker';
-import type { WorkerOptions } from './types.js';
+import type { GraphEvidenceCaptureRequest, WorkerOptions } from './types.js';
+
+function graphEvidenceRequest(
+  businessIntentId: string,
+  payload: unknown,
+): GraphEvidenceCaptureRequest {
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('Graph evidence task payload is invalid');
+  }
+  const record = payload as Record<string, unknown>;
+  if (
+    record.business_intent_id !== businessIntentId ||
+    typeof record.transaction_hash !== 'string' ||
+    typeof record.block_number !== 'string'
+  ) {
+    throw new Error('Graph evidence task payload does not match the outbox identity');
+  }
+  return {
+    businessIntentId,
+    transactionHash: asTransactionHash(record.transaction_hash),
+    blockNumber: asBlockNumber(record.block_number),
+  };
+}
 
 export async function executeAuthorizeIntent(
   businessIntentId: string,
@@ -181,6 +208,15 @@ export async function executeReconcileIntent(
   }
 }
 
+export async function executeCaptureGraphEvidence(
+  request: GraphEvidenceCaptureRequest,
+  options: WorkerOptions,
+): Promise<void> {
+  if (!options.graphEvidence) return;
+  const observation = await options.graphEvidence.capture(request);
+  await options.ledger.appendEvidence(request.businessIntentId, observation);
+}
+
 /** Supplier fulfillment is deliberately reachable only from a committed job.
  * It cannot change payment state or construct a replacement settlement. */
 export async function executeFulfillSupplierOrder(
@@ -224,6 +260,16 @@ export function createTaskList(options: WorkerOptions): TaskList {
       if (business_intent_id) {
         await executeReconcileIntent(business_intent_id, options, event_id);
       }
+    },
+    capture_graph_evidence: async (payload) => {
+      const record = payload as { business_intent_id?: unknown };
+      if (typeof record.business_intent_id !== 'string') {
+        throw new Error('Graph evidence task is missing business_intent_id');
+      }
+      await executeCaptureGraphEvidence(
+        graphEvidenceRequest(record.business_intent_id, payload),
+        options,
+      );
     },
     fulfill_supplier_order: async (payload) => {
       const { job_id, delivery_attempt } = payload as {
@@ -285,6 +331,15 @@ export async function drainOutboxJobs(options: WorkerOptions, maxJobs = 100): Pr
         await executeSubmitSettlement(job.business_intent_id, options);
       } else if (job.task_identifier === 'reconcile_intent') {
         await executeReconcileIntent(job.business_intent_id, options, job.job_key);
+      } else if (job.task_identifier === 'capture_graph_evidence') {
+        const payload = await client.query<{ payload: unknown }>(
+          'SELECT payload FROM outbox_jobs WHERE outbox_job_id = $1',
+          [job.outbox_job_id],
+        );
+        await executeCaptureGraphEvidence(
+          graphEvidenceRequest(job.business_intent_id, payload.rows[0]?.payload),
+          options,
+        );
       } else if (job.task_identifier === 'fulfill_supplier_order') {
         const payload = await client.query<{
           payload: { job_id?: string; delivery_attempt?: number };

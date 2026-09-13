@@ -17,6 +17,7 @@ import {
   createTaskList,
   drainOutboxJobs,
   executeAuthorizeIntent,
+  executeCaptureGraphEvidence,
   executeFulfillSupplierOrder,
   executeSubmitSettlement,
 } from '../src/index.js';
@@ -94,6 +95,7 @@ describe('Worker Unit Logic', () => {
     });
     expect(Object.keys(tasks).sort()).toEqual([
       'authorize_intent',
+      'capture_graph_evidence',
       'fulfill_supplier_order',
       'reconcile_intent',
       'submit_settlement',
@@ -153,6 +155,45 @@ describe('Worker Unit Logic', () => {
 
     expect(portCalled).toBe(true);
     expect(completedState).toBe('CONFIRMED');
+  });
+
+  it('persists Graph evidence from the durable post-commit task', async () => {
+    const appended: unknown[] = [];
+    const ledger = createMockLedger({
+      async appendEvidence(_id, evidence) {
+        appended.push(evidence);
+      },
+    });
+
+    await executeCaptureGraphEvidence(
+      {
+        businessIntentId: sampleRequest.business_intent_id,
+        transactionHash: `0x${'a'.repeat(64)}`,
+        blockNumber: '500',
+      },
+      {
+        pool: {} as never,
+        ledger,
+        settlementPort: {} as never,
+        graphEvidence: {
+          async capture(request) {
+            expect(request.transactionHash).toBe(`0x${'a'.repeat(64)}`);
+            return {
+              source: 'THE_GRAPH',
+              authority_class: 'OBSERVATION',
+              retrieved_at: '2026-09-13T10:00:00.000Z',
+              digest: 'graph-digest',
+              block_number: '500',
+              freshness: 'FRESH',
+            };
+          },
+        },
+      },
+    );
+
+    expect(appended).toEqual([
+      expect.objectContaining({ source: 'THE_GRAPH', freshness: 'FRESH' }),
+    ]);
   });
 
   it('passes provider request identity into the atomic claim before calling the settlement port', async () => {

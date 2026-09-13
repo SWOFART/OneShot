@@ -14,6 +14,10 @@ Atomic at-most-once execution worker for OneShot Business Intents.
 - `authorize_intent`: Validates intent against corporate spending and policy rules, advancing state to `READY` (or `REJECTED`).
 - `submit_settlement`: Atomically claims submission right and executes settlement via configured settlement port.
 - `reconcile_intent`: Reconciles ambiguous intent state against evidence observations.
+- `capture_graph_evidence`: Reads the pinned Graph source after a confirmed
+  settlement and appends a non-authoritative observation. Graph failure is
+  recorded as `UNAVAILABLE`; it never changes settlement state or grants a
+  retry.
 
 ## Architecture and Dispatch
 

@@ -21,6 +21,7 @@ import {
   type RecoveryCommandPack,
   type RecoveryCommandStorePort,
   type RecoveryCommandStoreResult,
+  type SubgraphMcpRecoveryPort,
   type SubgraphMcpPolicy,
 } from '@oneshot/reconciliation';
 import {
@@ -30,6 +31,7 @@ import {
   type TransactionReceipt,
 } from '@oneshot/arc-adapter';
 import type { EvidencePort as LaneBEvidencePort } from '@oneshot/privy-adapter';
+import type { GraphEvidenceCapturePort, GraphEvidenceCaptureRequest } from './types.js';
 import { createHash } from 'node:crypto';
 
 function sha256Hex(value: string): string {
@@ -92,6 +94,12 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
 
     const durableState = mapState(intent.state);
     const nowIso = new Date().toISOString();
+    const ledgerWithPayer = this.ledger as IntentLedger & {
+      getPaymentPayerWallet?: (businessIntentId: string) => Promise<string | undefined>;
+    };
+    const payerWallet = ledgerWithPayer.getPaymentPayerWallet
+      ? await ledgerWithPayer.getPaymentPayerWallet(businessIntentId)
+      : undefined;
     const toBlock = this.options.getToBlock
       ? await this.options.getToBlock()
       : this.options.toBlock;
@@ -104,7 +112,7 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
       binding,
       correlation: {
         strategy: 'TRANSFER_TUPLE_WINDOW',
-        sender: this.options.correlationSender,
+        sender: payerWallet ?? this.options.correlationSender,
         fromBlock: this.options.fromBlock,
         toBlock,
       },
@@ -143,6 +151,66 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
       mcpPolicy: this.options.mcpPolicy,
       capturedAt: nowIso,
     };
+  }
+}
+
+/**
+ * Captures non-authoritative Graph evidence for a confirmed settlement. This
+ * port never reads or writes settlement authority; it only produces a bounded
+ * observation for the durable evidence timeline.
+ */
+export class IntentLedgerGraphEvidenceCapturePort implements GraphEvidenceCapturePort {
+  constructor(
+    private readonly localState: LocalRecoveryStatePort,
+    private readonly subgraphMcp: SubgraphMcpRecoveryPort,
+    private readonly now: () => string = () => new Date().toISOString(),
+  ) {}
+
+  async capture(request: GraphEvidenceCaptureRequest): Promise<EvidenceView> {
+    const retrievedAt = this.now();
+    try {
+      const snapshot = await this.localState.read(request.businessIntentId);
+      const outcome = await this.subgraphMcp.lookup(snapshot.indexRequest, snapshot.mcpPolicy);
+      const view = outcome.view;
+      const digest = sha256Hex(
+        JSON.stringify({
+          businessIntentId: request.businessIntentId,
+          transactionHash: request.transactionHash,
+          blockNumber: request.blockNumber,
+          graph: view.graph,
+          observedThrough: view.observedThrough,
+          health: view.health,
+          candidates: view.candidates.map((candidate) => ({
+            id: candidate.id,
+            transactionHash: candidate.transactionHash,
+            logIndex: candidate.logIndex,
+            blockNumber: candidate.blockNumber,
+            bindingStatus: candidate.bindingStatus,
+          })),
+          diagnostics: view.diagnostics,
+        }),
+      );
+      return {
+        source: 'THE_GRAPH',
+        authority_class: 'OBSERVATION',
+        retrieved_at: view.retrievedAt,
+        digest: `graph-capture:${digest}`,
+        ...(view.observedThrough?.blockNumber
+          ? { block_number: view.observedThrough.blockNumber }
+          : {}),
+        freshness: view.health,
+      };
+    } catch {
+      return {
+        source: 'THE_GRAPH',
+        authority_class: 'OBSERVATION',
+        retrieved_at: retrievedAt,
+        digest: `graph-capture:${sha256Hex(
+          `graph-unavailable:${request.businessIntentId}:${request.transactionHash}:${request.blockNumber}`,
+        )}`,
+        freshness: 'UNAVAILABLE',
+      };
+    }
   }
 }
 
