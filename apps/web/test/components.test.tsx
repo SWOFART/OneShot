@@ -279,6 +279,63 @@ describe('JobWorkspace payment inputs', () => {
     expect(client.start).not.toHaveBeenCalled();
   });
 
+  it('queues the server-wallet payment when no browser wallet is wired', async () => {
+    const user = userEvent.setup();
+    const request = {
+      task_key: 'report-214124-850d9a80',
+      tool_id: 'team-report-v1' as const,
+      report_subject: '214124',
+      recipient: '0x292d3FCA76142E0C6136B934563f3A0750b633eb',
+      amount_atomic: '1000000',
+    };
+    const startedJob = {
+      job_id: 'job-report-server-214124',
+      ...request,
+      business_intent_id: 'intent-report-server-214124',
+      supplier: {
+        supplier_id: 'team-report-v1' as const,
+        order_reference: 'team-report-214124',
+        recipient: request.recipient,
+        amount_atomic: request.amount_atomic,
+        asset: 'USDC' as const,
+        network: 'eip155:5042002' as const,
+        expires_at: '2099-09-13T02:00:00.000Z',
+      },
+      payment_state: 'AUTHORIZING' as const,
+      payment_mode: 'SERVER_PRIVY' as const,
+      delivery_state: 'PENDING' as const,
+      created_at: '2026-09-13T02:30:00.000Z',
+      updated_at: '2026-09-13T02:30:00.000Z',
+    };
+    const client = {
+      quote: vi.fn(async () => ({
+        supplier_id: 'team-report-v1' as const,
+        order_reference: 'team-report-214124',
+        recipient: request.recipient,
+        amount_atomic: request.amount_atomic,
+        asset: 'USDC' as const,
+        network: 'eip155:5042002' as const,
+        expires_at: '2099-09-13T02:00:00.000Z',
+      })),
+      start: vi.fn(async () => startedJob),
+      prepareUserWalletJob: vi.fn(),
+      submitUserWalletPayment: vi.fn(),
+    };
+
+    render(<JobWorkspace client={client as never} onSelectIntent={() => undefined} />);
+    await user.type(screen.getByLabelText('Payment purpose'), request.report_subject);
+    await user.type(screen.getByLabelText('Service destination wallet'), request.recipient);
+    await user.type(screen.getByLabelText('Amount (USDC)'), '1');
+    await user.type(screen.getByLabelText('Custom request key (optional)'), request.task_key);
+    await user.click(screen.getByRole('button', { name: 'Review payment details' }));
+    await user.click(await screen.findByRole('button', { name: 'Approve and run service' }));
+
+    await waitFor(() => expect(client.start).toHaveBeenCalledWith(request));
+    expect(client.prepareUserWalletJob).not.toHaveBeenCalled();
+    expect(client.submitUserWalletPayment).not.toHaveBeenCalled();
+    expect(await screen.findByText(/Payment authorization is queued/u)).toBeTruthy();
+  });
+
   it('does not request a replacement transfer when the durable job already has a hash', async () => {
     const user = userEvent.setup();
     const paymentHash = `0x${'a'.repeat(64)}`;
