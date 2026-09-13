@@ -37,14 +37,18 @@ The user asked to remove the MCP 1 USDC boundary, provide the bearer required by
 - API authentication and route workspace selection.
 - MCP cap configuration and tests.
 - MCP docs page, operator docs, downloadable skill, and implementation plan.
-- PostgreSQL migration 011 and personal MCP credential store.`r`n- Authenticated Profile token generation and rotation UI.`r`n- Google Cloud deployment configuration (pending).
+- PostgreSQL migration 011 and personal MCP credential store.
+- Authenticated Profile token generation and rotation UI.
+- Google Cloud deployment configuration (pending).
 
 ## Commands/checks
 
 - `npx --yes skills@latest add https://github.com/SWOFART/OneShot/tree/develop --list --full-depth` - found `oneshot-arc-payment`.
 - `pnpm build` - passed on local Node 22 with the repository Node 24 engine warning.
 - `pnpm --filter @oneshot/api test` - 75/75 passed after personal token work.
-- Focused web profile/docs tests - 10/10 passed.`r`n- `pnpm test` - 79 files and 1052 tests passed.`r`n- `pnpm test:browser` - 8/8 Chromium checks passed.
+- Focused web profile/docs tests - 10/10 passed.
+- `pnpm test` - 79 files and 1052 tests passed.
+- `pnpm test:browser` - 8/8 Chromium checks passed.
 - Full web test exposed two pre-existing failures in `privy-session.test.tsx`; the changed MCP docs assertion was updated and passes.
 
 ## External-doc findings
@@ -54,14 +58,15 @@ The user asked to remove the MCP 1 USDC boundary, provide the bearer required by
 ## Unresolved questions
 
 - Google Secret Manager list/get remains unavailable to the active account; personal MCP bearer generation does not depend on a shared MCP secret.
-- Direct `/v1/intents/:id`, reconcile, and recovery-view routes are not yet workspace-bound in storage; job request views are isolated.`r`n- The active account cannot list/get Secret Manager metadata, but personal MCP tokens no longer require a shared MCP secret.
+- Direct `/v1/intents/:id`, reconcile, and recovery-view routes are not yet workspace-bound in storage; job request views are isolated.
+- The active account cannot list/get Secret Manager metadata, but personal MCP tokens no longer require a shared MCP secret.
 
 ## Git and PR state
 
 - Branch: fix/mcp-access-and-scope
 - Base: origin/develop at 246a38af36e291b0538eb0a8f87d1f3b3f1def60
 - Commit: 9aafe21d27e27a99ddb0586a0cff747bd36a38f2
-- PR: https://github.com/SWOFART/OneShot/pull/122 (draft)
+- PR: <https://github.com/SWOFART/OneShot/pull/122> (draft)
 - CI: all required checks passed for 9aafe21d27e27a99ddb0586a0cff747bd36a38f2
 
 ## Review gates
