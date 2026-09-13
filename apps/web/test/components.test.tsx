@@ -181,7 +181,7 @@ describe('IntentStatusView', () => {
 });
 
 describe('JobWorkspace payment inputs', () => {
-  it('refreshes once after the queued resume without polling jobs repeatedly', async () => {
+  it('reads the resumed job until the supplier result is available without listing jobs repeatedly', async () => {
     const user = userEvent.setup();
     const pendingJob = resumableJob('PENDING');
     const availableJob: JobView = {
@@ -193,11 +193,12 @@ describe('JobWorkspace payment inputs', () => {
         report: 'Recovered original supplier report.',
       },
     };
-    let listCalls = 0;
+    let getCalls = 0;
     const client = {
-      list: vi.fn(async () => {
-        listCalls += 1;
-        return [listCalls === 1 ? pendingJob : availableJob];
+      list: vi.fn(async () => [pendingJob]),
+      get: vi.fn(async () => {
+        getCalls += 1;
+        return getCalls === 1 ? pendingJob : availableJob;
       }),
       resume: vi.fn(async () => pendingJob),
     };
@@ -208,10 +209,12 @@ describe('JobWorkspace payment inputs', () => {
 
     await waitFor(
       () => expect(screen.getByText('Recovered original supplier report.')).toBeTruthy(),
-      { timeout: 3000 },
+      { timeout: 5000 },
     );
     expect(client.resume).toHaveBeenCalledWith(pendingJob.job_id);
-    expect(listCalls).toBe(2);
+    expect(client.resume).toHaveBeenCalledTimes(1);
+    expect(client.list).toHaveBeenCalledTimes(1);
+    expect(getCalls).toBe(2);
     expect(screen.getByText('Result ready:')).toBeTruthy();
   });
 

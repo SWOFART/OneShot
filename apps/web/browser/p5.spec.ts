@@ -60,6 +60,8 @@ async function mockJobApi(
     calls.push(`${request.method()} ${pathname}`);
     if (pathname === '/v1/jobs' && request.method() === 'GET')
       return json(route, 200, { jobs: [current] });
+    if (pathname === `/v1/jobs/${JOB_ID}` && request.method() === 'GET')
+      return json(route, 200, current);
     if (pathname === '/v1/jobs/quote' && request.method() === 'POST')
       return json(route, 200, current.supplier);
     if (pathname === '/v1/jobs' && request.method() === 'POST') {
