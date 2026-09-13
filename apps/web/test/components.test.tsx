@@ -1,4 +1,4 @@
-import type { IntentResponse, IntentState } from '@oneshot/contracts';
+import type { IntentResponse, IntentState, JobView } from '@oneshot/contracts';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
@@ -31,6 +31,36 @@ function intent(state: IntentState): IntentResponse {
     version: 1,
     attempts: [],
     evidence: [],
+  };
+}
+
+function resumableJob(deliveryState: JobView['delivery_state']): JobView {
+  return {
+    job_id: 'job-resume-result',
+    task_key: 'report-resume-result',
+    tool_id: 'team-report-v1',
+    business_intent_id: 'intent-resume-result',
+    supplier: {
+      supplier_id: 'team-report-v1',
+      order_reference: 'team_report_order_resume',
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount_atomic: '1000000',
+      asset: 'USDC',
+      network: 'eip155:5042002',
+      expires_at: '2099-09-13T12:00:00.000Z',
+    },
+    payment_state: 'COMMITTED',
+    payment_mode: 'SERVER_PRIVY',
+    delivery_state: deliveryState,
+    settlement: {
+      provider_reference_id: 'provider-resume-result',
+      transaction_hash: `0x${'c'.repeat(64)}`,
+      block_number: '99',
+      transfer_log_index: 0,
+      explorer_url: `https://testnet.arcscan.app/tx/0x${'c'.repeat(64)}`,
+    },
+    created_at: '2026-09-13T12:00:00.000Z',
+    updated_at: '2026-09-13T12:00:00.000Z',
   };
 }
 
@@ -151,6 +181,40 @@ describe('IntentStatusView', () => {
 });
 
 describe('JobWorkspace payment inputs', () => {
+  it('observes the queued resume until the existing result is available', async () => {
+    const user = userEvent.setup();
+    const pendingJob = resumableJob('PENDING');
+    const availableJob: JobView = {
+      ...pendingJob,
+      delivery_state: 'AVAILABLE',
+      result: {
+        order_reference: pendingJob.supplier.order_reference,
+        result_reference: 'team_report_result_resume',
+        report: 'Recovered original supplier report.',
+      },
+    };
+    let listCalls = 0;
+    const client = {
+      list: vi.fn(async () => {
+        listCalls += 1;
+        return [listCalls < 3 ? pendingJob : availableJob];
+      }),
+      resume: vi.fn(async () => pendingJob),
+    };
+
+    render(<JobList client={client as never} onSelectIntent={() => undefined} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Resume result (no new payment)' }));
+
+    await waitFor(
+      () => expect(screen.getByText('Recovered original supplier report.')).toBeTruthy(),
+      { timeout: 3000 },
+    );
+    expect(client.resume).toHaveBeenCalledWith(pendingJob.job_id);
+    expect(listCalls).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText('Result ready:')).toBeTruthy();
+  });
+
   it('sends the entered recipient and integer atomic amount to the quote boundary', async () => {
     const user = userEvent.setup();
     let quotedRequest: unknown;

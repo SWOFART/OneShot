@@ -677,7 +677,8 @@ a:hover {
   font-family: var(--os-font-mono);
 }
 
-.operator-did {
+.operator-did,
+.operator-wallet-address {
   font-family: var(--os-font-mono);
   font-size: 0.82rem;
   color: var(--os-ink);
@@ -686,6 +687,20 @@ a:hover {
   border-radius: var(--os-radius-lg);
   border: 1px solid var(--os-line);
   overflow-wrap: anywhere;
+}
+
+.session-wallet-address {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.session-wallet-address > span {
+  color: var(--os-panel-ink-muted);
+  font-size: 0.78rem;
+}
+
+.session-wallet-address .btn-copy {
+  justify-self: start;
 }
 
 .btn-copy {
@@ -1901,7 +1916,8 @@ a.secondary:hover {
   display: grid;
 }
 
-.operator-details .operator-did {
+.operator-details .operator-did,
+.operator-details .operator-wallet-address {
   color: var(--os-panel-ink-muted);
 }
 
@@ -1982,6 +1998,7 @@ a.secondary:hover {
 .job-workspace > input,
 .advanced-fields input,
 .operator-details .operator-did,
+.operator-details .operator-wallet-address,
 .operator-details summary {
   color: var(--os-ink);
 }
