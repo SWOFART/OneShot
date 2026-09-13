@@ -53,6 +53,10 @@ Point a Streamable HTTP MCP client at:
 https://oneshot.kapustazh.dev/mcp
 ```
 
+This is the canonical OneShot MCP endpoint and is the default for the payment
+skill; installing the skill alone does not register this server in an agent
+host. Use the ready-made configuration from Profile or the JSON below.
+
 Send the bearer as `Authorization: Bearer <token>`:
 
 ```json
@@ -73,7 +77,11 @@ Send the bearer as `Authorization: Bearer <token>`:
 
 ## Prepare and submit
 
-Prepare a payment with the wallet address selected by the user:
+Prepare a payment with the wallet address selected by the user. If the agent
+host has a wallet/account connector, it should read the active Ethereum wallet
+from that connector. Otherwise the user provides only the public wallet address
+once; the bearer token does not identify a wallet and must not be pasted into a
+prompt.
 
 ```json
 {
