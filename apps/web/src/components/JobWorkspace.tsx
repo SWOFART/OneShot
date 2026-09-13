@@ -38,6 +38,7 @@ function explorerHref(transactionHash: string | undefined): string | undefined {
 const USER_WALLET_PAYMENT_CHECK_DELAY_MS = 500;
 const USER_WALLET_PAYMENT_CHECK_ATTEMPTS = 30;
 const RESULT_REFRESH_DELAY_MS = 1000;
+const RESULT_REFRESH_ATTEMPTS = 15;
 
 function waitForPaymentCheck(): Promise<void> {
   return new Promise((resolve) => {
@@ -49,6 +50,23 @@ function waitForResultRefresh(): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, RESULT_REFRESH_DELAY_MS);
   });
+}
+
+async function waitForSupplierResult(
+  client: JobApiClient,
+  jobId: string,
+  initial: JobView,
+): Promise<JobView> {
+  let latest = initial;
+  for (
+    let attempt = 0;
+    attempt < RESULT_REFRESH_ATTEMPTS && latest.delivery_state === 'PENDING' && !latest.result;
+    attempt += 1
+  ) {
+    await waitForResultRefresh();
+    latest = await client.get(jobId);
+  }
+  return latest;
 }
 
 async function resolveUserWalletPayment(
@@ -492,12 +510,17 @@ export function JobList(props: {
     setError('');
     try {
       const resumed = await props.client.resume(jobId);
-      if (!resumed.result && resumed.delivery_state === 'PENDING') {
-        await waitForResultRefresh();
-      }
-      const listed = await refresh();
-      const latest = listed?.find((job) => job.job_id === jobId);
-      if (latest && !latest.result) {
+      setRequests((current) =>
+        current.map((job) => (job.job_id === jobId ? resumed : job)),
+      );
+      const latest =
+        resumed.result || resumed.delivery_state !== 'PENDING'
+          ? resumed
+          : await waitForSupplierResult(props.client, jobId, resumed);
+      setRequests((current) =>
+        current.map((job) => (job.job_id === jobId ? latest : job)),
+      );
+      if (!latest.result) {
         setError(
           latest.delivery_state === 'RETRIEVAL_FAILED'
             ? 'The supplier result could not be retrieved. No new payment was submitted.'

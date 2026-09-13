@@ -22,6 +22,23 @@ const quote: SupplierQuote = {
 };
 
 describe('JobApiClient quote flow', () => {
+  it('reads one job without listing the workspace jobs', async () => {
+    let calledUrl = '';
+    const job = { job_id: 'job-1', delivery_state: 'PENDING' };
+    const client = new JobApiClient({
+      fetchFn: async (input) => {
+        calledUrl = String(input);
+        return new Response(JSON.stringify(job), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      },
+    });
+
+    await expect(client.get('job-1')).resolves.toEqual(job);
+    expect(calledUrl).toBe('/v1/jobs/job-1');
+  });
+
   it('requests a non-chargeable quote with the authenticated task payload', async () => {
     let calledUrl = '';
     let calledBody = '';
