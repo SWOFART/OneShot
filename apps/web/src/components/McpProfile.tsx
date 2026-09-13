@@ -85,9 +85,10 @@ export function McpProfile(props: { readonly client: JobApiClient }) {
         </>
       )}
 
-      <h3>Install the payment skill</h3>
+      <h3 className="skill-install-heading">Install the payment skill for the agent</h3>
       <p>
-        Node.js includes npm and <code>npx</code>.
+        First install <a href="https://nodejs.org/en/download">Node.js</a> — npm comes with it and
+        brings <code>npx</code>. Then install the OneShot payment skill:
       </p>
       <pre className="docs-code" aria-label="Personal agent skill install command">
         <code>{SKILL_INSTALL}</code>
