@@ -93,7 +93,15 @@ describePostgres('production worker API to adapter path', () => {
             },
           },
           recoveryService: { handle: async () => ({}) } as never,
-          graphEvidence: { capture: async () => ({}) } as never,
+          graphEvidence: {
+            capture: async () => ({
+              source: 'THE_GRAPH' as const,
+              authority_class: 'OBSERVATION' as const,
+              retrieved_at: '2026-09-07T12:03:00.000Z',
+              digest: 'graph-capture:production-runtime-fixture',
+              freshness: 'FRESH' as const,
+            }),
+          } as never,
         }),
     });
     let attemptCounter = 0;
