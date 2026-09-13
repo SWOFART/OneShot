@@ -13,11 +13,12 @@ silently edited or automatically reversed.
 ## Current schema digest
 
 The append-only ledger, resumable-jobs, provider-identity, personal MCP
-credential, and Graph evidence capture migration set (`001` through `012`) has
+credential, Graph evidence capture, and historical Graph evidence backfill
+migration set (`001` through `013`) has
 SHA-256 digest:
 
 ```text
-cfbda4ad89e7cb2bc88e4c0c0603ba274f20bbd40fa713bd6cf535a670b6ba9f
+065214281bd4eb77b7df16de81f27b377cd97bdced241124448f6a9a08f88056
 ```
 
 ## Containerized Testing Command

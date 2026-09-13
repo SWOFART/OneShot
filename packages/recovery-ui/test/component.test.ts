@@ -77,7 +77,21 @@ describe('RecoveryTimeline', () => {
     renderScenario('fallback-disabled');
     expect(screen.queryByRole('heading', { name: 'Subgraph MCP' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'The Graph' })).toBeTruthy();
-    expect(screen.getByText('NOT REPORTED')).toBeTruthy();
+    expect(screen.getByText('NOT YET REPORTED')).toBeTruthy();
+  });
+
+  it('explains when Graph capture is pending for a historical settlement', () => {
+    const page = recoveryScenarioPages['fallback-disabled'][0]!;
+    render(
+      createElement(RecoveryTimeline, {
+        pages: [{ ...page, authoritativeState: 'COMMITTED' }],
+        onRefresh: vi.fn(async () => receipt),
+        onEscalate: null,
+        onLoadMore: null,
+      }),
+    );
+    expect(screen.getByText('CAPTURE PENDING')).toBeTruthy();
+    expect(screen.getByText(/Historical settlements are queued for capture/u)).toBeTruthy();
   });
 
   it('offers no retry, force-pay, or settlement action', () => {

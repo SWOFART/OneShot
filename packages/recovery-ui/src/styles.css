@@ -4,10 +4,9 @@
   :scope {
     color: var(--ink);
     background: var(--os-panel);
-    font-family: var(--os-font-secondary);
+    font-family: var(--os-font-primary);
     font-weight: 300;
     font-synthesis: none;
-    color-scheme: dark;
     --ink: var(--os-panel-ink);
     --muted: var(--os-panel-ink-muted);
     --line: var(--os-panel-line);
@@ -122,7 +121,7 @@
   .binding-warning,
   .duplicate-note,
   .order-note {
-    font-family: 'Cascadia Mono', 'SFMono-Regular', Consolas, monospace;
+    font-family: var(--os-font-mono);
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
@@ -191,7 +190,7 @@
 
   dd {
     margin: 4px 0 0;
-    font-family: 'Cascadia Mono', 'SFMono-Regular', Consolas, monospace;
+    font-family: var(--os-font-mono);
     font-size: 0.79rem;
   }
 
@@ -202,6 +201,9 @@
     gap: 28px;
     padding: clamp(24px, 5vw, 42px);
     border: 1px solid var(--line);
+    border-radius: var(--os-radius-lg);
+    background: var(--os-field);
+    color: var(--os-on-field);
     overflow: hidden;
   }
 
@@ -222,7 +224,7 @@
   .state-banner p {
     max-width: 680px;
     margin-bottom: 0;
-    color: var(--muted);
+    color: var(--os-on-field-muted);
     line-height: 1.6;
   }
 
@@ -239,14 +241,16 @@
     align-content: center;
     min-width: 230px;
     padding: 20px;
-    border: 1px solid var(--line);
-    background: var(--panel);
+    border: 1px solid var(--os-field-line);
+    border-radius: var(--os-radius);
+    background: transparent;
+    color: var(--os-on-field);
   }
 
   .lock-status span,
   .lock-status small {
-    color: var(--amber);
-    font-family: 'Cascadia Mono', 'SFMono-Regular', Consolas, monospace;
+    color: var(--os-on-field-muted);
+    font-family: var(--os-font-mono);
     font-size: 0.68rem;
     letter-spacing: 0.08em;
   }
@@ -277,7 +281,7 @@
     min-height: 44px;
     padding: 11px 18px;
     border: 1px solid var(--cyan);
-    border-radius: 2px;
+    border-radius: 999px;
     cursor: pointer;
     font-weight: 700;
   }
@@ -328,6 +332,7 @@
   .diagnostics {
     padding: clamp(22px, 4vw, 32px);
     border: 1px solid var(--line);
+    border-radius: var(--os-radius);
     background: var(--panel);
   }
 
@@ -486,7 +491,7 @@
   .decision-grid small {
     display: block;
     color: var(--muted);
-    font-family: 'Cascadia Mono', 'SFMono-Regular', Consolas, monospace;
+    font-family: var(--os-font-mono);
     font-size: 0.66rem;
     text-transform: uppercase;
   }
@@ -516,6 +521,24 @@
   .graph-panel + .panel,
   .diagnostics {
     margin-top: 20px;
+  }
+
+  .graph-panel {
+    --ink: var(--os-ink);
+    --muted: var(--os-ink-muted);
+    --line: var(--os-line);
+    --panel: var(--os-surface);
+    --panel-strong: var(--os-ground);
+    --cyan: var(--os-accent-ink);
+    --green: var(--os-accent-ink);
+    color: var(--ink);
+    background: var(--os-surface);
+  }
+
+  .graph-panel .health,
+  .graph-panel .binding-ok,
+  .graph-panel .binding-warning {
+    background: var(--os-panel);
   }
 
   .health-fresh,
@@ -570,7 +593,7 @@
     padding: 7px 10px;
     border: 1px solid var(--line);
     color: var(--amber);
-    font-family: 'Cascadia Mono', 'SFMono-Regular', Consolas, monospace;
+    font-family: var(--os-font-mono);
     font-size: 0.7rem;
   }
 
@@ -608,7 +631,7 @@
     place-items: center;
     border: 1px solid var(--cyan);
     color: var(--cyan);
-    font-family: 'Cascadia Mono', 'SFMono-Regular', Consolas, monospace;
+    font-family: var(--os-font-mono);
   }
 
   .card-heading > div {
@@ -740,13 +763,13 @@
     padding: 14px 16px;
     border: 1px solid var(--line);
     border-left: 2px solid var(--cyan);
-    border-radius: 12px;
+    border-radius: var(--os-radius);
   }
 
   .state-banner {
     gap: 18px;
     padding: 20px 24px;
-    border-radius: 12px;
+    border-radius: var(--os-radius-lg);
   }
 
   .state-banner h2 {
@@ -757,13 +780,13 @@
   .lock-status {
     min-width: 210px;
     padding: 14px 16px;
-    border-radius: 10px;
+    border-radius: var(--os-radius);
   }
 
   .graph-panel {
     margin-top: 16px;
     padding: 18px 22px;
-    border-radius: 12px;
+    border-radius: var(--os-radius);
   }
 
   .graph-panel .identity-grid {
@@ -777,7 +800,7 @@
   .panel,
   .diagnostics {
     padding: 20px 22px;
-    border-radius: 12px;
+    border-radius: var(--os-radius);
   }
 
   .dashboard-grid {

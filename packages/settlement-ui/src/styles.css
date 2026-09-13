@@ -12,7 +12,7 @@
     --red: var(--os-state-failed);
     --cyan: var(--os-signal);
     color: var(--ink);
-    font-family: var(--os-font-secondary);
+    font-family: var(--os-font-primary);
     font-weight: 300;
     display: flex;
     flex-direction: column;
@@ -35,6 +35,21 @@
   .details-header {
     display: grid;
     gap: 10px;
+    padding: clamp(16px, 3vw, 24px);
+    border: 1px solid var(--os-field-line);
+    border-radius: var(--os-radius-lg);
+    background: var(--os-field);
+    color: var(--os-on-field);
+  }
+
+  .details-header .eyebrow,
+  .details-header .purpose,
+  .proof-facts dt {
+    color: var(--os-on-field-muted);
+  }
+
+  .details-header .badge {
+    color: var(--os-on-field);
   }
 
   .proof-title-row {
@@ -55,17 +70,17 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1px;
     margin: 2px 0 0;
-    background: var(--line);
+    background: var(--os-field-line);
   }
 
   .proof-facts > div {
     min-width: 0;
     padding: 10px 12px;
-    background: var(--panel);
+    background: var(--os-field);
   }
 
   .proof-facts dt {
-    color: var(--muted);
+    color: var(--os-on-field-muted);
     font-size: 0.68rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -93,7 +108,7 @@
 
   .panel {
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--os-radius);
     background: var(--panel);
     padding: clamp(14px, 2vw, 22px);
   }
@@ -191,6 +206,7 @@
   .facts dd {
     margin: 0;
     min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .fact-note {
@@ -306,7 +322,7 @@
     background: var(--os-panel);
     color: var(--os-state-unknown);
     padding: 12px clamp(16px, 3vw, 32px);
-    font-family: Manrope, Inter, ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--os-font-primary);
     font-size: 0.8rem;
   }
 
