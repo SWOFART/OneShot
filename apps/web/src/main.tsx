@@ -13,10 +13,14 @@ const PrivyConsole = lazy(async () => {
   const module = await import('./auth/privy-session.js');
   function AuthenticatedApp() {
     const session = module.usePrivyOperatorSession();
-    // Privy login authenticates the operator only. Payments run server-side
-    // through the execution wallet (SERVER_PRIVY); the browser wallet is
-    // intentionally not wired into the console.
-    return <App route={window.location.pathname} useOperatorSession={() => session} />;
+    const userWallet = module.usePrivyUserWallet();
+    return (
+      <App
+        route={window.location.pathname}
+        useOperatorSession={() => session}
+        userWallet={userWallet}
+      />
+    );
   }
   return {
     default: () => (
