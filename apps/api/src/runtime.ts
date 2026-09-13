@@ -49,11 +49,12 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
       nextAttemptId: randomUUID,
     });
     const jobs = new JobLedger(pool, { now: () => new Date(), nextAttemptId: randomUUID });
+    const supplier = new TeamReportSupplier();
     const mcpCredentials = new McpCredentialStore(pool);
     const app = buildApi({
       ledger,
       jobs,
-      supplier: new TeamReportSupplier(),
+      supplier,
       ...(config.walletActivity
         ? { walletActivity: new StudioWalletActivityPort(config.walletActivity) }
         : {}),
@@ -84,9 +85,12 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
                 },
               ]),
               workspaceId: config.mcp.workspaceId,
-              payerWallet: config.mcp.payerWallet,
-              waitMs: config.mcp.waitMs,
               submissionsDisabled: config.submissionsDisabled,
+              /*
+               * НЕ УДАЛЯТЬ: config.mcp.payerWallet and config.mcp.waitMs are
+               * retained for the disabled corporate server-wallet mode. The
+               * active MCP handler intentionally receives no server payer.
+               */
             },
           }
         : {}),

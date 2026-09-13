@@ -200,15 +200,13 @@ export function JobWorkspace(props: {
     setStarting(true);
     const userWallet = props.userWallet;
     if (!userWallet) {
-      try {
-        const job = await props.client.start(jobRequest);
-        setApprovedJob(job);
-        setNotice('Request accepted. Payment authorization is queued.');
-      } catch {
-        setNotice('The request was not started. Keep the same request key when retrying.');
-      } finally {
-        setStarting(false);
-      }
+      /*
+       * НЕ УДАЛЯТЬ: the old server-wallet UI handoff is intentionally disabled
+       * for personal payments. Corporate autonomous agents may use that mode
+       * through a separately selected backend integration.
+       */
+      setNotice('Connect a Privy or MetaMask wallet before approving this direct Arc payment.');
+      setStarting(false);
       return;
     }
     setWalletAttempted(false);
@@ -404,22 +402,19 @@ export function JobWorkspace(props: {
           <details className="technical-details agent-handoff">
             <summary>Request for your agent</summary>
             <p>
-              Send this exact request to POST /v1/jobs only after approval. Reuse its task key when
-              resuming. The amount is in USDC atomic units, not dollars; network fees are separate.
+              Send this exact request to POST /v1/jobs/user-wallet/prepare only after approval and
+              add the connected payer_wallet. Reuse its task key when resuming. The amount is in
+              USDC atomic units, not dollars; network fees are separate.
             </p>
             <pre className="response-output">{JSON.stringify(request(), null, 2)}</pre>
           </details>
           <p className="field-help">
-            {props.userWallet
-              ? 'Nothing has been paid yet. Approval prepares a durable intent, then your connected wallet shows the exact USDC transfer for confirmation. OneShot never uses a server wallet for this report.'
-              : 'Nothing has been paid yet. Approval queues the existing server-wallet payment path for this test composition.'}
+            Nothing has been paid yet. Approval prepares a durable intent, then your connected
+            wallet shows the exact USDC transfer for confirmation. OneShot never uses a server
+            wallet for this report.
           </p>
           <button type="button" onClick={() => void start()} disabled={starting || walletAttempted}>
-            {starting
-              ? 'Starting request…'
-              : props.userWallet
-                ? 'Approve and pay from my wallet'
-                : 'Approve and run service'}
+            {starting ? 'Starting request…' : 'Approve and pay from my wallet'}
           </button>
         </>
       )}
@@ -430,29 +425,22 @@ export function JobWorkspace(props: {
       )}
       {approvedJob && (
         <>
-          <SupplierQuotePanel
-            heading={props.userWallet ? 'User-wallet payment' : 'Request accepted'}
-            quote={approvedJob.supplier}
-          />
-          {props.userWallet && (
-            <>
-              <p role="status" className="field-help">
-                Payment state: <strong>{approvedJob.payment_state}</strong>. Payer:{' '}
-                <span className="mono">
-                  {approvedJob.user_payment?.payer_wallet ?? 'connected wallet'}
-                </span>
-              </p>
-              {paymentHash && approvedJob.payment_state !== 'COMMITTED' && (
-                <button
-                  type="button"
-                  className="secondary"
-                  disabled={paymentChecking}
-                  onClick={() => void checkPayment()}
-                >
-                  {paymentChecking ? 'Checking Arc receipt…' : 'Check payment (same transaction)'}
-                </button>
-              )}
-            </>
+          <SupplierQuotePanel heading="User-wallet payment" quote={approvedJob.supplier} />
+          <p role="status" className="field-help">
+            Payment state: <strong>{approvedJob.payment_state}</strong>. Payer:{' '}
+            <span className="mono">
+              {approvedJob.user_payment?.payer_wallet ?? 'connected wallet'}
+            </span>
+          </p>
+          {paymentHash && approvedJob.payment_state !== 'COMMITTED' && (
+            <button
+              type="button"
+              className="secondary"
+              disabled={paymentChecking}
+              onClick={() => void checkPayment()}
+            >
+              {paymentChecking ? 'Checking Arc receipt…' : 'Check payment (same transaction)'}
+            </button>
           )}
           <button
             type="button"

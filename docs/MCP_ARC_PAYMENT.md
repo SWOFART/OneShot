@@ -1,53 +1,58 @@
-# OneShot MCP Arc payment
+# OneShot MCP Arc user-wallet payment
 
-The first MCP release exposes one remote tool, `arc_payment`. It creates or
-replays a durable OneShot Business Intent; the existing worker performs the
-policy-bound Privy server-wallet transfer on Arc Testnet. The MCP endpoint does
-not sign or submit transactions itself.
+The active MCP flow is non-custodial:
 
-The web app renders the client setup and walkthrough at `/docs/mcp`.
+1. `arc_payment` creates or replays a payer-bound OneShot job and returns the
+   exact Arc Testnet USDC ERC-20 transaction request.
+2. The user reviews and signs that request with the connected Privy embedded or
+   external wallet, or with MetaMask.
+3. The wallet broadcasts the USDC transfer directly to the recipient.
+4. `arc_payment_submit` receives the returned transaction hash.
+5. OneShot binds that hash, verifies the receipt and exact USDC `Transfer` log,
+   and returns the durable state and proof.
+
+The MCP bearer authenticates the workspace/agent. It does not authorize a
+server payer and it cannot sign or broadcast a user transaction.
 
 ## Deploy
 
-Configure the API with its payer. Personal bearer
-tokens are generated from an authenticated Profile and stored as SHA-256
-digests in PostgreSQL:
+Configure the API with a workspace and the credential-free Arc RPC used for
+receipt verification:
 
 ```dotenv
-ONESHOT_WORKSPACE_ID=<demo-workspace>
-ONESHOT_MCP_PAYER_ADDRESS=0x<privy-server-wallet-address>
-ONESHOT_MCP_WAIT_MS=2500
+ONESHOT_WORKSPACE_ID=<workspace>
+ONESHOT_ARC_RPC_URL=https://<arc-testnet-rpc>
 ```
 
-`ONESHOT_MCP_BEARER_TOKEN` is optional and exists only for a legacy
-operator-controlled client. If used, store it in Google Secret Manager. MCP
-bearers are accepted only on `/mcp`; Privy browser JWTs and
-`SERVICE_BEARER_TOKEN` cannot call this endpoint. Settlement remains subject to the worker's
-`ONESHOT_SETTLEMENT_CAP_ATOMIC` and the attached Privy policy.
+Personal bearer tokens are generated from an authenticated Profile and stored
+as SHA-256 digests in PostgreSQL. `ONESHOT_MCP_BEARER_TOKEN` remains optional
+for a legacy operator-controlled client.
 
-The calling agent generates one request key for each approved payment in the
-form `report-<purpose-slug>-<8 random hex>`. The user never has to provide or
-copy it. A repeated call using the same generated key and identical fields
-returns the original intent or settlement; changed payment fields return a
-conflict.
+```dotenv
+ONESHOT_MCP_BEARER_TOKEN=<at-least-32-characters>
+```
+
+```text
+НЕ УДАЛЯТЬ: ONESHOT_MCP_PAYER_ADDRESS and ONESHOT_MCP_WAIT_MS are retained
+only for the disabled corporate autonomous-agent server-wallet mode. The
+active personal MCP handler ignores them and never uses a server wallet.
+```
 
 ## Connect
 
-Install Node.js with npm (`npx` is bundled with npm), then install the agent
-skill:
+Install the agent skill:
 
 ```sh
 npx --yes skills@latest add https://github.com/SWOFART/OneShot/tree/develop --skill oneshot-arc-payment
 ```
 
-Point any Streamable HTTP MCP client at:
+Point a Streamable HTTP MCP client at:
 
 ```text
 https://oneshot.kapustazh.dev/mcp
 ```
 
-Sign in to OneShot, open **Profile**, and generate a bearer for that Privy
-account. Send it as `Authorization: Bearer <token>`. A generic client entry is:
+Send the bearer as `Authorization: Bearer <token>`:
 
 ```json
 {
@@ -63,32 +68,38 @@ account. Send it as `Authorization: Bearer <token>`. A generic client entry is:
 }
 ```
 
-`tools/list` returns only `arc_payment`:
+`tools/list` exposes `arc_payment` and `arc_payment_submit`.
+
+## Prepare and submit
+
+Prepare a payment with the wallet address selected by the user:
 
 ```json
 {
   "request_key": "report-one-approved-demo-purchase-850d9a80",
+  "payer_wallet": "0x<connected-wallet>",
   "recipient": "0x<recipient>",
-  "amount_usdc": "<approved amount>",
+  "amount_usdc": "1",
   "purpose": "One approved demo purchase"
 }
 ```
 
-`amount_usdc` is parsed as a decimal string with at most six decimal places;
-JavaScript floating point is never used. The tool pins USDC and
-`eip155:5042002`, reports the Privy server payer, and returns the authoritative
-OneShot state. `AUTHORIZING`, `READY`, and `SUBMITTING` mean wait. `UNKNOWN`
-means repeat the same call or inspect recovery evidence. Only `COMMITTED` with a
-stored transaction hash returns an ArcScan proof link.
+The result contains `transaction.to` equal to the Arc USDC contract,
+`transaction.data` containing `transfer(recipient, amount_atomic)`,
+`transaction.from` equal to `payer_wallet`, and `value: "0x0"`.
+The client must show this exact request to the user and use the wallet's
+normal signing API. The MCP tool must not be treated as a signing API.
 
-## Walkthrough
+Then submit the exact hash returned by the wallet:
 
-1. Connect and confirm `tools/list` contains only `arc_payment`.
-2. Let the agent generate a key, then call once with that key, recipient,
-   amount, and purpose.
-3. Show the returned Business Intent progressing to `COMMITTED`.
-4. Repeat the exact call and show the same Business Intent and transaction.
-5. Open the returned ArcScan link and compare recipient and atomic USDC amount.
+```json
+{
+  "business_intent_id": "intent_<value-from-prepare>",
+  "transaction_hash": "0x<hash-returned-by-wallet>"
+}
+```
 
-This walkthrough uses live inputs and the durable worker path. It needs no
-hardcoded transaction or mocked settlement.
+`COMMITTED` with a stored transaction hash and ArcScan URL is final proof.
+`UNKNOWN` means the same hash should be submitted again after the receipt is
+available. A different hash is rejected, so the flow preserves one intent,
+one bound transaction hash, and at most one committed settlement.

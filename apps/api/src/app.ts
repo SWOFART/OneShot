@@ -57,6 +57,7 @@ export interface ApiDependencies {
     | 'createOrReplay'
     | 'createUserWalletOrReplay'
     | 'get'
+    | 'getByBusinessIntentId'
     | 'list'
     | 'resumeDelivery'
     | 'recordActivityObservation'
@@ -248,8 +249,23 @@ export function buildApi(dependencies: ApiDependencies) {
 
   if (dependencies.mcp) {
     app.all('/mcp', async (request, reply) => {
+      if (!dependencies.jobs || !dependencies.supplier) {
+        sendError(
+          reply,
+          503,
+          'NOT_READY',
+          'MCP user-wallet payments are not configured',
+          correlationFor(request),
+        );
+        return;
+      }
       const mcpHandler = createArcPaymentMcpHandler({
         ledger: dependencies.ledger,
+        jobs: dependencies.jobs,
+        supplier: dependencies.supplier,
+        ...(dependencies.userWalletVerifier
+          ? { userWalletVerifier: dependencies.userWalletVerifier }
+          : {}),
         config: {
           ...dependencies.mcp!,
           workspaceId: requestWorkspaces.get(request) ?? dependencies.mcp!.workspaceId,

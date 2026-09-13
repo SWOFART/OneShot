@@ -1,14 +1,28 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { McpServer, createMcpHandler, type McpHttpHandler } from '@modelcontextprotocol/server';
-import { asEvmAddress, ContractValidationError, type IntentResponse } from '@oneshot/contracts';
-import type { IntentLedger } from '@oneshot/storage-postgres';
+import {
+  asBlockNumber,
+  asBusinessIntentId,
+  asEvmAddress,
+  asProviderReferenceId,
+  asTransactionHash,
+  ContractValidationError,
+  type JobView,
+  type SupplierPort,
+} from '@oneshot/contracts';
+import { derivedJobId } from '@oneshot/domain';
+import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
 import { z } from 'zod';
+import type { UserWalletVerificationPort } from './user-wallet.js';
 
 const ARC_NETWORK = 'eip155:5042002' as const;
+const ARC_CHAIN_ID = 5042002 as const;
+const ARC_USDC = '0x3600000000000000000000000000000000000000' as const;
 const USDC_DECIMALS = 6;
 const REQUEST_KEY_MAX_LENGTH = 128;
+const TRANSFER_SELECTOR = 'a9059cbb';
 
-const inputSchema = z.strictObject({
+const prepareInputSchema = z.strictObject({
   request_key: z
     .string()
     .min(1)
@@ -16,6 +30,10 @@ const inputSchema = z.strictObject({
     .describe(
       'Generate automatically as report-<purpose-slug>-<8 random hex>; reuse it exactly for retries and never ask the user for it',
     ),
+  payer_wallet: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{40}$/u)
+    .describe('The connected Privy embedded or external EVM wallet that will sign the payment'),
   recipient: z
     .string()
     .regex(/^0x[0-9a-fA-F]{40}$/u)
@@ -24,8 +42,22 @@ const inputSchema = z.strictObject({
   purpose: z.string().min(1).max(256).describe('Short non-secret payment purpose'),
 });
 
+const submitInputSchema = z.strictObject({
+  business_intent_id: z
+    .string()
+    .regex(/^intent_[0-9a-f]{64}$/u)
+    .describe('The business_intent_id returned by the prepare call'),
+  transaction_hash: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{64}$/u)
+    .describe(
+      'The hash returned by Privy or MetaMask after the user signed and broadcast the transfer',
+    ),
+});
+
 const outputSchema = z.strictObject({
   request_key: z.string(),
+  job_id: z.string(),
   business_intent_id: z.string(),
   state: z.enum([
     'AUTHORIZING',
@@ -37,7 +69,7 @@ const outputSchema = z.strictObject({
     'REJECTED',
   ]),
   payer: z.strictObject({
-    mode: z.literal('SERVER_PRIVY'),
+    mode: z.literal('USER_WALLET'),
     wallet_address: z.string(),
   }),
   recipient: z.string(),
@@ -46,6 +78,24 @@ const outputSchema = z.strictObject({
   asset: z.literal('USDC'),
   network: z.literal(ARC_NETWORK),
   replayed: z.boolean(),
+  quote: z.strictObject({
+    supplier_id: z.literal('team-report-v1'),
+    order_reference: z.string(),
+    recipient: z.string(),
+    amount_atomic: z.string(),
+    asset: z.literal('USDC'),
+    network: z.literal(ARC_NETWORK),
+    expires_at: z.string(),
+  }),
+  transaction: z
+    .strictObject({
+      chain_id: z.literal(ARC_CHAIN_ID),
+      from: z.string(),
+      to: z.string(),
+      data: z.string(),
+      value: z.literal('0x0'),
+    })
+    .optional(),
   settlement: z
     .strictObject({
       transaction_hash: z.string(),
@@ -53,19 +103,33 @@ const outputSchema = z.strictObject({
       explorer_url: z.string(),
     })
     .optional(),
-  next_action: z.enum(['WAIT', 'CHECK_STATUS', 'VIEW_PROOF', 'FIX_REQUEST']),
+  next_action: z.enum(['SIGN', 'CHECK_STATUS', 'VIEW_PROOF', 'FIX_REQUEST']),
 });
 
 export interface ArcPaymentMcpConfig {
   readonly workspaceId: string;
-  readonly payerWallet: string;
   readonly submissionsDisabled?: boolean;
+
+  /**
+   * НЕ УДАЛЯТЬ: legacy corporate autonomous-agent server-wallet configuration.
+   * It is intentionally not consumed by the active personal user-wallet MCP flow.
+   */
+  readonly payerWallet?: string;
+  /** НЕ УДАЛЯТЬ: retained only for the disabled legacy server-wallet mode. */
   readonly waitMs?: number;
-  readonly pollMs?: number;
 }
 
 export interface ArcPaymentMcpDependencies {
-  readonly ledger: Pick<IntentLedger, 'createOrReplay' | 'getIntent'>;
+  readonly ledger: Pick<
+    IntentLedger,
+    | 'beginUserWalletSubmission'
+    | 'recordUserWalletTransaction'
+    | 'completeSubmission'
+    | 'markUserWalletUnknown'
+  >;
+  readonly jobs: Pick<JobLedger, 'createUserWalletOrReplay' | 'getByBusinessIntentId'>;
+  readonly supplier: SupplierPort;
+  readonly userWalletVerifier?: UserWalletVerificationPort;
   readonly config: ArcPaymentMcpConfig;
 }
 
@@ -82,6 +146,10 @@ function boundedText(value: string, name: string, maximum: number): string {
   return value.normalize('NFC');
 }
 
+/**
+ * Retained for compatibility with the old server-wallet intent identity. The
+ * active MCP flow uses the resumable user-wallet job identity instead.
+ */
 export function arcPaymentBusinessIntentId(workspaceId: string, requestKey: string): string {
   const workspace = boundedText(workspaceId, 'workspace_id', 128);
   const key = boundedText(requestKey, 'request_key', REQUEST_KEY_MAX_LENGTH);
@@ -110,48 +178,77 @@ export function parseUsdcAmount(value: string): {
   };
 }
 
-function nextAction(
-  state: IntentResponse['state'],
-): 'WAIT' | 'CHECK_STATUS' | 'VIEW_PROOF' | 'FIX_REQUEST' {
-  if (state === 'COMMITTED') return 'VIEW_PROOF';
-  if (state === 'UNKNOWN') return 'CHECK_STATUS';
-  if (state === 'FAILED_SAFE' || state === 'REJECTED') return 'FIX_REQUEST';
-  return 'WAIT';
+function formatUsdcAmount(amountAtomic: string): string {
+  const atomic = BigInt(amountAtomic);
+  const whole = atomic / 10n ** 6n;
+  const fraction = (atomic % 10n ** 6n).toString(10).padStart(6, '0');
+  return `${whole.toString(10)}.${fraction}`;
 }
 
-function resultView(
-  requestKey: string,
-  amountUsdc: string,
-  payerWallet: string,
-  intent: IntentResponse,
-  replayed: boolean,
-) {
+function transferCalldata(recipient: string, amountAtomic: string): string {
+  const addressWord = recipient.slice(2).padStart(64, '0');
+  const amountWord = BigInt(amountAtomic).toString(16).padStart(64, '0');
+  return `0x${TRANSFER_SELECTOR}${addressWord}${amountWord}`;
+}
+
+function nextAction(
+  state: JobView['payment_state'],
+): 'SIGN' | 'CHECK_STATUS' | 'VIEW_PROOF' | 'FIX_REQUEST' {
+  if (state === 'READY') return 'SIGN';
+  if (state === 'COMMITTED') return 'VIEW_PROOF';
+  if (state === 'UNKNOWN' || state === 'SUBMITTING') return 'CHECK_STATUS';
+  return 'FIX_REQUEST';
+}
+
+function transactionFor(job: JobView) {
+  const payment = job.user_payment;
+  if (!payment) throw new Error('User-wallet payment binding is missing');
+  if (payment.token_contract !== ARC_USDC) {
+    throw new Error('User-wallet payment is bound to an unsupported token contract');
+  }
+  return {
+    chain_id: ARC_CHAIN_ID,
+    from: payment.payer_wallet,
+    to: payment.token_contract,
+    data: transferCalldata(payment.recipient, payment.amount_atomic),
+    value: '0x0' as const,
+  };
+}
+
+function resultView(requestKey: string, job: JobView, replayed: boolean) {
+  const payment = job.user_payment;
+  if (!payment) throw new Error('User-wallet payment binding is missing');
   return {
     request_key: requestKey,
-    business_intent_id: intent.business_intent_id,
-    state: intent.state,
+    job_id: job.job_id,
+    business_intent_id: job.business_intent_id,
+    state: job.payment_state,
     payer: {
-      mode: 'SERVER_PRIVY' as const,
-      wallet_address: payerWallet,
+      mode: 'USER_WALLET' as const,
+      wallet_address: payment.payer_wallet,
     },
-    recipient: intent.recipient,
-    amount_usdc: amountUsdc,
-    amount_atomic: intent.amount_atomic,
-    asset: intent.asset,
-    network: intent.network,
+    recipient: payment.recipient,
+    amount_usdc: formatUsdcAmount(payment.amount_atomic),
+    amount_atomic: payment.amount_atomic,
+    asset: 'USDC' as const,
+    network: payment.network,
     replayed,
-    ...(intent.settlement
+    quote: job.supplier,
+    ...(job.payment_state !== 'COMMITTED' && job.payment_state !== 'FAILED_SAFE'
+      ? { transaction: transactionFor(job) }
+      : {}),
+    ...(job.settlement
       ? {
           settlement: {
-            transaction_hash: intent.settlement.transaction_hash,
-            block_number: intent.settlement.block_number,
+            transaction_hash: job.settlement.transaction_hash,
+            block_number: job.settlement.block_number,
             explorer_url:
-              intent.settlement.explorer_url ??
-              `https://testnet.arcscan.app/tx/${intent.settlement.transaction_hash}`,
+              job.settlement.explorer_url ??
+              `https://testnet.arcscan.app/tx/${job.settlement.transaction_hash}`,
           },
         }
       : {}),
-    next_action: nextAction(intent.state),
+    next_action: nextAction(job.payment_state),
   };
 }
 
@@ -162,48 +259,29 @@ function toolError(message: string) {
   };
 }
 
-async function latestIntent(
-  ledger: ArcPaymentMcpDependencies['ledger'],
-  initial: IntentResponse,
-  waitMs: number,
-  pollMs: number,
-): Promise<IntentResponse> {
-  if (waitMs <= 0 || ['COMMITTED', 'FAILED_SAFE', 'UNKNOWN', 'REJECTED'].includes(initial.state)) {
-    return initial;
-  }
-  const deadline = Date.now() + waitMs;
-  let current = initial;
-  while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, Math.min(pollMs, deadline - Date.now())));
-    current = (await ledger.getIntent(initial.business_intent_id)) ?? current;
-    if (['COMMITTED', 'FAILED_SAFE', 'UNKNOWN', 'REJECTED'].includes(current.state)) break;
-  }
-  return current;
+function jsonResult(output: ReturnType<typeof resultView>) {
+  return {
+    content: [{ type: 'text' as const, text: JSON.stringify(output) }],
+    structuredContent: output,
+  };
 }
 
 export function createArcPaymentMcpHandler({
   ledger,
+  jobs,
+  supplier,
+  userWalletVerifier,
   config,
 }: ArcPaymentMcpDependencies): McpHttpHandler {
-  const payerWallet = asEvmAddress(config.payerWallet);
-  const waitMs = config.waitMs ?? 2_500;
-  const pollMs = config.pollMs ?? 250;
-  if (!Number.isSafeInteger(waitMs) || waitMs < 0 || waitMs > 5_000) {
-    throw new Error('MCP wait must be an integer from 0 to 5000 milliseconds');
-  }
-  if (!Number.isSafeInteger(pollMs) || pollMs < 10 || pollMs > 1_000) {
-    throw new Error('MCP poll interval must be an integer from 10 to 1000 milliseconds');
-  }
-
   return createMcpHandler(() => {
-    const server = new McpServer({ name: 'oneshot-arc-payments', version: '1.0.0' });
+    const server = new McpServer({ name: 'oneshot-arc-payments', version: '2.0.0' });
     server.registerTool(
       'arc_payment',
       {
-        title: 'Arc USDC payment',
+        title: 'Prepare Arc USDC payment',
         description:
-          'Create or replay an approved Arc Testnet USDC payment through the policy-bound Privy server wallet. Generate request_key automatically; never ask the user for it.',
-        inputSchema,
+          'Create or replay a payer-bound Arc Testnet USDC payment. The user must review and sign the returned ERC-20 transaction with the connected Privy or MetaMask wallet. This tool never uses a server wallet and never broadcasts a transaction.',
+        inputSchema: prepareInputSchema,
         outputSchema,
         annotations: {
           readOnlyHint: false,
@@ -212,47 +290,175 @@ export function createArcPaymentMcpHandler({
           openWorldHint: true,
         },
       },
-      async ({ request_key, recipient, amount_usdc, purpose }) => {
+      async ({ request_key, payer_wallet, recipient, amount_usdc, purpose }) => {
         try {
           const requestKey = boundedText(request_key, 'request_key', REQUEST_KEY_MAX_LENGTH);
           if (config.submissionsDisabled) {
-            return toolError('Arc payment submission is disabled for this deployment.');
+            return toolError('Arc payment preparation is disabled for this deployment.');
           }
           const amount = parseUsdcAmount(amount_usdc);
-          const result = await ledger.createOrReplay(
-            {
-              business_intent_id: arcPaymentBusinessIntentId(config.workspaceId, requestKey),
-              recipient: asEvmAddress(recipient),
-              amount_atomic: amount.atomic,
-              asset: 'USDC',
-              network: ARC_NETWORK,
-              purpose: boundedText(purpose, 'purpose', 256),
-            },
-            randomUUID(),
-          );
-          if (result.kind === 'INTENT_PAYLOAD_CONFLICT') {
+          const parsedPayer = asEvmAddress(payer_wallet);
+          const parsedRecipient = asEvmAddress(recipient);
+          const jobRequest = {
+            task_key: requestKey,
+            tool_id: 'team-report-v1' as const,
+            report_subject: boundedText(purpose, 'purpose', 256),
+            recipient: parsedRecipient,
+            amount_atomic: amount.atomic,
+          };
+          const jobId = derivedJobId(config.workspaceId, jobRequest);
+          const supplierOrder = await supplier.createOrder(jobRequest, jobId);
+          const result = await jobs.createUserWalletOrReplay({
+            workspaceId: config.workspaceId,
+            request: { ...jobRequest, payer_wallet: parsedPayer },
+            supplierOrder,
+            correlationId: `mcp-${requestKey.slice(0, 124)}`,
+          });
+          if (result.kind === 'TASK_PAYLOAD_CONFLICT') {
             return toolError(
-              'The request key already belongs to a different payment. Reuse the original immutable fields.',
+              'The request key already belongs to a different user-wallet payment. Reuse the original immutable fields and payer wallet.',
             );
           }
-          const intent = await latestIntent(ledger, result.intent, waitMs, pollMs);
-          const output = resultView(
-            requestKey,
-            amount.decimal,
-            payerWallet,
-            intent,
-            result.kind === 'REPLAY_IDENTICAL',
+          return jsonResult(resultView(requestKey, result.job, result.kind === 'REPLAYED'));
+        } catch (error) {
+          if (error instanceof ContractValidationError) {
+            if (error.message.includes('Supplier task payload conflicts')) {
+              return toolError(
+                'The request key already belongs to a different user-wallet payment. Reuse the original immutable fields and payer wallet.',
+              );
+            }
+            return toolError(error.message);
+          }
+          throw error;
+        }
+      },
+    );
+
+    server.registerTool(
+      'arc_payment_submit',
+      {
+        title: 'Verify signed Arc USDC payment',
+        description:
+          'Bind the transaction hash returned by the user wallet to the prepared payment, verify the Arc receipt and exact USDC Transfer log, and return the durable payment status. This tool never submits or retries a transaction.',
+        inputSchema: submitInputSchema,
+        outputSchema,
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      async ({ business_intent_id, transaction_hash }) => {
+        try {
+          if (config.submissionsDisabled) {
+            return toolError('Arc payment verification is disabled for this deployment.');
+          }
+          if (!userWalletVerifier) {
+            return toolError(
+              'Arc receipt verification is not configured. Set ONESHOT_ARC_RPC_URL before enabling user-wallet MCP payments.',
+            );
+          }
+          const businessIntentId = asBusinessIntentId(business_intent_id);
+          const transactionHash = asTransactionHash(transaction_hash);
+          const job = await jobs.getByBusinessIntentId(config.workspaceId, businessIntentId);
+          if (!job) return toolError('The prepared payment was not found in this workspace.');
+          if (job.payment_mode !== 'USER_WALLET' || !job.user_payment) {
+            return toolError('The prepared payment is not configured for a user wallet.');
+          }
+
+          const begun = await ledger.beginUserWalletSubmission(
+            job.business_intent_id,
+            job.user_payment.payer_wallet,
+            `mcp-submit-${transactionHash.slice(2, 18)}`,
           );
-          return {
-            content: [{ type: 'text' as const, text: JSON.stringify(output) }],
-            structuredContent: output,
-          };
+          if (!begun.begun) {
+            if (begun.currentState === 'COMMITTED' || begun.currentState === 'FAILED_SAFE') {
+              const current = await jobs.getByBusinessIntentId(
+                config.workspaceId,
+                job.business_intent_id,
+              );
+              return current
+                ? jsonResult(resultView(job.task_key, current, true))
+                : toolError('The completed payment could not be read back from durable storage.');
+            }
+            return toolError(
+              begun.reason === 'NOT_USER_WALLET'
+                ? 'The payer wallet does not match the durable user-wallet authorization.'
+                : 'This user-wallet payment is no longer available for verification.',
+            );
+          }
+          if (begun.transactionHash && begun.transactionHash !== transactionHash) {
+            return toolError(
+              'A different transaction hash is already bound to this payment; do not submit another transaction.',
+            );
+          }
+          const recorded = await ledger.recordUserWalletTransaction(
+            begun.attemptId,
+            transactionHash,
+          );
+          if (recorded === 'CONFLICT' || recorded === 'NOT_FOUND') {
+            return toolError(
+              'The transaction hash could not be bound to the durable payment attempt.',
+            );
+          }
+
+          let verification;
+          try {
+            verification = await userWalletVerifier.verify({
+              transactionHash,
+              walletAddress: job.user_payment.payer_wallet,
+              recipient: job.user_payment.recipient,
+              amountAtomic: job.user_payment.amount_atomic,
+            });
+          } catch {
+            return toolError(
+              'Arc receipt verification is temporarily unavailable; the hash is recorded and no retry was submitted.',
+            );
+          }
+
+          if (verification.kind === 'CONFIRMED') {
+            await ledger.completeSubmission(job.business_intent_id, begun.attemptId, {
+              kind: 'CONFIRMED',
+              provider_reference_id: asProviderReferenceId(`user-wallet:${transactionHash}`),
+              transaction_hash: asTransactionHash(verification.transactionHash),
+              block_number: asBlockNumber(verification.blockNumber),
+              transfer_log_index: verification.transferLogIndex,
+              verified_by: 'ARC_RPC_EXACT_TRANSFER',
+            });
+          } else if (verification.kind === 'FINAL_REVERT') {
+            await ledger.completeSubmission(job.business_intent_id, begun.attemptId, {
+              kind: 'DEFINITELY_NOT_SUBMITTED',
+              reason: verification.reason,
+            });
+          } else {
+            await ledger.markUserWalletUnknown(
+              job.business_intent_id,
+              begun.attemptId,
+              verification.kind === 'PENDING'
+                ? 'User wallet transaction is not final; receipt is not available yet'
+                : verification.reason,
+            );
+          }
+          const updated = await jobs.getByBusinessIntentId(
+            config.workspaceId,
+            job.business_intent_id,
+          );
+          if (!updated) return toolError('Updated payment could not be read from durable storage.');
+          return jsonResult(resultView(job.task_key, updated, false));
         } catch (error) {
           if (error instanceof ContractValidationError) return toolError(error.message);
           throw error;
         }
       },
     );
+
+    /*
+     * НЕ УДАЛЯТЬ: the former policy-bound Privy server-wallet MCP handler is
+     * intentionally disabled. Corporate autonomous-agent settlement may be
+     * restored later as a separate explicitly selected mode. It must never be
+     * used as a fallback for personal Privy/MetaMask payments.
+     */
     return server;
   });
 }

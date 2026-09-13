@@ -97,6 +97,20 @@ describe('API runtime configuration', () => {
     });
   });
 
+  it('allows active user-wallet MCP without a server payer address', () => {
+    expect(
+      loadApiRuntimeConfig({
+        ...base,
+        ONESHOT_WORKSPACE_ID: 'user-wallet-mcp-workspace',
+        ONESHOT_MCP_BEARER_TOKEN: 'mcp-token-with-at-least-thirty-two-characters',
+      }).mcp,
+    ).toEqual({
+      bearerToken: 'mcp-token-with-at-least-thirty-two-characters',
+      workspaceId: 'user-wallet-mcp-workspace',
+      waitMs: 2500,
+    });
+  });
+
   it('fails closed on partial MCP configuration', () => {
     expect(() =>
       loadApiRuntimeConfig({

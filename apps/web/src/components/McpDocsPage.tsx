@@ -19,6 +19,7 @@ const skillInstall =
 
 const toolInput = `{
   "request_key": "report-one-approved-demo-purchase-850d9a80",
+  "payer_wallet": "0x<connected-wallet>",
   "recipient": "0x<recipient>",
   "amount_usdc": "<approved amount>",
   "purpose": "One approved demo purchase"
@@ -51,8 +52,9 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
         <p className="eyebrow">ONESHOT MCP / ARC PAYMENT</p>
         <h1>Connect an agent to one safe payment tool.</h1>
         <p className="docs-lead">
-          OneShot exposes <code>arc_payment</code> over Streamable HTTP. It creates or replays one
-          durable Arc Testnet USDC intent through the policy-bound Privy server wallet.
+          OneShot exposes <code>arc_payment</code> and <code>arc_payment_submit</code> over
+          Streamable HTTP. The connected Privy or MetaMask wallet signs and sends USDC directly to
+          the Arc recipient; OneShot only prepares and verifies the payment.
         </p>
       </header>
 
@@ -61,6 +63,10 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
         <ul className="docs-facts">
           <li>The agent generates one random request key for each new approved payment.</li>
           <li>Exact retries return the original intent; changed fields return a conflict.</li>
+          <li>The payer is the wallet address selected by the user, never a server wallet.</li>
+          <li>
+            The second tool verifies the exact receipt and Transfer log for the returned hash.
+          </li>
         </ul>
       </section>
 
@@ -90,22 +96,26 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
       <section className="docs-section" aria-labelledby="mcp-call-heading">
         <h2 id="mcp-call-heading">Run the walkthrough</h2>
         <ol className="docs-steps">
-          <li>Connect, then confirm that the tool list contains only arc_payment.</li>
+          <li>
+            Connect, then confirm that the tool list contains arc_payment and arc_payment_submit.
+          </li>
           <li>Review the recipient, purpose, and amount before giving them to the agent.</li>
+          <li>Pass the connected Privy or MetaMask wallet address as payer_wallet.</li>
           <li>
             The agent generates a request key from the purpose plus eight random hex characters; you
             do not need to provide or copy it.
           </li>
-          <li>Call arc_payment once with that generated request key.</li>
-          <li>Repeat the exact call and confirm it returns the same Business Intent.</li>
+          <li>Call arc_payment once and show the returned transaction request to the user.</li>
+          <li>Have the user sign and broadcast it, then call arc_payment_submit with the hash.</li>
           <li>When the state is COMMITTED, open its ArcScan proof and compare the transfer.</li>
         </ol>
         <pre className="docs-code" aria-label="arc_payment tool input">
           <code>{toolInput}</code>
         </pre>
         <p className="docs-note">
-          AUTHORIZING, READY, and SUBMITTING mean wait. UNKNOWN means repeat the same call or
-          inspect recovery evidence. Only COMMITTED with a stored transaction hash is final proof.
+          READY means sign the exact transaction request. UNKNOWN means repeat submit with the same
+          hash or inspect recovery evidence. Only COMMITTED with a stored transaction hash is final
+          proof.
         </p>
       </section>
     </main>
