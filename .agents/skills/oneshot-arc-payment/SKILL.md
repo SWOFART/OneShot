@@ -40,10 +40,11 @@ Input (all fields required, strict):
 - `purpose` — short non-secret payment purpose (max 256 chars).
 
 Output: `state` (`READY | SUBMITTING | COMMITTED | FAILED_SAFE | UNKNOWN |
-REJECTED`), `replayed`, `payer.mode` (`USER_WALLET`), `amount_atomic`, and an
-exact `transaction` object for the Arc USDC transfer. The agent must show that
-transaction to the user or hand it to the connected wallet; this tool never
-broadcasts it.
+REJECTED`), `replayed`, `payer.mode` (`USER_WALLET`), `amount_atomic`, an
+exact `transaction` object for the Arc USDC transfer, and a `signing_url`. Give
+the user the signing URL: it opens the authenticated OneShot wallet handoff,
+which loads the prepared payment and asks the user to review and sign it. The
+tool never broadcasts a transaction.
 
 After the wallet returns a transaction hash, call `arc_payment_submit` with the
 returned `business_intent_id` and that exact hash. OneShot binds the hash,
@@ -53,10 +54,12 @@ checks the receipt and exact USDC `Transfer` log, and returns the durable state.
 
 1. Generate the `request_key`, then call `arc_payment` once with that key, the
    exact payer wallet, recipient, amount, and purpose the user approved.
-2. Ask the user to review the returned calldata and sign/broadcast it with
-   Privy or MetaMask. Do not create a replacement transaction.
-3. Call `arc_payment_submit` with the returned `business_intent_id` and the
-   hash returned by the wallet.
+2. Give the user the returned `signing_url`. The user must be signed into the
+   matching OneShot workspace, review the recipient and amount, and click the
+   wallet confirmation. Do not create a replacement transaction.
+3. The wallet handoff records the hash through the normal user-wallet API. If
+   the agent receives the hash separately, call `arc_payment_submit` with the
+   returned `business_intent_id` and that exact hash.
 4. If `state` is `COMMITTED`, report `settlement.transaction_hash` and its
    `explorer_url` (ArcScan). Done.
 5. If `state` is `UNKNOWN`, repeat `arc_payment_submit` with the same hash.

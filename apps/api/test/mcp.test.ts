@@ -205,6 +205,7 @@ describe('MCP user-wallet Arc payment', () => {
     ).result.structuredContent;
     expect(prepared).toMatchObject({
       state: 'READY',
+      signing_url: `https://oneshot.kapustazh.dev/app?mcp_job_id=${prepared.job_id}`,
       payer: { mode: 'USER_WALLET', wallet_address: PAYER },
       amount_usdc: '1.000000',
       amount_atomic: '1000000',

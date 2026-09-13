@@ -45,6 +45,8 @@ export interface AppProps {
   readonly recoveryClient?: RecoveryClient;
   readonly useOperatorSession?: UseOperatorSession;
   readonly userWallet?: UserWalletSession;
+  /** Optional prepared MCP job to open directly in the wallet-signing workspace. */
+  readonly mcpJobId?: string;
   /** main.tsx passes the browser route; omitted preserves legacy test composition. */
   readonly route?: string;
 }
@@ -142,10 +144,11 @@ function CabinetPage(props: {
   readonly theme: Theme;
   readonly onToggleTheme: () => void;
   readonly userWallet?: UserWalletSession;
+  readonly mcpJobId?: string;
 }) {
   const [section, setSection] = useState<
     'overview' | 'services' | 'requests' | 'protection' | 'profile'
-  >('overview');
+  >(props.mcpJobId ? 'services' : 'overview');
   const [intentId, setIntentId] = useState('');
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [activityError, setActivityError] = useState<string | null>(null);
@@ -283,6 +286,7 @@ function CabinetPage(props: {
             <div className="panel-stack">
               <JobWorkspace
                 client={props.jobClient}
+                {...(props.mcpJobId ? { initialJobId: props.mcpJobId } : {})}
                 {...(props.userWallet ? { userWallet: props.userWallet } : {})}
                 onSelectIntent={selectRequest}
               />
@@ -373,6 +377,7 @@ export function App(props: AppProps = {}) {
         settlementClient={settlementClient}
         recoveryClient={recoveryClient}
         {...(props.userWallet ? { userWallet: props.userWallet } : {})}
+        {...(props.mcpJobId ? { mcpJobId: props.mcpJobId } : {})}
         theme={theme}
         onToggleTheme={toggleTheme}
       />

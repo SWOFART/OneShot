@@ -73,12 +73,14 @@ describe('API runtime configuration', () => {
       ...base,
       ONESHOT_WORKSPACE_ID: 'mcp-demo-workspace',
       ONESHOT_MCP_BEARER_TOKEN: 'mcp-token-with-at-least-thirty-two-characters',
+      ONESHOT_APP_URL: 'https://oneshot.example/app',
       ONESHOT_MCP_PAYER_ADDRESS: '0x1111111111111111111111111111111111111111',
       ONESHOT_MCP_WAIT_MS: '500',
     });
     expect(config.mcp).toEqual({
       bearerToken: 'mcp-token-with-at-least-thirty-two-characters',
       workspaceId: 'mcp-demo-workspace',
+      signingAppUrl: 'https://oneshot.example/app',
       payerWallet: '0x1111111111111111111111111111111111111111',
       waitMs: 500,
     });

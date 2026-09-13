@@ -20,6 +20,7 @@ const PrivyConsole = lazy(async () => {
     return (
       <App
         route={window.location.pathname}
+        {...(mcpJobId ? { mcpJobId } : {})}
         useOperatorSession={() => session}
         userWallet={userWallet}
       />
@@ -39,6 +40,8 @@ if (!container) {
   throw new Error('Root container #root not found in document');
 }
 
+const mcpJobId = new URLSearchParams(window.location.search).get('mcp_job_id') ?? undefined;
+
 createRoot(container).render(
   <StrictMode>
     {appId ? (
@@ -46,7 +49,7 @@ createRoot(container).render(
         <PrivyConsole />
       </Suspense>
     ) : (
-      <App route={window.location.pathname} />
+      <App route={window.location.pathname} {...(mcpJobId ? { mcpJobId } : {})} />
     )}
   </StrictMode>,
 );

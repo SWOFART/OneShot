@@ -35,6 +35,10 @@ function explorerHref(transactionHash: string | undefined): string | undefined {
     : undefined;
 }
 
+function mcpPaymentStillSignable(job: JobView): boolean {
+  return job.payment_state === 'READY' && Date.parse(job.supplier.expires_at) > Date.now();
+}
+
 const USER_WALLET_PAYMENT_CHECK_DELAY_MS = 500;
 const USER_WALLET_PAYMENT_CHECK_ATTEMPTS = 30;
 function waitForPaymentCheck(): Promise<void> {
@@ -118,6 +122,7 @@ export function JobWorkspace(props: {
   readonly client: JobApiClient;
   readonly userWallet?: UserWalletSession;
   readonly onSelectIntent: (id: string) => void;
+  readonly initialJobId?: string;
 }) {
   const [subject, setSubject] = useState('');
   const [recipient, setRecipient] = useState('');
@@ -131,6 +136,7 @@ export function JobWorkspace(props: {
   const [paymentHash, setPaymentHash] = useState<string | null>(null);
   const [walletAttempted, setWalletAttempted] = useState(false);
   const [paymentChecking, setPaymentChecking] = useState(false);
+  const [mcpJobLoading, setMcpJobLoading] = useState(Boolean(props.initialJobId));
   const [notice, setNotice] = useState('');
   const generatedTaskKey = subject.trim() ? `report-${subjectSlug(subject)}-${runSuffix}` : '';
   const taskKey = customTaskKey.trim() || generatedTaskKey;
@@ -188,6 +194,39 @@ export function JobWorkspace(props: {
       setQuoteLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!props.initialJobId) return;
+    let cancelled = false;
+    setMcpJobLoading(true);
+    void (async () => {
+      try {
+        const job = await props.client.get(props.initialJobId!);
+        if (job.payment_mode !== 'USER_WALLET' || !job.user_payment) {
+          throw new Error('The linked payment is not a user-wallet payment');
+        }
+        if (cancelled) return;
+        setApprovedJob(job);
+        if (job.user_payment.transaction_hash) setPaymentHash(job.user_payment.transaction_hash);
+        setNotice(
+          mcpPaymentStillSignable(job)
+            ? 'MCP payment is ready. Review the details, then confirm the wallet signature.'
+            : job.payment_state === 'READY'
+              ? 'This MCP signing link has expired. Create a new approved payment instead.'
+              : `This MCP payment is already ${job.payment_state}.`,
+        );
+      } catch {
+        if (!cancelled) {
+          setNotice('The MCP payment link is invalid, expired, or belongs to another workspace.');
+        }
+      } finally {
+        if (!cancelled) setMcpJobLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [props.client, props.initialJobId]);
 
   async function start(): Promise<void> {
     if (!quote) return;
@@ -300,11 +339,58 @@ export function JobWorkspace(props: {
     }
   }
 
+  async function signMcpPayment(): Promise<void> {
+    const job = approvedJob;
+    const userWallet = props.userWallet;
+    const payment = job?.user_payment;
+    if (!job || !userWallet || !payment || job.payment_state !== 'READY') return;
+    setStarting(true);
+    setWalletAttempted(true);
+    let submittedHash: string | null = null;
+    try {
+      const payerWallet = userWallet.address ?? (await userWallet.connect());
+      if (!payerWallet) throw new Error('No Ethereum wallet is connected');
+      if (payerWallet.toLowerCase() !== payment.payer_wallet.toLowerCase()) {
+        throw new Error('The connected wallet does not match the prepared payer wallet');
+      }
+      setNotice('Review the recipient and amount in your wallet, then confirm the transaction.');
+      const transactionHash = await userWallet.sendTransfer(payment);
+      submittedHash = transactionHash;
+      setPaymentHash(transactionHash);
+      const initial = await props.client.submitUserWalletPayment(job.job_id, transactionHash);
+      setApprovedJob(initial);
+      setPaymentChecking(initial.payment_state === 'UNKNOWN');
+      const updated = await resolveUserWalletPayment(
+        props.client,
+        job.job_id,
+        transactionHash,
+        initial,
+      );
+      setApprovedJob(updated);
+      setNotice(
+        updated.payment_state === 'COMMITTED'
+          ? 'Payment confirmed from your connected wallet.'
+          : updated.payment_state === 'UNKNOWN'
+            ? 'Transaction recorded but not final. Use the same transaction check if needed.'
+            : `Payment state: ${updated.payment_state}.`,
+      );
+    } catch {
+      setNotice(
+        submittedHash
+          ? 'The transaction hash is recorded. Use Check payment to verify it; do not pay again.'
+          : 'No transaction hash was returned. Do not approve another payment until you confirm the wallet status.',
+      );
+    } finally {
+      setPaymentChecking(false);
+      setStarting(false);
+    }
+  }
+
   return (
     <section
       className="panel job-workspace"
       aria-label="Direct Arc payment"
-      aria-busy={quoteLoading || starting}
+      aria-busy={quoteLoading || starting || mcpJobLoading}
     >
       <header>
         <p className="eyebrow">DIRECT PAYMENT</p>
@@ -431,6 +517,17 @@ export function JobWorkspace(props: {
               {approvedJob.user_payment?.payer_wallet ?? 'connected wallet'}
             </span>
           </p>
+          {props.initialJobId &&
+            mcpPaymentStillSignable(approvedJob) &&
+            approvedJob.user_payment && (
+              <button
+                type="button"
+                onClick={() => void signMcpPayment()}
+                disabled={starting || mcpJobLoading || walletAttempted}
+              >
+                {starting ? 'Waiting for wallet…' : 'Confirm and sign in wallet'}
+              </button>
+            )}
           {paymentHash && approvedJob.payment_state !== 'COMMITTED' && (
             <button
               type="button"

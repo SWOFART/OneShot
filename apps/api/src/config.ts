@@ -30,6 +30,8 @@ export interface ApiRuntimeConfig {
   readonly mcp?: {
     readonly bearerToken?: string;
     readonly workspaceId: string;
+    /** Public frontend route where a user can sign a prepared MCP payment. */
+    readonly signingAppUrl?: string;
     /** НЕ УДАЛЯТЬ: disabled corporate server-wallet mode only. */
     readonly payerWallet?: string;
     readonly waitMs: number;
@@ -83,6 +85,7 @@ function optionalHttpsUrl(environment: NodeJS.ProcessEnv, name: string): string 
 function mcpConfig(environment: NodeJS.ProcessEnv, workspaceId: string): ApiRuntimeConfig['mcp'] {
   const names = [
     'ONESHOT_MCP_BEARER_TOKEN',
+    'ONESHOT_APP_URL',
     'ONESHOT_MCP_PAYER_ADDRESS',
     'ONESHOT_MCP_WAIT_MS',
   ] as const;
@@ -103,9 +106,11 @@ function mcpConfig(environment: NodeJS.ProcessEnv, workspaceId: string): ApiRunt
   if (payerWallet && !/^0x[0-9a-f]{40}$/u.test(payerWallet)) {
     throw new Error('Invalid environment variable: ONESHOT_MCP_PAYER_ADDRESS');
   }
+  const signingAppUrl = optionalHttpsUrl(environment, 'ONESHOT_APP_URL');
   return {
     ...(bearerToken ? { bearerToken } : {}),
     workspaceId,
+    ...(signingAppUrl ? { signingAppUrl } : {}),
     ...(payerWallet ? { payerWallet } : {}),
     waitMs: integer(environment, 'ONESHOT_MCP_WAIT_MS', 2_500, 0, 5_000),
   };

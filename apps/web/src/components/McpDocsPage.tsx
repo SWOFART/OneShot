@@ -105,8 +105,14 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
             The agent generates a request key from the purpose plus eight random hex characters; you
             do not need to provide or copy it.
           </li>
-          <li>Call arc_payment once and show the returned transaction request to the user.</li>
-          <li>Have the user sign and broadcast it, then call arc_payment_submit with the hash.</li>
+          <li>Call arc_payment once and give the returned signing_url to the user.</li>
+          <li>
+            The user opens the link, reviews the prepared request, and signs it in Privy or
+            MetaMask.
+          </li>
+          <li>
+            Use the returned hash with arc_payment_submit when the agent receives it separately.
+          </li>
           <li>When the state is COMMITTED, open its ArcScan proof and compare the transfer.</li>
         </ol>
         <pre className="docs-code" aria-label="arc_payment tool input">

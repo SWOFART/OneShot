@@ -21,6 +21,7 @@ const ARC_USDC = '0x3600000000000000000000000000000000000000' as const;
 const USDC_DECIMALS = 6;
 const REQUEST_KEY_MAX_LENGTH = 128;
 const TRANSFER_SELECTOR = 'a9059cbb';
+const DEFAULT_SIGNING_APP_URL = 'https://oneshot.kapustazh.dev/app';
 
 const prepareInputSchema = z.strictObject({
   request_key: z
@@ -59,6 +60,7 @@ const outputSchema = z.strictObject({
   request_key: z.string(),
   job_id: z.string(),
   business_intent_id: z.string(),
+  signing_url: z.string().url(),
   state: z.enum([
     'AUTHORIZING',
     'READY',
@@ -109,6 +111,8 @@ const outputSchema = z.strictObject({
 export interface ArcPaymentMcpConfig {
   readonly workspaceId: string;
   readonly submissionsDisabled?: boolean;
+  /** Public frontend route used to hand a prepared payment to the user's wallet. */
+  readonly signingAppUrl?: string;
 
   /**
    * НЕ УДАЛЯТЬ: legacy corporate autonomous-agent server-wallet configuration.
@@ -215,13 +219,19 @@ function transactionFor(job: JobView) {
   };
 }
 
-function resultView(requestKey: string, job: JobView, replayed: boolean) {
+function resultView(
+  requestKey: string,
+  job: JobView,
+  replayed: boolean,
+  signingAppUrl = DEFAULT_SIGNING_APP_URL,
+) {
   const payment = job.user_payment;
   if (!payment) throw new Error('User-wallet payment binding is missing');
   return {
     request_key: requestKey,
     job_id: job.job_id,
     business_intent_id: job.business_intent_id,
+    signing_url: `${signingAppUrl}?mcp_job_id=${encodeURIComponent(job.job_id)}`,
     state: job.payment_state,
     payer: {
       mode: 'USER_WALLET' as const,
@@ -319,7 +329,9 @@ export function createArcPaymentMcpHandler({
               'The request key already belongs to a different user-wallet payment. Reuse the original immutable fields and payer wallet.',
             );
           }
-          return jsonResult(resultView(requestKey, result.job, result.kind === 'REPLAYED'));
+          return jsonResult(
+            resultView(requestKey, result.job, result.kind === 'REPLAYED', config.signingAppUrl),
+          );
         } catch (error) {
           if (error instanceof ContractValidationError) {
             if (error.message.includes('Supplier task payload conflicts')) {
@@ -379,7 +391,7 @@ export function createArcPaymentMcpHandler({
                 job.business_intent_id,
               );
               return current
-                ? jsonResult(resultView(job.task_key, current, true))
+                ? jsonResult(resultView(job.task_key, current, true, config.signingAppUrl))
                 : toolError('The completed payment could not be read back from durable storage.');
             }
             return toolError(
@@ -445,7 +457,7 @@ export function createArcPaymentMcpHandler({
             job.business_intent_id,
           );
           if (!updated) return toolError('Updated payment could not be read from durable storage.');
-          return jsonResult(resultView(job.task_key, updated, false));
+          return jsonResult(resultView(job.task_key, updated, false, config.signingAppUrl));
         } catch (error) {
           if (error instanceof ContractValidationError) return toolError(error.message);
           throw error;
