@@ -1,5 +1,6 @@
-<!-- Rendered from apps/web's own `.top-nav` by `scripts/render-nav-panel.mjs`;
-     re-run that script after a brand token, mark, or nav label change. -->
+<!-- The brand lock-up from apps/web's own `.top-nav`, rendered by
+     `scripts/render-nav-panel.mjs`; re-run that script after a brand token,
+     mark, or label change. -->
 <picture>
   <source
     media="(prefers-color-scheme: dark)"
@@ -7,8 +8,8 @@
   />
   <img
     src="docs/assets/nav-panel-light.svg"
-    alt="OneShot settlement engine — Arc Testnet, USDC, open workspace"
-    width="1000"
+    alt="OneShot — settlement engine"
+    width="381"
   />
 </picture>
 
