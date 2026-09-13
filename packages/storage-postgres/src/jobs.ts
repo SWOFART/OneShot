@@ -424,17 +424,39 @@ export class JobLedger {
         await client.query('COMMIT');
         return undefined;
       }
+      // A delivery is only PENDING legitimately while its fulfilment row is
+      // still queued or being worked. If no such row is left, nothing will ever
+      // move this job again: the worker no-ops a payload whose delivery_attempt
+      // no longer matches, marks the row DELIVERED, and PENDING was not
+      // resumable, so the job was stranded with the payment already committed.
+      // The queued-row check runs under the job's FOR UPDATE lock, so a
+      // concurrent resume cannot also claim it, and a row a worker currently
+      // holds is still status PENDING and so still counts as queued.
+      const queuedDelivery = await client.query(
+        `SELECT 1 FROM outbox_jobs
+         WHERE task_identifier = 'fulfill_supplier_order'
+           AND status = 'PENDING'
+           AND payload->>'job_id' = $1
+         LIMIT 1`,
+        [jobId],
+      );
+      const strandedDelivery = job.delivery_state === 'PENDING' && queuedDelivery.rowCount === 0;
       if (
         job.payment_state === 'COMMITTED' &&
-        (job.delivery_state === 'NOT_REQUESTED' || job.delivery_state === 'RETRIEVAL_FAILED')
+        (job.delivery_state === 'NOT_REQUESTED' ||
+          job.delivery_state === 'RETRIEVAL_FAILED' ||
+          strandedDelivery)
       ) {
         const now = this.#dependencies.now();
+        // Compare and set against the state just read under the row lock, so a
+        // stranded PENDING is claimed exactly once and the retrieval that a new
+        // delivery_attempt fences off can never complete under the old one.
         const resumed = await client.query<{ delivery_attempt: number }>(
           `UPDATE resumable_jobs
            SET delivery_state = 'PENDING', delivery_attempt = delivery_attempt + 1, updated_at = $1
-           WHERE job_id = $2 AND delivery_state IN ('NOT_REQUESTED', 'RETRIEVAL_FAILED')
+           WHERE job_id = $2 AND delivery_state = $3
            RETURNING delivery_attempt`,
-          [now, jobId],
+          [now, jobId, job.delivery_state],
         );
         const deliveryAttempt = resumed.rows[0]?.delivery_attempt;
         if (deliveryAttempt === undefined) {

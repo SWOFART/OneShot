@@ -248,7 +248,7 @@ describe('JobLedger delivery recovery', () => {
     const resumed = await ledger.resumeDelivery('workspace-unit', failedJob.job_id);
 
     expect(resumed).toMatchObject({ delivery_state: 'PENDING', payment_state: 'COMMITTED' });
-    const outbox = calls.find((call) => call.sql.includes("'fulfill_supplier_order'"));
+    const outbox = calls.find((call) => call.sql.includes('INSERT INTO outbox_jobs'));
     expect(outbox?.values?.[1]).toBe(`fulfill:${failedJob.job_id}:team_report_order_unit:2`);
     expect(outbox?.values?.[2]).toBe(
       JSON.stringify({ job_id: failedJob.job_id, delivery_attempt: 2 }),
@@ -257,7 +257,7 @@ describe('JobLedger delivery recovery', () => {
     expect(calls.some((call) => call.sql.includes('attempts'))).toBe(false);
   });
 
-  it('does not enqueue a duplicate delivery while an attempt is already pending', async () => {
+  it('does not enqueue a duplicate delivery while an attempt is already queued', async () => {
     const calls: string[] = [];
     const pendingJob = { ...failedJob, delivery_state: 'PENDING' as const };
     const client = {
@@ -266,7 +266,10 @@ describe('JobLedger delivery recovery', () => {
         if (sql.includes('FOR UPDATE OF j') || sql.includes('WHERE j.workspace_id')) {
           return { rows: [pendingJob] };
         }
-        return { rows: [] };
+        // The fulfilment row is still queued, or a worker is holding it: either
+        // way something will still move this delivery.
+        if (sql.includes('FROM outbox_jobs')) return { rows: [{ '?column?': 1 }], rowCount: 1 };
+        return { rows: [], rowCount: 0 };
       },
       release() {},
     };
@@ -278,6 +281,51 @@ describe('JobLedger delivery recovery', () => {
     await ledger.resumeDelivery('workspace-unit', pendingJob.job_id);
 
     expect(calls.some((sql) => sql.includes('RETURNING delivery_attempt'))).toBe(false);
-    expect(calls.some((sql) => sql.includes("'fulfill_supplier_order'"))).toBe(false);
+    expect(calls.some((sql) => sql.includes('INSERT INTO outbox_jobs'))).toBe(false);
+  });
+
+  /**
+   * The payment is committed and the result was never retrieved, but nothing is
+   * queued to retrieve it: the worker no-ops a payload whose delivery_attempt no
+   * longer matches and then marks the row DELIVERED. PENDING was not resumable,
+   * so such a job could never move again.
+   */
+  it('re-queues a pending delivery that has no fulfilment work left', async () => {
+    const calls: Array<{ sql: string; values?: readonly unknown[] }> = [];
+    const strandedJob = { ...failedJob, delivery_state: 'PENDING' as const };
+    const client = {
+      async query(sql: string, values?: readonly unknown[]) {
+        calls.push({ sql, values });
+        if (sql.includes('FOR UPDATE OF j')) return { rows: [strandedJob], rowCount: 1 };
+        if (sql.includes('RETURNING delivery_attempt')) {
+          return { rows: [{ delivery_attempt: 2 }], rowCount: 1 };
+        }
+        if (sql.includes('WHERE j.workspace_id')) {
+          return { rows: [{ ...strandedJob, delivery_attempt: 2 }], rowCount: 1 };
+        }
+        // Nothing queued and nothing in flight.
+        return { rows: [], rowCount: 0 };
+      },
+      release() {},
+    };
+    const ledger = new JobLedger({ connect: async () => client } as never, {
+      now: () => new Date('2026-09-07T12:02:00.000Z'),
+      nextAttemptId: () => 'unused',
+    });
+
+    await ledger.resumeDelivery('workspace-unit', strandedJob.job_id);
+
+    // Claimed against the state read under the row lock, so two concurrent
+    // resumes cannot both take it.
+    const claim = calls.find((call) => call.sql.includes('RETURNING delivery_attempt'));
+    expect(claim?.values?.[2]).toBe('PENDING');
+    // A fresh attempt fences the retrieval, and no payment work is created.
+    const outbox = calls.find((call) => call.sql.includes('INSERT INTO outbox_jobs'));
+    expect(outbox?.values?.[1]).toBe(`fulfill:${strandedJob.job_id}:team_report_order_unit:2`);
+    expect(outbox?.values?.[2]).toBe(
+      JSON.stringify({ job_id: strandedJob.job_id, delivery_attempt: 2 }),
+    );
+    expect(calls.some((call) => call.sql.includes('submit_settlement'))).toBe(false);
+    expect(calls.some((call) => call.sql.includes('attempts'))).toBe(false);
   });
 });
