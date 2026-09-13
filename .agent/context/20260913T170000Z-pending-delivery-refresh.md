@@ -44,8 +44,15 @@ Follow-up: skip Gate A and Gate B, open the pull request as a draft.
   after a report of unwanted traffic. The bound and the pending-only condition
   are what keep both reports satisfied; the resume control it removed stays
   removed.
-- A delivery stranded in `PENDING` server-side is out of scope here and is
-  recorded below as an unresolved risk.
+- A delivery stranded in `PENDING` is now recoverable. `PENDING` alone is not
+  treated as resumable: the deciding evidence is whether a `fulfill_supplier_order`
+  row is still queued (`status = 'PENDING'`) for that job. A row a worker is
+  currently holding is still queued, so an in-flight retrieval is never
+  duplicated; only a job with nothing left to move it is re-queued.
+- Selected `.agent/TEST_MATRIX.md` cases: downstream failure after payment (the
+  committed payment is preserved and no payment work is created on the recovery
+  path) and parallel/duplicate claim (the compare-and-set against the locked
+  row's state means two concurrent resumes cannot both claim one delivery).
 
 ## Files/components touched
 
@@ -55,13 +62,19 @@ Follow-up: skip Gate A and Gate B, open the pull request as a draft.
   stops once nothing is pending, and gives up on a delivery that stays pending.
 - `apps/web/browser/p5.spec.ts` - the read count is now a lower bound, because
   an exact count would flake once a pending delivery is re-read on a timer.
+- `packages/storage-postgres/src/jobs.ts` - `resumeDelivery` now also recovers a
+  delivery stranded in `PENDING` with no queued fulfilment row, claiming it
+  against the state read under the job's row lock.
+- `packages/storage-postgres/test/jobs.test.ts` - a queued or in-flight
+  fulfilment row is still left alone; a stranded one is re-queued under a fresh
+  `delivery_attempt`, with no payment work created.
 
 ## Commands/checks
 
 - `pnpm format:check` - PASS
 - `pnpm lint` - PASS
 - `pnpm typecheck` - PASS
-- `pnpm test` - PASS, 81 files / 1057 tests, includes build. The root vitest
+- `pnpm test` - PASS, 81 files / 1059 tests, includes build. The root vitest
   config covers no `.tsx` file, so the command below is the one that exercises
   these components.
 - `pnpm --filter @oneshot/web test` - PASS, 17 files / 97 tests
@@ -75,11 +88,11 @@ Follow-up: skip Gate A and Gate B, open the pull request as a draft.
 
 ## Unresolved questions
 
-- A delivery that is stranded in `PENDING` cannot be recovered: `resumeDelivery`
-  re-queues only `NOT_REQUESTED` or `RETRIEVAL_FAILED`, and the web resume
-  control was removed, so a `PENDING` job whose outbox row was already consumed
-  has no path forward. The bounded re-reads give up on such a job rather than
-  fixing it. This needs a separate backend change.
+- Nothing in the web UI calls `POST /v1/jobs/:jobId/resume`, so recovering a
+  stranded delivery still needs an API call. The control that used to do it was
+  removed deliberately; re-adding one is a product decision, not a defect fix.
+- Whether any currently stranded job exists in the user's environment is
+  unverified here: it is inferred from the state machine, not from their data.
 
 ## Git and PR state
 
