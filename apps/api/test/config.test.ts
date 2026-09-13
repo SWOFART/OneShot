@@ -68,19 +68,17 @@ describe('API runtime configuration', () => {
     });
   });
 
-  it('loads an isolated one-intent MCP configuration', () => {
+  it('loads an isolated MCP configuration', () => {
     const config = loadApiRuntimeConfig({
       ...base,
       ONESHOT_WORKSPACE_ID: 'mcp-demo-workspace',
       ONESHOT_MCP_BEARER_TOKEN: 'mcp-token-with-at-least-thirty-two-characters',
-      ONESHOT_MCP_REQUEST_KEY: 'arc-demo-payment-1',
       ONESHOT_MCP_PAYER_ADDRESS: '0x1111111111111111111111111111111111111111',
       ONESHOT_MCP_WAIT_MS: '500',
     });
     expect(config.mcp).toEqual({
       bearerToken: 'mcp-token-with-at-least-thirty-two-characters',
       workspaceId: 'mcp-demo-workspace',
-      allowedRequestKey: 'arc-demo-payment-1',
       payerWallet: '0x1111111111111111111111111111111111111111',
       waitMs: 500,
     });
@@ -90,12 +88,10 @@ describe('API runtime configuration', () => {
     const config = loadApiRuntimeConfig({
       ...base,
       ONESHOT_WORKSPACE_ID: 'mcp-fallback-workspace',
-      ONESHOT_MCP_REQUEST_KEY: 'arc-payment',
       ONESHOT_MCP_PAYER_ADDRESS: '0x1111111111111111111111111111111111111111',
     });
     expect(config.mcp).toEqual({
       workspaceId: 'mcp-fallback-workspace',
-      allowedRequestKey: 'arc-payment',
       payerWallet: '0x1111111111111111111111111111111111111111',
       waitMs: 2500,
     });

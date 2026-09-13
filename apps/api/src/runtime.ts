@@ -84,7 +84,6 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
                 },
               ]),
               workspaceId: config.mcp.workspaceId,
-              allowedRequestKey: config.mcp.allowedRequestKey,
               payerWallet: config.mcp.payerWallet,
               waitMs: config.mcp.waitMs,
               submissionsDisabled: config.submissionsDisabled,

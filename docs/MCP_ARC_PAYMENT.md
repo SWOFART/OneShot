@@ -9,13 +9,12 @@ The web app renders the client setup and walkthrough at `/docs/mcp`.
 
 ## Deploy
 
-Configure the API with one fixed request scope and payer. Personal bearer
+Configure the API with its payer. Personal bearer
 tokens are generated from an authenticated Profile and stored as SHA-256
 digests in PostgreSQL:
 
 ```dotenv
 ONESHOT_WORKSPACE_ID=<demo-workspace>
-ONESHOT_MCP_REQUEST_KEY=<one-stable-demo-request-key>
 ONESHOT_MCP_PAYER_ADDRESS=0x<privy-server-wallet-address>
 ONESHOT_MCP_WAIT_MS=2500
 ```
@@ -26,10 +25,11 @@ bearers are accepted only on `/mcp`; Privy browser JWTs and
 `SERVICE_BEARER_TOKEN` cannot call this endpoint. Settlement remains subject to the worker's
 `ONESHOT_SETTLEMENT_CAP_ATOMIC` and the attached Privy policy.
 
-The fixed `ONESHOT_MCP_REQUEST_KEY` is the one-intent demo quota. A call using
-another key is denied. A repeated call using the configured key and identical
-fields returns the original intent or settlement; changed payment fields return
-a conflict.
+The calling agent generates one request key for each approved payment in the
+form `report-<purpose-slug>-<8 random hex>`. The user never has to provide or
+copy it. A repeated call using the same generated key and identical fields
+returns the original intent or settlement; changed payment fields return a
+conflict.
 
 ## Connect
 
@@ -67,7 +67,7 @@ account. Send it as `Authorization: Bearer <token>`. A generic client entry is:
 
 ```json
 {
-  "request_key": "<ONESHOT_MCP_REQUEST_KEY>",
+  "request_key": "report-one-approved-demo-purchase-850d9a80",
   "recipient": "0x<recipient>",
   "amount_usdc": "<approved amount>",
   "purpose": "One approved demo purchase"
@@ -84,7 +84,8 @@ stored transaction hash returns an ArcScan proof link.
 ## Walkthrough
 
 1. Connect and confirm `tools/list` contains only `arc_payment`.
-2. Call it once with the configured key, recipient, amount, and purpose.
+2. Let the agent generate a key, then call once with that key, recipient,
+   amount, and purpose.
 3. Show the returned Business Intent progressing to `COMMITTED`.
 4. Repeat the exact call and show the same Business Intent and transaction.
 5. Open the returned ArcScan link and compare recipient and atomic USDC amount.

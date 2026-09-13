@@ -286,7 +286,6 @@ export function buildApi(dependencies: ApiDependencies) {
     return {
       configured: status.configured,
       ...(status.createdAt ? { created_at: status.createdAt } : {}),
-      request_key: dependencies.mcp.allowedRequestKey,
     };
   });
 
@@ -317,7 +316,6 @@ export function buildApi(dependencies: ApiDependencies) {
     return reply.code(201).send({
       bearer_token: issued.bearerToken,
       created_at: issued.createdAt,
-      request_key: dependencies.mcp.allowedRequestKey,
     });
   });
 
@@ -339,7 +337,6 @@ export function buildApi(dependencies: ApiDependencies) {
     return {
       bearer_token: issued.bearerToken,
       created_at: issued.createdAt,
-      request_key: dependencies.mcp.allowedRequestKey,
     };
   });
 

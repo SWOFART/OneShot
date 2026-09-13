@@ -18,7 +18,7 @@ const skillInstall =
   'npx --yes skills@latest add https://github.com/SWOFART/OneShot/tree/develop --skill oneshot-arc-payment';
 
 const toolInput = `{
-  "request_key": "<ONESHOT_MCP_REQUEST_KEY>",
+  "request_key": "report-one-approved-demo-purchase-850d9a80",
   "recipient": "0x<recipient>",
   "amount_usdc": "<approved amount>",
   "purpose": "One approved demo purchase"
@@ -59,7 +59,7 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
       <section className="docs-section" aria-labelledby="mcp-boundary-heading">
         <h2 id="mcp-boundary-heading">Payment boundary</h2>
         <ul className="docs-facts">
-          <li>One configured request key can create one payment intent.</li>
+          <li>The agent generates one random request key for each new approved payment.</li>
           <li>Exact retries return the original intent; changed fields return a conflict.</li>
         </ul>
       </section>
@@ -92,7 +92,11 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
         <ol className="docs-steps">
           <li>Connect, then confirm that the tool list contains only arc_payment.</li>
           <li>Review the recipient, purpose, and amount before giving them to the agent.</li>
-          <li>Call arc_payment once with the configured request key.</li>
+          <li>
+            The agent generates a request key from the purpose plus eight random hex characters; you
+            do not need to provide or copy it.
+          </li>
+          <li>Call arc_payment once with that generated request key.</li>
           <li>Repeat the exact call and confirm it returns the same Business Intent.</li>
           <li>When the state is COMMITTED, open its ArcScan proof and compare the transfer.</li>
         </ol>

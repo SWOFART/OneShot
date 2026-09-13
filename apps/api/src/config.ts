@@ -30,7 +30,6 @@ export interface ApiRuntimeConfig {
   readonly mcp?: {
     readonly bearerToken?: string;
     readonly workspaceId: string;
-    readonly allowedRequestKey: string;
     readonly payerWallet: string;
     readonly waitMs: number;
   };
@@ -83,7 +82,6 @@ function optionalHttpsUrl(environment: NodeJS.ProcessEnv, name: string): string 
 function mcpConfig(environment: NodeJS.ProcessEnv, workspaceId: string): ApiRuntimeConfig['mcp'] {
   const names = [
     'ONESHOT_MCP_BEARER_TOKEN',
-    'ONESHOT_MCP_REQUEST_KEY',
     'ONESHOT_MCP_PAYER_ADDRESS',
     'ONESHOT_MCP_WAIT_MS',
   ] as const;
@@ -95,15 +93,6 @@ function mcpConfig(environment: NodeJS.ProcessEnv, workspaceId: string): ApiRunt
   if (bearerToken && bearerToken.length < 32) {
     throw new Error('Environment variable ONESHOT_MCP_BEARER_TOKEN must be at least 32 characters');
   }
-  const allowedRequestKey = required(environment, 'ONESHOT_MCP_REQUEST_KEY');
-  if (
-    allowedRequestKey.length > 128 ||
-    allowedRequestKey.trim() !== allowedRequestKey ||
-    // eslint-disable-next-line no-control-regex -- Request keys reject ASCII controls.
-    /[\u0000-\u001f\u007f]/u.test(allowedRequestKey)
-  ) {
-    throw new Error('Invalid environment variable: ONESHOT_MCP_REQUEST_KEY');
-  }
   const payerWallet = required(environment, 'ONESHOT_MCP_PAYER_ADDRESS').toLowerCase();
   if (!/^0x[0-9a-f]{40}$/u.test(payerWallet)) {
     throw new Error('Invalid environment variable: ONESHOT_MCP_PAYER_ADDRESS');
@@ -111,7 +100,6 @@ function mcpConfig(environment: NodeJS.ProcessEnv, workspaceId: string): ApiRunt
   return {
     ...(bearerToken ? { bearerToken } : {}),
     workspaceId,
-    allowedRequestKey,
     payerWallet,
     waitMs: integer(environment, 'ONESHOT_MCP_WAIT_MS', 2_500, 0, 5_000),
   };
