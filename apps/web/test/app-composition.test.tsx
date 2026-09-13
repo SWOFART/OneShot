@@ -66,7 +66,7 @@ describe('Gate P5 shell composition', () => {
       '<ONESHOT_MCP_BEARER_TOKEN>',
     );
     expect(screen.getByLabelText('arc_payment tool input').textContent).toContain(
-      '<ONESHOT_MCP_REQUEST_KEY>',
+      'report-one-approved-demo-purchase-850d9a80',
     );
     expect(screen.getByLabelText('Agent skill install command').textContent).toContain(
       'npx --yes skills@latest add',
@@ -112,13 +112,12 @@ describe('Gate P5 shell composition', () => {
     const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
     const jobClient = {
       async mcpCredentialStatus() {
-        return { configured: false, request_key: 'profile-request' };
+        return { configured: false };
       },
       async issueMcpCredential() {
         return {
           bearer_token: 'personal-secret-token',
           created_at: '2026-09-13T04:00:00.000Z',
-          request_key: 'profile-request',
         };
       },
     } as unknown as JobApiClient;
@@ -143,7 +142,7 @@ describe('Gate P5 shell composition', () => {
     await user.click(screen.getByRole('button', { name: 'Copy bearer token' }));
     expect(writeText).toHaveBeenCalledWith('personal-secret-token');
     expect(screen.getByRole('button', { name: 'Bearer copied' })).toBeTruthy();
-    expect(screen.getByText('profile-request')).toBeTruthy();
+    expect(screen.queryByText('profile-request')).toBeNull();
   });
 
   it('gives Payment services and Requests distinct responsibilities', async () => {

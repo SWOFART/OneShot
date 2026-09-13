@@ -107,7 +107,6 @@ describePostgres('durable HTTP API', () => {
       mcp: {
         authenticator: staticBearerAuthenticator(mcpToken),
         workspaceId: 'integration-mcp-workspace',
-        allowedRequestKey: requestKey,
         payerWallet: '0x1111111111111111111111111111111111111111',
         waitMs: 0,
       },

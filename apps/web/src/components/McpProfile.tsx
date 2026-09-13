@@ -45,7 +45,6 @@ export function McpProfile(props: { readonly client: JobApiClient }) {
       setStatus({
         configured: true,
         created_at: credential.created_at,
-        request_key: credential.request_key,
       });
     } catch {
       setError('Could not generate the MCP bearer token.');
@@ -98,9 +97,6 @@ export function McpProfile(props: { readonly client: JobApiClient }) {
           <button type="button" className="btn-copy" onClick={() => void copyBearer()}>
             {copied ? 'Bearer copied' : 'Copy bearer token'}
           </button>
-          <p>
-            Request key: <code>{issued.request_key}</code>
-          </p>
         </>
       )}
 

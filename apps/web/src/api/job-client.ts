@@ -12,13 +12,11 @@ import type { ApiClientConfig } from './client.js';
 export interface McpCredentialStatus {
   readonly configured: boolean;
   readonly created_at?: string;
-  readonly request_key: string;
 }
 
 export interface IssuedMcpCredential {
   readonly bearer_token: string;
   readonly created_at: string;
-  readonly request_key: string;
 }
 
 async function responseJson<T>(response: Response): Promise<T | null> {

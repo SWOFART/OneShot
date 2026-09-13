@@ -9,7 +9,13 @@ const USDC_DECIMALS = 6;
 const REQUEST_KEY_MAX_LENGTH = 128;
 
 const inputSchema = z.strictObject({
-  request_key: z.string().min(1).max(REQUEST_KEY_MAX_LENGTH).describe('Configured demo key'),
+  request_key: z
+    .string()
+    .min(1)
+    .max(REQUEST_KEY_MAX_LENGTH)
+    .describe(
+      'Generate automatically as report-<purpose-slug>-<8 random hex>; reuse it exactly for retries and never ask the user for it',
+    ),
   recipient: z
     .string()
     .regex(/^0x[0-9a-fA-F]{40}$/u)
@@ -52,7 +58,6 @@ const outputSchema = z.strictObject({
 
 export interface ArcPaymentMcpConfig {
   readonly workspaceId: string;
-  readonly allowedRequestKey: string;
   readonly payerWallet: string;
   readonly submissionsDisabled?: boolean;
   readonly waitMs?: number;
@@ -180,11 +185,6 @@ export function createArcPaymentMcpHandler({
   ledger,
   config,
 }: ArcPaymentMcpDependencies): McpHttpHandler {
-  const allowedRequestKey = boundedText(
-    config.allowedRequestKey,
-    'allowed_request_key',
-    REQUEST_KEY_MAX_LENGTH,
-  );
   const payerWallet = asEvmAddress(config.payerWallet);
   const waitMs = config.waitMs ?? 2_500;
   const pollMs = config.pollMs ?? 250;
@@ -202,7 +202,7 @@ export function createArcPaymentMcpHandler({
       {
         title: 'Arc USDC payment',
         description:
-          'Create or replay the single approved Arc Testnet USDC payment through the policy-bound Privy server wallet.',
+          'Create or replay an approved Arc Testnet USDC payment through the policy-bound Privy server wallet. Generate request_key automatically; never ask the user for it.',
         inputSchema,
         outputSchema,
         annotations: {
@@ -215,9 +215,6 @@ export function createArcPaymentMcpHandler({
       async ({ request_key, recipient, amount_usdc, purpose }) => {
         try {
           const requestKey = boundedText(request_key, 'request_key', REQUEST_KEY_MAX_LENGTH);
-          if (requestKey !== allowedRequestKey) {
-            return toolError('This MCP credential is limited to its configured demo request key.');
-          }
           if (config.submissionsDisabled) {
             return toolError('Arc payment submission is disabled for this deployment.');
           }

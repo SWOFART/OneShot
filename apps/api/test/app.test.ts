@@ -150,7 +150,6 @@ describe('API boundary controls', () => {
       mcp: {
         authenticator: staticBearerAuthenticator('legacy-mcp-token'),
         workspaceId: 'legacy-workspace',
-        allowedRequestKey: 'approved-request',
         payerWallet: '0x1111111111111111111111111111111111111111',
       },
     });
@@ -158,7 +157,7 @@ describe('API boundary controls', () => {
 
     expect(
       (await app.inject({ method: 'GET', url: '/v1/profile/mcp-token', headers })).json(),
-    ).toEqual({ configured: false, request_key: 'approved-request' });
+    ).toEqual({ configured: false });
     const created = await app.inject({
       method: 'POST',
       url: '/v1/profile/mcp-token',
@@ -168,7 +167,6 @@ describe('API boundary controls', () => {
     expect(created.json()).toEqual({
       bearer_token: 'a'.repeat(43),
       created_at: '2026-09-13T04:00:00.000Z',
-      request_key: 'approved-request',
     });
     expect(issue).toHaveBeenCalledWith('privy_alice');
     await app.close();

@@ -48,7 +48,6 @@ describe('JobApiClient quote flow', () => {
     const credential = {
       bearer_token: 'personal-token',
       created_at: '2026-09-13T04:00:00.000Z',
-      request_key: 'profile-request',
     };
     const client = new JobApiClient({
       getAuthToken: () => 'privy-access-token',
