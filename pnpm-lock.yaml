@@ -110,6 +110,9 @@ importers:
       '@privy-io/react-auth':
         specifier: 3.6.1
         version: 3.6.1(@types/react@19.2.18)(encoding@0.1.13)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)(use-sync-external-store@1.4.0(react@19.2.8))(zod@3.25.76)
+      buffer:
+        specifier: 6.0.3
+        version: 6.0.3
       react:
         specifier: 19.2.8
         version: 19.2.8
