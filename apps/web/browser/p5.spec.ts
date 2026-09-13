@@ -5,7 +5,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 const JOB_ID = `job_${'a'.repeat(64)}`;
 const INTENT_ID = `intent_${'b'.repeat(64)}`;
 
-function job(deliveryState: 'RETRIEVAL_FAILED' | 'AVAILABLE' = 'RETRIEVAL_FAILED') {
+function job(deliveryState: 'PENDING' | 'RETRIEVAL_FAILED' | 'AVAILABLE' = 'RETRIEVAL_FAILED') {
   return {
     job_id: JOB_ID,
     task_key: 'report-browser-acme',
@@ -47,32 +47,23 @@ async function json(route: Route, status: number, body: unknown): Promise<void> 
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function mockJobApi(
-  page: Page,
-  options: { readonly startDelayMs?: number; readonly resumeDelayMs?: number } = {},
-): Promise<string[]> {
+async function mockJobApi(page: Page): Promise<string[]> {
   const calls: string[] = [];
-  let current = job();
+  let current = job('PENDING');
+  let listReads = 0;
   await page.route('**/health/ready', (route) => json(route, 200, { status: 'ok' }));
   await page.route('**/v1/**', async (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
     calls.push(`${request.method()} ${pathname}`);
-    if (pathname === '/v1/jobs' && request.method() === 'GET')
+    if (pathname === '/v1/jobs' && request.method() === 'GET') {
+      listReads += 1;
+      if (listReads > 1) current = job('AVAILABLE');
       return json(route, 200, { jobs: [current] });
-    if (pathname === `/v1/jobs/${JOB_ID}` && request.method() === 'GET')
-      return json(route, 200, current);
+    }
     if (pathname === '/v1/jobs/quote' && request.method() === 'POST')
       return json(route, 200, current.supplier);
     if (pathname === '/v1/jobs' && request.method() === 'POST') {
-      if (options.startDelayMs)
-        await new Promise((resolve) => setTimeout(resolve, options.startDelayMs));
-      return json(route, 202, current);
-    }
-    if (pathname === `/v1/jobs/${JOB_ID}/resume` && request.method() === 'POST') {
-      if (options.resumeDelayMs)
-        await new Promise((resolve) => setTimeout(resolve, options.resumeDelayMs));
-      current = job('AVAILABLE');
       return json(route, 202, current);
     }
     if (pathname === '/v1/activity' && request.method() === 'GET') {
@@ -176,7 +167,7 @@ for (const theme of ['light', 'dark'] as const) {
       test.setTimeout(60_000);
       await page.setViewportSize({ width, height: 1000 });
       await page.addInitScript((value) => localStorage.setItem('oneshot.theme', value), theme);
-      await mockJobApi(page);
+      const calls = await mockJobApi(page);
       const checkContrast = async () => {
         await page.addScriptTag({ content: axe.source });
         const violations = await page.evaluate(async () => {
@@ -252,8 +243,11 @@ for (const theme of ['light', 'dark'] as const) {
           await expect(page.getByRole('heading', { name: 'Review before approval' })).toBeVisible();
         }
         if (label === 'Requests') {
-          await page.getByRole('button', { name: 'Resume result (no new payment)' }).click();
+          await expect(page.getByText('Retrieving result')).toBeVisible();
+          expect(calls).not.toContain(`POST /v1/jobs/${JOB_ID}/resume`);
+          await page.getByRole('button', { name: 'Refresh requests' }).click();
           await expect(page.getByText('Recovered original supplier report.')).toBeVisible();
+          expect(calls.filter((call) => call === 'GET /v1/jobs')).toHaveLength(2);
           const results = await page
             .getByRole('region', { name: 'Requests and results' })
             .boundingBox();

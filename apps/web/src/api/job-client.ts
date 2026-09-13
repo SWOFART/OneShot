@@ -52,15 +52,6 @@ export class JobApiClient {
     return response.ok ? ((await responseJson<JobListResponse>(response))?.jobs ?? []) : [];
   }
 
-  async get(jobId: string): Promise<JobView> {
-    const response = await this.#fetch(`${this.#baseUrl}/v1/jobs/${encodeURIComponent(jobId)}`, {
-      headers: this.#headers(),
-    });
-    const body = await responseJson<JobView>(response);
-    if (!response.ok || !body) throw new Error('Could not load the job status');
-    return body;
-  }
-
   async start(request: CreateJobRequest): Promise<JobView> {
     const response = await this.#fetch(`${this.#baseUrl}/v1/jobs`, {
       method: 'POST',
@@ -105,19 +96,6 @@ export class JobApiClient {
     });
     const body = await responseJson<SupplierQuote>(response);
     if (!response.ok || !body) throw new Error('Could not load a live supplier quote');
-    return body;
-  }
-
-  async resume(jobId: string): Promise<JobView> {
-    const response = await this.#fetch(
-      `${this.#baseUrl}/v1/jobs/${encodeURIComponent(jobId)}/resume`,
-      {
-        method: 'POST',
-        headers: this.#headers(),
-      },
-    );
-    const body = await responseJson<JobView>(response);
-    if (!response.ok || !body) throw new Error('Could not resume supplier delivery');
     return body;
   }
 
