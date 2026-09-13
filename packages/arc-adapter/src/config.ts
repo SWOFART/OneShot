@@ -76,14 +76,6 @@ export const CONFIG_VARIABLES: readonly VariableSpec[] = [
     examplePlaceholder: '<privy-policy-id>',
   },
   {
-    name: 'ONESHOT_RECIPIENT_ALLOWLIST',
-    classification: 'human-only',
-    description:
-      'Comma-separated EVM addresses permitted to receive settlement. A human ' +
-      'curates this; there is no automated default and an empty list settles nothing.',
-    examplePlaceholder: '0x<recipient-one>,0x<recipient-two>',
-  },
-  {
     name: 'ONESHOT_SETTLEMENT_CAP_ATOMIC',
     classification: 'human-only',
     description:
@@ -120,7 +112,6 @@ export interface SettlementConfig {
   readonly privyAppId: string;
   readonly privyWalletId: string;
   readonly privyPolicyId: string;
-  readonly recipientAllowlist: readonly `0x${string}`[];
   readonly settlementCapAtomic: AmountAtomic;
   readonly rpcTimeoutMs: number;
 }
@@ -135,8 +126,6 @@ export class ConfigError extends Error {
       | 'PROFILE_DISABLED'
       | 'MAINNET_NOT_AUTHORIZED'
       | 'INVALID_URL'
-      | 'INVALID_ADDRESS'
-      | 'EMPTY_ALLOWLIST'
       | 'INVALID_TIMEOUT'
       | 'INVALID_CAP',
   ) {
@@ -154,22 +143,6 @@ function required(env: RawEnv, name: string): string {
     throw new ConfigError(`Required configuration variable ${name} is missing.`, 'MISSING_VARIABLE');
   }
   return value;
-}
-
-const EVM_ADDRESS = /^0x[a-fA-F0-9]{40}$/;
-
-/**
- * Normalize an EVM address to lowercase.
- *
- * Lowercase rather than EIP-55 checksum so that comparisons against an
- * allowlist are exact string equality and cannot differ by casing alone.
- */
-function normalizeAddress(candidate: string, label: string): `0x${string}` {
-  const trimmed = candidate.trim();
-  if (!EVM_ADDRESS.test(trimmed)) {
-    throw new ConfigError(`${label} is not a valid EVM address.`, 'INVALID_ADDRESS');
-  }
-  return trimmed.toLowerCase() as `0x${string}`;
 }
 
 function parseHttpsUrl(candidate: string, label: string): string {
@@ -235,23 +208,6 @@ export function loadSettlementConfig(env: RawEnv): SettlementConfig {
     ? parseHttpsUrl(rawExplorer, 'ONESHOT_ARC_EXPLORER_URL')
     : undefined;
 
-  const allowlistRaw = required(env, 'ONESHOT_RECIPIENT_ALLOWLIST').trim();
-  const recipientAllowlist =
-    allowlistRaw === '*' || allowlistRaw === ''
-      ? []
-      : allowlistRaw
-          .split(',')
-          .map((entry) => entry.trim())
-          .filter((entry) => entry.length > 0)
-          .map((entry) => normalizeAddress(entry, 'ONESHOT_RECIPIENT_ALLOWLIST entry'));
-
-  if (allowlistRaw !== '*' && allowlistRaw !== '' && recipientAllowlist.length === 0) {
-    throw new ConfigError(
-      'ONESHOT_RECIPIENT_ALLOWLIST must contain at least one address or "*".',
-      'EMPTY_ALLOWLIST',
-    );
-  }
-
   let settlementCapAtomic: AmountAtomic;
   try {
     settlementCapAtomic = parseAmountAtomic(required(env, 'ONESHOT_SETTLEMENT_CAP_ATOMIC'));
@@ -284,17 +240,9 @@ export function loadSettlementConfig(env: RawEnv): SettlementConfig {
     privyAppId: required(env, 'ONESHOT_PRIVY_APP_ID'),
     privyWalletId: required(env, 'ONESHOT_PRIVY_WALLET_ID'),
     privyPolicyId: required(env, 'ONESHOT_PRIVY_POLICY_ID'),
-    recipientAllowlist,
     settlementCapAtomic,
     rpcTimeoutMs,
   };
-}
-
-/** Is this recipient permitted? Exact match against the normalized allowlist. */
-export function isAllowedRecipient(config: SettlementConfig, recipient: string): boolean {
-  if (!EVM_ADDRESS.test(recipient.trim())) return false;
-  if (config.recipientAllowlist.length === 0) return true;
-  return config.recipientAllowlist.includes(recipient.trim().toLowerCase() as `0x${string}`);
 }
 
 /** Render `.env.example` content containing placeholders only. */

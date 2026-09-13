@@ -63,7 +63,6 @@ must supply and approve it.
 | `ONESHOT_PRIVY_APP_SECRET`         | secret     | yes at runtime | Read by no code in these packages      |
 | `ONESHOT_PRIVY_WALLET_ID`          | public     | yes            | Execution wallet                       |
 | `ONESHOT_PRIVY_POLICY_ID`          | public     | yes            | Must be attached to the wallet         |
-| `ONESHOT_RECIPIENT_ALLOWLIST`      | human-only | yes            | Empty list settles nothing             |
 | `ONESHOT_SETTLEMENT_CAP_ATOMIC`    | human-only | yes            | Atomic units, compared as `bigint`     |
 | `ONESHOT_RPC_TIMEOUT_MS`           | optional   | no             | Default 10000, max 120000              |
 | `ONESHOT_ALLOW_MAINNET_ACTIVATION` | human-only | no             | Default false                          |

@@ -17,7 +17,6 @@ import type { SettlementBaseline } from '../src/hardening.js';
 
 const WALLET = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const RECIPIENT = '0x1111111111111111111111111111111111111111';
-const OTHER = '0x2222222222222222222222222222222222222222';
 const USDC = '0x3600000000000000000000000000000000000000';
 
 const ENV: RawEnv = {
@@ -26,7 +25,6 @@ const ENV: RawEnv = {
   ONESHOT_PRIVY_APP_ID: 'app_1234567890',
   ONESHOT_PRIVY_WALLET_ID: 'wallet_1234567890',
   ONESHOT_PRIVY_POLICY_ID: 'policy_1234567890',
-  ONESHOT_RECIPIENT_ALLOWLIST: RECIPIENT,
   ONESHOT_SETTLEMENT_CAP_ATOMIC: '1000000',
 };
 
@@ -109,12 +107,18 @@ describe('PrivyAuthorizationAdapter', () => {
   });
 
   it.each<[string, Partial<CreateIntentRequest>]>([
-    ['a non-allowlisted recipient', { recipient: OTHER }],
     ['a zero amount', { amount_atomic: '0' }],
     ['an amount above the cap', { amount_atomic: '1000001' }],
   ])('denies %s', async (_label, override) => {
     const result = await auth().authorize(intent(override));
     expect(result.kind).toBe('DENIED');
+  });
+
+  it('authorizes any valid recipient within the amount cap', async () => {
+    const result = await auth().authorize(
+      intent({ recipient: '0x2222222222222222222222222222222222222222' }),
+    );
+    expect(result.kind).toBe('AUTHORIZED');
   });
 
   it('permits an amount exactly at the cap', async () => {
