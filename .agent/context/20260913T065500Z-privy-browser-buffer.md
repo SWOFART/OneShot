@@ -68,9 +68,13 @@ asked to fix the issue.
 
 - Branch: `fix/privy-browser-buffer`
 - Base: `origin/develop` at `5e1c9e9210ef22416ee8b62713e9a3e597bb4577`
-- Commit: uncommitted
-- PR: not created
-- CI: not run
+- Implementation commit: `4721961d7e55047d120e2d4e51dc3a40b4d520bb`
+- PR: [#126](https://github.com/SWOFART/OneShot/pull/126), draft
+- CI: repository policy, Markdown/Mermaid, and Cloudflare Workers build passed;
+  frontend browser acceptance and ESLint/TypeScript were pending at this snapshot.
+- Production frontend: Cloudflare Worker version
+  `935dfd2b-8fba-4875-964e-7f609c472378`; the public page returned HTTP 200 and
+  its entry bundle contained the `globalThis.Buffer` initialization.
 
 ## Review gates
 
@@ -80,4 +84,5 @@ asked to fix the issue.
 
 ## Handoff/next steps
 
-1. Commit and push the focused candidate, open a PR, and deploy the frontend.
+1. Wait for remaining PR checks and have the user retry one approved testnet
+   transfer; agents do not merge.
