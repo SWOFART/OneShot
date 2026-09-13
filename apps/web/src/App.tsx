@@ -546,7 +546,15 @@ export function App(props: AppProps = {}) {
               ))}
             </nav>
 
-            <main id={`${activeTab}-panel`} role="tabpanel" aria-labelledby={`${activeTab}-tab`}>
+            {/* Keyed like the cabinet panel above, so switching tabs remounts
+                the panel and restarts the fade in `.tab-fade`. */}
+            <main
+              id={`${activeTab}-panel`}
+              className="tab-fade"
+              key={activeTab}
+              role="tabpanel"
+              aria-labelledby={`${activeTab}-tab`}
+            >
               {activeTab === 'create' ? (
                 <IntentForm client={apiClient} onIntentCreatedOrSelected={selectIntent} />
               ) : activeTab === 'status' ? (

@@ -28,11 +28,18 @@ This is the second, deliberately separate demo mode:
   one Circle Arc nanopayments sample endpoint through Circle Gateway.
 
 The website x402 request is signed by the connected Privy wallet through its
-EIP-712 signing API. No private key is accepted or exported. The paying wallet
-must already have the required Circle Gateway testnet balance; the one-time
-deposit is an operational setup step and is not repeated by the website. The
-operator fallback signs with the configured server-side Privy wallet and has
-the same Gateway-balance prerequisite.
+EIP-712 signing API. No private key is accepted or exported. The website now
+offers an explicit **Fund my Gateway balance** action for the connected buyer
+wallet. It may request two wallet transactions: an ERC-20 allowance for the
+Gateway Wallet followed by `GatewayWallet.deposit(USDC, amount)`. OneShot never
+funds another user, never uses the server wallet for this user-funded path, and
+never sends a normal ERC-20 transfer directly to the Gateway Wallet.
+
+Funding is Arc Testnet-only and uses testnet USDC. If an approval or deposit
+response is lost, the UI holds the flow and asks the user to check the same
+transaction or Gateway balance before trying again; it does not blindly repeat
+the deposit. The operator fallback signs with the configured server-side Privy
+wallet and has its own separate Gateway-balance prerequisite.
 
 ## Run
 

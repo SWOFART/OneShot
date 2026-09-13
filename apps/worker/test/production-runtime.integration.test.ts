@@ -37,7 +37,6 @@ describePostgres('production worker API to adapter path', () => {
         ONESHOT_PRIVY_APP_ID: 'app-test',
         ONESHOT_PRIVY_WALLET_ID: 'wallet-test',
         ONESHOT_PRIVY_POLICY_ID: 'policy-test',
-        ONESHOT_RECIPIENT_ALLOWLIST: '0x2222222222222222222222222222222222222222',
         ONESHOT_SETTLEMENT_CAP_ATOMIC: '1000000',
       }),
       privyAppSecret: 'test-secret',

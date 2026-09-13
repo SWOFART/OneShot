@@ -6,8 +6,7 @@ baseline and its checked-in evidence remain useful but do not prove this flow.
 
 For the first Arc transfer rehearsal, enter a small testnet invoice in the
 cabinet (for example `10000` atomic USDC / `0.01 USDC`) and use a second
-team-controlled Arc Testnet wallet that is present in the worker's
-`ONESHOT_RECIPIENT_ALLOWLIST`. The transfer is a real Privy-authorized
+team-controlled Arc Testnet wallet. The transfer is a real Privy-authorized
 settlement, but the result remains labelled as a team-operated demo until an
 external supplier is integrated.
 

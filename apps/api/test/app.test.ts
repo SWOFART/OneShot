@@ -9,6 +9,7 @@ import type {
   ReconcileResponse,
 } from '@oneshot/contracts';
 import type { CreateIntentResult, IntentLedger } from '@oneshot/storage-postgres';
+import { CircleX402PreSubmitError } from '@oneshot/supplier-adapter';
 import { buildApi, staticBearerAuthenticator, type ApiDependencies } from '../src/index.js';
 
 const request = {
@@ -279,6 +280,9 @@ describe('OpenAPI contract endpoints', () => {
         async get() {
           return paidRequest;
         },
+        async list() {
+          return [paidRequest];
+        },
       },
       authenticator: staticBearerAuthenticator('test-token'),
       config: { workspaceId: 'workspace-paid-api' },
@@ -337,6 +341,14 @@ describe('OpenAPI contract endpoints', () => {
     });
     expect(found.statusCode).toBe(200);
     expect(found.json()).toEqual(paidRequest);
+
+    const listed = await app.inject({
+      method: 'GET',
+      url: '/v1/requests',
+      headers: { authorization: 'Bearer test-token' },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json()).toEqual({ requests: [paidRequest] });
     await app.close();
   });
 
@@ -401,6 +413,9 @@ describe('OpenAPI contract endpoints', () => {
         async get() {
           return committed;
         },
+        async list() {
+          return [committed];
+        },
       },
       authenticator: staticBearerAuthenticator('test-token'),
       config: { workspaceId: 'workspace-paid-api-user-wallet' },
@@ -451,6 +466,57 @@ describe('OpenAPI contract endpoints', () => {
       },
       { name: 'reconcile', value: { id: prepared.business_intent_id } },
     ]);
+    await app.close();
+  });
+
+  it('returns a safe 400 when a Circle authorization is refused before forwarding', async () => {
+    const payer = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const app = buildApi({
+      ledger: createMockLedger(),
+      paidApi: {
+        async quote() {
+          throw new Error('not used');
+        },
+        async start() {
+          throw new Error('not used');
+        },
+        async prepareUserWallet() {
+          throw new Error('not used');
+        },
+        async submitUserWallet() {
+          throw new CircleX402PreSubmitError('internal parsing detail');
+        },
+        async reconcileUserWallet() {
+          throw new Error('not used');
+        },
+        async get() {
+          return undefined;
+        },
+        async list() {
+          return [];
+        },
+      },
+      authenticator: staticBearerAuthenticator('test-token'),
+      nextCorrelationId: () => 'correlation-circle-presubmit',
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/paid-api/intent-paid-api-user-wallet/user-wallet/submit',
+      headers: { authorization: 'Bearer test-token' },
+      payload: {
+        payer_wallet: payer,
+        payment_payload: { x402Version: 2, payload: {} },
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      code: 'INVALID_REQUEST',
+      message:
+        'The Circle authorization is no longer valid. No payment was sent; sign a fresh authorization.',
+      correlation_id: 'correlation-circle-presubmit',
+    });
     await app.close();
   });
 

@@ -134,6 +134,14 @@ describePostgres('PostgreSQL intent ledger', () => {
         (SELECT count(*) FROM outbox_jobs)::text AS jobs`,
     );
     expect(counts.rows[0]).toEqual({ intents: '1', paid: '1', attempts: '1', jobs: '1' });
+
+    await expect(ledger.listPaidApi('workspace-paid-api')).resolves.toMatchObject([
+      expect.objectContaining({
+        business_intent_id: results[0]?.request.business_intent_id,
+        task_key: paidRequest.task_key,
+        tool_id: paidRequest.tool_id,
+      }),
+    ]);
   });
 
   it('binds a user-funded paid API request to its payer without an authorization outbox', async () => {

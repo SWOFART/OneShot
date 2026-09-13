@@ -460,6 +460,59 @@
         }
       }
     },
+    "/v1/requests": {
+      "get": {
+        "operationId": "listRequests",
+        "summary": "List durable team-report and paid-API requests in the authorized workspace",
+        "security": [
+          {
+            "serviceBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Durable requests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "NOT_READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/jobs/quote": {
       "post": {
         "operationId": "quoteJob",
@@ -2598,6 +2651,32 @@
             "maxItems": 100,
             "items": {
               "$ref": "#/components/schemas/JobResponse"
+            }
+          }
+        }
+      },
+      "RequestListItem": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/JobResponse"
+          },
+          {
+            "$ref": "#/components/schemas/PaidApiResponse"
+          }
+        ]
+      },
+      "RequestListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requests"
+        ],
+        "properties": {
+          "requests": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/RequestListItem"
             }
           }
         }

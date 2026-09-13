@@ -808,6 +808,30 @@ export class IntentLedger {
     }
   }
 
+  async listPaidApi(workspaceIdValue: unknown, limit = 50): Promise<readonly PaidApiResponse[]> {
+    const workspaceId = String(workspaceIdValue);
+    const bounded = Number.isSafeInteger(limit) && limit > 0 && limit <= 100 ? limit : 50;
+    const client = await this.#pool.connect();
+    try {
+      const result = await client.query<{ business_intent_id: string }>(
+        `SELECT business_intent_id
+         FROM paid_api_requests
+         WHERE workspace_id = $1
+         ORDER BY updated_at DESC, business_intent_id DESC
+         LIMIT $2`,
+        [workspaceId, bounded],
+      );
+      const requests = await Promise.all(
+        result.rows.map((row) =>
+          this.#readPaidApi(client, workspaceId, asBusinessIntentId(row.business_intent_id)),
+        ),
+      );
+      return requests.filter((request): request is PaidApiResponse => request !== undefined);
+    } finally {
+      client.release();
+    }
+  }
+
   async getPaidApiTarget(businessIntentIdValue: unknown): Promise<PaidApiTarget | undefined> {
     const businessIntentId = asBusinessIntentId(businessIntentIdValue);
     const result = await this.#pool.query<{

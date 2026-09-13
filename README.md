@@ -238,9 +238,8 @@ Cloudflare Workers Build checkout.
 
 The resumable job flow uses a deliberately labelled team-operated supplier
 until an external supplier is selected. In Tools, enter the exact Arc Testnet
-recipient and USDC amount for the purchase. The recipient must be included in
-the worker's `ONESHOT_RECIPIENT_ALLOWLIST`, and the amount must be within the
-Privy policy cap. The existing worker authorizes and submits the exact quote
+recipient and USDC amount for the purchase. The amount must be within the
+settlement cap. The existing worker authorizes and submits the exact quote
 through Privy on Arc Testnet. A committed job's settlement and ArcScan
 evidence remain authoritative; delivery resume never submits a replacement
 payment.

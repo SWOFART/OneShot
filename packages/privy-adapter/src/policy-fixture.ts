@@ -44,7 +44,6 @@ export interface PolicyDefinition {
 export interface PolicyInputs {
   readonly chainId: number;
   readonly tokenContract: `0x${string}`;
-  readonly recipientAllowlist: readonly `0x${string}`[];
   /** Maximum atomic units for a single settlement. */
   readonly amountCapAtomic: bigint;
 }
@@ -53,8 +52,8 @@ export interface PolicyInputs {
  * Build the expected policy.
  *
  * The single ALLOW rule requires every condition to hold at once: right chain,
- * right token contract, zero native value, the transfer method, an allowlisted
- * recipient, and an amount at or under the cap. Anything failing one condition
+ * right token contract, zero native value, the transfer method, and an amount
+ * at or under the cap. Anything failing one condition
  * falls through to the default DENY.
  */
 export function buildExpectedPolicy(inputs: PolicyInputs): PolicyDefinition {
@@ -93,12 +92,6 @@ export function buildExpectedPolicy(inputs: PolicyInputs): PolicyDefinition {
           },
           {
             fieldSource: 'ethereum_calldata',
-            field: 'transfer.to',
-            operator: 'in',
-            value: inputs.recipientAllowlist.map((address) => address.toLowerCase()),
-          },
-          {
-            fieldSource: 'ethereum_calldata',
             field: 'transfer.amount',
             operator: 'lte',
             value: inputs.amountCapAtomic.toString(10),
@@ -121,7 +114,6 @@ export const REQUIRED_POLICY_FIELDS: readonly string[] = [
   'to',
   'value',
   'transfer',
-  'transfer.to',
   'transfer.amount',
 ];
 

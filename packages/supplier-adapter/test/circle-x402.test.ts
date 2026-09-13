@@ -5,7 +5,9 @@ import {
   CircleX402PreSubmitError,
   CircleX402UserWalletForwarder,
   parseCircleX402Quote,
+  parseCircleX402UserWalletPayload,
 } from '../src/circle-x402.js';
+import { CIRCLE_X402_USER_WALLET_VALIDITY_WINDOW_SECONDS } from '@oneshot/contracts';
 
 const URL = 'https://x402.example.test/api/dataset';
 const PAY_TO = '0x1111111111111111111111111111111111111111';
@@ -303,6 +305,101 @@ describe('Circle Gateway x402 client', () => {
     expect(headers.get('PAYMENT-SIGNATURE')).toBeTruthy();
   });
 
+  it('accepts Circle backdating plus a normal wallet approval delay exactly once', async () => {
+    vi.useFakeTimers();
+    try {
+      const now = new Date('2026-09-12T18:22:07.000Z');
+      vi.setSystemTime(now);
+      const payer = '0x2222222222222222222222222222222222222222';
+      const quote = parseCircleX402Quote({
+        url: URL,
+        resourceUrl: URL,
+        x402Version: 2,
+        requirements: requirements(),
+      });
+      const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(JSON.stringify({ dataset: 'user-paid' }), {
+          status: 200,
+          headers: {
+            'PAYMENT-RESPONSE': encoded({
+              success: true,
+              transaction: TX,
+              network: 'eip155:5042002',
+            }),
+          },
+        }),
+      );
+      const forwarder = new CircleX402UserWalletForwarder({ allowedUrl: URL, fetchFn });
+
+      await expect(
+        forwarder.forward({
+          businessIntentId: 'intent-x402-user-wallet-delay',
+          quote,
+          payerAddress: payer,
+          paymentPayload: {
+            x402Version: 2,
+            payload: {
+              authorization: {
+                from: payer,
+                to: PAY_TO,
+                value: '10000',
+                validAfter: String(Math.floor(now.getTime() / 1000) - 615),
+                validBefore: String(Math.floor(now.getTime() / 1000) + 600),
+                nonce: `0x${'e'.repeat(64)}`,
+              },
+              signature: `0x${'f'.repeat(130)}`,
+            },
+          },
+        }),
+      ).resolves.toMatchObject({ settlement: { transactionHash: TX } });
+      expect(fetchFn).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('refuses an authorization older than the bounded wallet approval window before forwarding', async () => {
+    vi.useFakeTimers();
+    try {
+      const now = new Date('2026-09-12T18:22:07.000Z');
+      vi.setSystemTime(now);
+      const payer = '0x2222222222222222222222222222222222222222';
+      const quote = parseCircleX402Quote({
+        url: URL,
+        resourceUrl: URL,
+        x402Version: 2,
+        requirements: requirements(),
+      });
+      const fetchFn = vi.fn<typeof fetch>();
+      const forwarder = new CircleX402UserWalletForwarder({ allowedUrl: URL, fetchFn });
+
+      await expect(
+        forwarder.forward({
+          businessIntentId: 'intent-x402-user-wallet-expired',
+          quote,
+          payerAddress: payer,
+          paymentPayload: {
+            x402Version: 2,
+            payload: {
+              authorization: {
+                from: payer,
+                to: PAY_TO,
+                value: '10000',
+                validAfter: String(Math.floor(now.getTime() / 1000) - 901),
+                validBefore: String(Math.floor(now.getTime() / 1000) + 600),
+                nonce: `0x${'e'.repeat(64)}`,
+              },
+              signature: `0x${'f'.repeat(130)}`,
+            },
+          },
+        }),
+      ).rejects.toBeInstanceOf(CircleX402PreSubmitError);
+      expect(fetchFn).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('rejects a user-wallet payload that does not match the approved payer before forwarding', async () => {
     const quote = parseCircleX402Quote({
       url: URL,
@@ -334,5 +431,90 @@ describe('Circle Gateway x402 client', () => {
       }),
     ).rejects.toBeInstanceOf(CircleX402PreSubmitError);
     expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('accepts a bounded human-approval validity buffer and rejects longer windows', () => {
+    const payer = '0x2222222222222222222222222222222222222222';
+    const quote = parseCircleX402Quote({
+      url: URL,
+      resourceUrl: URL,
+      x402Version: 2,
+      requirements: requirements(),
+    });
+    const now = Math.floor(Date.now() / 1000);
+    const payload = (validBefore: number) => ({
+      x402Version: 2,
+      payload: {
+        authorization: {
+          from: payer,
+          to: PAY_TO,
+          value: '10000',
+          validAfter: String(now - 600),
+          validBefore: String(validBefore),
+          nonce: `0x${'c'.repeat(64)}`,
+        },
+        signature: `0x${'d'.repeat(130)}`,
+      },
+    });
+
+    expect(() =>
+      parseCircleX402UserWalletPayload(
+        payload(now + CIRCLE_X402_USER_WALLET_VALIDITY_WINDOW_SECONDS),
+        quote,
+        payer,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      parseCircleX402UserWalletPayload(
+        payload(now + CIRCLE_X402_USER_WALLET_VALIDITY_WINDOW_SECONDS + 1),
+        quote,
+        payer,
+      ),
+    ).toThrow(CircleX402PreSubmitError);
+  });
+
+  it('marks an explicit supplier verification refusal as pre-submit safe', async () => {
+    const payer = '0x2222222222222222222222222222222222222222';
+    const quote = parseCircleX402Quote({
+      url: URL,
+      resourceUrl: URL,
+      x402Version: 2,
+      requirements: requirements(),
+    });
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: 'Payment verification failed',
+          reason: 'authorization_validity_too_short',
+        }),
+        { status: 402, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+    const forwarder = new CircleX402UserWalletForwarder({
+      allowedUrl: URL,
+      fetchFn,
+    });
+
+    await expect(
+      forwarder.forward({
+        businessIntentId: 'intent-x402-verification-refused',
+        quote,
+        payerAddress: payer,
+        paymentPayload: {
+          x402Version: 2,
+          payload: {
+            authorization: {
+              from: payer,
+              to: PAY_TO,
+              value: '10000',
+              validAfter: String(Math.floor(Date.now() / 1000) - 600),
+              validBefore: String(Math.floor(Date.now() / 1000) + 600),
+              nonce: `0x${'c'.repeat(64)}`,
+            },
+            signature: `0x${'d'.repeat(130)}`,
+          },
+        },
+      }),
+    ).rejects.toBeInstanceOf(CircleX402PreSubmitError);
   });
 });

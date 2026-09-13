@@ -2,8 +2,8 @@ import { formatAtomicUsdcWithAsset } from '@oneshot/settlement-ui';
 import { useEffect, useState } from 'react';
 import type { JobView, PaidApiQuote, PaidApiResponse, SupplierQuote } from '@oneshot/contracts';
 import type { JobApiClient } from '../api/job-client.js';
-import type { UserWalletSession } from '../auth/session.js';
-import type { PaidApiClient } from '../api/paid-api-client.js';
+import { GatewayFundingError, type UserWalletSession } from '../auth/session.js';
+import { PaidApiUserWalletSubmissionError, type PaidApiClient } from '../api/paid-api-client.js';
 import { usdcToAtomicUnits } from '../utils/money.js';
 import {
   deliveryStatusCopy,
@@ -208,6 +208,13 @@ export function JobWorkspace(props: {
         throw new Error('The durable payment plan differs from the reviewed quote');
       }
       setApprovedJob(job);
+      if (job.user_payment.transaction_hash) {
+        setPaymentHash(job.user_payment.transaction_hash);
+        setNotice(
+          'The original wallet transaction is already recorded. Check that same transaction; do not approve another payment.',
+        );
+        return;
+      }
       setNotice(
         'Review the exact recipient and amount in Privy, then confirm the wallet transaction.',
       );
@@ -428,8 +435,13 @@ export function CircleX402DemoPanel(props: {
   const [taskKey, setTaskKey] = useState(() => `circle-api-${crypto.randomUUID().slice(0, 8)}`);
   const [quote, setQuote] = useState<PaidApiQuote | null>(null);
   const [request, setRequest] = useState<PaidApiResponse | null>(null);
-  const [loading, setLoading] = useState<'quote' | 'start' | 'sign' | 'refresh' | null>(null);
+  const [loading, setLoading] = useState<
+    'quote' | 'start' | 'sign' | 'refresh' | 'fund' | 'balance' | null
+  >(null);
   const [notice, setNotice] = useState('');
+  const [gatewayTarget, setGatewayTarget] = useState('1');
+  const [gatewayBalance, setGatewayBalance] = useState<string | null>(null);
+  const [gatewayFundingHash, setGatewayFundingHash] = useState<string | null>(null);
   const paidApiRequest = { task_key: taskKey.trim(), tool_id: 'circle-x402-api-v1' as const };
 
   function clear(): void {
@@ -459,7 +471,10 @@ export function CircleX402DemoPanel(props: {
     setNotice('');
     try {
       if (!props.userWallet) {
-        const result = await props.client.start({ ...paidApiRequest, approved_quote: approvedQuote });
+        const result = await props.client.start({
+          ...paidApiRequest,
+          approved_quote: approvedQuote,
+        });
         setRequest(result);
         setNotice('Request accepted. OneShot now owns the payment attempt.');
         return;
@@ -474,12 +489,14 @@ export function CircleX402DemoPanel(props: {
       setRequest(result);
       setNotice('Request prepared. Your wallet will now ask you to sign the exact Circle payment.');
       await signAndSubmit(result, approvedQuote, payerWallet);
-    } catch {
+    } catch (error) {
       if (!props.userWallet) setQuote(null);
       setNotice(
-        props.userWallet
-          ? 'The payment was not completed. If your wallet showed a signature request, check the same request status before trying again.'
-          : 'The API request was not accepted. Keep the same request key before retrying.',
+        props.userWallet && error instanceof PaidApiUserWalletSubmissionError
+          ? error.message
+          : props.userWallet
+            ? 'The payment was not completed. If your wallet showed a signature request, check the same request status before trying again.'
+            : 'The API request was not accepted. Keep the same request key before retrying.',
       );
     } finally {
       setLoading(null);
@@ -493,6 +510,15 @@ export function CircleX402DemoPanel(props: {
   ): Promise<void> {
     if (!props.client || !props.userWallet) return;
     setLoading('sign');
+    const gatewayBalance = await props.userWallet.getGatewayBalance(payerWallet);
+    if (
+      !/^\d+$/u.test(gatewayBalance) ||
+      BigInt(gatewayBalance) < BigInt(approvedQuote.amount_atomic)
+    ) {
+      throw new PaidApiUserWalletSubmissionError(
+        'Your Arc Testnet Circle Gateway balance is below this price. Fund the Gateway balance, then sign this same prepared request.',
+      );
+    }
     const paymentPayload = await props.userWallet.signX402Payment(approvedQuote);
     const submitted = await props.client.submitUserWalletPayment(
       prepared.business_intent_id,
@@ -509,6 +535,69 @@ export function CircleX402DemoPanel(props: {
     );
   }
 
+  async function refreshGatewayBalance(): Promise<void> {
+    if (!props.userWallet) return;
+    setLoading('balance');
+    setNotice('');
+    try {
+      const payerWallet = props.userWallet.address ?? (await props.userWallet.connect());
+      if (!payerWallet) throw new Error('No Ethereum wallet is connected');
+      setGatewayBalance(await props.userWallet.getGatewayBalance(payerWallet));
+      setNotice('Gateway balance refreshed.');
+    } catch {
+      setNotice('The Gateway balance could not be checked. No payment was submitted.');
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function fundGateway(): Promise<void> {
+    if (!props.userWallet) return;
+    let targetAmountAtomic: string;
+    try {
+      targetAmountAtomic = usdcToAtomicUnits(gatewayTarget);
+      if (targetAmountAtomic === '0') throw new Error('Gateway target must be positive');
+    } catch {
+      setNotice('Enter a positive Gateway balance target with up to 6 decimal places.');
+      return;
+    }
+    setLoading('fund');
+    setNotice('Your wallet may ask for approval, then a Gateway deposit.');
+    try {
+      const payerWallet = props.userWallet.address ?? (await props.userWallet.connect());
+      if (!payerWallet) throw new Error('No Ethereum wallet is connected');
+      const result = await props.userWallet.fundGateway(targetAmountAtomic);
+      setGatewayFundingHash(result.deposit_transaction_hash);
+      try {
+        setGatewayBalance(await props.userWallet.getGatewayBalance(payerWallet));
+      } catch {
+        setGatewayBalance(null);
+      }
+      setNotice(
+        result.deposit_transaction_hash
+          ? 'Gateway deposit confirmed on Arc Testnet. Wait for Circle balance processing, then sign the API payment.'
+          : 'Your Gateway balance already meets the requested target.',
+      );
+    } catch (error) {
+      if (error instanceof GatewayFundingError && error.transaction_hash) {
+        setGatewayFundingHash(error.transaction_hash);
+      }
+      if (error instanceof GatewayFundingError && error.phase === 'DEPOSIT') {
+        setNotice(
+          'The Gateway deposit result is not fully resolved. Do not fund again; refresh the Gateway balance and check the same transaction first.',
+        );
+      } else if (error instanceof GatewayFundingError && error.phase === 'APPROVAL') {
+        setNotice(
+          'The Gateway approval result is not fully resolved. No deposit was submitted by OneShot; check the same approval before trying again.',
+        );
+      } else {
+        setNotice('Gateway funding was not completed. No API payment was submitted.');
+      }
+    } finally {
+      setLoading(null);
+    }
+  }
+
   async function signPrepared(): Promise<void> {
     if (!request || !quote || !props.userWallet) return;
     const payerWallet = request.payer_wallet ?? props.userWallet.address;
@@ -519,8 +608,12 @@ export function CircleX402DemoPanel(props: {
     setNotice('');
     try {
       await signAndSubmit(request, quote, payerWallet);
-    } catch {
-      setNotice('The payment was not completed. Check the same request status before trying again.');
+    } catch (error) {
+      setNotice(
+        error instanceof PaidApiUserWalletSubmissionError
+          ? error.message
+          : 'The payment was not completed. Check the same request status before trying again.',
+      );
     } finally {
       setLoading(null);
     }
@@ -559,10 +652,58 @@ export function CircleX402DemoPanel(props: {
         own wallet.
       </p>
       {props.userWallet && (
-        <p className="field-help">
-          Circle Gateway requires this wallet to have a funded Arc Testnet Gateway balance. OneShot
-          does not deposit or move funds automatically; approval only signs the reviewed payment.
-        </p>
+        <section className="quote-panel gateway-funding-panel" aria-label="Circle Gateway balance">
+          <header className="panel-heading">
+            <div>
+              <h3>Your Circle Gateway balance</h3>
+              <span className="badge tone-neutral">Buyer-funded</span>
+            </div>
+            <span className="mono">
+              {gatewayBalance === null
+                ? 'Not checked'
+                : `${formatAtomicUsdcWithAsset(gatewayBalance, 'USDC') ?? 'Invalid'} USDC`}
+            </span>
+          </header>
+          <p className="panel-lede">
+            This is your wallet&apos;s own Arc Testnet balance for gas-free Circle payments. OneShot
+            never pays for you and never deposits into another user&apos;s balance.
+          </p>
+          <label htmlFor="gateway-target-amount">Target Gateway balance (USDC)</label>
+          <input
+            id="gateway-target-amount"
+            value={gatewayTarget}
+            disabled={loading !== null}
+            onChange={(event) => setGatewayTarget(event.target.value)}
+            inputMode="decimal"
+            autoComplete="off"
+          />
+          <p className="field-help">
+            Funding may show up to two wallet confirmations: allowance approval and Gateway deposit.
+            Use testnet USDC only. A confirmed deposit may take a moment to appear in Circle&apos;s
+            available balance.
+          </p>
+          <div className="proof-controls">
+            <button type="button" disabled={loading !== null} onClick={() => void fundGateway()}>
+              {loading === 'fund' ? 'Funding Gateway…' : 'Fund my Gateway balance'}
+            </button>
+            <button
+              type="button"
+              className="secondary compact"
+              disabled={loading !== null}
+              onClick={() => void refreshGatewayBalance()}
+            >
+              {loading === 'balance' ? 'Checking…' : 'Refresh Gateway balance'}
+            </button>
+          </div>
+          {gatewayFundingHash && (
+            <p className="field-help">
+              Funding transaction:{' '}
+              <a href={explorerHref(gatewayFundingHash)} target="_blank" rel="noreferrer noopener">
+                View on ArcScan
+              </a>
+            </p>
+          )}
+        </section>
       )}
       <label htmlFor="paid-api-task-key">Request key</label>
       <input
@@ -767,15 +908,20 @@ export function JobList(props: {
   readonly client: JobApiClient;
   readonly onSelectIntent: (id: string) => void;
 }) {
-  const [jobs, setJobs] = useState<readonly JobView[]>([]);
+  const [requests, setRequests] = useState<readonly (JobView | PaidApiResponse)[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [resumingJobId, setResumingJobId] = useState<string | null>(null);
+  const [checkingPaymentJobId, setCheckingPaymentJobId] = useState<string | null>(null);
 
   async function refresh(): Promise<void> {
     setLoading(true);
     try {
-      setJobs(await props.client.list());
+      const listed =
+        typeof props.client.listRequests === 'function'
+          ? await props.client.listRequests()
+          : (await props.client.list()).map((job) => job);
+      setRequests(listed);
       setError('');
     } catch {
       setError('Requests could not be loaded. Check API readiness and your workspace session.');
@@ -797,6 +943,21 @@ export function JobList(props: {
     }
   }
 
+  async function checkRecordedPayment(job: JobView): Promise<void> {
+    const transactionHash = job.user_payment?.transaction_hash;
+    if (job.payment_mode !== 'USER_WALLET' || !transactionHash) return;
+    setCheckingPaymentJobId(job.job_id);
+    setError('');
+    try {
+      await props.client.submitUserWalletPayment(job.job_id, transactionHash);
+      await refresh();
+    } catch {
+      setError('The recorded transaction could not be verified. No new payment was submitted.');
+    } finally {
+      setCheckingPaymentJobId(null);
+    }
+  }
+
   useEffect(() => {
     void refresh();
   }, []);
@@ -805,7 +966,7 @@ export function JobList(props: {
     <section
       className="panel"
       aria-label="Requests and results"
-      aria-busy={loading || resumingJobId !== null}
+      aria-busy={loading || resumingJobId !== null || checkingPaymentJobId !== null}
     >
       <header className="panel-heading">
         <div>
@@ -815,104 +976,213 @@ export function JobList(props: {
         <button
           type="button"
           className="secondary compact"
-          disabled={loading || resumingJobId !== null}
+          disabled={loading || resumingJobId !== null || checkingPaymentJobId !== null}
           onClick={() => void refresh()}
         >
           {loading ? 'Refreshing…' : 'Refresh requests'}
         </button>
       </header>
-      {error && (
-        <p role="alert" className="notice error-notice">
-          {error}
-        </p>
-      )}
-      {loading ? (
-        <p role="status">Checking requests…</p>
-      ) : jobs.length === 0 ? (
-        <p>No requests yet. Open Payment services to start a supported request.</p>
-      ) : (
-        <ul className="attempts job-list">
-          {jobs.map((job, index) => {
-            const payment = paymentStatusCopy(job.payment_state);
-            const delivery = deliveryStatusCopy(job.delivery_state);
-            return (
-              <li key={job.job_id}>
-                <div className="job-row-heading">
+      {/* The request list arrives after the panel has mounted, so the tab's own
+          fade is long over by the time there is anything to read. Keying this
+          block on the loading state remounts it when the rows land, which runs
+          the same fade on the content the operator actually waited for. */}
+      <div className="tab-fade" key={loading ? 'loading' : 'loaded'}>
+        {error && (
+          <p role="alert" className="notice error-notice">
+            {error}
+          </p>
+        )}
+        {loading ? (
+          <p role="status">Checking requests…</p>
+        ) : requests.length === 0 ? (
+          <p>No requests yet. Open Payment services to start a supported request.</p>
+        ) : (
+          <ul className="attempts job-list">
+            {requests.map((request, index) => {
+              if (request.tool_id === 'circle-x402-api-v1') {
+                const payment = paymentStatusCopy(request.payment_state);
+                return (
+                  <li key={request.business_intent_id}>
+                    <div className="job-row-heading">
+                      <button
+                        type="button"
+                        className="secondary compact"
+                        onClick={() => props.onSelectIntent(request.business_intent_id)}
+                      >
+                        Open request {index + 1}
+                      </button>
+                      <span className={`badge tone-${payment.tone}`}>{payment.label}</span>
+                    </div>
+                    <p>
+                      <strong>OneShot x402 Dataset</strong> Â· {payment.label}
+                    </p>
+                    <p className="job-quote-summary">
+                      Price:{' '}
+                      <span className="mono">
+                        {formatAtomicUsdcWithAsset(
+                          request.quote.amount_atomic,
+                          request.quote.asset,
+                        ) ?? 'Unavailable'}
+                      </span>{' '}
+                      Â· {request.resource_url}
+                    </p>
+                    {request.response !== undefined && (
+                      <p>
+                        <strong>API result recorded.</strong> Open this request to inspect payment
+                        proof.
+                      </p>
+                    )}
+                    {request.settlement ? (
+                      <p className="job-settlement-summary">
+                        <strong>Payment confirmed:</strong>{' '}
+                        {explorerHref(request.settlement.transaction_hash) ? (
+                          <a
+                            href={explorerHref(request.settlement.transaction_hash)}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                          >
+                            View the ArcScan transaction
+                          </a>
+                        ) : (
+                          <span className="mono">{request.settlement.transaction_hash}</span>
+                        )}
+                      </p>
+                    ) : request.provider_transaction_hash ? (
+                      <p className="job-settlement-summary">
+                        <strong>Transaction recorded:</strong> payment proof is still being checked.
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="secondary compact"
+                      onClick={() => props.onSelectIntent(request.business_intent_id)}
+                    >
+                      Open payment proof
+                    </button>
+                    <details className="technical-details">
+                      <summary>Show request details</summary>
+                      <dl className="facts">
+                        <div>
+                          <dt>Request key</dt>
+                          <dd className="mono break-all">{maskIdentifier(request.task_key)}</dd>
+                        </div>
+                        <div>
+                          <dt>Business intent</dt>
+                          <dd className="mono break-all">
+                            {maskIdentifier(request.business_intent_id, 10)}
+                          </dd>
+                        </div>
+                        {request.payer_wallet && (
+                          <div>
+                            <dt>Payer wallet</dt>
+                            <dd className="mono break-all">{request.payer_wallet}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    </details>
+                  </li>
+                );
+              }
+              const job = request;
+              const payment = paymentStatusCopy(job.payment_state);
+              const delivery = deliveryStatusCopy(job.delivery_state);
+              return (
+                <li key={job.job_id}>
+                  <div className="job-row-heading">
+                    <button
+                      type="button"
+                      className="secondary compact"
+                      onClick={() => props.onSelectIntent(job.business_intent_id)}
+                    >
+                      Open request {index + 1}
+                    </button>
+                    <span className={`badge tone-${delivery.tone}`}>{delivery.label}</span>
+                  </div>
+                  <p>
+                    <strong>{serviceLabel(job.tool_id)}</strong> · {payment.label}
+                  </p>
+                  <p className="job-quote-summary">
+                    Price: <span className="mono">{quoteAmount(job.supplier)}</span> ·{' '}
+                    {delivery.description}
+                  </p>
+                  {job.settlement && (
+                    <p className="job-settlement-summary">
+                      <strong>Payment confirmed:</strong>{' '}
+                      {explorerHref(job.settlement.transaction_hash) ? (
+                        <a
+                          href={explorerHref(job.settlement.transaction_hash)}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                        >
+                          View the ArcScan transaction
+                        </a>
+                      ) : (
+                        <span className="mono">{job.settlement.transaction_hash}</span>
+                      )}
+                    </p>
+                  )}
+                  {job.result ? (
+                    <p>
+                      <strong>Result ready:</strong> {job.result.report}
+                    </p>
+                  ) : job.payment_state === 'COMMITTED' ? (
+                    <button
+                      type="button"
+                      className="secondary compact"
+                      disabled={resumingJobId !== null}
+                      onClick={() => void resume(job.job_id)}
+                    >
+                      {resumingJobId === job.job_id
+                        ? 'Resuming…'
+                        : 'Resume result (no new payment)'}
+                    </button>
+                  ) : null}
+                  {job.payment_mode === 'USER_WALLET' &&
+                    job.payment_state === 'UNKNOWN' &&
+                    job.user_payment?.transaction_hash && (
+                      <button
+                        type="button"
+                        className="secondary compact"
+                        disabled={
+                          loading || resumingJobId !== null || checkingPaymentJobId !== null
+                        }
+                        onClick={() => void checkRecordedPayment(job)}
+                      >
+                        {checkingPaymentJobId === job.job_id
+                          ? 'Checking recorded transaction...'
+                          : 'Check recorded transaction (no payment)'}
+                      </button>
+                    )}
                   <button
                     type="button"
                     className="secondary compact"
                     onClick={() => props.onSelectIntent(job.business_intent_id)}
                   >
-                    Open request {index + 1}
+                    Open payment proof
                   </button>
-                  <span className={`badge tone-${delivery.tone}`}>{delivery.label}</span>
-                </div>
-                <p>
-                  <strong>{serviceLabel(job.tool_id)}</strong> · {payment.label}
-                </p>
-                <p className="job-quote-summary">
-                  Price: <span className="mono">{quoteAmount(job.supplier)}</span> ·{' '}
-                  {delivery.description}
-                </p>
-                {job.settlement && (
-                  <p className="job-settlement-summary">
-                    <strong>Payment confirmed:</strong>{' '}
-                    {explorerHref(job.settlement.transaction_hash) ? (
-                      <a
-                        href={explorerHref(job.settlement.transaction_hash)}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                      >
-                        View the ArcScan transaction
-                      </a>
-                    ) : (
-                      <span className="mono">{job.settlement.transaction_hash}</span>
-                    )}
-                  </p>
-                )}
-                {job.result ? (
-                  <p>
-                    <strong>Result ready:</strong> {job.result.report}
-                  </p>
-                ) : job.payment_state === 'COMMITTED' ? (
-                  <button
-                    type="button"
-                    className="secondary compact"
-                    disabled={resumingJobId !== null}
-                    onClick={() => void resume(job.job_id)}
-                  >
-                    {resumingJobId === job.job_id ? 'Resuming…' : 'Resume result (no new payment)'}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="secondary compact"
-                  onClick={() => props.onSelectIntent(job.business_intent_id)}
-                >
-                  Open payment proof
-                </button>
-                <details className="technical-details">
-                  <summary>Show request details</summary>
-                  <dl className="facts">
-                    <div>
-                      <dt>Request key</dt>
-                      <dd className="mono break-all">{maskIdentifier(job.task_key)}</dd>
-                    </div>
-                    <div>
-                      <dt>Supplier order</dt>
-                      <dd className="mono break-all">{job.supplier.order_reference}</dd>
-                    </div>
-                    <div>
-                      <dt>Destination</dt>
-                      <dd className="mono break-all">{shortenAddress(job.supplier.recipient)}</dd>
-                    </div>
-                  </dl>
-                </details>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                  <details className="technical-details">
+                    <summary>Show request details</summary>
+                    <dl className="facts">
+                      <div>
+                        <dt>Request key</dt>
+                        <dd className="mono break-all">{maskIdentifier(job.task_key)}</dd>
+                      </div>
+                      <div>
+                        <dt>Supplier order</dt>
+                        <dd className="mono break-all">{job.supplier.order_reference}</dd>
+                      </div>
+                      <div>
+                        <dt>Destination</dt>
+                        <dd className="mono break-all">{shortenAddress(job.supplier.recipient)}</dd>
+                      </div>
+                    </dl>
+                  </details>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }

@@ -17,6 +17,7 @@ import {
   type SubmitPaidApiUserWalletRequest,
 } from '@oneshot/contracts';
 import { derivedJobId } from '@oneshot/domain';
+import { CircleX402PreSubmitError } from '@oneshot/supplier-adapter';
 import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { ServiceAuthenticator } from './auth.js';
@@ -553,6 +554,16 @@ export function buildApi(dependencies: ApiDependencies) {
           )
           .send(result);
       } catch (error) {
+        if (error instanceof CircleX402PreSubmitError) {
+          sendError(
+            reply,
+            400,
+            'INVALID_REQUEST',
+            'The Circle authorization is no longer valid. No payment was sent; sign a fresh authorization.',
+            correlationFor(request),
+          );
+          return;
+        }
         if (error instanceof PaidApiUserWalletConflictError) {
           sendError(
             reply,
@@ -636,6 +647,30 @@ export function buildApi(dependencies: ApiDependencies) {
       return;
     }
     return paidApi;
+  });
+
+  app.get('/v1/requests', async (request, reply) => {
+    if (!dependencies.jobs && !dependencies.paidApi) {
+      sendError(
+        reply,
+        503,
+        'NOT_READY',
+        'Durable request listing is not configured',
+        correlationFor(request),
+      );
+      return;
+    }
+    const [jobs, paidApi] = await Promise.all([
+      dependencies.jobs?.list(workspaceId) ?? Promise.resolve([]),
+      dependencies.paidApi?.list() ?? Promise.resolve([]),
+    ]);
+    const requests = [...jobs, ...paidApi]
+      .sort((left, right) => {
+        const updated = Date.parse(right.updated_at) - Date.parse(left.updated_at);
+        return updated || right.business_intent_id.localeCompare(left.business_intent_id);
+      })
+      .slice(0, 100);
+    return { requests };
   });
 
   app.get('/v1/jobs', async (request, reply) => {

@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CircleX402DemoPanel } from '../src/components/JobWorkspace.js';
-import { PaidApiClient } from '../src/api/paid-api-client.js';
+import { PaidApiClient, PaidApiUserWalletSubmissionError } from '../src/api/paid-api-client.js';
 
 afterEach(cleanup);
 
@@ -59,6 +59,29 @@ describe('Circle x402 paid API workspace flow', () => {
       'POST https://oneshot.example.test/v1/paid-api',
       'GET https://oneshot.example.test/v1/paid-api/intent_paid-api-test',
     ]);
+  });
+
+  it('keeps only the safe Circle authorization refusal from an API error response', async () => {
+    const safeRefusal =
+      'The Circle authorization is no longer valid. No payment was sent; sign a fresh authorization.';
+    const client = new PaidApiClient({
+      fetchFn: async () =>
+        new Response(JSON.stringify({ code: 'INVALID_REQUEST', message: safeRefusal }), {
+          status: 400,
+          headers: { 'content-type': 'application/json' },
+        }),
+    });
+
+    await expect(
+      client.submitUserWalletPayment(
+        'intent-paid-api-test',
+        '0x2222222222222222222222222222222222222222',
+        {
+          x402Version: 2,
+          payload: {},
+        },
+      ),
+    ).rejects.toThrow(safeRefusal);
   });
 
   it('quotes and approves one stable task key, then links the provider hash to ArcScan', async () => {
@@ -147,6 +170,9 @@ describe('Circle x402 paid API workspace flow', () => {
         userWallet={{
           address: payerWallet,
           connect: vi.fn(async () => payerWallet),
+          getGatewayBalance: vi.fn(async () => '10000'),
+          getGatewayPendingDeposits: vi.fn(async () => []),
+          fundGateway: vi.fn(),
           sendTransfer: vi.fn(),
           signX402Payment,
         }}
@@ -175,5 +201,132 @@ describe('Circle x402 paid API workspace flow', () => {
     ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Check payment status' }));
     await waitFor(() => expect(reconcileUserWalletPayment).toHaveBeenCalledOnce());
+  });
+
+  it('does not ask for a Circle payment signature when the Gateway balance is too low', async () => {
+    const user = userEvent.setup();
+    const payerWallet = '0x2222222222222222222222222222222222222222';
+    const prepared = {
+      ...approved,
+      payment_state: 'READY' as const,
+      payment_mode: 'USER_WALLET' as const,
+      payer_wallet: payerWallet,
+    };
+    const signX402Payment = vi.fn();
+    const submitUserWalletPayment = vi.fn();
+    const client = {
+      quote: vi.fn(async () => quote),
+      start: vi.fn(async () => approved),
+      prepareUserWallet: vi.fn(async () => prepared),
+      submitUserWalletPayment,
+      reconcileUserWalletPayment: vi.fn(async () => prepared),
+      get: vi.fn(async () => prepared),
+    };
+    render(
+      <CircleX402DemoPanel
+        client={client}
+        userWallet={{
+          address: payerWallet,
+          connect: vi.fn(async () => payerWallet),
+          getGatewayBalance: vi.fn(async () => '0'),
+          getGatewayPendingDeposits: vi.fn(async () => []),
+          fundGateway: vi.fn(),
+          sendTransfer: vi.fn(),
+          signX402Payment,
+        }}
+        onSelectIntent={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Check price' }));
+    await user.click(screen.getByRole('button', { name: 'Approve and pay from my wallet' }));
+
+    expect(await screen.findByText(/Gateway balance is below this price/u)).toBeTruthy();
+    expect(signX402Payment).not.toHaveBeenCalled();
+    expect(submitUserWalletPayment).not.toHaveBeenCalled();
+  });
+
+  it('lets the buyer fund their own Gateway balance before signing', async () => {
+    const user = userEvent.setup();
+    const payerWallet = '0x2222222222222222222222222222222222222222';
+    const fundGateway = vi.fn(async () => ({
+      target_amount_atomic: '1000000',
+      deposited_amount_atomic: '1000000',
+      approval_transaction_hash: `0x${'a'.repeat(64)}`,
+      deposit_transaction_hash: `0x${'b'.repeat(64)}`,
+    }));
+    const client = {
+      quote: vi.fn(async () => quote),
+      start: vi.fn(async () => approved),
+      prepareUserWallet: vi.fn(async () => approved),
+      submitUserWalletPayment: vi.fn(),
+      reconcileUserWalletPayment: vi.fn(async () => approved),
+      get: vi.fn(async () => approved),
+    };
+    render(
+      <CircleX402DemoPanel
+        client={client}
+        userWallet={{
+          address: payerWallet,
+          connect: vi.fn(async () => payerWallet),
+          getGatewayBalance: vi.fn(async () => '1000000'),
+          getGatewayPendingDeposits: vi.fn(async () => []),
+          fundGateway,
+          sendTransfer: vi.fn(),
+          signX402Payment: vi.fn(),
+        }}
+        onSelectIntent={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Fund my Gateway balance' }));
+    await waitFor(() => expect(fundGateway).toHaveBeenCalledWith('1000000'));
+    expect(screen.getByText(/OneShot never pays for you/iu)).toBeTruthy();
+    expect(screen.getByText(/Gateway deposit confirmed on Arc Testnet/iu)).toBeTruthy();
+  });
+
+  it('shows the API-safe refusal when a wallet authorization was not forwarded', async () => {
+    const user = userEvent.setup();
+    const payerWallet = '0x2222222222222222222222222222222222222222';
+    const prepared = {
+      ...approved,
+      payment_state: 'READY' as const,
+      payment_mode: 'USER_WALLET' as const,
+      payer_wallet: payerWallet,
+    };
+    const safeRefusal =
+      'The Circle authorization is no longer valid. No payment was sent; sign a fresh authorization.';
+    const client = {
+      quote: vi.fn(async () => quote),
+      start: vi.fn(async () => approved),
+      prepareUserWallet: vi.fn(async () => prepared),
+      submitUserWalletPayment: vi.fn(async () => {
+        throw new PaidApiUserWalletSubmissionError(safeRefusal);
+      }),
+      reconcileUserWalletPayment: vi.fn(async () => prepared),
+      get: vi.fn(async () => prepared),
+    };
+    render(
+      <CircleX402DemoPanel
+        client={client}
+        userWallet={{
+          address: payerWallet,
+          connect: vi.fn(async () => payerWallet),
+          getGatewayBalance: vi.fn(async () => '10000'),
+          getGatewayPendingDeposits: vi.fn(async () => []),
+          fundGateway: vi.fn(),
+          sendTransfer: vi.fn(),
+          signX402Payment: vi.fn(async () => ({
+            x402Version: 2,
+            payload: { authorization: {}, signature: '0xsignature' },
+          })),
+        }}
+        onSelectIntent={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Check price' }));
+    await user.click(screen.getByRole('button', { name: 'Approve and pay from my wallet' }));
+    expect(await screen.findByText(safeRefusal)).toBeTruthy();
   });
 });
