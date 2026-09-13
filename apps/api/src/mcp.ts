@@ -321,7 +321,14 @@ export function createArcPaymentMcpHandler({
           }
           return jsonResult(resultView(requestKey, result.job, result.kind === 'REPLAYED'));
         } catch (error) {
-          if (error instanceof ContractValidationError) return toolError(error.message);
+          if (error instanceof ContractValidationError) {
+            if (error.message.includes('Supplier task payload conflicts')) {
+              return toolError(
+                'The request key already belongs to a different user-wallet payment. Reuse the original immutable fields and payer wallet.',
+              );
+            }
+            return toolError(error.message);
+          }
           throw error;
         }
       },
