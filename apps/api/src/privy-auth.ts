@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { importSPKI, jwtVerify } from 'jose';
 import type { ServiceAuthenticator } from './auth.js';
 
@@ -32,6 +33,10 @@ export function isJwtCredential(authorization: string | undefined): boolean {
   return token !== null && looksLikeJwt(token);
 }
 
+export function privyWorkspaceId(subject: string): string {
+  return `privy_${createHash('sha256').update(subject, 'utf8').digest('hex')}`;
+}
+
 export function createPrivyAccessTokenAuthenticator(
   config: PrivyAccessTokenAuthenticatorConfig,
 ): ServiceAuthenticator {
@@ -49,7 +54,7 @@ export function createPrivyAccessTokenAuthenticator(
   return {
     async authenticate(authorization) {
       const token = bearerToken(authorization);
-      if (token === null || !looksLikeJwt(token)) return 'UNAUTHORIZED';
+      if (token === null || !looksLikeJwt(token)) return { decision: 'UNAUTHORIZED' };
 
       let subject: string | undefined;
       try {
@@ -61,17 +66,17 @@ export function createPrivyAccessTokenAuthenticator(
         });
         subject = payload.sub;
       } catch {
-        return 'UNAUTHORIZED';
+        return { decision: 'UNAUTHORIZED' };
       }
 
       if (subject === undefined || subject.length === 0 || !subject.startsWith(PRIVY_DID_PREFIX)) {
-        return 'UNAUTHORIZED';
+        return { decision: 'UNAUTHORIZED' };
       }
       if (allowed !== null && !allowed.has(subject)) {
         config.onForbiddenSubject?.(subject);
-        return 'FORBIDDEN';
+        return { decision: 'FORBIDDEN' };
       }
-      return 'AUTHORIZED';
+      return { decision: 'AUTHORIZED', workspaceId: privyWorkspaceId(subject) };
     },
   };
 }

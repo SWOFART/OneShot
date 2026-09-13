@@ -23,12 +23,15 @@ They must not block the first working `arc_payment` demo.
 
 ## Implementation status
 
-- Tasks 1-7 are implemented on `mcp-integration` in commit `1f25bae` and passed
-  Gate A before that commit was pushed.
-- The local `/docs/mcp` page and same-origin Vite proxy complete the local part
-  of Task 8.
-- The real Arc Testnet call, identical replay, and recorded proof remain pending
-  while testing is restricted to the local environment.
+- Tasks 1-7, the downloadable skill, and `/docs/mcp` are merged into `develop`.
+- The MCP-specific 1 USDC cap has been removed. The worker and Privy policy
+  remain the payment authorization boundary.
+- Privy browser requests are scoped to an opaque workspace derived from the
+  verified Privy subject, so job lists, results, and activity are per user.
+- Each signed-in Privy user can generate or rotate one bearer in Profile. Only
+  its SHA-256 digest is stored, and `/mcp` resolves it to that user's workspace.
+- Google Cloud deployment still needs the MCP runtime variables before the
+  public endpoint can initialize. The shared bearer is optional compatibility.
 
 ## Non-negotiable behavior
 
@@ -37,22 +40,22 @@ They must not block the first working `arc_payment` demo.
 - Repeating the same request returns the existing intent and settlement.
 - Reusing the key with different immutable fields returns a conflict.
 - `SUBMITTING` and `UNKNOWN` never create a replacement payment.
-- Privy policy and OneShot both validate the amount and transaction scope.
+- Privy policy and the settlement worker validate the amount and transaction scope.
 - The tool returns authoritative OneShot state, not an inferred success.
 - A real demo payment is complete only after a verified Arc receipt is durable.
 
 ## Delivery order
 
-| Order | Task                                    | Depends on | Exit condition                                  |
-| ----- | --------------------------------------- | ---------- | ----------------------------------------------- |
-| 1     | Freeze the tool contract                | None       | Input and output schemas are approved           |
-| 2     | Add MCP-only authentication             | Task 1     | `/mcp` accepts only the dedicated credential    |
-| 3     | Mount Streamable HTTP MCP               | Task 2     | `initialize` and `tools/list` expose one tool   |
-| 4     | Connect `arc_payment` to the ledger     | Task 3     | Calls create or replay one durable intent       |
-| 5     | Enforce payment scope and spend bounds  | Task 4     | Invalid or excessive requests broadcast nothing |
-| 6     | Return status and proof                 | Task 4     | Replays report the same authoritative state     |
-| 7     | Verify failure and concurrency behavior | Tasks 4-6  | Required payment tests pass                     |
-| 8     | Document and run one demo               | Task 7     | One real Arc Testnet settlement is verified     |
+| Order | Task                                    | Depends on | Exit condition                                |
+| ----- | --------------------------------------- | ---------- | --------------------------------------------- |
+| 1     | Freeze the tool contract                | None       | Input and output schemas are approved         |
+| 2     | Add MCP-only authentication             | Task 1     | `/mcp` accepts only the dedicated credential  |
+| 3     | Mount Streamable HTTP MCP               | Task 2     | `initialize` and `tools/list` expose one tool |
+| 4     | Connect `arc_payment` to the ledger     | Task 3     | Calls create or replay one durable intent     |
+| 5     | Enforce payment scope                   | Task 4     | Invalid requests broadcast nothing            |
+| 6     | Return status and proof                 | Task 4     | Replays report the same authoritative state   |
+| 7     | Verify failure and concurrency behavior | Tasks 4-6  | Required payment tests pass                   |
+| 8     | Document and run one demo               | Task 7     | One real Arc Testnet settlement is verified   |
 
 ## Task 1: freeze the tool contract
 
@@ -80,21 +83,23 @@ They must not block the first working `arc_payment` demo.
 
 ### Work
 
-- Add one dedicated high-entropy bearer credential in deployment secret
-  storage for the first release.
-- Accept it only on `/mcp`; do not let it authorize `/v1/*` routes.
+- Generate one random 256-bit bearer per verified Privy workspace and store
+  only its SHA-256 digest in PostgreSQL.
+- Show a new or rotated bearer once in the authenticated Profile.
+- Accept personal bearers only on `/mcp`; do not let them authorize `/v1/*`
+  routes. Keep the deployment bearer optional for legacy operator clients.
 - Keep Privy JWT authentication for the browser and the existing internal
   service credential for internal or legacy routes.
-- Bind the MCP principal to one explicit demo workspace.
-- Compare credentials in constant time and never log or return them.
+- Bind the MCP principal to the workspace that issued its bearer.
+- Never log bearer values or return stored digests.
 
 ### Done when
 
 - Missing, invalid, and browser credentials fail on `/mcp`.
-- The MCP credential succeeds on `/mcp` and fails on browser/API routes.
+- Each personal credential succeeds on `/mcp`, fails on browser/API routes,
+  and derives intent IDs from its owner's workspace.
 
-Self-service token generation, token tables, HMAC peppers, and per-user token
-rotation are deferred until there is more than one MCP user.
+Personal token generation, digest-only storage, and rotation are implemented.
 
 ## Task 3: mount the MCP transport
 
@@ -141,7 +146,8 @@ rotation are deferred until there is more than one MCP user.
   zero native value, ERC-20 `transfer`, and the approved per-payment cap.
 - Validate the recipient as an EVM address even when the current policy permits
   any recipient.
-- Keep the application settlement cap equal to or lower than the Privy cap.
+- Keep the worker settlement cap equal to or lower than the Privy cap. Do not
+  add a second MCP-specific amount cap.
 - Add a cumulative control before allowing repeated unique requests. Choose
   one:
   - a Privy rolling USDC spending cap for normal use; or
@@ -151,8 +157,8 @@ rotation are deferred until there is more than one MCP user.
 
 ### Done when
 
-- Above-cap and exhausted-quota requests create zero broadcasts and zero
-  settlements.
+- Worker or Privy above-cap denials and exhausted-quota requests create zero
+  broadcasts and zero settlements.
 - Policy drift makes the tool unavailable before submission.
 
 ## Task 6: return authoritative status and proof
@@ -182,7 +188,7 @@ rotation are deferred until there is more than one MCP user.
 - Ten sequential identical calls produce one settlement.
 - Ten parallel identical calls produce one settlement.
 - Same key with changed immutable payload returns a conflict.
-- Privy denial, amount above cap, and exhausted quota produce zero broadcasts.
+- Privy denial, worker amount denial, and exhausted quota produce zero broadcasts.
 - Crash or lost response after possible submission enters `UNKNOWN`, then
   reconciliation finds the original payment without resubmission.
 - Committed replay returns the original transaction and result.
@@ -200,7 +206,11 @@ rotation are deferred until there is more than one MCP user.
 
 - Add one short `/docs/mcp` page with generic Streamable HTTP configuration and
   one copy-ready client example.
-- Use an environment-variable placeholder for the bearer credential.
+- Use an environment-variable placeholder for the bearer credential. The real
+  value comes from Google Secret Manager and is never sent to an unauthenticated
+  documentation page.
+- Include the verified `npx skills add` command and state that Node.js/npm
+  provides `npx`.
 - Demonstrate one real `arc_payment` call, one identical replay, and one proof
   view.
 - Record the Business Intent ID, verified Arc transaction, policy identity,
@@ -212,27 +222,26 @@ rotation are deferred until there is more than one MCP user.
 - The demo shows one real Arc Testnet USDC settlement and no replacement
   settlement on replay.
 
-Client-specific setup pages and an installable `oneshot-arc-payment` skill are
-deferred until the tool contract is stable.
+The installable `oneshot-arc-payment` skill is part of the first release.
 
 ## Milestone 2: personal Privy wallets
 
 Start this milestone only after the server-wallet MCP path is working.
 
-1. Replace the fixed MCP principal with a principal containing credential kind,
-   Privy subject, opaque workspace ID, and MCP token ID.
-2. Create one isolated workspace and one revocable MCP token per Privy user.
-3. Store only a SHA-256 digest of each random 32-byte token and enforce
-   one-active-token generation atomically.
-4. Bind jobs, intents, recovery, activity, results, and proofs to the workspace;
-   return `404` for cross-workspace identifiers.
+1. Add a durable token ID and explicit credential kind to the existing opaque
+   workspace principal if audit trails require them.
+2. Add explicit revoke without replacement; generation and rotation already
+   keep one active bearer per Privy workspace.
+3. Add a server-side pepper only if the 256-bit random bearer format changes.
+4. Extend the existing Privy-scoped job, result, and activity routes to direct
+   intent, recovery, and proof routes; return `404` for cross-workspace identifiers.
 5. Discover the user's embedded Ethereum wallet and show funding/readiness.
 6. Create a user-owned Privy override policy and add the OneShot P-256 key
    quorum as an additional signer after one explicit user authorization.
 7. Resolve wallet and signer policy per workspace in the worker while keeping
    the existing global execution wallet only for legacy service requests.
-8. Add the **Agents** tab for wallet status, signer enable/disable, policy
-   controls, and MCP token lifecycle.
+8. Extend the existing **Profile** token controls with wallet status,
+   signer enable/disable, and policy controls.
 9. Replace the current request list with a workspace-bound unified feed.
 10. Add multi-user isolation, concurrent token generation, signer attachment,
     policy update, and browser accessibility tests.

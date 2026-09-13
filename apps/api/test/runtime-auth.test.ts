@@ -45,21 +45,29 @@ async function token(subject: string): Promise<string> {
 describe('API authenticator composition', () => {
   it('accepts only the service bearer when Privy is disabled', async () => {
     const auth = buildApiAuthenticator(config(false));
-    expect(await auth.authenticate('Bearer service-token-1234')).toBe('AUTHORIZED');
-    expect(await auth.authenticate(`Bearer ${await token(OPERATOR)}`)).toBe('UNAUTHORIZED');
+    expect(await auth.authenticate('Bearer service-token-1234')).toEqual({
+      decision: 'AUTHORIZED',
+    });
+    expect(await auth.authenticate(`Bearer ${await token(OPERATOR)}`)).toEqual({
+      decision: 'UNAUTHORIZED',
+    });
   });
 
   it('accepts both credential classes when Privy is enabled', async () => {
     const auth = buildApiAuthenticator(config(true));
-    expect(await auth.authenticate('Bearer service-token-1234')).toBe('AUTHORIZED');
-    expect(await auth.authenticate(`Bearer ${await token(OPERATOR)}`)).toBe('AUTHORIZED');
+    expect(await auth.authenticate('Bearer service-token-1234')).toEqual({
+      decision: 'AUTHORIZED',
+    });
+    expect((await auth.authenticate(`Bearer ${await token(OPERATOR)}`)).decision).toBe(
+      'AUTHORIZED',
+    );
   });
 
   it('logs the rejected subject without any token material', async () => {
     const lines: string[] = [];
     const auth = buildApiAuthenticator(config(true), (line) => lines.push(line));
     const outsiderToken = await token('did:privy:outsider');
-    expect(await auth.authenticate(`Bearer ${outsiderToken}`)).toBe('FORBIDDEN');
+    expect(await auth.authenticate(`Bearer ${outsiderToken}`)).toEqual({ decision: 'FORBIDDEN' });
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('did:privy:outsider');
     expect(lines[0]).not.toContain(outsiderToken);

@@ -109,7 +109,6 @@ describePostgres('durable HTTP API', () => {
         workspaceId: 'integration-mcp-workspace',
         allowedRequestKey: requestKey,
         payerWallet: '0x1111111111111111111111111111111111111111',
-        maxAmountAtomic: 1_000_000n,
         waitMs: 0,
       },
     });

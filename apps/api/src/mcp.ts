@@ -53,7 +53,6 @@ const outputSchema = z.strictObject({
 export interface ArcPaymentMcpConfig {
   readonly workspaceId: string;
   readonly allowedRequestKey: string;
-  readonly maxAmountAtomic: bigint;
   readonly payerWallet: string;
   readonly submissionsDisabled?: boolean;
   readonly waitMs?: number;
@@ -187,7 +186,6 @@ export function createArcPaymentMcpHandler({
     REQUEST_KEY_MAX_LENGTH,
   );
   const payerWallet = asEvmAddress(config.payerWallet);
-  if (config.maxAmountAtomic <= 0n) throw new Error('MCP amount cap must be positive');
   const waitMs = config.waitMs ?? 2_500;
   const pollMs = config.pollMs ?? 250;
   if (!Number.isSafeInteger(waitMs) || waitMs < 0 || waitMs > 5_000) {
@@ -224,11 +222,6 @@ export function createArcPaymentMcpHandler({
             return toolError('Arc payment submission is disabled for this deployment.');
           }
           const amount = parseUsdcAmount(amount_usdc);
-          if (BigInt(amount.atomic) > config.maxAmountAtomic) {
-            return toolError(
-              `Requested amount exceeds the MCP cap of ${config.maxAmountAtomic.toString(10)} atomic USDC.`,
-            );
-          }
           const result = await ledger.createOrReplay(
             {
               business_intent_id: arcPaymentBusinessIntentId(config.workspaceId, requestKey),

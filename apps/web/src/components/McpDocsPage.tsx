@@ -14,10 +14,13 @@ const clientConfig = `{
   }
 }`;
 
+const skillInstall =
+  'npx --yes skills@latest add https://github.com/SWOFART/OneShot/tree/develop --skill oneshot-arc-payment';
+
 const toolInput = `{
   "request_key": "<ONESHOT_MCP_REQUEST_KEY>",
   "recipient": "0x<recipient>",
-  "amount_usdc": "1.000000",
+  "amount_usdc": "<approved amount>",
   "purpose": "One approved demo purchase"
 }`;
 
@@ -57,17 +60,27 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
         <h2 id="mcp-boundary-heading">Payment boundary</h2>
         <ul className="docs-facts">
           <li>One configured request key can create one payment intent.</li>
-          <li>The default maximum is 1.000000 USDC, or 1000000 atomic units.</li>
           <li>Exact retries return the original intent; changed fields return a conflict.</li>
           <li>The server wallet pays without a MetaMask or browser wallet popup.</li>
         </ul>
       </section>
 
+      <section className="docs-section" aria-labelledby="mcp-skill-heading">
+        <h2 id="mcp-skill-heading">Install the agent skill</h2>
+        <p>
+          Install Node.js with npm first; <code>npx</code> is included with npm. Then install the
+          OneShot payment skill from the <code>develop</code> branch.
+        </p>
+        <pre className="docs-code" aria-label="Agent skill install command">
+          <code>{skillInstall}</code>
+        </pre>
+      </section>
+
       <section className="docs-section" aria-labelledby="mcp-config-heading">
         <h2 id="mcp-config-heading">Client configuration</h2>
         <p>
-          Ask the operator for the dedicated MCP bearer token and request key. Keep both in your
-          client environment; never paste a real credential into source control.
+          Sign in, open Profile, and generate your workspace-bound bearer. Keep it in your client
+          environment; never paste a real credential into source control.
         </p>
         <pre className="docs-code" aria-label="MCP client configuration">
           <code>{clientConfig}</code>

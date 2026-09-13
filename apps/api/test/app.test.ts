@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type {
   CreateJobRequest,
   IntentResponse,
@@ -97,6 +97,83 @@ function createMockLedger(
 }
 
 describe('API boundary controls', () => {
+  it('uses the authenticated principal workspace for request listings', async () => {
+    const workspaces: string[] = [];
+    const app = buildApi({
+      ledger: createMockLedger(),
+      jobs: {
+        async list(workspaceId: string) {
+          workspaces.push(workspaceId);
+          return [];
+        },
+      } as unknown as ApiDependencies['jobs'],
+      authenticator: {
+        async authenticate(authorization) {
+          return {
+            decision: 'AUTHORIZED' as const,
+            workspaceId: authorization === 'Bearer alice' ? 'privy_alice' : 'privy_bob',
+          };
+        },
+      },
+      config: { workspaceId: 'shared-fallback' },
+    });
+
+    await app.inject({
+      method: 'GET',
+      url: '/v1/jobs',
+      headers: { authorization: 'Bearer alice' },
+    });
+    await app.inject({ method: 'GET', url: '/v1/jobs', headers: { authorization: 'Bearer bob' } });
+
+    expect(workspaces).toEqual(['privy_alice', 'privy_bob']);
+    await app.close();
+  });
+
+  it('issues one personal MCP bearer for the authenticated Privy workspace', async () => {
+    const issue = vi.fn(async () => ({
+      bearerToken: 'a'.repeat(43),
+      createdAt: '2026-09-13T04:00:00.000Z',
+    }));
+    const app = buildApi({
+      ledger: createMockLedger(),
+      authenticator: {
+        async authenticate() {
+          return { decision: 'AUTHORIZED' as const, workspaceId: 'privy_alice' };
+        },
+      },
+      mcpCredentials: {
+        async status() {
+          return { configured: false };
+        },
+        issue,
+      },
+      mcp: {
+        authenticator: staticBearerAuthenticator('legacy-mcp-token'),
+        workspaceId: 'legacy-workspace',
+        allowedRequestKey: 'approved-request',
+        payerWallet: '0x1111111111111111111111111111111111111111',
+      },
+    });
+    const headers = { authorization: 'Bearer privy-jwt' };
+
+    expect(
+      (await app.inject({ method: 'GET', url: '/v1/profile/mcp-token', headers })).json(),
+    ).toEqual({ configured: false, request_key: 'approved-request' });
+    const created = await app.inject({
+      method: 'POST',
+      url: '/v1/profile/mcp-token',
+      headers,
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json()).toEqual({
+      bearer_token: 'a'.repeat(43),
+      created_at: '2026-09-13T04:00:00.000Z',
+      request_key: 'approved-request',
+    });
+    expect(issue).toHaveBeenCalledWith('privy_alice');
+    await app.close();
+  });
+
   it('never reaches the ledger when the credential is forbidden', async () => {
     const calls: string[] = [];
     const app = buildApi({
@@ -108,7 +185,7 @@ describe('API boundary controls', () => {
       }),
       authenticator: {
         async authenticate() {
-          return 'FORBIDDEN';
+          return { decision: 'FORBIDDEN' as const };
         },
       },
     });

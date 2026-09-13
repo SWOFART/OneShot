@@ -9,21 +9,22 @@ The web app renders the client setup and walkthrough at `/docs/mcp`.
 
 ## Deploy
 
-Configure the API with one dedicated secret and one fixed demo scope:
+Configure the API with one fixed request scope and payer. Personal bearer
+tokens are generated from an authenticated Profile and stored as SHA-256
+digests in PostgreSQL:
 
 ```dotenv
 ONESHOT_WORKSPACE_ID=<demo-workspace>
-ONESHOT_MCP_BEARER_TOKEN=<random-secret-at-least-32-characters>
 ONESHOT_MCP_REQUEST_KEY=<one-stable-demo-request-key>
 ONESHOT_MCP_PAYER_ADDRESS=0x<privy-server-wallet-address>
-ONESHOT_MCP_MAX_AMOUNT_ATOMIC=1000000
 ONESHOT_MCP_WAIT_MS=2500
 ```
 
-Store `ONESHOT_MCP_BEARER_TOKEN` in the deployment secret store. It is accepted
-only on `/mcp`; Privy browser JWTs and `SERVICE_BEARER_TOKEN` cannot call this
-endpoint. The MCP cap must be no greater than the worker's
-`ONESHOT_SETTLEMENT_CAP_ATOMIC` and the attached Privy policy cap.
+`ONESHOT_MCP_BEARER_TOKEN` is optional and exists only for a legacy
+operator-controlled client. If used, store it in Google Secret Manager. MCP
+bearers are accepted only on `/mcp`; Privy browser JWTs and
+`SERVICE_BEARER_TOKEN` cannot call this endpoint. Settlement remains subject to the worker's
+`ONESHOT_SETTLEMENT_CAP_ATOMIC` and the attached Privy policy.
 
 The fixed `ONESHOT_MCP_REQUEST_KEY` is the one-intent demo quota. A call using
 another key is denied. A repeated call using the configured key and identical
@@ -32,14 +33,21 @@ a conflict.
 
 ## Connect
 
+Install Node.js with npm (`npx` is bundled with npm), then install the agent
+skill:
+
+```sh
+npx --yes skills@latest add https://github.com/SWOFART/OneShot/tree/develop --skill oneshot-arc-payment
+```
+
 Point any Streamable HTTP MCP client at:
 
 ```text
 https://oneshot.kapustazh.dev/mcp
 ```
 
-Send the dedicated token as `Authorization: Bearer <token>`. A generic client
-entry is:
+Sign in to OneShot, open **Profile**, and generate a bearer for that Privy
+account. Send it as `Authorization: Bearer <token>`. A generic client entry is:
 
 ```json
 {
@@ -61,7 +69,7 @@ entry is:
 {
   "request_key": "<ONESHOT_MCP_REQUEST_KEY>",
   "recipient": "0x<recipient>",
-  "amount_usdc": "1.000000",
+  "amount_usdc": "<approved amount>",
   "purpose": "One approved demo purchase"
 }
 ```
