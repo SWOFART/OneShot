@@ -105,6 +105,7 @@ export function usePrivyUserWallet(): UserWalletSession {
   const { user } = usePrivy();
   const { ready: walletsReady, wallets } = useWallets();
   const { wallet: activeWallet, connect: connectWallet } = useActiveWallet();
+  const [connectedWalletAddress, setConnectedWalletAddress] = useState<string | null>(null);
   const explicitlyConnectedWallet = useRef<{
     readonly subject: string | null;
     readonly wallet: EthereumWallet;
@@ -125,6 +126,7 @@ export function usePrivyUserWallet(): UserWalletSession {
     const result = await connectWallet({ reset: true });
     if (result.wallet?.type !== 'ethereum') return undefined;
     explicitlyConnectedWallet.current = { subject, wallet: result.wallet };
+    setConnectedWalletAddress(result.wallet.address);
     return result.wallet;
   }
 
@@ -171,7 +173,7 @@ export function usePrivyUserWallet(): UserWalletSession {
     address:
       selectedWallet?.address ??
       (explicitlyConnectedWallet.current?.subject === subject
-        ? explicitlyConnectedWallet.current.wallet.address
+        ? (connectedWalletAddress ?? explicitlyConnectedWallet.current.wallet.address)
         : null),
     connect,
     sendTransfer,

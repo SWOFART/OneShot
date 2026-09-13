@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { OperatorSession } from '../auth/session.js';
+import type { OperatorSession, UserWalletSession } from '../auth/session.js';
 import { maskIdentifier } from './workspace-copy.js';
 
 export interface LoginGateProps {
@@ -7,6 +7,7 @@ export interface LoginGateProps {
   readonly machineToken: string;
   readonly onMachineTokenChange: (value: string) => void;
   readonly showMachineToken?: boolean;
+  readonly userWallet?: UserWalletSession;
   readonly children: ReactNode;
 }
 
@@ -87,6 +88,12 @@ export function LoginGate(props: LoginGateProps) {
               <code className="operator-did" title="Technical session identifier">
                 {maskIdentifier(props.session.subject, 8)}
               </code>
+              <div className="session-wallet-address">
+                <span>Wallet address</span>
+                <code title="Wallet address used for user-wallet payments">
+                  {props.userWallet?.address ?? 'No wallet connected'}
+                </code>
+              </div>
               <button
                 type="button"
                 className="btn-copy"

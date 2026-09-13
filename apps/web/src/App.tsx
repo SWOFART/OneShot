@@ -183,6 +183,7 @@ function CabinetPage(props: {
         session={props.session}
         machineToken={props.machineToken}
         onMachineTokenChange={props.setMachineToken}
+        {...(props.userWallet ? { userWallet: props.userWallet } : {})}
       >
         <header className="app-header hero-section cabinet-header">
           <Hero>
@@ -508,6 +509,7 @@ export function App(props: AppProps = {}) {
             session={session}
             machineToken={machineToken}
             onMachineTokenChange={setMachineToken}
+            {...(props.userWallet ? { userWallet: props.userWallet } : {})}
           >
             <details className="intent-context technical-details">
               <summary>Open a request by identifier (advanced)</summary>

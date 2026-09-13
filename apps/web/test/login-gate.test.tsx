@@ -33,11 +33,17 @@ describe('LoginGate', () => {
   });
 
   it('shows the console and masks the session identifier when signed in', () => {
+    const walletAddress = '0x1111111111111111111111111111111111111111';
     render(
       <LoginGate
         session={signedInSession('did:privy:abc123')}
         machineToken=""
         onMachineTokenChange={() => {}}
+        userWallet={{
+          address: walletAddress,
+          connect: async () => walletAddress,
+          sendTransfer: async () => `0x${'a'.repeat(64)}`,
+        }}
       >
         <p>{CONSOLE_TEXT}</p>
       </LoginGate>,
@@ -45,6 +51,7 @@ describe('LoginGate', () => {
     expect(screen.getByText(CONSOLE_TEXT)).toBeTruthy();
     expect(screen.getByText('PRIVY CONNECTED')).toBeTruthy();
     expect(screen.getByText('Workspace session active')).toBeTruthy();
+    expect(screen.getByText(walletAddress)).toBeTruthy();
     expect(screen.queryByText('did:privy:abc123')).toBeNull();
   });
 
