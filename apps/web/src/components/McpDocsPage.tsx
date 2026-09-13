@@ -100,7 +100,10 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
             Connect, then confirm that the tool list contains arc_payment and arc_payment_submit.
           </li>
           <li>Review the recipient, purpose, and amount before giving them to the agent.</li>
-          <li>Pass the connected Privy or MetaMask wallet address as payer_wallet.</li>
+          <li>
+            The agent reads the active Privy or MetaMask address from its wallet connector when one
+            is available; otherwise provide the public address as payer_wallet once.
+          </li>
           <li>
             The agent generates a request key from the purpose plus eight random hex characters; you
             do not need to provide or copy it.
