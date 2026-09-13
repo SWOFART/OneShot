@@ -307,7 +307,7 @@ describe('usePrivyOperatorSession — native Privy login', () => {
   });
 });
 
-describe('usePrivyUserWallet — dedicated Privy payer', () => {
+describe('usePrivyUserWallet — selected payer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.active.wallet = undefined;
@@ -334,16 +334,23 @@ describe('usePrivyUserWallet — dedicated Privy payer', () => {
     });
   });
 
-  it('keeps the Privy payer when MetaMask becomes active', async () => {
+  it('uses active MetaMask and leaves approval to that wallet', async () => {
     const metamask = ethereumWallet('metamask', '0x1111111111111111111111111111111111111111');
     const privy = ethereumWallet('privy', '0x2222222222222222222222222222222222222222');
     mocks.active.wallet = metamask.wallet;
     mocks.wallets = [metamask.wallet, privy.wallet];
 
     const { result } = renderHook(() => usePrivyUserWallet());
-    expect(result.current.address).toBe(privy.wallet.address);
-    expect(mocks.active.setActiveWallet).toHaveBeenCalledWith(privy.wallet);
+    expect(result.current.address).toBe(metamask.wallet.address);
+    expect(mocks.active.setActiveWallet).not.toHaveBeenCalled();
 
+    await result.current.sendTransfer({
+      chain_id: 5042002,
+      token_contract: '0x3600000000000000000000000000000000000000',
+      payer_wallet: metamask.wallet.address,
+      recipient: '0x3333333333333333333333333333333333333333',
+      amount_atomic: '10000',
+    });
     await result.current.signX402Payment({
       supplier_id: 'circle-x402-v1',
       resource_url: 'https://api.example.test/premium/dataset',
@@ -355,12 +362,15 @@ describe('usePrivyUserWallet — dedicated Privy payer', () => {
       max_timeout_seconds: 300,
     });
 
-    expect(privy.request).toHaveBeenCalledWith(
+    expect(metamask.request).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'eth_signTypedData_v4' }),
     );
-    expect(metamask.request).not.toHaveBeenCalled();
+    expect(metamask.request).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'eth_sendTransaction' }),
+    );
+    expect(privy.request).not.toHaveBeenCalled();
 
-    const signingRequest = privy.request.mock.calls.find(
+    const signingRequest = metamask.request.mock.calls.find(
       ([request]) => request.method === 'eth_signTypedData_v4',
     )?.[0] as { params: [string, string] } | undefined;
     const typedData = JSON.parse(signingRequest?.params[1] ?? '{}') as {
@@ -391,8 +401,25 @@ describe('usePrivyUserWallet — dedicated Privy payer', () => {
       recipient: '0x3333333333333333333333333333333333333333',
       amount_atomic: '10000',
     });
+    await result.current.signX402Payment({
+      supplier_id: 'circle-x402-v1',
+      resource_url: 'https://api.example.test/premium/dataset',
+      recipient: '0x3333333333333333333333333333333333333333',
+      amount_atomic: '10000',
+      asset: 'USDC',
+      network: 'eip155:5042002',
+      x402_version: 2,
+      max_timeout_seconds: 300,
+    });
 
-    expect(selected.request).toHaveBeenCalledOnce();
+    const signingRequest = selected.request.mock.calls.find(
+      ([request]) => request.method === 'eth_signTypedData_v4',
+    )?.[0] as { params: [string, string] } | undefined;
+    const typedData = JSON.parse(signingRequest?.params[1] ?? '{}') as {
+      types?: Record<string, unknown>;
+    };
+    expect(typedData.types?.EIP712Domain).toBeUndefined();
+    expect(typedData.types?.TransferWithAuthorization).toBeDefined();
     expect(first.request).not.toHaveBeenCalled();
   });
 
@@ -429,6 +456,19 @@ describe('usePrivyUserWallet — dedicated Privy payer', () => {
     expect(selected.request).toHaveBeenCalledWith(
       expect.objectContaining({ method: 'eth_sendTransaction' }),
     );
+
+    const signingRequest = selected.request.mock.calls.find(
+      ([request]) => request.method === 'eth_signTypedData_v4',
+    )?.[0] as { params: [string, string] } | undefined;
+    const typedData = JSON.parse(signingRequest?.params[1] ?? '{}') as {
+      types?: Record<string, unknown>;
+    };
+    expect(typedData.types?.EIP712Domain).toEqual([
+      { name: 'name', type: 'string' },
+      { name: 'version', type: 'string' },
+      { name: 'chainId', type: 'uint256' },
+      { name: 'verifyingContract', type: 'address' },
+    ]);
   });
 
   it('forgets a picker wallet when the signed-in Privy user changes', async () => {
