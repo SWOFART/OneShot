@@ -4,6 +4,7 @@ import {
   asEvmAddress,
   asTransactionHash,
   type ActivityResponse,
+  type ActivityTransactionView,
   type ActivityTransferView,
   parseCreateJobRequest,
   parseCreateUserWalletJobRequest,
@@ -128,6 +129,11 @@ function asView(row: JobRow): JobView {
 interface ActivityTransferInput {
   readonly transaction_hash: string;
   readonly log_index: number;
+  readonly sender?: string;
+  readonly token_contract?: string;
+  readonly block_number?: string;
+  readonly block_timestamp?: string;
+  readonly network?: 'eip155:5042002';
   readonly recipient: string;
   readonly amount_atomic: string;
 }
@@ -153,6 +159,31 @@ function parseActivityTransfers(payload: unknown): readonly ActivityTransferInpu
       return {
         transaction_hash: asTransactionHash(row.transaction_hash),
         log_index: logIndex,
+        ...(row.sender === undefined ? {} : { sender: asEvmAddress(row.sender) }),
+        ...(row.token_contract === undefined
+          ? {}
+          : { token_contract: asEvmAddress(row.token_contract) }),
+        ...(row.block_number === undefined
+          ? {}
+          : { block_number: asAtomicAmount(row.block_number) }),
+        ...(row.block_timestamp === undefined
+          ? {}
+          : {
+              block_timestamp:
+                typeof row.block_timestamp === 'string' &&
+                /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/u.test(row.block_timestamp)
+                  ? row.block_timestamp
+                  : (() => {
+                      throw new Error('invalid block timestamp');
+                    })(),
+            }),
+        ...(row.network === undefined
+          ? {}
+          : row.network === 'eip155:5042002'
+            ? { network: row.network }
+            : (() => {
+                throw new Error('invalid network');
+              })()),
         recipient: asEvmAddress(row.recipient),
         amount_atomic: asAtomicAmount(row.amount_atomic),
       };
@@ -480,6 +511,17 @@ export class JobLedger {
     );
   }
 
+  async activityPayerWallets(workspaceId: string): Promise<readonly string[]> {
+    const result = await this.#pool.query<{ payer_wallet: string }>(
+      `SELECT DISTINCT lower(payer_wallet) AS payer_wallet
+       FROM resumable_jobs
+       WHERE workspace_id = $1 AND payer_wallet IS NOT NULL
+       ORDER BY payer_wallet ASC`,
+      [workspaceId],
+    );
+    return result.rows.map((row) => asEvmAddress(row.payer_wallet));
+  }
+
   async recordActivityObservation(params: {
     readonly workspaceId: string;
     readonly freshness: 'FRESH' | 'LAGGING' | 'UNHEALTHY' | 'UNAVAILABLE' | 'UNKNOWN_FRESHNESS';
@@ -502,45 +544,76 @@ export class JobLedger {
   }
 
   async activity(workspaceId: string): Promise<ActivityResponse> {
-    const [observation, settlements, uncertain, recordedTransfers] = await Promise.all([
-      this.#pool.query<{
-        freshness: string;
-        coverage_note: string;
-        observed_at: Date;
-        payload: unknown;
-      }>(
-        `SELECT freshness, coverage_note, observed_at, payload FROM wallet_activity_observations
+    const [observation, settlements, uncertain, recordedTransfers, activityJobs] =
+      await Promise.all([
+        this.#pool.query<{
+          freshness: string;
+          coverage_note: string;
+          observed_at: Date;
+          payload: unknown;
+        }>(
+          `SELECT freshness, coverage_note, observed_at, payload FROM wallet_activity_observations
          WHERE workspace_id = $1 ORDER BY observation_id DESC LIMIT 1`,
-        [workspaceId],
-      ),
-      this.#pool.query<{ count: string }>(
-        `SELECT count(*)::text AS count FROM (
+          [workspaceId],
+        ),
+        this.#pool.query<{ count: string }>(
+          `SELECT count(*)::text AS count FROM (
            SELECT j.business_intent_id FROM resumable_jobs j
            JOIN settlements s ON s.business_intent_id = j.business_intent_id
            WHERE j.workspace_id = $1
          ) recorded`,
-        [workspaceId],
-      ),
-      this.#pool.query<{ count: string }>(
-        `SELECT count(*)::text AS count FROM (
+          [workspaceId],
+        ),
+        this.#pool.query<{ count: string }>(
+          `SELECT count(*)::text AS count FROM (
            SELECT j.business_intent_id FROM resumable_jobs j
            JOIN business_intents i ON i.business_intent_id = j.business_intent_id
            WHERE j.workspace_id = $1 AND i.state = 'UNKNOWN'
          ) uncertain`,
-        [workspaceId],
-      ),
-      this.#pool.query<{
-        transaction_hash: string;
-        transfer_log_index: number;
-        job_id: string;
-      }>(
-        `SELECT s.transaction_hash, s.transfer_log_index, j.job_id
+          [workspaceId],
+        ),
+        this.#pool.query<{
+          transaction_hash: string;
+          transfer_log_index: number;
+          job_id: string;
+        }>(
+          `SELECT s.transaction_hash, s.transfer_log_index, j.job_id
          FROM settlements s
          JOIN resumable_jobs j ON j.business_intent_id = s.business_intent_id
          WHERE j.workspace_id = $1`,
-        [workspaceId],
-      ),
-    ]);
+          [workspaceId],
+        ),
+        this.#pool.query<{
+          job_id: string;
+          business_intent_id: string;
+          payment_state: JobView['payment_state'];
+          payment_mode: PaymentMode;
+          transaction_hash: string | null;
+          recipient: string;
+          amount_atomic: string;
+          transfer_log_index: number | null;
+        }>(
+          `SELECT j.job_id, j.business_intent_id, i.state AS payment_state, j.payment_mode,
+                COALESCE(s.transaction_hash, j.payment_transaction_hash, latest.provider_transaction_hash) AS transaction_hash,
+                j.supplier_quote->>'recipient' AS recipient,
+                j.supplier_quote->>'amount_atomic' AS amount_atomic,
+                s.transfer_log_index
+         FROM resumable_jobs j
+         JOIN business_intents i ON i.business_intent_id = j.business_intent_id
+         LEFT JOIN settlements s ON s.business_intent_id = j.business_intent_id
+         LEFT JOIN LATERAL (
+           SELECT a.provider_transaction_hash
+           FROM attempts a
+           WHERE a.business_intent_id = j.business_intent_id
+           ORDER BY a.attempt_sequence DESC
+           LIMIT 1
+         ) latest ON true
+         WHERE j.workspace_id = $1
+         ORDER BY j.updated_at DESC, j.job_id ASC
+         LIMIT 100`,
+          [workspaceId],
+        ),
+      ]);
     const row = observation.rows[0];
     const indexedTransfers = row ? parseActivityTransfers(row.payload) : [];
     const recordedByTransfer = new Map(
@@ -559,12 +632,57 @@ export class JobLedger {
         ...(jobId ? { job_id: jobId } : {}),
       };
     });
+    const transactions: readonly ActivityTransactionView[] = activityJobs.rows.map((job) => {
+      const transactionHash = job.transaction_hash
+        ? asTransactionHash(job.transaction_hash)
+        : undefined;
+      const recipient = asEvmAddress(job.recipient);
+      const amountAtomic = asAtomicAmount(job.amount_atomic);
+      const matchesPaymentTuple = (transfer: ActivityTransferInput): boolean =>
+        transfer.transaction_hash.toLowerCase() === transactionHash?.toLowerCase() &&
+        transfer.recipient.toLowerCase() === recipient.toLowerCase() &&
+        transfer.amount_atomic === amountAtomic &&
+        (transfer.token_contract === undefined ||
+          transfer.token_contract.toLowerCase() === '0x3600000000000000000000000000000000000000');
+      const graphTransfer = transactionHash
+        ? indexedTransfers.find(matchesPaymentTuple)
+        : undefined;
+      const exactTransfer =
+        transactionHash && job.transfer_log_index !== null
+          ? indexedTransfers.find(
+              (transfer) =>
+                transfer.log_index === job.transfer_log_index && matchesPaymentTuple(transfer),
+            )
+          : undefined;
+      const matchedTransfer = exactTransfer ?? graphTransfer;
+      return {
+        job_id: job.job_id,
+        business_intent_id: job.business_intent_id,
+        payment_state: job.payment_state,
+        payment_mode: job.payment_mode,
+        ...(transactionHash ? { transaction_hash: transactionHash } : {}),
+        recipient,
+        amount_atomic: amountAtomic,
+        graph_status: transactionHash
+          ? !row || row.freshness === 'UNAVAILABLE'
+            ? 'UNAVAILABLE'
+            : matchedTransfer
+              ? 'INDEXED_TRANSFER'
+              : 'NOT_INDEXED'
+          : 'NO_TRANSACTION_HASH',
+        ...(matchedTransfer?.block_number
+          ? { graph_block_number: matchedTransfer.block_number }
+          : {}),
+        ...(matchedTransfer ? { graph_log_index: matchedTransfer.log_index } : {}),
+      };
+    });
     return {
       ...(row ? { observation: { ...row, observed_at: row.observed_at.toISOString() } } : {}),
       recorded_settlement_count: Number(settlements.rows[0]?.count ?? '0'),
       uncertain_job_count: Number(uncertain.rows[0]?.count ?? '0'),
       unmatched_transfer_count: transfers.filter((transfer) => transfer.match === 'UNMATCHED')
         .length,
+      transactions,
       transfers,
     };
   }

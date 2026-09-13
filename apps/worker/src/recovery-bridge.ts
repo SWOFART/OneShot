@@ -155,7 +155,7 @@ export class IntentLedgerLocalRecoveryStatePort implements LocalRecoveryStatePor
 }
 
 /**
- * Captures non-authoritative Graph evidence for a confirmed settlement. This
+ * Captures non-authoritative Graph evidence for a site payment outcome. This
  * port never reads or writes settlement authority; it only produces a bounded
  * observation for the durable evidence timeline.
  */

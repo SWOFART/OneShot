@@ -37,8 +37,8 @@ export interface SettlementPort {
 
 export interface GraphEvidenceCaptureRequest {
   readonly businessIntentId: string;
-  readonly transactionHash: string;
-  readonly blockNumber: string;
+  readonly transactionHash?: string;
+  readonly blockNumber?: string;
 }
 
 export interface GraphEvidenceCapturePort {

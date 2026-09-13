@@ -584,6 +584,7 @@ describe('resumable job API boundary', () => {
           recorded_settlement_count: 1,
           uncertain_job_count: 0,
           unmatched_transfer_count: 0,
+          transactions: [],
           transfers: [],
         };
       },
@@ -677,6 +678,7 @@ describe('resumable job API boundary', () => {
       recorded_settlement_count: 1,
       uncertain_job_count: 0,
       unmatched_transfer_count: 0,
+      transactions: [],
       transfers: [],
     });
 

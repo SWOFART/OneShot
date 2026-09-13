@@ -5,6 +5,25 @@ import type { SettlementClient } from '@oneshot/settlement-ui';
 import { RecoverySurface, SettlementSurface } from './FrontendSurfaces.js';
 import { maskIdentifier } from './workspace-copy.js';
 
+function shortHash(value: string): string {
+  return `${value.slice(0, 10)}…${value.slice(-8)}`;
+}
+
+function graphStatusLabel(
+  status: ActivityResponse['transactions'][number]['graph_status'],
+): string {
+  switch (status) {
+    case 'INDEXED_TRANSFER':
+      return 'Indexed transfer';
+    case 'NOT_INDEXED':
+      return 'Hash not indexed';
+    case 'NO_TRANSACTION_HASH':
+      return 'No transaction hash';
+    case 'UNAVAILABLE':
+      return 'Graph unavailable';
+  }
+}
+
 export function PaymentProtectionPanel({
   activity,
   activityError,
@@ -21,6 +40,8 @@ export function PaymentProtectionPanel({
   readonly onRefresh: () => void;
 }) {
   const observation = activity?.observation;
+  const transactions = activity?.transactions ?? [];
+  const transfers = activity?.transfers ?? [];
   const count = (value: number | undefined): string =>
     activity === null || value === undefined ? '—' : String(value);
 
@@ -67,6 +88,94 @@ export function PaymentProtectionPanel({
               : 'No activity check has been requested.')}
         </p>
       </div>
+      {activity && (
+        <div className="proof-history" aria-label="Site transaction history">
+          <header className="proof-history-heading">
+            <div>
+              <p className="eyebrow">SITE AUDIT TRAIL</p>
+              <h3>Every payment request</h3>
+            </div>
+            <span className="proof-read-only">GRAPH + LEDGER</span>
+          </header>
+          <p className="field-help">
+            One row is shown for every payment request created in this workspace, including
+            rejected, failed, uncertain and approved outcomes.
+          </p>
+          {transactions.length > 0 ? (
+            <ol className="proof-history-list">
+              {transactions.map((transaction) => (
+                <li key={transaction.job_id} className="proof-history-item">
+                  <div className="proof-history-item-heading">
+                    <strong>{transaction.payment_state}</strong>
+                    <span>{transaction.payment_mode}</span>
+                  </div>
+                  <p>
+                    Request <code>{maskIdentifier(transaction.business_intent_id)}</code> ·{' '}
+                    <code>{transaction.amount_atomic}</code> atomic USDC to{' '}
+                    <code>{shortHash(transaction.recipient)}</code>
+                  </p>
+                  <p>
+                    {transaction.transaction_hash ? (
+                      <>
+                        Transaction <code>{shortHash(transaction.transaction_hash)}</code>
+                      </>
+                    ) : (
+                      'No transaction hash was recorded for this outcome.'
+                    )}{' '}
+                    · The Graph: <strong>{graphStatusLabel(transaction.graph_status)}</strong>
+                    {transaction.graph_block_number
+                      ? ` · block ${transaction.graph_block_number}`
+                      : ''}
+                    {transaction.graph_log_index !== undefined
+                      ? ` · log ${transaction.graph_log_index}`
+                      : ''}
+                  </p>
+                  {transaction.graph_status === 'NOT_INDEXED' && (
+                    <small>
+                      The Graph has no matching event yet. That is not proof that payment did not
+                      happen; Arc receipt and OneShot state remain authoritative.
+                    </small>
+                  )}
+                  {transaction.graph_status === 'UNAVAILABLE' && (
+                    <small>
+                      Graph evidence could not be read for this refresh. Arc receipt and OneShot
+                      state remain authoritative.
+                    </small>
+                  )}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="field-help">No site payment requests are recorded yet.</p>
+          )}
+          {transfers.length > 0 && (
+            <details className="proof-transfer-details">
+              <summary>Indexed Graph transfers ({transfers.length})</summary>
+              <ul className="proof-transfer-list">
+                {transfers.map((transfer) => (
+                  <li key={`${transfer.transaction_hash}:${transfer.log_index}`}>
+                    <span>
+                      <code>{shortHash(transfer.transaction_hash)}</code> · log {transfer.log_index}{' '}
+                      · {transfer.amount_atomic} atomic USDC
+                    </span>
+                    <small>
+                      {transfer.match === 'RECORDED_SETTLEMENT'
+                        ? 'Matched to a OneShot settlement'
+                        : 'Unmatched network activity'}
+                      {transfer.sender ? ` · from ${shortHash(transfer.sender)}` : ''}
+                      {transfer.token_contract
+                        ? ` · token ${shortHash(transfer.token_contract)}`
+                        : ''}
+                      {transfer.block_number ? ` · block ${transfer.block_number}` : ''}
+                      {transfer.block_timestamp ? ` · ${transfer.block_timestamp}` : ''}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
       {intentId ? (
         <div className="proof-request">
           <header className="proof-request-heading">
