@@ -1,17 +1,19 @@
 <!-- The brand lock-up from apps/web's own `.top-nav`, rendered by
      `scripts/render-nav-panel.mjs`; re-run that script after a brand token,
      mark, or label change. -->
-<picture>
-  <source
-    media="(prefers-color-scheme: dark)"
-    srcset="docs/assets/nav-panel-dark.svg"
-  />
-  <img
-    src="docs/assets/nav-panel-light.svg"
-    alt="OneShot — settlement engine"
-    width="381"
-  />
-</picture>
+<div align="center">
+  <picture>
+    <source
+      media="(prefers-color-scheme: dark)"
+      srcset="docs/assets/nav-panel-dark.svg"
+    />
+    <img
+      src="docs/assets/nav-panel-light.svg"
+      alt="OneShot — settlement engine"
+      width="381"
+    />
+  </picture>
+</div>
 
 # OneShot
 
