@@ -165,6 +165,7 @@ describe('Gate P5 shell composition', () => {
           recorded_settlement_count: 0,
           uncertain_job_count: 0,
           unmatched_transfer_count: 0,
+          transactions: [],
           transfers: [],
         };
       },
@@ -198,6 +199,48 @@ describe('Gate P5 shell composition', () => {
     expect(screen.getByText(/Open Payment services to start/u)).toBeTruthy();
   });
 
+  it('shows Graph evidence beside every site payment outcome', async () => {
+    const hash = `0x${'a'.repeat(64)}`;
+    const jobClient = {
+      async refreshActivity() {
+        return {
+          observation: { freshness: 'FRESH' },
+          recorded_settlement_count: 0,
+          uncertain_job_count: 0,
+          unmatched_transfer_count: 0,
+          transactions: [
+            {
+              job_id: 'job-graph-evidence',
+              business_intent_id: 'intent-graph-evidence',
+              payment_state: 'FAILED_SAFE' as const,
+              payment_mode: 'USER_WALLET' as const,
+              transaction_hash: hash,
+              recipient: '0x1111111111111111111111111111111111111111',
+              amount_atomic: '1000000',
+              graph_status: 'NOT_INDEXED' as const,
+            },
+          ],
+          transfers: [],
+        };
+      },
+    } as unknown as JobApiClient;
+
+    render(
+      <App
+        route="/app"
+        useOperatorSession={() => signedInSession()}
+        jobClient={jobClient}
+        settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
+        recoveryClient={createInMemoryRecoveryClient('lagging')}
+      />,
+    );
+
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Payment proof' }));
+    expect(await screen.findByText('FAILED_SAFE')).toBeTruthy();
+    expect(screen.getByText('Hash not indexed')).toBeTruthy();
+    expect(screen.getByText(/not proof that payment did not happen/u)).toBeTruthy();
+  });
+
   /**
    * The tab strip faded on its own while the panel behind it appeared
    * instantly: the console panel was never wrapped, and the request list
@@ -229,6 +272,7 @@ describe('Gate P5 shell composition', () => {
           recorded_settlement_count: 0,
           uncertain_job_count: 0,
           unmatched_transfer_count: 0,
+          transactions: [],
           transfers: [],
         };
       },

@@ -4,8 +4,9 @@ The active MCP flow is non-custodial:
 
 1. `arc_payment` creates or replays a payer-bound OneShot job and returns the
    exact Arc Testnet USDC ERC-20 transaction request.
-2. The user reviews and signs that request with the connected Privy embedded or
-   external wallet, or with MetaMask.
+2. The MCP result includes a one-time-style signing URL. The user opens it in
+   the authenticated OneShot workspace, reviews the exact request, and signs
+   with the connected Privy embedded or external wallet, or with MetaMask.
 3. The wallet broadcasts the USDC transfer directly to the recipient.
 4. `arc_payment_submit` receives the returned transaction hash.
 5. OneShot binds that hash, verifies the receipt and exact USDC `Transfer` log,
@@ -87,8 +88,10 @@ Prepare a payment with the wallet address selected by the user:
 The result contains `transaction.to` equal to the Arc USDC contract,
 `transaction.data` containing `transfer(recipient, amount_atomic)`,
 `transaction.from` equal to `payer_wallet`, and `value: "0x0"`.
-The client must show this exact request to the user and use the wallet's
-normal signing API. The MCP tool must not be treated as a signing API.
+It also contains `signing_url`, which opens the authenticated wallet handoff.
+The client should give that URL to the user. The frontend validates the
+prepared job and uses the wallet's normal signing API. The MCP tool must not
+be treated as a signing API.
 
 Then submit the exact hash returned by the wallet:
 

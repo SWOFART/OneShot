@@ -191,12 +191,15 @@ distinguishes a Graph observation that is still pending from proof that no
 payment happened. Profile issues and rotates the personal MCP bearer. The P5
 browser acceptance suite runs with Playwright/Chromium in CI.
 
-Authenticated wallet activity is read-only: the API records bounded Graph
-observations, links indexed transfers to settlements in the caller's workspace,
-and surfaces unmatched transfers. Every committed settlement captures Graph
-evidence through a durable, idempotent outbox job, including a backfill for
-settlements that predate that capture. Graph absence or lag never changes
-payment authority.
+Authenticated site activity is read-only: the API automatically queries the
+configured Arc subgraph for every payer wallet recorded in the workspace,
+records bounded Graph observations, and displays one audit row for every site
+payment request, including rejected, failed-safe, uncertain, and committed
+outcomes. Indexed transfers are linked to settlements and unmatched transfers
+remain visible. Every committed settlement captures Graph evidence through a
+durable, idempotent outbox job, including a backfill for settlements that
+predate that capture. Graph absence or lag never changes payment authority; a
+missing or reverted transfer event is not proof that no payment happened.
 
 A browser caller's workspace is derived from its verified Privy subject, so
 jobs, results, and activity are scoped to the signed-in operator rather than to

@@ -196,6 +196,35 @@ describe('Worker Unit Logic', () => {
     ]);
   });
 
+  it('captures Graph evidence for an outcome with no transaction hash', async () => {
+    let captured: { businessIntentId: string; transactionHash?: string } | undefined;
+    const tasks = createTaskList({
+      pool: {} as never,
+      ledger: createMockLedger({
+        async appendEvidence() {},
+      }),
+      settlementPort: {} as never,
+      graphEvidence: {
+        async capture(request) {
+          captured = request;
+          return {
+            source: 'THE_GRAPH',
+            authority_class: 'OBSERVATION',
+            retrieved_at: '2026-09-13T10:00:00.000Z',
+            digest: 'graph-no-hash',
+            freshness: 'UNAVAILABLE',
+          };
+        },
+      },
+    });
+
+    await tasks.capture_graph_evidence({
+      business_intent_id: sampleRequest.business_intent_id,
+    });
+
+    expect(captured).toEqual({ businessIntentId: sampleRequest.business_intent_id });
+  });
+
   it('passes provider request identity into the atomic claim before calling the settlement port', async () => {
     const order: string[] = [];
     let claimedIdentity: unknown;

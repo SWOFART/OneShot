@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { ActivityResponse } from '@oneshot/contracts';
 import { createSettlementClient, type SettlementClient } from '@oneshot/settlement-ui';
 import type { RecoveryClient } from '@oneshot/recovery-ui';
@@ -45,6 +45,8 @@ export interface AppProps {
   readonly recoveryClient?: RecoveryClient;
   readonly useOperatorSession?: UseOperatorSession;
   readonly userWallet?: UserWalletSession;
+  /** Optional prepared MCP job to open directly in the wallet-signing workspace. */
+  readonly mcpJobId?: string;
   /** main.tsx passes the browser route; omitted preserves legacy test composition. */
   readonly route?: string;
 }
@@ -142,13 +144,36 @@ function CabinetPage(props: {
   readonly theme: Theme;
   readonly onToggleTheme: () => void;
   readonly userWallet?: UserWalletSession;
+  readonly mcpJobId?: string;
 }) {
   const [section, setSection] = useState<
     'overview' | 'services' | 'requests' | 'protection' | 'profile'
-  >('overview');
+  >(props.mcpJobId ? 'services' : 'overview');
   const [intentId, setIntentId] = useState('');
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [activityError, setActivityError] = useState<string | null>(null);
+  const workspaceUnlocked =
+    props.session.status === 'SIGNED_IN' || props.machineToken.trim() !== '';
+  const refreshActivity = useCallback(async (): Promise<void> => {
+    if (!workspaceUnlocked || typeof props.jobClient.refreshActivity !== 'function') return;
+    setActivityError(null);
+    try {
+      setActivity(await props.jobClient.refreshActivity());
+    } catch {
+      setActivityError(
+        'Payment activity is unavailable right now. Existing payment records are unchanged.',
+      );
+    }
+  }, [props.jobClient, workspaceUnlocked]);
+
+  useEffect(() => {
+    void refreshActivity();
+  }, [refreshActivity]);
+
+  useEffect(() => {
+    if (section === 'protection') void refreshActivity();
+  }, [refreshActivity, section]);
+
   const labels = {
     overview: 'Overview',
     services: 'Payment services',
@@ -283,6 +308,7 @@ function CabinetPage(props: {
             <div className="panel-stack">
               <JobWorkspace
                 client={props.jobClient}
+                {...(props.mcpJobId ? { initialJobId: props.mcpJobId } : {})}
                 {...(props.userWallet ? { userWallet: props.userWallet } : {})}
                 onSelectIntent={selectRequest}
               />
@@ -298,17 +324,7 @@ function CabinetPage(props: {
               intentId={intentId}
               recoveryClient={props.recoveryClient}
               settlementClient={props.settlementClient}
-              onRefresh={() => {
-                setActivityError(null);
-                void props.jobClient
-                  .refreshActivity()
-                  .then(setActivity)
-                  .catch(() => {
-                    setActivityError(
-                      'Payment activity is unavailable right now. Existing payment records are unchanged.',
-                    );
-                  });
-              }}
+              onRefresh={() => void refreshActivity()}
             />
           )}
           {section === 'profile' && <McpProfile client={props.jobClient} />}
@@ -373,6 +389,7 @@ export function App(props: AppProps = {}) {
         settlementClient={settlementClient}
         recoveryClient={recoveryClient}
         {...(props.userWallet ? { userWallet: props.userWallet } : {})}
+        {...(props.mcpJobId ? { mcpJobId: props.mcpJobId } : {})}
         theme={theme}
         onToggleTheme={toggleTheme}
       />

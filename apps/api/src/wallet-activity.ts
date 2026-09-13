@@ -8,6 +8,11 @@ export interface WalletActivitySnapshot {
     readonly transfers: readonly {
       readonly transaction_hash: string;
       readonly log_index: number;
+      readonly sender?: string;
+      readonly token_contract?: string;
+      readonly block_number?: string;
+      readonly block_timestamp?: string;
+      readonly network?: 'eip155:5042002';
       readonly recipient: string;
       readonly amount_atomic: string;
     }[];
@@ -15,21 +20,57 @@ export interface WalletActivitySnapshot {
 }
 
 export interface WalletActivityPort {
-  refresh(): Promise<WalletActivitySnapshot>;
+  refresh(wallets?: readonly string[]): Promise<WalletActivitySnapshot>;
 }
 
-const QUERY = `query OneShotWalletActivity($sender: Bytes!) { settlementCandidates(first: 100, orderBy: blockNumber, orderDirection: desc, where: { sender: $sender }) { transactionHash logIndex recipient amountAtomic } _meta { deployment hasIndexingErrors block { number } } }`;
+const QUERY = `query OneShotWalletActivity($senders: [Bytes!]!) { settlementCandidates(first: 100, orderBy: blockNumber, orderDirection: desc, where: { sender_in: $senders }) { transactionHash logIndex sender tokenContract blockNumber blockTimestamp network recipient amountAtomic } _meta { deployment hasIndexingErrors block { number } } }`;
+
+function graphBlockTimestamp(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/u.test(value)
+  ) {
+    return value;
+  }
+  if (typeof value !== 'string' || !/^(0|[1-9][0-9]*)$/u.test(value)) {
+    throw new Error('Graph activity block timestamp failed validation');
+  }
+  const seconds = Number(value);
+  if (!Number.isSafeInteger(seconds) || seconds < 0) {
+    throw new Error('Graph activity block timestamp failed validation');
+  }
+  const timestamp = new Date(seconds * 1_000);
+  if (Number.isNaN(timestamp.getTime())) {
+    throw new Error('Graph activity block timestamp failed validation');
+  }
+  return timestamp.toISOString();
+}
 
 export class StudioWalletActivityPort implements WalletActivityPort {
   constructor(
     private readonly options: {
       readonly endpoint: string;
-      readonly wallet: string;
+      readonly wallet?: string;
       readonly apiKey?: string;
       readonly fetchFn?: typeof fetch;
     },
   ) {}
-  async refresh(): Promise<WalletActivitySnapshot> {
+  async refresh(wallets: readonly string[] = []): Promise<WalletActivitySnapshot> {
+    const senders = [...(this.options.wallet ? [this.options.wallet] : []), ...wallets].reduce<
+      string[]
+    >((unique, wallet) => {
+      const address = asEvmAddress(wallet).toLowerCase();
+      if (!unique.includes(address)) unique.push(address);
+      return unique;
+    }, []);
+    if (senders.length === 0) {
+      return {
+        freshness: 'UNAVAILABLE',
+        coverageNote: 'No site payer wallet is recorded for this workspace yet.',
+        payload: { transfers: [] },
+      };
+    }
     const response = await (this.options.fetchFn ?? fetch)(this.options.endpoint, {
       method: 'POST',
       headers: {
@@ -38,7 +79,7 @@ export class StudioWalletActivityPort implements WalletActivityPort {
       },
       body: JSON.stringify({
         query: QUERY,
-        variables: { sender: asEvmAddress(this.options.wallet) },
+        variables: { senders },
       }),
     });
     if (!response.ok) throw new Error('Graph activity query is unavailable');
@@ -70,6 +111,17 @@ export class StudioWalletActivityPort implements WalletActivityPort {
       return {
         transaction_hash: asTransactionHash(row.transactionHash),
         log_index: index,
+        ...(typeof row.sender === 'string' ? { sender: asEvmAddress(row.sender) } : {}),
+        ...(typeof row.tokenContract === 'string'
+          ? { token_contract: asEvmAddress(row.tokenContract) }
+          : {}),
+        ...(typeof row.blockNumber === 'string' && /^(0|[1-9][0-9]*)$/u.test(row.blockNumber)
+          ? { block_number: row.blockNumber }
+          : {}),
+        ...(row.blockTimestamp === undefined
+          ? {}
+          : { block_timestamp: graphBlockTimestamp(row.blockTimestamp)! }),
+        ...(row.network === 'eip155:5042002' ? { network: 'eip155:5042002' as const } : {}),
         recipient: asEvmAddress(row.recipient),
         amount_atomic: row.amountAtomic,
       };

@@ -1828,6 +1828,112 @@ a.secondary:hover {
   margin: 0;
 }
 
+.proof-history {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--os-panel-line);
+}
+
+.proof-history-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.proof-history-heading .eyebrow {
+  margin-bottom: 0.35rem;
+}
+
+.proof-history-heading h3 {
+  margin: 0;
+  color: var(--os-panel-ink);
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.proof-history .field-help {
+  margin: 0;
+}
+
+.proof-history-list,
+.proof-transfer-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.proof-history-item,
+.proof-transfer-details {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--os-panel-line);
+  border-radius: 0.75rem;
+  background: var(--os-surface);
+}
+
+.proof-history-item {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.proof-history-item-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--os-ink);
+}
+
+.proof-history-item-heading span {
+  color: var(--os-ink-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.proof-history-item p,
+.proof-history-item small,
+.proof-transfer-list small {
+  margin: 0;
+  color: var(--os-ink-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.proof-history-item code,
+.proof-transfer-list code {
+  font-family: var(--os-font-mono);
+  font-size: 0.78rem;
+}
+
+.proof-history-item strong {
+  color: var(--os-ink);
+}
+
+.proof-transfer-details {
+  color: var(--os-ink);
+}
+
+.proof-transfer-details summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.proof-transfer-list {
+  margin-top: 0.75rem;
+}
+
+.proof-transfer-list li {
+  display: grid;
+  gap: 0.2rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--os-panel-line);
+}
+
 .proof-request {
   display: grid;
   gap: 0.9rem;

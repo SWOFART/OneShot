@@ -61,6 +61,7 @@ export interface ApiDependencies {
     | 'list'
     | 'resumeDelivery'
     | 'recordActivityObservation'
+    | 'activityPayerWallets'
     | 'activity'
   >;
   readonly supplier?: SupplierPort;
@@ -143,6 +144,38 @@ export function buildApi(dependencies: ApiDependencies) {
   const workspaceFor = (request: FastifyRequest): string =>
     requestWorkspaces.get(request) ?? defaultWorkspaceId;
   const walletActivity = dependencies.walletActivity ?? new UnavailableWalletActivityPort();
+  async function refreshGraphActivity(
+    workspaceId: string,
+    additionalWallet?: string,
+  ): Promise<void> {
+    // A missing activity port is the deliberate local/test fallback. The
+    // configured production port is queried after user-wallet outcomes as
+    // well as from the cabinet refresh, so Graph is not recovery-only.
+    if (!dependencies.walletActivity || !dependencies.jobs?.recordActivityObservation) return;
+    try {
+      const wallets = dependencies.jobs.activityPayerWallets
+        ? await dependencies.jobs.activityPayerWallets(workspaceId)
+        : additionalWallet
+          ? [additionalWallet]
+          : [];
+      const normalizedAdditionalWallet = additionalWallet?.toLowerCase();
+      const observation = await dependencies.walletActivity.refresh(
+        normalizedAdditionalWallet &&
+          !wallets.some((wallet) => wallet.toLowerCase() === normalizedAdditionalWallet)
+          ? [...wallets, normalizedAdditionalWallet]
+          : wallets,
+      );
+      await dependencies.jobs.recordActivityObservation({
+        workspaceId,
+        freshness: observation.freshness,
+        coverageNote: observation.coverageNote,
+        payload: observation.payload,
+      });
+    } catch {
+      // Activity is read-only evidence. A provider failure must not change the
+      // payment response or turn a missing index row into a no-payment claim.
+    }
+  }
   const jobsUnavailable = (reply: FastifyReply, request: FastifyRequest): void =>
     sendError(
       reply,
@@ -621,6 +654,7 @@ export function buildApi(dependencies: ApiDependencies) {
         );
         return;
       }
+      await refreshGraphActivity(workspaceFor(request), job.user_payment.payer_wallet);
       return reply.code(updated.payment_state === 'UNKNOWN' ? 202 : 200).send(updated);
     },
   );
@@ -686,7 +720,10 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
-    const observation = await walletActivity.refresh();
+    const wallets = dependencies.jobs.activityPayerWallets
+      ? await dependencies.jobs.activityPayerWallets(workspaceFor(request))
+      : [];
+    const observation = await walletActivity.refresh(wallets);
     await dependencies.jobs.recordActivityObservation({
       workspaceId: workspaceFor(request),
       freshness: observation.freshness,

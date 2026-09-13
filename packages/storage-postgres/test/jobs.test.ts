@@ -119,6 +119,84 @@ describe('JobLedger delivery recovery', () => {
     });
   });
 
+  it('projects every site outcome with its Graph match status', async () => {
+    const indexedHash = `0x${'c'.repeat(64)}`;
+    const rejectedJob = {
+      job_id: 'job-rejected-site',
+      business_intent_id: 'intent-rejected-site',
+      payment_state: 'REJECTED' as const,
+      payment_mode: 'USER_WALLET' as const,
+      transaction_hash: null,
+      recipient: failedJob.supplier_quote.recipient,
+      amount_atomic: failedJob.supplier_quote.amount_atomic,
+      transfer_log_index: null,
+    };
+    const failedJobActivity = {
+      job_id: 'job-failed-site',
+      business_intent_id: 'intent-failed-site',
+      payment_state: 'FAILED_SAFE' as const,
+      payment_mode: 'USER_WALLET' as const,
+      transaction_hash: indexedHash,
+      recipient: failedJob.supplier_quote.recipient,
+      amount_atomic: failedJob.supplier_quote.amount_atomic,
+      transfer_log_index: null,
+    };
+    const pool = {
+      async query(sql: string) {
+        if (sql.includes('FROM wallet_activity_observations')) {
+          return {
+            rows: [
+              {
+                freshness: 'FRESH',
+                coverage_note: 'indexed',
+                observed_at: new Date('2026-09-07T12:00:00.000Z'),
+                payload: {
+                  transfers: [
+                    {
+                      transaction_hash: indexedHash,
+                      log_index: 7,
+                      recipient: failedJob.supplier_quote.recipient,
+                      amount_atomic: failedJob.supplier_quote.amount_atomic,
+                      block_number: '123',
+                    },
+                  ],
+                },
+              },
+            ],
+          };
+        }
+        if (sql.includes('FROM settlements s')) return { rows: [] };
+        if (sql.includes("i.state = 'UNKNOWN'")) return { rows: [{ count: '0' }] };
+        if (sql.includes('SELECT j.job_id, j.business_intent_id')) {
+          return { rows: [failedJobActivity, rejectedJob] };
+        }
+        if (sql.includes('recorded')) return { rows: [{ count: '0' }] };
+        return { rows: [] };
+      },
+    };
+    const ledger = new JobLedger(pool as never, {
+      now: () => new Date('2026-09-07T12:01:00.000Z'),
+      nextAttemptId: () => 'unused',
+    });
+
+    await expect(ledger.activity('workspace-unit')).resolves.toMatchObject({
+      transactions: [
+        {
+          business_intent_id: 'intent-failed-site',
+          payment_state: 'FAILED_SAFE',
+          graph_status: 'INDEXED_TRANSFER',
+          graph_block_number: '123',
+          graph_log_index: 7,
+        },
+        {
+          business_intent_id: 'intent-rejected-site',
+          payment_state: 'REJECTED',
+          graph_status: 'NO_TRANSACTION_HASH',
+        },
+      ],
+    });
+  });
+
   it('projects committed settlement evidence with the Arc Testnet explorer link', async () => {
     const settledJob = {
       ...failedJob,

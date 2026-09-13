@@ -17,17 +17,21 @@ function graphEvidenceRequest(
     throw new Error('Graph evidence task payload is invalid');
   }
   const record = payload as Record<string, unknown>;
-  if (
-    record.business_intent_id !== businessIntentId ||
-    typeof record.transaction_hash !== 'string' ||
-    typeof record.block_number !== 'string'
-  ) {
+  if (record.business_intent_id !== businessIntentId) {
     throw new Error('Graph evidence task payload does not match the outbox identity');
+  }
+  if (record.transaction_hash !== undefined && typeof record.transaction_hash !== 'string') {
+    throw new Error('Graph evidence task transaction hash is invalid');
+  }
+  if (record.block_number !== undefined && typeof record.block_number !== 'string') {
+    throw new Error('Graph evidence task block number is invalid');
   }
   return {
     businessIntentId,
-    transactionHash: asTransactionHash(record.transaction_hash),
-    blockNumber: asBlockNumber(record.block_number),
+    ...(record.transaction_hash
+      ? { transactionHash: asTransactionHash(record.transaction_hash) }
+      : {}),
+    ...(record.block_number ? { blockNumber: asBlockNumber(record.block_number) } : {}),
   };
 }
 

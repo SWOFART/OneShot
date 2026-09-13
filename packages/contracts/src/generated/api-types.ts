@@ -147,10 +147,28 @@ export interface JobListResponse {
 export interface ActivityTransferView {
   readonly transaction_hash: string;
   readonly log_index: number;
+  readonly sender?: string;
+  readonly token_contract?: string;
+  readonly block_number?: string;
+  readonly block_timestamp?: string;
+  readonly network?: 'eip155:5042002';
   readonly recipient: string;
   readonly amount_atomic: string;
   readonly match: 'RECORDED_SETTLEMENT' | 'UNMATCHED';
   readonly job_id?: string;
+}
+
+export interface ActivityTransactionView {
+  readonly job_id: string;
+  readonly business_intent_id: string;
+  readonly payment_state: IntentState;
+  readonly payment_mode: PaymentMode;
+  readonly transaction_hash?: string;
+  readonly recipient: string;
+  readonly amount_atomic: string;
+  readonly graph_status: 'INDEXED_TRANSFER' | 'NOT_INDEXED' | 'NO_TRANSACTION_HASH' | 'UNAVAILABLE';
+  readonly graph_block_number?: string;
+  readonly graph_log_index?: number;
 }
 
 export interface ActivityResponse {
@@ -158,6 +176,7 @@ export interface ActivityResponse {
   readonly recorded_settlement_count: number;
   readonly uncertain_job_count: number;
   readonly unmatched_transfer_count: number;
+  readonly transactions: readonly ActivityTransactionView[];
   readonly transfers: readonly ActivityTransferView[];
 }
 
