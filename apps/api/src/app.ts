@@ -14,8 +14,10 @@ import {
 } from '@oneshot/contracts';
 import { derivedJobId } from '@oneshot/domain';
 import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
+import { toNodeHandler } from '@modelcontextprotocol/node';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { ServiceAuthenticator } from './auth.js';
+import { createArcPaymentMcpHandler, type ArcPaymentMcpConfig } from './mcp.js';
 import { allowAllRateLimiter, type RateLimiter } from './rate-limit.js';
 import { UnavailableWalletActivityPort, type WalletActivityPort } from './wallet-activity.js';
 
@@ -63,6 +65,7 @@ export interface ApiDependencies {
   readonly supplier?: SupplierPort;
   readonly walletActivity?: WalletActivityPort;
   readonly userWalletVerifier?: UserWalletVerificationPort;
+  readonly mcp?: ArcPaymentMcpConfig & { readonly authenticator: ServiceAuthenticator };
   readonly authenticator: ServiceAuthenticator;
   readonly rateLimiter?: RateLimiter;
   readonly nextCorrelationId?: () => string;
@@ -135,6 +138,10 @@ export function buildApi(dependencies: ApiDependencies) {
   const rateLimiter = dependencies.rateLimiter ?? allowAllRateLimiter;
   const workspaceId = dependencies.config?.workspaceId ?? 'local-test-workspace';
   const walletActivity = dependencies.walletActivity ?? new UnavailableWalletActivityPort();
+  const mcpHandler = dependencies.mcp
+    ? createArcPaymentMcpHandler({ ledger: dependencies.ledger, config: dependencies.mcp })
+    : undefined;
+  const nodeMcpHandler = mcpHandler ? toNodeHandler(mcpHandler) : undefined;
   const jobsUnavailable = (reply: FastifyReply, request: FastifyRequest): void =>
     sendError(
       reply,
@@ -178,10 +185,10 @@ export function buildApi(dependencies: ApiDependencies) {
     }
     void reply.header('x-correlation-id', correlationId);
     void reply.header('access-control-allow-origin', '*');
-    void reply.header('access-control-allow-methods', 'GET, POST, OPTIONS');
+    void reply.header('access-control-allow-methods', 'GET, POST, DELETE, OPTIONS');
     void reply.header(
       'access-control-allow-headers',
-      'authorization, content-type, x-correlation-id',
+      'authorization, content-type, x-correlation-id, mcp-protocol-version, mcp-session-id, last-event-id',
     );
 
     // The browser client sends this read-only refresh as a bodyless JSON POST.
@@ -207,8 +214,12 @@ export function buildApi(dependencies: ApiDependencies) {
       return reply;
     }
 
-    if (!request.url.startsWith('/v1/')) return;
-    const decision = await dependencies.authenticator.authenticate(request.headers.authorization);
+    const path = request.url.split('?')[0];
+    const isMcp = path === '/mcp';
+    if (!request.url.startsWith('/v1/') && !isMcp) return;
+    const decision = await (isMcp
+      ? dependencies.mcp?.authenticator.authenticate(request.headers.authorization)
+      : dependencies.authenticator.authenticate(request.headers.authorization));
     if (decision !== 'AUTHORIZED') {
       sendError(
         reply,
@@ -224,13 +235,27 @@ export function buildApi(dependencies: ApiDependencies) {
       !(await rateLimiter.allow({
         correlationId,
         key: request.ip || 'unknown-client',
-        route: request.url.split('?')[0] ?? request.url,
+        route: path ?? request.url,
       }))
     ) {
       sendError(reply, 429, 'RATE_LIMITED', 'Request rate limit exceeded', correlationId);
       return reply;
     }
   });
+
+  if (nodeMcpHandler) {
+    app.all('/mcp', async (request, reply) => {
+      reply.hijack();
+      await nodeMcpHandler(
+        request.raw as unknown as Parameters<typeof nodeMcpHandler>[0],
+        reply.raw,
+        request.body,
+      );
+    });
+    app.addHook('onClose', async () => {
+      await mcpHandler?.close();
+    });
+  }
 
   app.post('/v1/intents', { schema: { body: createIntentBodySchema } }, async (request, reply) => {
     const result = await dependencies.ledger.createOrReplay(request.body, correlationFor(request));

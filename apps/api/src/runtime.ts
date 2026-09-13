@@ -63,6 +63,19 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
           }
         : {}),
       authenticator: buildApiAuthenticator(config),
+      ...(config.mcp
+        ? {
+            mcp: {
+              authenticator: staticBearerAuthenticator(config.mcp.bearerToken),
+              workspaceId: config.mcp.workspaceId,
+              allowedRequestKey: config.mcp.allowedRequestKey,
+              payerWallet: config.mcp.payerWallet,
+              maxAmountAtomic: config.mcp.maxAmountAtomic,
+              waitMs: config.mcp.waitMs,
+              submissionsDisabled: config.submissionsDisabled,
+            },
+          }
+        : {}),
       rateLimiter: new PostgresRateLimiter(pool, config.rateLimit),
       config: {
         submissionsDisabled: config.submissionsDisabled,

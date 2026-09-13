@@ -7,9 +7,10 @@ const DEFAULT_BACKEND_URL = 'https://oneshot-api-775560462825.europe-west1.run.a
 
 const CORS_HEADERS: Record<string, string> = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, OPTIONS',
-  'access-control-allow-headers': 'authorization, content-type, x-correlation-id',
-  'access-control-expose-headers': 'x-correlation-id',
+  'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
+  'access-control-allow-headers':
+    'authorization, content-type, x-correlation-id, mcp-protocol-version, mcp-session-id, last-event-id',
+  'access-control-expose-headers': 'x-correlation-id, mcp-session-id',
 };
 
 async function proxy(
@@ -47,7 +48,11 @@ export default {
     const url = new URL(request.url);
 
     // Forward API and health check requests to Google Cloud Run.
-    if (url.pathname.startsWith('/v1/') || url.pathname.startsWith('/health/')) {
+    if (
+      url.pathname.startsWith('/v1/') ||
+      url.pathname.startsWith('/health/') ||
+      url.pathname === '/mcp'
+    ) {
       if (request.method === 'OPTIONS') {
         return new Response(null, {
           status: 204,

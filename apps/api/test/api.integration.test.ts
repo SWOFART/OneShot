@@ -2,7 +2,12 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import { IntentLedger, migrate } from '@oneshot/storage-postgres';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buildApi, startApiRuntime, staticBearerAuthenticator } from '../src/index.js';
+import {
+  arcPaymentBusinessIntentId,
+  buildApi,
+  startApiRuntime,
+  staticBearerAuthenticator,
+} from '../src/index.js';
 
 const describePostgres = process.env.TEST_POSTGRES === '1' ? describe : describe.skip;
 const request = {
@@ -91,5 +96,72 @@ describePostgres('durable HTTP API', () => {
     } finally {
       await runtime.close();
     }
+  });
+
+  it('converges parallel MCP calls on one durable intent and zero direct settlements', async () => {
+    const mcpToken = 'integration-mcp-token-with-32-characters';
+    const requestKey = 'integration-arc-payment';
+    const app = buildApi({
+      ledger: ledger(),
+      authenticator: staticBearerAuthenticator('integration-token'),
+      mcp: {
+        authenticator: staticBearerAuthenticator(mcpToken),
+        workspaceId: 'integration-mcp-workspace',
+        allowedRequestKey: requestKey,
+        payerWallet: '0x1111111111111111111111111111111111111111',
+        maxAmountAtomic: 1_000_000n,
+        waitMs: 0,
+      },
+    });
+    const call = (amount = '1') =>
+      app.inject({
+        method: 'POST',
+        url: '/mcp',
+        headers: {
+          authorization: `Bearer ${mcpToken}`,
+          accept: 'application/json, text/event-stream',
+          'content-type': 'application/json',
+          'mcp-protocol-version': '2025-06-18',
+        },
+        payload: {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: {
+            name: 'arc_payment',
+            arguments: {
+              request_key: requestKey,
+              recipient: '0x2222222222222222222222222222222222222222',
+              amount_usdc: amount,
+              purpose: 'One integration payment',
+            },
+          },
+        },
+      });
+
+    const responses = await Promise.all(Array.from({ length: 10 }, () => call()));
+    expect(responses.every((response) => response.statusCode === 200)).toBe(true);
+    const businessIntentId = arcPaymentBusinessIntentId('integration-mcp-workspace', requestKey);
+    const counts = await pool.query<{
+      intents: string;
+      attempts: string;
+      settlements: string;
+    }>(
+      `SELECT
+        (SELECT count(*) FROM business_intents WHERE business_intent_id = $1)::text AS intents,
+        (SELECT count(*) FROM attempts WHERE business_intent_id = $1)::text AS attempts,
+        (SELECT count(*) FROM settlements WHERE business_intent_id = $1)::text AS settlements`,
+      [businessIntentId],
+    );
+    expect(counts.rows[0]).toEqual({ intents: '1', attempts: '1', settlements: '0' });
+
+    const conflict = await call('0.5');
+    expect(conflict.body).toContain('different payment');
+    const afterConflict = await pool.query<{ count: string }>(
+      'SELECT count(*)::text AS count FROM business_intents WHERE business_intent_id = $1',
+      [businessIntentId],
+    );
+    expect(afterConflict.rows[0]?.count).toBe('1');
+    await app.close();
   });
 });

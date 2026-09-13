@@ -20,6 +20,7 @@ import { Hero } from './components/Hero.js';
 import { IntentForm } from './components/IntentForm.js';
 import { IntentStatusView } from './components/IntentStatusView.js';
 import { LoginGate } from './components/LoginGate.js';
+import { McpDocsPage } from './components/McpDocsPage.js';
 import { ReadinessBanner } from './components/ReadinessBanner.js';
 import { JobList, JobWorkspace } from './components/JobWorkspace.js';
 import { RecoverySurface, SettlementSurface } from './components/FrontendSurfaces.js';
@@ -87,6 +88,9 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
           <div className="hero-actions">
             <a className="btn-hero-cta" href="/app">
               Open workspace
+            </a>
+            <a className="btn-hero-secondary" href="/docs/mcp">
+              Connect an agent
             </a>
             <a className="btn-hero-secondary" href="#how-it-works">
               How it works
@@ -350,6 +354,9 @@ export function App(props: AppProps = {}) {
   );
 
   if (props.route === '/') return <LandingPage theme={theme} onToggleTheme={toggleTheme} />;
+  if (props.route?.startsWith('/docs/mcp')) {
+    return <McpDocsPage theme={theme} onToggleTheme={toggleTheme} />;
+  }
   if (props.route?.startsWith('/app')) {
     return (
       <CabinetPage

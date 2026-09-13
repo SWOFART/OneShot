@@ -1,6 +1,7 @@
 export * from './app.js';
 export * from './auth.js';
 export * from './config.js';
+export * from './mcp.js';
 export * from './privy-auth.js';
 export * from './rate-limit.js';
 export * from './wallet-activity.js';

@@ -315,6 +315,7 @@ plus explicit human authorization.
 | ------------------------------------------------------------------------ | -------------------------------------------------------- |
 | [`plan.md`](plan.md)                                                     | Product plan, scope, and delivery gates                  |
 | [`docs/DOMAIN_ARCHITECTURE.md`](docs/DOMAIN_ARCHITECTURE.md)             | Domain model and boundaries                              |
+| [`docs/MCP_ARC_PAYMENT.md`](docs/MCP_ARC_PAYMENT.md)                     | One-tool MCP deployment and live walkthrough             |
 | [`docs/RECOVERY_HARDENING.md`](docs/RECOVERY_HARDENING.md)               | Recovery, runtime, authentication, and metrics contracts |
 | [`milestones/CONTRACTS.md`](milestones/CONTRACTS.md)                     | Frozen v1 contract pack                                  |
 | [`docs/settlement/`](docs/settlement/)                                   | Settlement config, provider setup, live evidence         |
