@@ -31,7 +31,7 @@ describePostgres('PostgreSQL intent ledger', () => {
   afterEach(async () => {
     if (typeof pool === 'undefined') return;
     await pool.query(
-      'TRUNCATE wallet_activity_observations, operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, resumable_jobs, business_intents RESTART IDENTITY',
+      'TRUNCATE wallet_activity_observations, operational_metric_events, outbox_jobs, evidence_observations, settlements, attempts, resumable_jobs, paid_api_requests, business_intents RESTART IDENTITY',
     );
     nextAttempt = 0;
   });
