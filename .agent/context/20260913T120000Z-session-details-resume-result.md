@@ -17,30 +17,30 @@ Clone `SWOFART/OneShot`, create a branch from `develop`, fix the session-details
 - The project URL is `https://github.com/SWOFART/OneShot.git`, identified from the user’s already-open GitHub tab.
 - The requested branch name was not specified; use `fix/session-details-resume-result`.
 - The resume endpoint is asynchronous (`202 Accepted`), so the UI must observe the durable job state after enqueueing rather than treating the first pending response as final.
-- A user report confirmed that a single one-second full-list refresh is too early: the API can legitimately remain `PENDING` while the supplier worker finishes. Follow-up reads must target the same `job_id`, not list the whole workspace.
+- A user report confirmed that automatic follow-up reads create unwanted network traffic while the API remains `PENDING`. The UI therefore leaves delivery observation to the existing manual `Refresh requests` action.
 - The payment proof view remains read-only; result retrieval must never submit a payment.
 
 ## Plan
 
 1. Inspect the web components, API client, styles, and existing tests.
 2. Add wallet-specific copy behavior and session-details layout styles.
-3. Make resume read the same job until the API reports `result`/`AVAILABLE`, with bounded timeout/error handling, and add regression tests.
+3. Keep pending supplier delivery explicit, remove the non-working resume button and automatic polling from the web UI, and add regression coverage for manual refresh.
 4. Run focused web checks and broader repository checks as feasible.
 
 ## Key decisions
 
 - Keep copy-session-ID behavior and add a separate wallet-address copy button so both identifiers remain available.
-- Send one `POST /v1/jobs/:jobId/resume`, then read only `GET /v1/jobs/:jobId` until the durable job reports a result or the bounded wait expires. Do not add payment or result endpoint behavior that could bypass durable state.
+- Do not map settlement proof to supplier-result readiness. `Settlement READY` means authorization/submission ownership; `Result ready` requires the job's durable `result` payload.
+- Remove the web resume control and automatic job-status polling. Use the existing explicit `GET /v1/jobs` manual refresh to observe whether the worker has completed delivery.
 - A response with `payment_state: COMMITTED` and `delivery_state: PENDING` proves payment only; it is not evidence that a supplier result is ready. The UI must not fabricate `Result ready` for that response.
 
 ## Files/components touched
 
 - `apps/web/src/components/LoginGate.tsx` - separate session-ID and wallet-address copy actions, with a disabled state when no wallet is connected.
-- `apps/web/src/api/job-client.ts` - adds a read-only single-job status method for asynchronous delivery observation.
-- `apps/web/src/components/JobWorkspace.tsx` - observes the same job until a result is available or retrieval fails/times out, without repeatedly listing all jobs.
+- `apps/web/src/components/JobWorkspace.tsx` - removes the non-working resume button and automatic polling; the existing manual refresh remains the only list read.
 - `apps/web/src/styles.css` - wallet address gets the DID pill treatment and a spaced wallet block.
-- `apps/web/test/login-gate.test.tsx`, `apps/web/test/components.test.tsx`, and `apps/web/test/job-client.test.ts` - regression coverage for clipboard behavior, exact-one resume, bounded single-job reads, and async result availability.
-- `apps/web/browser/p5.spec.ts` - serves the single-job read endpoint in browser acceptance mocks.
+- `apps/web/test/login-gate.test.tsx`, `apps/web/test/components.test.tsx`, and `apps/web/test/job-client.test.ts` - regression coverage for clipboard behavior and explicit pending delivery without a resume action.
+- `apps/web/browser/p5.spec.ts` - models `PENDING` on initial load and `AVAILABLE` only after a manual refresh; it asserts no resume request is sent.
 
 ## Commands/checks
 
@@ -61,6 +61,12 @@ Clone `SWOFART/OneShot`, create a branch from `develop`, fix the session-details
 - Follow-up `pnpm --filter @oneshot/web typecheck` - passed.
 - Follow-up `pnpm --filter @oneshot/web test:browser` - passed, 8 browser tests.
 - Follow-up `pnpm format:check` - passed after Prettier formatting.
+- Latest focused web test after removing resume polling - passed, 22 tests.
+- Latest full web test after removing resume polling - passed, 17 files / 95 tests.
+- Latest `pnpm --filter @oneshot/web lint` - passed.
+- Latest `pnpm --filter @oneshot/web typecheck` - passed.
+- Latest `pnpm --filter @oneshot/web test:browser` - passed, 8 browser tests.
+- Latest `pnpm format:check` - passed.
 - `pnpm lint` - passed.
 - `pnpm build` - passed.
 - `pnpm test` - passed, 80 files / 1,053 tests.
@@ -78,9 +84,9 @@ Clone `SWOFART/OneShot`, create a branch from `develop`, fix the session-details
 
 - Branch: `fix/session-details-resume-result`
 - Base: `develop` at `d671af1da36878b7aaafcfc3049bc958e0daeb34`
-- Previous commit: `26dfab5989f39c111d22f626b69a3b38d17a197e`
-- Follow-up fix: uncommitted; candidate changes are not yet staged.
-- PR: [#135](https://github.com/SWOFART/OneShot/pull/135), open against `develop`, currently at the previous commit.
+- Previous commit: `1824728d594a04a797fa1447acd1a3f9edc7fd3e`
+- Latest UI change: uncommitted; candidate changes are not yet staged.
+- PR: [#136](https://github.com/SWOFART/OneShot/pull/136), open against `develop`, currently at the previous commit.
 - CI: not run for the follow-up candidate yet.
 
 ## Review gates
