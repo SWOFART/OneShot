@@ -53,7 +53,6 @@ NOTHING`, so redelivery after a crash does not duplicate evidence.
 ## Files/components touched
 
 - `packages/storage-postgres/migrations/012_graph_evidence.sql`
-- `packages/storage-postgres/migrations/012_graph_evidence.sql`
 - `packages/storage-postgres/src/ledger.ts`
 - `apps/worker/src/types.ts`
 - `apps/worker/src/recovery-bridge.ts`
@@ -93,10 +92,13 @@ NOTHING`, so redelivery after a crash does not duplicate evidence.
 ## Git and PR state
 
 - Branch: `feature/always-on-graph-evidence`
-- Base: `develop` at current local/origin HEAD before implementation
-- Commit: uncommitted; intended feature files are not yet staged
-- PR: not created
-- CI: not run
+- Base: `develop` at `62920523c5a323cfc0e38d57c632f498b4d921d5`
+- Feature commit: `4fea7e66d6187760052d24508d47e73fa2b8daca`
+- Feature tree: `86f39915dbab92450483c367f9fc0df67bae6172`
+- Remote branch: pushed to `origin/feature/always-on-graph-evidence`
+- Draft PR: [#124](https://github.com/SWOFART/OneShot/pull/124)
+- PR head at creation: feature commit/tree above
+- CI: GitHub checks are pending/queued; local validation passed
 
 ## Review gates
 
@@ -105,6 +107,6 @@ NOTHING`, so redelivery after a crash does not duplicate evidence.
 
 ## Handoff/next steps
 
-1. Stage only this feature and its context record; preserve unrelated work.
-2. Commit, push, and open a draft PR targeting `develop` with an explicit
-   “GATE A wasn’t started” note.
+1. Keep the unrelated `.agent/context/20260912T-user-wallet-payment.md`
+   modification unstaged.
+2. Human review and CI follow-up remain; do not start Gate A or Gate B.
