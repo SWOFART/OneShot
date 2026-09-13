@@ -247,7 +247,10 @@ for (const theme of ['light', 'dark'] as const) {
           expect(calls).not.toContain(`POST /v1/jobs/${JOB_ID}/resume`);
           await page.getByRole('button', { name: 'Refresh requests' }).click();
           await expect(page.getByText('Recovered original supplier report.')).toBeVisible();
-          expect(calls.filter((call) => call === 'GET /v1/jobs')).toHaveLength(2);
+          // At least the mount read and the manual refresh. It is not an exact
+          // count: a delivery reported as PENDING is re-read on a timer, so a
+          // slower run legitimately reads more times.
+          expect(calls.filter((call) => call === 'GET /v1/jobs').length).toBeGreaterThanOrEqual(2);
           const results = await page
             .getByRole('region', { name: 'Requests and results' })
             .boundingBox();
