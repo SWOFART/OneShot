@@ -130,6 +130,22 @@ gcloud run deploy oneshot-api \
 
 ### Step 5: Cloud Run Worker deployment
 
+The worker is not request-driven. It drains the outbox on its own timer, so it
+only works while its process is alive and holding CPU. Both flags below are
+required, and a deployment that omits them fails quietly: payments still settle
+through the API, but supplier deliveries sit in `PENDING` and every request
+stays on "Retrieving result".
+
+- `--min-instances=1` keeps an instance up. At the default of zero, Cloud Run
+  stops the idle container and its drain timer stops with it.
+- `--no-cpu-throttling` keeps CPU allocated between requests. Throttled, the
+  timer does not fire reliably even while an instance exists.
+
+The symptom is intermittent, which makes it easy to misread: any request that
+reaches the service boots an instance, and startup drains the backlog before
+the timer takes over, so the queue appears to clear itself and then stalls
+again.
+
 ```bash
 # Deploy settlement and reconciliation worker
 gcloud run deploy oneshot-worker \
@@ -137,6 +153,8 @@ gcloud run deploy oneshot-worker \
   --region=us-central1 \
   --platform=managed \
   --no-allow-unauthenticated \
+  --min-instances=1 \
+  --no-cpu-throttling \
   --add-cloudsql-instances="PROJECT_ID:us-central1:oneshot-postgres" \
   --set-env-vars="HOST=0.0.0.0,PORT=8080,DB_NAME=oneshot,DB_USER=oneshot_user,INSTANCE_CONNECTION_NAME=PROJECT_ID:us-central1:oneshot-postgres,ONESHOT_ARC_PROFILE=arc-testnet,ONESHOT_ARC_RPC_URL=https://ARC_RPC_HOST,ONESHOT_PRIVY_APP_ID=PRIVY_APP_ID,ONESHOT_PRIVY_WALLET_ID=PRIVY_WALLET_ID,ONESHOT_PRIVY_WALLET_ADDRESS=PRIVY_WALLET_ADDRESS,ONESHOT_PRIVY_POLICY_ID=PRIVY_POLICY_ID,ONESHOT_PRIVY_POLICY_DIGEST=PRIVY_POLICY_DIGEST,ONESHOT_SETTLEMENT_CAP_ATOMIC=1000000,ONESHOT_SUBGRAPH_SOURCE=STUDIO_GRAPHQL,ONESHOT_SUBGRAPH_QUERY_URL=https://api.studio.thegraph.com/query/STUDIO_ID/SUBGRAPH/VERSION,ONESHOT_SUBGRAPH_DEPLOYMENT_ID=SUBGRAPH_DEPLOYMENT_ID,ONESHOT_SUBGRAPH_MANIFEST_CID=SUBGRAPH_MANIFEST_CID,ONESHOT_SUBGRAPH_MAX_LAG_BLOCKS=5,ONESHOT_RECOVERY_FROM_BLOCK=0,ONESHOT_RECOVERY_TO_BLOCK=RECOVERY_TO_BLOCK,ONESHOT_VERTEX_PROJECT_ID=PROJECT_ID,ONESHOT_VERTEX_LOCATION=europe-west1,ONESHOT_VERTEX_MODEL=gemini-2.5-flash" \
   --set-secrets="DB_PASS=oneshot-db-pass:latest,ONESHOT_PRIVY_APP_SECRET=privy-secret:latest,ONESHOT_GRAPH_API_KEY=graph-api-key:latest"
