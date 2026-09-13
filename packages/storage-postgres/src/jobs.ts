@@ -566,56 +566,63 @@ export class JobLedger {
   }
 
   async activity(workspaceId: string): Promise<ActivityResponse> {
-    const [observation, settlements, uncertain, recordedTransfers, activityJobs] =
-      await Promise.all([
-        this.#pool.query<{
-          freshness: string;
-          coverage_note: string;
-          observed_at: Date;
-          payload: unknown;
-        }>(
-          `SELECT freshness, coverage_note, observed_at, payload FROM wallet_activity_observations
+    const [
+      observation,
+      settlements,
+      uncertain,
+      recordedTransfers,
+      activityJobs,
+      workspaceWalletRows,
+      workspaceHashRows,
+    ] = await Promise.all([
+      this.#pool.query<{
+        freshness: string;
+        coverage_note: string;
+        observed_at: Date;
+        payload: unknown;
+      }>(
+        `SELECT freshness, coverage_note, observed_at, payload FROM wallet_activity_observations
          WHERE workspace_id = $1 ORDER BY observation_id DESC LIMIT 1`,
-          [workspaceId],
-        ),
-        this.#pool.query<{ count: string }>(
-          `SELECT count(*)::text AS count FROM (
+        [workspaceId],
+      ),
+      this.#pool.query<{ count: string }>(
+        `SELECT count(*)::text AS count FROM (
            SELECT j.business_intent_id FROM resumable_jobs j
            JOIN settlements s ON s.business_intent_id = j.business_intent_id
            WHERE j.workspace_id = $1
          ) recorded`,
-          [workspaceId],
-        ),
-        this.#pool.query<{ count: string }>(
-          `SELECT count(*)::text AS count FROM (
+        [workspaceId],
+      ),
+      this.#pool.query<{ count: string }>(
+        `SELECT count(*)::text AS count FROM (
            SELECT j.business_intent_id FROM resumable_jobs j
            JOIN business_intents i ON i.business_intent_id = j.business_intent_id
            WHERE j.workspace_id = $1 AND i.state = 'UNKNOWN'
          ) uncertain`,
-          [workspaceId],
-        ),
-        this.#pool.query<{
-          transaction_hash: string;
-          transfer_log_index: number;
-          job_id: string;
-        }>(
-          `SELECT s.transaction_hash, s.transfer_log_index, j.job_id
+        [workspaceId],
+      ),
+      this.#pool.query<{
+        transaction_hash: string;
+        transfer_log_index: number;
+        job_id: string;
+      }>(
+        `SELECT s.transaction_hash, s.transfer_log_index, j.job_id
          FROM settlements s
          JOIN resumable_jobs j ON j.business_intent_id = s.business_intent_id
          WHERE j.workspace_id = $1`,
-          [workspaceId],
-        ),
-        this.#pool.query<{
-          job_id: string;
-          business_intent_id: string;
-          payment_state: JobView['payment_state'];
-          payment_mode: PaymentMode;
-          transaction_hash: string | null;
-          recipient: string;
-          amount_atomic: string;
-          transfer_log_index: number | null;
-        }>(
-          `SELECT j.job_id, j.business_intent_id, i.state AS payment_state, j.payment_mode,
+        [workspaceId],
+      ),
+      this.#pool.query<{
+        job_id: string;
+        business_intent_id: string;
+        payment_state: JobView['payment_state'];
+        payment_mode: PaymentMode;
+        transaction_hash: string | null;
+        recipient: string;
+        amount_atomic: string;
+        transfer_log_index: number | null;
+      }>(
+        `SELECT j.job_id, j.business_intent_id, i.state AS payment_state, j.payment_mode,
                 COALESCE(s.transaction_hash, j.payment_transaction_hash, latest.provider_transaction_hash) AS transaction_hash,
                 j.supplier_quote->>'recipient' AS recipient,
                 j.supplier_quote->>'amount_atomic' AS amount_atomic,
@@ -633,11 +640,56 @@ export class JobLedger {
          WHERE j.workspace_id = $1
          ORDER BY j.updated_at DESC, j.job_id ASC
          LIMIT 100`,
-          [workspaceId],
-        ),
-      ]);
+        [workspaceId],
+      ),
+      this.#pool.query<{ payer_wallet: string }>(
+        `SELECT DISTINCT lower(payer_wallet) AS payer_wallet
+         FROM resumable_jobs
+         WHERE workspace_id = $1 AND payer_wallet IS NOT NULL`,
+        [workspaceId],
+      ),
+      this.#pool.query<{ transaction_hash: string }>(
+        `SELECT DISTINCT lower(transaction_hash) AS transaction_hash FROM (
+           SELECT workspace_settlement.transaction_hash
+           FROM settlements workspace_settlement
+           JOIN resumable_jobs workspace_job
+             ON workspace_job.business_intent_id = workspace_settlement.business_intent_id
+           WHERE workspace_job.workspace_id = $1
+           UNION
+           SELECT workspace_job.payment_transaction_hash
+           FROM resumable_jobs workspace_job
+           WHERE workspace_job.workspace_id = $1
+             AND workspace_job.payment_transaction_hash IS NOT NULL
+           UNION
+           SELECT workspace_attempt.provider_transaction_hash
+           FROM attempts workspace_attempt
+           JOIN resumable_jobs workspace_job
+             ON workspace_job.business_intent_id = workspace_attempt.business_intent_id
+           WHERE workspace_job.workspace_id = $1
+             AND workspace_attempt.provider_transaction_hash IS NOT NULL
+         ) workspace_transaction_hashes`,
+        [workspaceId],
+      ),
+    ]);
     const row = observation.rows[0];
-    const indexedTransfers = row ? parseActivityTransfers(row.payload) : [];
+    const observedTransfers = row ? parseActivityTransfers(row.payload) : [];
+    // The Graph is queried with the shared server wallet as well as this
+    // workspace's user wallets, so the raw observation also carries transfers
+    // that belong to other workspaces. Evidence is workspace-scoped: keep only
+    // transfers this workspace can own, either by payer wallet or by a
+    // transaction hash the workspace already recorded on a settlement, a job or
+    // an attempt.
+    const workspaceWallets = new Set(
+      workspaceWalletRows.rows.map((wallet) => wallet.payer_wallet.toLowerCase()),
+    );
+    const workspaceHashes = new Set(
+      workspaceHashRows.rows.map((hash) => hash.transaction_hash.toLowerCase()),
+    );
+    const indexedTransfers = observedTransfers.filter(
+      (transfer) =>
+        workspaceHashes.has(transfer.transaction_hash.toLowerCase()) ||
+        (transfer.sender !== undefined && workspaceWallets.has(transfer.sender.toLowerCase())),
+    );
     const recordedByTransfer = new Map(
       recordedTransfers.rows.map((settlement) => [
         activityTransferKey(settlement.transaction_hash, settlement.transfer_log_index),
