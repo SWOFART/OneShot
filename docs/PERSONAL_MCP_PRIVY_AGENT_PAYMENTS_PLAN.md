@@ -1,5 +1,11 @@
 # OneShot MCP `arc_payment` implementation plan
 
+> Historical design note: this plan describes the former server-wallet MVP.
+> The active implementation now uses `arc_payment` for user-wallet preparation
+> and `arc_payment_submit` for receipt verification. The old server-wallet
+> path is retained only as a disabled corporate-mode reference and is not the
+> personal payment default.
+
 ## Decision
 
 Ship one remote MCP tool first:

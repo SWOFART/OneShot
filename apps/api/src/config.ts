@@ -30,7 +30,8 @@ export interface ApiRuntimeConfig {
   readonly mcp?: {
     readonly bearerToken?: string;
     readonly workspaceId: string;
-    readonly payerWallet: string;
+    /** НЕ УДАЛЯТЬ: disabled corporate server-wallet mode only. */
+    readonly payerWallet?: string;
     readonly waitMs: number;
   };
 }
@@ -93,14 +94,19 @@ function mcpConfig(environment: NodeJS.ProcessEnv, workspaceId: string): ApiRunt
   if (bearerToken && bearerToken.length < 32) {
     throw new Error('Environment variable ONESHOT_MCP_BEARER_TOKEN must be at least 32 characters');
   }
-  const payerWallet = required(environment, 'ONESHOT_MCP_PAYER_ADDRESS').toLowerCase();
-  if (!/^0x[0-9a-f]{40}$/u.test(payerWallet)) {
+  /*
+   * НЕ УДАЛЯТЬ: this optional value belongs only to the disabled corporate
+   * server-wallet mode. Personal MCP payments bind the wallet supplied by the
+   * user and never read this address.
+   */
+  const payerWallet = environment.ONESHOT_MCP_PAYER_ADDRESS?.trim().toLowerCase();
+  if (payerWallet && !/^0x[0-9a-f]{40}$/u.test(payerWallet)) {
     throw new Error('Invalid environment variable: ONESHOT_MCP_PAYER_ADDRESS');
   }
   return {
     ...(bearerToken ? { bearerToken } : {}),
     workspaceId,
-    payerWallet,
+    ...(payerWallet ? { payerWallet } : {}),
     waitMs: integer(environment, 'ONESHOT_MCP_WAIT_MS', 2_500, 0, 5_000),
   };
 }

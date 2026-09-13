@@ -120,8 +120,8 @@ test.describe('resumable job workspace', () => {
     await expect(page.getByText('Payment evidence', { exact: true })).toHaveCount(0);
   });
 
-  test('starts one job and resumes only its original supplier delivery', async ({ page }) => {
-    const calls = await mockJobApi(page, { startDelayMs: 1000, resumeDelayMs: 1000 });
+  test('requires a connected user wallet before approving a direct payment', async ({ page }) => {
+    const calls = await mockJobApi(page);
     await page.goto('/app');
     await unlockWorkspace(page);
     await page.getByRole('tab', { name: 'Payment services' }).click();
@@ -145,24 +145,10 @@ test.describe('resumable job workspace', () => {
       .locator('button')
       .last();
     await approve.click();
-    await expect(approve).toBeDisabled();
-    await expect(approve).toHaveText('Starting request…');
-    await expect.poll(() => calls.filter((call) => call === 'POST /v1/jobs')).toHaveLength(1);
-    await expect(page.getByRole('status')).toContainText('Payment authorization is queued');
-    await expect(page.getByRole('heading', { name: 'Request accepted' })).toBeVisible();
-    await expect(page.getByText('2.500000 USDC')).toBeVisible();
-    await page.getByText('Show supplier details').click();
-    await expect(page.getByText('team_report_order_browser')).toBeVisible();
-    await page.getByRole('tab', { name: 'Requests' }).click();
-    await expect(page.getByRole('link', { name: 'View the ArcScan transaction' })).toHaveAttribute(
-      'href',
-      `https://testnet.arcscan.app/tx/0x${'c'.repeat(64)}`,
+    await expect(page.getByRole('status')).toContainText(
+      'Connect a Privy or MetaMask wallet before approving',
     );
-    const resume = page.locator('.job-list li').first().locator('button').nth(1);
-    await resume.click();
-    await expect(resume).toBeDisabled();
-    await expect(resume).toHaveText('Resuming…');
-    await expect(page.getByText('Recovered original supplier report.')).toBeVisible();
+    expect(calls).not.toContain('POST /v1/jobs');
   });
 
   test('shows activity as read-only evidence and keeps the cabinet responsive', async ({

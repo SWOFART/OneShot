@@ -1,5 +1,6 @@
 import {
   asAtomicAmount,
+  asBusinessIntentId,
   asEvmAddress,
   asTransactionHash,
   type ActivityResponse,
@@ -358,6 +359,19 @@ export class JobLedger {
     } finally {
       client.release();
     }
+  }
+
+  async getByBusinessIntentId(
+    workspaceId: string,
+    businessIntentIdValue: unknown,
+  ): Promise<JobView | undefined> {
+    const businessIntentId = asBusinessIntentId(businessIntentIdValue);
+    const result = await this.#pool.query<JobRow>(
+      `${this.#selectJob()} WHERE j.workspace_id = $1 AND j.business_intent_id = $2`,
+      [workspaceId, businessIntentId],
+    );
+    const row = result.rows[0];
+    return row ? asView(row) : undefined;
   }
 
   async list(workspaceId: string, limit = 50): Promise<readonly JobView[]> {

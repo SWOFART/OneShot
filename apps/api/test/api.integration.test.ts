@@ -1,13 +1,10 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import { IntentLedger, migrate } from '@oneshot/storage-postgres';
+import { derivedBusinessIntentId } from '@oneshot/domain';
+import { IntentLedger, JobLedger, migrate } from '@oneshot/storage-postgres';
+import { TeamReportSupplier } from '@oneshot/supplier-adapter';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  arcPaymentBusinessIntentId,
-  buildApi,
-  startApiRuntime,
-  staticBearerAuthenticator,
-} from '../src/index.js';
+import { buildApi, startApiRuntime, staticBearerAuthenticator } from '../src/index.js';
 
 const describePostgres = process.env.TEST_POSTGRES === '1' ? describe : describe.skip;
 const request = {
@@ -101,13 +98,18 @@ describePostgres('durable HTTP API', () => {
   it('converges parallel MCP calls on one durable intent and zero direct settlements', async () => {
     const mcpToken = 'integration-mcp-token-with-32-characters';
     const requestKey = 'integration-arc-payment';
+    const jobs = new JobLedger(pool, {
+      now: () => new Date('2026-09-07T12:00:00.000Z'),
+      nextAttemptId: () => `http-user-wallet-attempt-${++attempts}`,
+    });
     const app = buildApi({
       ledger: ledger(),
+      jobs,
+      supplier: new TeamReportSupplier(),
       authenticator: staticBearerAuthenticator('integration-token'),
       mcp: {
         authenticator: staticBearerAuthenticator(mcpToken),
         workspaceId: 'integration-mcp-workspace',
-        payerWallet: '0x1111111111111111111111111111111111111111',
         waitMs: 0,
       },
     });
@@ -129,6 +131,7 @@ describePostgres('durable HTTP API', () => {
             name: 'arc_payment',
             arguments: {
               request_key: requestKey,
+              payer_wallet: '0x1111111111111111111111111111111111111111',
               recipient: '0x2222222222222222222222222222222222222222',
               amount_usdc: amount,
               purpose: 'One integration payment',
@@ -139,7 +142,13 @@ describePostgres('durable HTTP API', () => {
 
     const responses = await Promise.all(Array.from({ length: 10 }, () => call()));
     expect(responses.every((response) => response.statusCode === 200)).toBe(true);
-    const businessIntentId = arcPaymentBusinessIntentId('integration-mcp-workspace', requestKey);
+    const businessIntentId = derivedBusinessIntentId('integration-mcp-workspace', {
+      task_key: requestKey,
+      tool_id: 'team-report-v1',
+      report_subject: 'One integration payment',
+      recipient: '0x2222222222222222222222222222222222222222',
+      amount_atomic: '1000000',
+    });
     const counts = await pool.query<{
       intents: string;
       attempts: string;
