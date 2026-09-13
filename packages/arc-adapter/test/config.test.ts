@@ -3,7 +3,6 @@ import {
   CONFIG_VARIABLES,
   ConfigError,
   SECRET_VARIABLE_NAMES,
-  isAllowedRecipient,
   loadSettlementConfig,
   renderEnvExample,
   type RawEnv,
@@ -16,7 +15,6 @@ const VALID: RawEnv = {
   ONESHOT_PRIVY_APP_SECRET: 'unused-by-this-module',
   ONESHOT_PRIVY_WALLET_ID: 'wallet_1234567890',
   ONESHOT_PRIVY_POLICY_ID: 'policy_1234567890',
-  ONESHOT_RECIPIENT_ALLOWLIST: '0x1111111111111111111111111111111111111111',
   ONESHOT_SETTLEMENT_CAP_ATOMIC: '1000000',
 };
 
@@ -38,7 +36,6 @@ describe('loadSettlementConfig', () => {
     'ONESHOT_PRIVY_APP_ID',
     'ONESHOT_PRIVY_WALLET_ID',
     'ONESHOT_PRIVY_POLICY_ID',
-    'ONESHOT_RECIPIENT_ALLOWLIST',
     'ONESHOT_SETTLEMENT_CAP_ATOMIC',
   ])('fails closed when %s is missing', (name) => {
     expect(() => loadSettlementConfig(withEnv({ [name]: undefined }))).toThrow(ConfigError);
@@ -88,53 +85,6 @@ describe('URL validation', () => {
     expect(() => loadSettlementConfig(withEnv({ ONESHOT_ARC_RPC_URL: 'not-a-url' }))).toThrow(
       expect.objectContaining({ code: 'INVALID_URL' }),
     );
-  });
-});
-
-describe('recipient allowlist', () => {
-  it('normalizes addresses to lowercase for exact comparison', () => {
-    const config = loadSettlementConfig(
-      withEnv({
-        ONESHOT_RECIPIENT_ALLOWLIST: '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-      }),
-    );
-    expect(config.recipientAllowlist).toEqual([
-      '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-    ]);
-  });
-
-  it('matches a recipient regardless of the casing it arrives in', () => {
-    const config = loadSettlementConfig(VALID);
-    expect(isAllowedRecipient(config, '0x1111111111111111111111111111111111111111')).toBe(true);
-    expect(isAllowedRecipient(config, '0x1111111111111111111111111111111111111111'.toUpperCase().replace('0X', '0x'))).toBe(true);
-  });
-
-  it('rejects an address that is not on the allowlist', () => {
-    const config = loadSettlementConfig(VALID);
-    expect(isAllowedRecipient(config, '0x2222222222222222222222222222222222222222')).toBe(false);
-  });
-
-  it('rejects a malformed address rather than treating it as absent', () => {
-    const config = loadSettlementConfig(VALID);
-    expect(isAllowedRecipient(config, '0x123')).toBe(false);
-    expect(isAllowedRecipient(config, 'not-an-address')).toBe(false);
-  });
-
-  it('fails closed on an allowlist of only separators', () => {
-    expect(() => loadSettlementConfig(withEnv({ ONESHOT_RECIPIENT_ALLOWLIST: ' , , ' }))).toThrow(
-      expect.objectContaining({ code: 'EMPTY_ALLOWLIST' }),
-    );
-  });
-
-  it('rejects an allowlist containing one malformed entry', () => {
-    expect(() =>
-      loadSettlementConfig(
-        withEnv({
-          ONESHOT_RECIPIENT_ALLOWLIST:
-            '0x1111111111111111111111111111111111111111,0xnope',
-        }),
-      ),
-    ).toThrow(expect.objectContaining({ code: 'INVALID_ADDRESS' }));
   });
 });
 

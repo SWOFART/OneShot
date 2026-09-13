@@ -11,7 +11,6 @@ import {
 const INPUTS: PolicyInputs = {
   chainId: 5042002,
   tokenContract: '0x3600000000000000000000000000000000000000',
-  recipientAllowlist: ['0x1111111111111111111111111111111111111111'],
   amountCapAtomic: 1_000_000n,
 };
 
@@ -112,25 +111,10 @@ describe('digest', () => {
     expect(policyDigest(buildExpectedPolicy(INPUTS))).toBe(policyDigest(POLICY));
   });
 
-  it('is independent of recipient allowlist ordering', () => {
-    // Two operators listing the same recipients in different order describe
-    // the same policy and must not read as drift.
-    const a = buildExpectedPolicy({
-      ...INPUTS,
-      recipientAllowlist: ['0x1111111111111111111111111111111111111111', '0x2222222222222222222222222222222222222222'],
-    });
-    const b = buildExpectedPolicy({
-      ...INPUTS,
-      recipientAllowlist: ['0x2222222222222222222222222222222222222222', '0x1111111111111111111111111111111111111111'],
-    });
-    expect(policyDigest(a)).toBe(policyDigest(b));
-  });
-
   it.each<[string, Partial<PolicyInputs>]>([
     ['a different chain', { chainId: 1 }],
     ['a different token', { tokenContract: '0x4600000000000000000000000000000000000000' }],
     ['a raised cap', { amountCapAtomic: 2_000_000n }],
-    ['an extra recipient', { recipientAllowlist: ['0x1111111111111111111111111111111111111111', '0x3333333333333333333333333333333333333333'] }],
   ])('changes when the policy changes: %s', (_label, override) => {
     // Each of these is a real widening of what the wallet may do, so readiness
     // must see drift rather than silently accept the deployed policy.

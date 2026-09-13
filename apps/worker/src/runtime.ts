@@ -51,14 +51,6 @@ function stableJson(value: unknown): string {
   return JSON.stringify(value) ?? 'null';
 }
 
-function firstAllowedRecipient(config: WorkerRuntimeConfig): `0x${string}` {
-  const recipient = config.settlement.recipientAllowlist[0];
-  if (!recipient) {
-    return (config.walletAddress as `0x${string}`) ?? '0xa605EE031E41f04f8e193059A24407f83677c';
-  }
-  return recipient;
-}
-
 async function composeProduction(
   pool: Pool,
   ledger: IntentLedger,
@@ -102,7 +94,7 @@ async function composeProduction(
   );
   const startupDecision = await startupAuthorization.authorize({
     business_intent_id: 'runtime-readiness-probe',
-    recipient: firstAllowedRecipient(config),
+    recipient: config.walletAddress as `0x${string}`,
     amount_atomic: '1',
     asset: 'USDC',
     network: 'eip155:5042002',
@@ -270,7 +262,7 @@ async function composeProduction(
           () => observed,
         ).authorize({
           business_intent_id: 'runtime-readiness-probe',
-          recipient: firstAllowedRecipient(config),
+          recipient: config.walletAddress as `0x${string}`,
           amount_atomic: '1',
           asset: 'USDC',
           network: 'eip155:5042002',
@@ -288,7 +280,7 @@ async function composeProduction(
           businessIntentId: 'runtime-readiness-probe',
           chainId: config.settlement.profile.chainId,
           tokenContract: config.settlement.profile.tokenContract,
-          recipient: firstAllowedRecipient(config),
+          recipient: config.walletAddress as `0x${string}`,
           amountAtomic: 1n,
         });
         const estimatedFee = await provider.estimateNativeFee({
