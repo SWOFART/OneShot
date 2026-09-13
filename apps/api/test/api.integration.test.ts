@@ -163,7 +163,7 @@ describePostgres('durable HTTP API', () => {
     expect(counts.rows[0]).toEqual({ intents: '1', attempts: '1', settlements: '0' });
 
     const conflict = await call('0.5');
-    expect(conflict.body).toContain('different payment');
+    expect(conflict.body).toContain('different user-wallet payment');
     const afterConflict = await pool.query<{ count: string }>(
       'SELECT count(*)::text AS count FROM business_intents WHERE business_intent_id = $1',
       [businessIntentId],
