@@ -284,7 +284,7 @@ export function JobWorkspace(props: {
           setSubject(event.target.value);
           clearQuote();
         }}
-        placeholder="Q4 supplier research"
+        placeholder="Describe the payment intent"
       />
       <label htmlFor="report-recipient">Service destination wallet</label>
       <input

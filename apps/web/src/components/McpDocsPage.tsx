@@ -61,15 +61,14 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
         <ul className="docs-facts">
           <li>One configured request key can create one payment intent.</li>
           <li>Exact retries return the original intent; changed fields return a conflict.</li>
-          <li>The server wallet pays without a MetaMask or browser wallet popup.</li>
         </ul>
       </section>
 
       <section className="docs-section" aria-labelledby="mcp-skill-heading">
         <h2 id="mcp-skill-heading">Install the agent skill</h2>
         <p>
-          Install Node.js with npm first; <code>npx</code> is included with npm. Then install the
-          OneShot payment skill from the <code>develop</code> branch.
+          First install <a href="https://nodejs.org/en/download">Node.js</a> — npm comes with it.
+          Then install the OneShot payment skill:
         </p>
         <pre className="docs-code" aria-label="Agent skill install command">
           <code>{skillInstall}</code>
@@ -77,10 +76,11 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
       </section>
 
       <section className="docs-section" aria-labelledby="mcp-config-heading">
-        <h2 id="mcp-config-heading">Client configuration</h2>
+        <h2 id="mcp-config-heading">Agent configuration</h2>
         <p>
-          Sign in, open Profile, and generate your workspace-bound bearer. Keep it in your client
-          environment; never paste a real credential into source control.
+          Every OneShot account gets its own MCP bearer. Sign in, open Profile, and choose Generate
+          bearer token — the page shows a ready-made configuration for your agent's MCP client. Keep
+          the token private and never paste real credentials into source control.
         </p>
         <pre className="docs-code" aria-label="MCP client configuration">
           <code>{clientConfig}</code>

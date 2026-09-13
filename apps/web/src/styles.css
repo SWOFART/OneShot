@@ -872,6 +872,11 @@ a:hover {
   margin-bottom: 0;
 }
 
+/* Extra separation above the agent-skill install heading in Profile. */
+.skill-install-heading {
+  margin-top: 3rem;
+}
+
 /* Two or more panels stacked in one tab. */
 .panel-stack {
   display: grid;

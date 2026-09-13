@@ -195,7 +195,7 @@ function CabinetPage(props: {
           </Hero>
         </header>
         <details className="walkthrough">
-          <summary>Walk through a real request</summary>
+          <summary>Walk through a real payment</summary>
           <p>
             Use the actual service, wallet and result. This guide never creates or pays a request
             for you.
@@ -256,12 +256,13 @@ function CabinetPage(props: {
               <p className="eyebrow">ONE JOB · ONE PAYMENT</p>
               <h2>What would you like to do?</h2>
               <p>
-                Choose a connected API service, review its exact quote, and follow the result from
-                one durable request. Technical evidence stays available when you need it.
+                Send one direct USDC payment on Arc Testnet: review the exact quote, approve once,
+                and follow the same durable request from approval to proof. Payment evidence stays
+                available whenever you need it.
               </p>
               <div className="workspace-action-grid">
                 <button type="button" onClick={() => setSection('services')}>
-                  Run an API service
+                  Run a direct payment
                 </button>
                 <button type="button" className="secondary" onClick={() => setSection('requests')}>
                   View requests

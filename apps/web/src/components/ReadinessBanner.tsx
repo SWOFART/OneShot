@@ -26,5 +26,5 @@ export function ReadinessBanner({ client }: { readonly client: OneShotApiClient 
       </div>
     );
   }
-  return <div className="readiness success">Backend ready · Arc Testnet · USDC</div>;
+  return null;
 }
