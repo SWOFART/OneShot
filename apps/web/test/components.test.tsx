@@ -190,6 +190,95 @@ describe('JobWorkspace payment inputs', () => {
     );
   });
 
+  it('pays the reviewed report through the selected browser wallet', async () => {
+    const user = userEvent.setup();
+    const payerWallet = '0x3333333333333333333333333333333333333333';
+    const paymentHash = `0x${'a'.repeat(64)}`;
+    const request = {
+      task_key: 'report-214124-850d9a80',
+      tool_id: 'team-report-v1' as const,
+      report_subject: '214124',
+      recipient: '0x292d3FCA76142E0C6136B934563f3A0750b633eb',
+      amount_atomic: '1000000',
+    };
+    const supplier = {
+      supplier_id: 'team-report-v1' as const,
+      order_reference: 'team-report-214124',
+      recipient: request.recipient,
+      amount_atomic: request.amount_atomic,
+      asset: 'USDC' as const,
+      network: 'eip155:5042002' as const,
+      expires_at: '2099-09-13T02:00:00.000Z',
+    };
+    const payment = {
+      chain_id: 5042002 as const,
+      network: 'eip155:5042002' as const,
+      token_contract: '0x3600000000000000000000000000000000000000',
+      payer_wallet: payerWallet,
+      recipient: request.recipient,
+      amount_atomic: request.amount_atomic,
+    };
+    const preparedJob = {
+      job_id: 'job-report-214124',
+      ...request,
+      business_intent_id: 'intent-report-214124',
+      supplier,
+      payment_state: 'READY' as const,
+      payment_mode: 'USER_WALLET' as const,
+      user_payment: payment,
+      delivery_state: 'PENDING' as const,
+      created_at: '2026-09-13T01:30:00.000Z',
+      updated_at: '2026-09-13T01:30:00.000Z',
+    };
+    const committedJob = {
+      ...preparedJob,
+      payment_state: 'COMMITTED' as const,
+      user_payment: { ...payment, transaction_hash: paymentHash },
+    };
+    const sendTransfer = vi.fn(async () => paymentHash);
+    const client = {
+      quote: vi.fn(async () => supplier),
+      start: vi.fn(),
+      prepareUserWalletJob: vi.fn(async () => preparedJob),
+      submitUserWalletPayment: vi.fn(async () => committedJob),
+    };
+
+    render(
+      <JobWorkspace
+        client={client as never}
+        userWallet={{
+          address: payerWallet,
+          connect: vi.fn(async () => payerWallet),
+          getGatewayBalance: vi.fn(async () => '0'),
+          getGatewayPendingDeposits: vi.fn(async () => []),
+          fundGateway: vi.fn(),
+          sendTransfer,
+          signX402Payment: vi.fn(),
+        }}
+        onSelectIntent={() => undefined}
+      />,
+    );
+    await user.type(screen.getByLabelText('Payment purpose'), request.report_subject);
+    await user.type(screen.getByLabelText('Service destination wallet'), request.recipient);
+    await user.type(screen.getByLabelText('Amount (USDC)'), '1');
+    await user.type(screen.getByLabelText('Custom request key (optional)'), request.task_key);
+    await user.click(screen.getByRole('button', { name: 'Review payment details' }));
+    await user.click(await screen.findByRole('button', { name: 'Approve and pay from my wallet' }));
+
+    await waitFor(() =>
+      expect(client.prepareUserWalletJob).toHaveBeenCalledWith({
+        ...request,
+        payer_wallet: payerWallet,
+      }),
+    );
+    expect(sendTransfer).toHaveBeenCalledWith(payment);
+    expect(client.submitUserWalletPayment).toHaveBeenCalledWith(
+      preparedJob.job_id,
+      paymentHash,
+    );
+    expect(client.start).not.toHaveBeenCalled();
+  });
+
   it('does not request a replacement transfer when the durable job already has a hash', async () => {
     const user = userEvent.setup();
     const paymentHash = `0x${'a'.repeat(64)}`;

@@ -214,24 +214,18 @@ async function waitForSuccessfulReceipt(provider: EthereumProvider, transactionH
 export function usePrivyUserWallet(): UserWalletSession {
   const { user } = usePrivy();
   const { ready: walletsReady, wallets } = useWallets();
-  const { wallet: activeWallet, setActiveWallet, connect: connectWallet } = useActiveWallet();
+  const { wallet: activeWallet, connect: connectWallet } = useActiveWallet();
   const explicitlyConnectedWallet = useRef<{
     readonly subject: string | null;
     readonly wallet: EthereumWallet;
   } | null>(null);
   const subject = user?.id ?? null;
-  const selectedWallet: ConnectedWallet | undefined =
-    walletsReady && isPrivyEthereumWallet(activeWallet)
+  const selectedWallet: EthereumWallet | undefined =
+    activeWallet?.type === 'ethereum'
       ? activeWallet
       : walletsReady
         ? wallets.find((candidate) => isPrivyEthereumWallet(candidate))
         : undefined;
-
-  useEffect(() => {
-    if (selectedWallet && !isPrivyEthereumWallet(activeWallet)) {
-      setActiveWallet(selectedWallet);
-    }
-  }, [activeWallet, selectedWallet, setActiveWallet]);
 
   async function selectWallet(): Promise<EthereumWallet | undefined> {
     if (selectedWallet) return selectedWallet;
@@ -498,15 +492,18 @@ export function usePrivyUserWallet(): UserWalletSession {
             current!.address,
             JSON.stringify({
               domain: parameters.domain,
-              types: {
-                ...parameters.types,
-                EIP712Domain: [
-                  { name: 'name', type: 'string' },
-                  { name: 'version', type: 'string' },
-                  { name: 'chainId', type: 'uint256' },
-                  { name: 'verifyingContract', type: 'address' },
-                ],
-              },
+              types:
+                current.walletClientType === 'privy'
+                  ? parameters.types
+                  : {
+                      ...parameters.types,
+                      EIP712Domain: [
+                        { name: 'name', type: 'string' },
+                        { name: 'version', type: 'string' },
+                        { name: 'chainId', type: 'uint256' },
+                        { name: 'verifyingContract', type: 'address' },
+                      ],
+                    },
               primaryType: parameters.primaryType,
               message: jsonSafe(parameters.message),
             }),
