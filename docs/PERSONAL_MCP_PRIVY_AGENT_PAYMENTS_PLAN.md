@@ -83,18 +83,21 @@ They must not block the first working `arc_payment` demo.
 
 ### Work
 
-- Add one dedicated high-entropy bearer credential in deployment secret
-  storage for the first release.
-- Accept it only on `/mcp`; do not let it authorize `/v1/*` routes.
+- Generate one random 256-bit bearer per verified Privy workspace and store
+  only its SHA-256 digest in PostgreSQL.
+- Show a new or rotated bearer once in the authenticated Profile.
+- Accept personal bearers only on `/mcp`; do not let them authorize `/v1/*`
+  routes. Keep the deployment bearer optional for legacy operator clients.
 - Keep Privy JWT authentication for the browser and the existing internal
   service credential for internal or legacy routes.
-- Bind the MCP principal to one explicit demo workspace.
-- Compare credentials in constant time and never log or return them.
+- Bind the MCP principal to the workspace that issued its bearer.
+- Never log bearer values or return stored digests.
 
 ### Done when
 
 - Missing, invalid, and browser credentials fail on `/mcp`.
-- The MCP credential succeeds on `/mcp` and fails on browser/API routes.
+- Each personal credential succeeds on `/mcp`, fails on browser/API routes,
+  and derives intent IDs from its owner's workspace.
 
 Personal token generation, digest-only storage, and rotation are implemented.
 
@@ -237,8 +240,8 @@ Start this milestone only after the server-wallet MCP path is working.
    quorum as an additional signer after one explicit user authorization.
 7. Resolve wallet and signer policy per workspace in the worker while keeping
    the existing global execution wallet only for legacy service requests.
-8. Add the **Agents** tab for wallet status, signer enable/disable, policy
-   controls, and MCP token lifecycle.
+8. Extend the existing **Profile** token controls with wallet status,
+   signer enable/disable, and policy controls.
 9. Replace the current request list with a workspace-bound unified feed.
 10. Add multi-user isolation, concurrent token generation, signer attachment,
     policy update, and browser accessibility tests.

@@ -53,16 +53,16 @@ The user asked to remove the MCP 1 USDC boundary, provide the bearer required by
 
 ## Unresolved questions
 
-- Google Secret Manager access for the active account is currently denied for list/get; create/version permissions must be tested during deployment.
+- Google Secret Manager list/get remains unavailable to the active account; personal MCP bearer generation does not depend on a shared MCP secret.
 - Direct `/v1/intents/:id`, reconcile, and recovery-view routes are not yet workspace-bound in storage; job request views are isolated.`r`n- The active account cannot list/get Secret Manager metadata, but personal MCP tokens no longer require a shared MCP secret.
 
 ## Git and PR state
 
 - Branch: fix/mcp-access-and-scope
 - Base: origin/develop at 246a38af36e291b0538eb0a8f87d1f3b3f1def60
-- Commit: uncommitted
-- PR: not created
-- CI: not started
+- Commit: 9aafe21d27e27a99ddb0586a0cff747bd36a38f2
+- PR: https://github.com/SWOFART/OneShot/pull/122 (draft)
+- CI: all required checks passed for 9aafe21d27e27a99ddb0586a0cff747bd36a38f2
 
 ## Review gates
 
