@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { ActivityResponse } from '@oneshot/contracts';
 import { createSettlementClient, type SettlementClient } from '@oneshot/settlement-ui';
 import type { RecoveryClient } from '@oneshot/recovery-ui';
@@ -152,6 +152,28 @@ function CabinetPage(props: {
   const [intentId, setIntentId] = useState('');
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [activityError, setActivityError] = useState<string | null>(null);
+  const workspaceUnlocked =
+    props.session.status === 'SIGNED_IN' || props.machineToken.trim() !== '';
+  const refreshActivity = useCallback(async (): Promise<void> => {
+    if (!workspaceUnlocked || typeof props.jobClient.refreshActivity !== 'function') return;
+    setActivityError(null);
+    try {
+      setActivity(await props.jobClient.refreshActivity());
+    } catch {
+      setActivityError(
+        'Payment activity is unavailable right now. Existing payment records are unchanged.',
+      );
+    }
+  }, [props.jobClient, workspaceUnlocked]);
+
+  useEffect(() => {
+    void refreshActivity();
+  }, [refreshActivity]);
+
+  useEffect(() => {
+    if (section === 'protection') void refreshActivity();
+  }, [refreshActivity, section]);
+
   const labels = {
     overview: 'Overview',
     services: 'Payment services',
@@ -302,17 +324,7 @@ function CabinetPage(props: {
               intentId={intentId}
               recoveryClient={props.recoveryClient}
               settlementClient={props.settlementClient}
-              onRefresh={() => {
-                setActivityError(null);
-                void props.jobClient
-                  .refreshActivity()
-                  .then(setActivity)
-                  .catch(() => {
-                    setActivityError(
-                      'Payment activity is unavailable right now. Existing payment records are unchanged.',
-                    );
-                  });
-              }}
+              onRefresh={() => void refreshActivity()}
             />
           )}
           {section === 'profile' && <McpProfile client={props.jobClient} />}

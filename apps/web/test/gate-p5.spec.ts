@@ -24,6 +24,7 @@ test('cabinet activity refresh is authenticated, read-only, and does not persist
         recorded_settlement_count: 1,
         uncertain_job_count: 0,
         unmatched_transfer_count: 0,
+        transactions: [],
         transfers: [],
       });
     }
@@ -32,6 +33,7 @@ test('cabinet activity refresh is authenticated, read-only, and does not persist
         recorded_settlement_count: 1,
         uncertain_job_count: 0,
         unmatched_transfer_count: 0,
+        transactions: [],
         transfers: [],
       });
     }

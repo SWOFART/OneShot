@@ -306,10 +306,43 @@ const schemas = {
     properties: {
       transaction_hash: { type: 'string', pattern: '^0x[0-9a-fA-F]{64}$' },
       log_index: { type: 'integer', minimum: 0 },
+      sender: evmAddress,
+      token_contract: evmAddress,
+      block_number: amountAtomic,
+      block_timestamp: { type: 'string', format: 'date-time' },
+      network: { type: 'string', const: 'eip155:5042002' },
       recipient: evmAddress,
       amount_atomic: amountAtomic,
       match: { type: 'string', enum: ['RECORDED_SETTLEMENT', 'UNMATCHED'] },
       job_id: boundedId,
+    },
+  },
+  ActivityTransaction: {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'job_id',
+      'business_intent_id',
+      'payment_state',
+      'payment_mode',
+      'recipient',
+      'amount_atomic',
+      'graph_status',
+    ],
+    properties: {
+      job_id: boundedId,
+      business_intent_id: boundedId,
+      payment_state: { type: 'string', enum: intentStates },
+      payment_mode: { type: 'string', enum: paymentModes },
+      transaction_hash: { type: 'string', pattern: '^0x[0-9a-fA-F]{64}$' },
+      recipient: evmAddress,
+      amount_atomic: amountAtomic,
+      graph_status: {
+        type: 'string',
+        enum: ['INDEXED_TRANSFER', 'NOT_INDEXED', 'NO_TRANSACTION_HASH', 'UNAVAILABLE'],
+      },
+      graph_block_number: amountAtomic,
+      graph_log_index: { type: 'integer', minimum: 0 },
     },
   },
   ActivityResponse: {
@@ -319,12 +352,18 @@ const schemas = {
       'recorded_settlement_count',
       'uncertain_job_count',
       'unmatched_transfer_count',
+      'transactions',
       'transfers',
     ],
     properties: {
       recorded_settlement_count: { type: 'integer', minimum: 0 },
       uncertain_job_count: { type: 'integer', minimum: 0 },
       unmatched_transfer_count: { type: 'integer', minimum: 0 },
+      transactions: {
+        type: 'array',
+        maxItems: 100,
+        items: { $ref: '#/$defs/ActivityTransaction' },
+      },
       transfers: { type: 'array', maxItems: 100, items: { $ref: '#/$defs/ActivityTransfer' } },
       observation: { type: 'object', additionalProperties: true },
     },
@@ -910,10 +949,28 @@ export interface JobListResponse {
 export interface ActivityTransferView {
   readonly transaction_hash: string;
   readonly log_index: number;
+  readonly sender?: string;
+  readonly token_contract?: string;
+  readonly block_number?: string;
+  readonly block_timestamp?: string;
+  readonly network?: 'eip155:5042002';
   readonly recipient: string;
   readonly amount_atomic: string;
   readonly match: 'RECORDED_SETTLEMENT' | 'UNMATCHED';
   readonly job_id?: string;
+}
+
+export interface ActivityTransactionView {
+  readonly job_id: string;
+  readonly business_intent_id: string;
+  readonly payment_state: IntentState;
+  readonly payment_mode: PaymentMode;
+  readonly transaction_hash?: string;
+  readonly recipient: string;
+  readonly amount_atomic: string;
+  readonly graph_status: 'INDEXED_TRANSFER' | 'NOT_INDEXED' | 'NO_TRANSACTION_HASH' | 'UNAVAILABLE';
+  readonly graph_block_number?: string;
+  readonly graph_log_index?: number;
 }
 
 export interface ActivityResponse {
@@ -921,6 +978,7 @@ export interface ActivityResponse {
   readonly recorded_settlement_count: number;
   readonly uncertain_job_count: number;
   readonly unmatched_transfer_count: number;
+  readonly transactions: readonly ActivityTransactionView[];
   readonly transfers: readonly ActivityTransferView[];
 }
 

@@ -22,7 +22,8 @@ export interface ApiRuntimeConfig {
   readonly privyAuth?: PrivyAuthRuntimeConfig;
   readonly walletActivity?: {
     readonly endpoint: string;
-    readonly wallet: string;
+    /** Optional server-wallet fallback; user-wallet payers come from the workspace ledger. */
+    readonly wallet?: string;
     readonly apiKey?: string;
   };
   /** Credential-free read-only RPC used to verify user-submitted receipts. */
@@ -206,13 +207,18 @@ export function loadApiRuntimeConfig(
 ): ApiRuntimeConfig {
   const workspaceId = environment.ONESHOT_WORKSPACE_ID?.trim() || 'default-workspace';
   const privyAuth = privyAuthConfig(environment);
-  const activityEndpoint = environment.ONESHOT_GRAPH_QUERY_URL?.trim();
+  // The worker and API must query the same pinned Studio deployment. Keep the
+  // older activity-specific variable as an explicit override for deployments
+  // that still use it, but make the worker's canonical subgraph URL sufficient
+  // for the site activity path too.
+  const activityEndpoint =
+    environment.ONESHOT_GRAPH_QUERY_URL?.trim() || environment.ONESHOT_SUBGRAPH_QUERY_URL?.trim();
   const activityWallet = environment.ONESHOT_ACTIVITY_WALLET_ADDRESS?.trim();
   const userWalletRpcUrl = optionalRpcUrl(environment, 'ONESHOT_ARC_RPC_URL');
   const mcp = mcpConfig(environment, workspaceId);
-  if ((activityEndpoint && !activityWallet) || (!activityEndpoint && activityWallet)) {
+  if (!activityEndpoint && activityWallet) {
     throw new Error(
-      'ONESHOT_GRAPH_QUERY_URL and ONESHOT_ACTIVITY_WALLET_ADDRESS must be configured together',
+      'A Graph query URL is required when ONESHOT_ACTIVITY_WALLET_ADDRESS is configured',
     );
   }
   if (activityEndpoint) {
@@ -236,11 +242,11 @@ export function loadApiRuntimeConfig(
       windowMs: integer(environment, 'ONESHOT_API_RATE_LIMIT_WINDOW_MS', 60_000, 1_000, 3_600_000),
     },
     ...(privyAuth ? { privyAuth } : {}),
-    ...(activityEndpoint && activityWallet
+    ...(activityEndpoint
       ? {
           walletActivity: {
             endpoint: activityEndpoint,
-            wallet: activityWallet,
+            ...(activityWallet ? { wallet: activityWallet } : {}),
             ...(environment.ONESHOT_GRAPH_API_KEY?.trim()
               ? { apiKey: environment.ONESHOT_GRAPH_API_KEY.trim() }
               : {}),

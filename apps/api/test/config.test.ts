@@ -68,6 +68,16 @@ describe('API runtime configuration', () => {
     });
   });
 
+  it('uses the canonical worker Graph URL for automatic site activity', () => {
+    const config = loadApiRuntimeConfig({
+      ...base,
+      ONESHOT_SUBGRAPH_QUERY_URL: 'https://api.studio.thegraph.com/query/oneshot/arc/1',
+    });
+    expect(config.walletActivity).toEqual({
+      endpoint: 'https://api.studio.thegraph.com/query/oneshot/arc/1',
+    });
+  });
+
   it('loads an isolated MCP configuration', () => {
     const config = loadApiRuntimeConfig({
       ...base,

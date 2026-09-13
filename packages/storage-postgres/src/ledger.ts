@@ -396,6 +396,30 @@ export class IntentLedger {
     }
   }
 
+  async #enqueueGraphEvidenceOnClient(
+    client: PoolClient,
+    businessIntentId: BusinessIntentId,
+    version: number,
+    values: { readonly transactionHash?: string; readonly blockNumber?: string } = {},
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO outbox_jobs (
+         business_intent_id, job_key, task_identifier, payload, available_at, created_at
+       ) VALUES ($1, $2, 'capture_graph_evidence', $3::jsonb, $4, $4)
+       ON CONFLICT (job_key) DO NOTHING`,
+      [
+        businessIntentId,
+        `graph-evidence:${businessIntentId}:${version}`,
+        JSON.stringify({
+          business_intent_id: businessIntentId,
+          ...(values.transactionHash ? { transaction_hash: values.transactionHash } : {}),
+          ...(values.blockNumber ? { block_number: values.blockNumber } : {}),
+        }),
+        this.#dependencies.now(),
+      ],
+    );
+  }
+
   async ping(): Promise<void> {
     await this.#pool.query('SELECT 1');
   }
@@ -663,6 +687,7 @@ export class IntentLedger {
           ['REJECTED', result.reason, id],
         );
         await this.#recordMetricEventOnClient(client, id, 'POLICY_DENIAL', 'AUTHORIZATION');
+        await this.#enqueueGraphEvidenceOnClient(client, id, newVersion);
         await client.query('COMMIT');
         return { completed: true, state: 'REJECTED', version: newVersion };
       }
@@ -1071,6 +1096,7 @@ export class IntentLedger {
         "UPDATE attempts SET stage = 'UNKNOWN', sanitized_error = $1 WHERE attempt_id = $2",
         [reason.slice(0, 256), attemptId],
       );
+      await this.#enqueueGraphEvidenceOnClient(client, id, newVersion);
       await this.#recordMetricEventOnClient(client, id, 'PROVIDER_ERROR', 'USER_WALLET_UNKNOWN');
       await client.query('COMMIT');
       return { completed: true, state: 'UNKNOWN', version: newVersion };
@@ -1180,22 +1206,10 @@ export class IntentLedger {
             ],
           );
         }
-        await client.query(
-          `INSERT INTO outbox_jobs (
-             business_intent_id, job_key, task_identifier, payload, available_at, created_at
-           ) VALUES ($1, $2, 'capture_graph_evidence', $3::jsonb, $4, $4)
-           ON CONFLICT (job_key) DO NOTHING`,
-          [
-            id,
-            `graph-evidence:${id}:${newVersion}`,
-            JSON.stringify({
-              business_intent_id: id,
-              transaction_hash: result.transaction_hash,
-              block_number: result.block_number,
-            }),
-            now,
-          ],
-        );
+        await this.#enqueueGraphEvidenceOnClient(client, id, newVersion, {
+          transactionHash: result.transaction_hash,
+          blockNumber: result.block_number,
+        });
         await client.query('COMMIT');
         return { completed: true, state: 'COMMITTED', version: newVersion };
       }
@@ -1213,6 +1227,7 @@ export class IntentLedger {
           'UPDATE attempts SET stage = $1, sanitized_error = $2 WHERE attempt_id = $3',
           ['FAILED_SAFE', result.reason, attemptId],
         );
+        await this.#enqueueGraphEvidenceOnClient(client, id, newVersion);
         await client.query('COMMIT');
         return { completed: true, state: 'FAILED_SAFE', version: newVersion };
       }
@@ -1240,6 +1255,7 @@ export class IntentLedger {
           ON CONFLICT (job_key) DO NOTHING`,
           [id, `reconcile:${id}:${newVersion}`, JSON.stringify({ business_intent_id: id }), now],
         );
+        await this.#enqueueGraphEvidenceOnClient(client, id, newVersion);
         await this.#recordMetricEventOnClient(client, id, 'PROVIDER_ERROR', 'POSSIBLY_SUBMITTED');
         await client.query('COMMIT');
         return { completed: true, state: 'UNKNOWN', version: newVersion };
@@ -1481,6 +1497,11 @@ export class IntentLedger {
             JSON.stringify({ business_intent_id: orphan.business_intent_id }),
             now,
           ],
+        );
+        await this.#enqueueGraphEvidenceOnClient(
+          client,
+          asBusinessIntentId(orphan.business_intent_id),
+          newVersion,
         );
 
         recovered.push({ businessIntentId: orphan.business_intent_id, newVersion });
