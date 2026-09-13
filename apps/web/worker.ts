@@ -8,10 +8,11 @@ const DEFAULT_BACKEND_URL = 'https://oneshot-api-775560462825.europe-west1.run.a
 
 const CORS_HEADERS: Record<string, string> = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, OPTIONS',
+  'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
   'access-control-allow-headers':
-    'authorization, content-type, payment-signature, x-correlation-id',
-  'access-control-expose-headers': 'PAYMENT-REQUIRED, PAYMENT-RESPONSE, x-correlation-id',
+    'authorization, content-type, payment-signature, x-correlation-id, mcp-protocol-version, mcp-session-id, last-event-id',
+  'access-control-expose-headers':
+    'PAYMENT-REQUIRED, PAYMENT-RESPONSE, x-correlation-id, mcp-session-id',
 };
 
 const SELLER_PATH_PREFIX = '/api/premium/';
@@ -90,7 +91,11 @@ export default {
     }
 
     // Forward API and health check requests to Google Cloud Run.
-    if (url.pathname.startsWith('/v1/') || url.pathname.startsWith('/health/')) {
+    if (
+      url.pathname.startsWith('/v1/') ||
+      url.pathname.startsWith('/health/') ||
+      url.pathname === '/mcp'
+    ) {
       if (request.method === 'OPTIONS') {
         return new Response(null, {
           status: 204,

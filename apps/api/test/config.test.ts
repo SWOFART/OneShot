@@ -83,6 +83,47 @@ describe('API runtime configuration', () => {
     ).toThrow('HTTPS');
   });
 
+  it('loads an isolated one-intent MCP configuration', () => {
+    const config = loadApiRuntimeConfig({
+      ...base,
+      ONESHOT_WORKSPACE_ID: 'mcp-demo-workspace',
+      ONESHOT_MCP_BEARER_TOKEN: 'mcp-token-with-at-least-thirty-two-characters',
+      ONESHOT_MCP_REQUEST_KEY: 'arc-demo-payment-1',
+      ONESHOT_MCP_PAYER_ADDRESS: '0x1111111111111111111111111111111111111111',
+      ONESHOT_MCP_MAX_AMOUNT_ATOMIC: '1000000',
+      ONESHOT_MCP_WAIT_MS: '500',
+      ONESHOT_SETTLEMENT_CAP_ATOMIC: '1000000',
+    });
+    expect(config.mcp).toEqual({
+      bearerToken: 'mcp-token-with-at-least-thirty-two-characters',
+      workspaceId: 'mcp-demo-workspace',
+      allowedRequestKey: 'arc-demo-payment-1',
+      payerWallet: '0x1111111111111111111111111111111111111111',
+      maxAmountAtomic: 1000000n,
+      waitMs: 500,
+    });
+  });
+
+  it('fails closed on partial or over-cap MCP configuration', () => {
+    expect(() =>
+      loadApiRuntimeConfig({
+        ...base,
+        ONESHOT_MCP_BEARER_TOKEN: 'mcp-token-with-at-least-thirty-two-characters',
+      }),
+    ).toThrow('ONESHOT_WORKSPACE_ID');
+    expect(() =>
+      loadApiRuntimeConfig({
+        ...base,
+        ONESHOT_WORKSPACE_ID: 'mcp-demo-workspace',
+        ONESHOT_MCP_BEARER_TOKEN: 'mcp-token-with-at-least-thirty-two-characters',
+        ONESHOT_MCP_REQUEST_KEY: 'arc-demo-payment-1',
+        ONESHOT_MCP_PAYER_ADDRESS: '0x1111111111111111111111111111111111111111',
+        ONESHOT_MCP_MAX_AMOUNT_ATOMIC: '1000001',
+        ONESHOT_SETTLEMENT_CAP_ATOMIC: '1000000',
+      }),
+    ).toThrow('must not exceed');
+  });
+
   it('loads a complete Privy configuration', () => {
     const config = loadApiRuntimeConfig({
       ...base,

@@ -27,6 +27,14 @@ export interface ApiRuntimeConfig {
   };
   /** Credential-free read-only RPC used to verify user-submitted receipts. */
   readonly userWalletRpcUrl?: string;
+  readonly mcp?: {
+    readonly bearerToken: string;
+    readonly workspaceId: string;
+    readonly allowedRequestKey: string;
+    readonly payerWallet: string;
+    readonly maxAmountAtomic: bigint;
+    readonly waitMs: number;
+  };
   readonly paidApi?: {
     readonly url: string;
     readonly maxAmountAtomic: bigint;
@@ -83,6 +91,51 @@ function optionalAtomicAmount(environment: NodeJS.ProcessEnv, name: string): big
     throw new Error(`Invalid environment variable: ${name}`);
   }
   return BigInt(raw);
+}
+
+function mcpConfig(environment: NodeJS.ProcessEnv, workspaceId: string): ApiRuntimeConfig['mcp'] {
+  const names = [
+    'ONESHOT_MCP_BEARER_TOKEN',
+    'ONESHOT_MCP_REQUEST_KEY',
+    'ONESHOT_MCP_PAYER_ADDRESS',
+    'ONESHOT_MCP_MAX_AMOUNT_ATOMIC',
+    'ONESHOT_MCP_WAIT_MS',
+  ] as const;
+  if (names.every((name) => !environment[name]?.trim())) return undefined;
+  if (!environment.ONESHOT_WORKSPACE_ID?.trim()) {
+    throw new Error('ONESHOT_WORKSPACE_ID is required when MCP is enabled');
+  }
+  const bearerToken = required(environment, 'ONESHOT_MCP_BEARER_TOKEN', 32);
+  const allowedRequestKey = required(environment, 'ONESHOT_MCP_REQUEST_KEY');
+  if (
+    allowedRequestKey.length > 128 ||
+    allowedRequestKey.trim() !== allowedRequestKey ||
+    // eslint-disable-next-line no-control-regex -- Request keys reject ASCII controls.
+    /[\u0000-\u001f\u007f]/u.test(allowedRequestKey)
+  ) {
+    throw new Error('Invalid environment variable: ONESHOT_MCP_REQUEST_KEY');
+  }
+  const payerWallet = required(environment, 'ONESHOT_MCP_PAYER_ADDRESS').toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/u.test(payerWallet)) {
+    throw new Error('Invalid environment variable: ONESHOT_MCP_PAYER_ADDRESS');
+  }
+  const rawMax = environment.ONESHOT_MCP_MAX_AMOUNT_ATOMIC?.trim() || '1000000';
+  if (rawMax.length > 78 || !/^[1-9][0-9]*$/u.test(rawMax)) {
+    throw new Error('Invalid environment variable: ONESHOT_MCP_MAX_AMOUNT_ATOMIC');
+  }
+  const maxAmountAtomic = BigInt(rawMax);
+  const workerCap = environment.ONESHOT_SETTLEMENT_CAP_ATOMIC?.trim();
+  if (workerCap && /^[1-9][0-9]*$/u.test(workerCap) && maxAmountAtomic > BigInt(workerCap)) {
+    throw new Error('ONESHOT_MCP_MAX_AMOUNT_ATOMIC must not exceed ONESHOT_SETTLEMENT_CAP_ATOMIC');
+  }
+  return {
+    bearerToken,
+    workspaceId,
+    allowedRequestKey,
+    payerWallet,
+    maxAmountAtomic,
+    waitMs: integer(environment, 'ONESHOT_MCP_WAIT_MS', 2_500, 0, 5_000),
+  };
 }
 
 function optionalRpcUrl(environment: NodeJS.ProcessEnv, name: string): string | undefined {
@@ -173,12 +226,14 @@ function privyAuthConfig(environment: NodeJS.ProcessEnv): PrivyAuthRuntimeConfig
 export function loadApiRuntimeConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): ApiRuntimeConfig {
+  const workspaceId = environment.ONESHOT_WORKSPACE_ID?.trim() || 'default-workspace';
   const privyAuth = privyAuthConfig(environment);
   const activityEndpoint = environment.ONESHOT_GRAPH_QUERY_URL?.trim();
   const activityWallet = environment.ONESHOT_ACTIVITY_WALLET_ADDRESS?.trim();
   const paidApiUrl = optionalHttpsUrl(environment, 'ONESHOT_X402_URL');
   const paidApiMaxAmount = optionalAtomicAmount(environment, 'ONESHOT_X402_MAX_AMOUNT_ATOMIC');
   const userWalletRpcUrl = optionalRpcUrl(environment, 'ONESHOT_ARC_RPC_URL');
+  const mcp = mcpConfig(environment, workspaceId);
   if ((activityEndpoint && !activityWallet) || (!activityEndpoint && activityWallet)) {
     throw new Error(
       'ONESHOT_GRAPH_QUERY_URL and ONESHOT_ACTIVITY_WALLET_ADDRESS must be configured together',
@@ -199,7 +254,7 @@ export function loadApiRuntimeConfig(
     // One fixed workspace is safer than accepting a caller-selected tenant.
     // Deployments should configure this explicit value; the default keeps local
     // development and existing single-workspace installations closed to one scope.
-    workspaceId: environment.ONESHOT_WORKSPACE_ID?.trim() || 'default-workspace',
+    workspaceId,
     rateLimit: {
       maxRequests: integer(environment, 'ONESHOT_API_RATE_LIMIT_MAX_REQUESTS', 60, 1, 10_000),
       windowMs: integer(environment, 'ONESHOT_API_RATE_LIMIT_WINDOW_MS', 60_000, 1_000, 3_600_000),
@@ -218,5 +273,6 @@ export function loadApiRuntimeConfig(
       : {}),
     ...(paidApiUrl ? { paidApi: { url: paidApiUrl, maxAmountAtomic: paidApiMaxAmount } } : {}),
     ...(userWalletRpcUrl ? { userWalletRpcUrl } : {}),
+    ...(mcp ? { mcp } : {}),
   };
 }

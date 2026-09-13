@@ -55,6 +55,12 @@ importers:
 
   apps/api:
     dependencies:
+      '@modelcontextprotocol/node':
+        specifier: 2.0.0
+        version: 2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.13.7)
+      '@modelcontextprotocol/server':
+        specifier: 2.0.0
+        version: 2.0.0
       '@oneshot/arc-adapter':
         specifier: workspace:*
         version: link:../../packages/arc-adapter
@@ -79,6 +85,9 @@ importers:
       pg:
         specifier: 8.23.0
         version: 8.23.0
+      zod:
+        specifier: 4.2.1
+        version: 4.2.1
     devDependencies:
       '@testcontainers/postgresql':
         specifier: 12.1.0
@@ -88,7 +97,7 @@ importers:
     dependencies:
       '@circle-fin/x402-batching':
         specifier: 3.4.0
-        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
+        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@4.2.1))
       '@x402/core':
         specifier: 2.25.0
         version: 2.25.0
@@ -97,7 +106,7 @@ importers:
         version: 2.25.0(typescript@6.0.3)
       viem:
         specifier: 2.56.3
-        version: 2.56.3(typescript@6.0.3)(zod@3.25.76)
+        version: 2.56.3(typescript@6.0.3)(zod@4.2.1)
 
   apps/web:
     dependencies:
@@ -194,7 +203,7 @@ importers:
         version: link:../../packages/supplier-adapter
       '@privy-io/node':
         specifier: 0.34.0
-        version: 0.34.0(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
+        version: 0.34.0(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@4.2.1))
       google-auth-library:
         specifier: 11.0.2
         version: 11.0.2(supports-color@10.2.2)
@@ -216,7 +225,7 @@ importers:
     dependencies:
       viem:
         specifier: 2.56.3
-        version: 2.56.3(typescript@6.0.3)(zod@3.25.76)
+        version: 2.56.3(typescript@6.0.3)(zod@4.2.1)
 
   packages/brand:
     dependencies:
@@ -274,10 +283,10 @@ importers:
         version: link:../contracts
       '@privy-io/node':
         specifier: 0.34.0
-        version: 0.34.0(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
+        version: 0.34.0(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@4.2.1))
       viem:
         specifier: 2.56.3
-        version: 2.56.3(typescript@6.0.3)(zod@3.25.76)
+        version: 2.56.3(typescript@6.0.3)(zod@4.2.1)
 
   packages/reconciliation: {}
 
@@ -402,7 +411,7 @@ importers:
     dependencies:
       '@circle-fin/x402-batching':
         specifier: 3.4.0
-        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))
+        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@4.2.1))
       '@oneshot/arc-adapter':
         specifier: workspace:*
         version: link:../arc-adapter
@@ -890,6 +899,12 @@ packages:
     peerDependencies:
       react: '>= 16 || ^19.0.0-rc'
 
+  '@hono/node-server@1.19.17':
+    resolution: {integrity: sha512-dSneS5qhiauZWGDCeK4o695Xd9nUNjviSZCMQrj10eetr8Uln1ucn6bbphOM6UynAMMtNIzZNSpL9vnASJwrPQ==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: ^4
+
   '@hpke/chacha20poly1305@1.8.0':
     resolution: {integrity: sha512-FcBfAQ+Y99vMNJP2yrZ9wpL8V0GOwp1+zMyzvc6alasrBygfFjFm1yeUtyADJCu/27C3Lm5mJzx6u7pwg+cX5w==}
     engines: {node: '>=16.0.0'}
@@ -1307,6 +1322,24 @@ packages:
     peerDependencies:
       react: ^17.0.2 || ^18.0.0 || ^19.0
       react-dom: ^17.0.2 || ^18.0.0 || ^19.0
+
+  '@modelcontextprotocol/core@2.0.0':
+    resolution: {integrity: sha512-pJCEwGG7Lfr/+PQp9ZTwKXNeO5wzbfKL7H3MYpCorM4oFBoQrdjnBgEoqG+RjhsvS1FKrDbKux+M1HhlnGWqcA==}
+    engines: {node: '>=20'}
+
+  '@modelcontextprotocol/node@2.0.0':
+    resolution: {integrity: sha512-Y4hAC2XdGDUdDOCbLDOCA4+aL3NUldjsOWlDL/YwpAxrPhRm1xHd7lZ+mLacvZ9t3PaH28wgNoaLQGrIk1P2pg==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@modelcontextprotocol/server': ^2.0.0
+      hono: ^4.11.4
+    peerDependenciesMeta:
+      hono:
+        optional: true
+
+  '@modelcontextprotocol/server@2.0.0':
+    resolution: {integrity: sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw==}
+    engines: {node: '>=20'}
 
   '@msgpack/msgpack@3.1.2':
     resolution: {integrity: sha512-JEW4DEtBzfe8HvUYecLU9e6+XJnKDlUAIve8FvPzF3Kzs6Xo/KuZkZJsDH0wJXl/qEZbeeE7edxDNY3kMs39hQ==}
@@ -3209,6 +3242,10 @@ packages:
 
   help-me@5.0.0:
     resolution: {integrity: sha512-7xgomUX6ADmcYzFik0HzAxh/73YlKR9bmFzf51CZwR+b6YtzU2m0u49hQCqV6SvlqIqsaxovfwdvbnsw3b/zpg==}
+
+  hono@4.13.7:
+    resolution: {integrity: sha512-c8/gF9ac8Y78/agExVocyLevgR+JlpNB444Py0FSX8pJoPdYUfUzRcXtYEYGwt6l19qIlVZPN5Mfsw9jFShmQQ==}
+    engines: {node: '>=16.9.0'}
 
   hookified@1.15.1:
     resolution: {integrity: sha512-MvG/clsADq1GPM2KGo2nyfaWVyn9naPiXrqIe4jYjXNZQt238kWyOGrsyc/DmRAQ+Re6yeo6yX/yoNCG5KAEVg==}
@@ -5286,6 +5323,9 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.2.1:
+    resolution: {integrity: sha512-0wZ1IRqGGhMP76gLqz8EyfBXKk0J2qo2+H3fi4mcUP/KtTocoX08nmIAHl1Z2kJIZbZee8KOpBCSNPRgauucjw==}
+
   zustand@5.0.15:
     resolution: {integrity: sha512-MpSEjRiBkA9crSYeOUH32rJC7SVqAbm0Fqcqge/bUi2PPoLcBWKOsG+C8mevmpr8TwXHBVkChbbJiyvkE+i/3A==}
     engines: {node: '>=12.20.0'}
@@ -5402,10 +5442,10 @@ snapshots:
     optionalDependencies:
       '@x402/evm': 2.25.0(typescript@6.0.3)
 
-  '@circle-fin/x402-batching@3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))':
+  '@circle-fin/x402-batching@3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@4.2.1))':
     dependencies:
       '@x402/core': 2.25.0
-      viem: 2.56.3(typescript@6.0.3)(zod@3.25.76)
+      viem: 2.56.3(typescript@6.0.3)(zod@4.2.1)
     optionalDependencies:
       '@x402/evm': 2.25.0(typescript@6.0.3)
 
@@ -5745,6 +5785,10 @@ snapshots:
   '@heroicons/react@2.2.0(react@19.2.8)':
     dependencies:
       react: 19.2.8
+
+  '@hono/node-server@1.19.17(hono@4.13.7)':
+    dependencies:
+      hono: 4.13.7
 
   '@hpke/chacha20poly1305@1.8.0':
     dependencies:
@@ -6133,6 +6177,22 @@ snapshots:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
+  '@modelcontextprotocol/core@2.0.0':
+    dependencies:
+      zod: 4.2.1
+
+  '@modelcontextprotocol/node@2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.13.7)':
+    dependencies:
+      '@hono/node-server': 1.19.17(hono@4.13.7)
+      '@modelcontextprotocol/server': 2.0.0
+    optionalDependencies:
+      hono: 4.13.7
+
+  '@modelcontextprotocol/server@2.0.0':
+    dependencies:
+      '@modelcontextprotocol/core': 2.0.0
+      zod: 4.2.1
+
   '@msgpack/msgpack@3.1.2': {}
 
   '@multiformats/dns@1.0.15':
@@ -6361,7 +6421,7 @@ snapshots:
     optionalDependencies:
       viem: 2.56.3(typescript@6.0.3)(zod@3.25.76)
 
-  '@privy-io/node@0.34.0(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@3.25.76))':
+  '@privy-io/node@0.34.0(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@4.2.1))':
     dependencies:
       '@hpke/chacha20poly1305': 1.8.0
       '@hpke/core': 1.9.0
@@ -6374,7 +6434,7 @@ snapshots:
       svix: 1.99.1
     optionalDependencies:
       '@x402/evm': 2.25.0(typescript@6.0.3)
-      viem: 2.56.3(typescript@6.0.3)(zod@3.25.76)
+      viem: 2.56.3(typescript@6.0.3)(zod@4.2.1)
 
   '@privy-io/popup@0.0.1': {}
 
@@ -7712,6 +7772,11 @@ snapshots:
       typescript: 6.0.3
       zod: 3.25.76
 
+  abitype@1.2.3(typescript@6.0.3)(zod@4.2.1):
+    optionalDependencies:
+      typescript: 6.0.3
+      zod: 4.2.1
+
   abort-controller@3.0.0:
     dependencies:
       event-target-shim: 5.0.1
@@ -8936,6 +9001,8 @@ snapshots:
 
   help-me@5.0.0: {}
 
+  hono@4.13.7: {}
+
   hookified@1.15.1: {}
 
   hookified@2.2.0: {}
@@ -9644,6 +9711,21 @@ snapshots:
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
       abitype: 1.2.3(typescript@6.0.3)(zod@3.25.76)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - zod
+
+  ox@0.14.44(typescript@6.0.3)(zod@4.2.1):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/ciphers': 1.3.0
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@6.0.3)(zod@4.2.1)
       eventemitter3: 5.0.1
     optionalDependencies:
       typescript: 6.0.3
@@ -10763,6 +10845,23 @@ snapshots:
       - utf-8-validate
       - zod
 
+  viem@2.56.3(typescript@6.0.3)(zod@4.2.1):
+    dependencies:
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@6.0.3)(zod@4.2.1)
+      isows: 1.0.7(ws@8.21.0)
+      ox: 0.14.44(typescript@6.0.3)(zod@4.2.1)
+      ws: 8.21.0
+    optionalDependencies:
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - zod
+
   vite@8.0.0(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@types/node@24.13.3)(yaml@2.9.0):
     dependencies:
       '@oxc-project/runtime': 0.115.0
@@ -11048,6 +11147,8 @@ snapshots:
   zod@3.22.4: {}
 
   zod@3.25.76: {}
+
+  zod@4.2.1: {}
 
   zustand@5.0.15(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.4.0(react@19.2.8)):
     optionalDependencies:
