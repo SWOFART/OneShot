@@ -1,3 +1,17 @@
+<!-- Rendered from apps/web's own `.top-nav` by `scripts/render-nav-panel.mjs`;
+     re-run that script after a brand token, mark, or nav label change. -->
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="docs/assets/nav-panel-dark.svg"
+  />
+  <img
+    src="docs/assets/nav-panel-light.svg"
+    alt="OneShot settlement engine — Arc Testnet, USDC, open workspace"
+    width="1000"
+  />
+</picture>
+
 # OneShot
 
 **One job. Many retries. One settlement.**
@@ -8,10 +22,10 @@ parallel workers, and multiple agent instances.
 
 Product direction: **resumable paid tools for business agents** — resume the
 job, not the payment. The settlement engine includes one team-operated testnet
-report supplier, task-bound order/result delivery, and separate public (`/`)
-and authenticated cabinet (`/app`) routes. Resumable external work requires
-supplier support; this is not a guarantee of exactly-once execution for
-arbitrary tools.
+report supplier, task-bound order/result delivery, a one-tool MCP endpoint for
+agents, and separate public (`/`), agent-docs (`/docs/mcp`), and authenticated
+cabinet (`/app`) routes. Resumable external work requires supplier support; this
+is not a guarantee of exactly-once execution for arbitrary tools.
 
 The cardinality it protects is:
 
@@ -137,9 +151,10 @@ lock: OneShot's durable state is.
 ## Repository layout
 
 ```text
-apps/api                      HTTP seam
-apps/web                      composed operator UI (intent, settlement, recovery)
+apps/api                      HTTP seam, MCP endpoint, personal MCP credentials
+apps/web                      landing, agent docs, and operator workspace
 apps/worker                   settlement and reconciliation workers
+packages/brand                brand tokens, commit-ring mark, hero geometry
 packages/supplier-adapter     idempotent team-operated testnet report connector
 packages/contracts            frozen v1 contract pack, OpenAPI, fixtures
 packages/domain               intent, attempt, and settlement state
@@ -166,17 +181,26 @@ pnpm build:frontend
 pnpm --filter @oneshot/web dev
 ```
 
-Open `http://localhost:3000/`. The app shell composes create/replay,
-authoritative status, settlement evidence, and recovery evidence tabs. The
-settlement tab reads the configured OneShot API; the recovery tab projects the
-frozen `recovery-view` API into the C05 timeline model, with labelled
-fail-closed fallbacks for legacy or unavailable evidence. The P5 browser
-acceptance suite runs with Playwright/Chromium in CI.
+Open `http://localhost:3000/` for the public landing page, `/docs/mcp` for the
+agent connection guide, and `/app` for the authenticated workspace. The
+workspace composes five sections — Overview, Payment services, Requests,
+Payment proof, and Profile. Payment proof reads the configured OneShot API and
+projects the frozen `recovery-view` API into the C05 timeline model, with
+labelled fail-closed fallbacks for legacy or unavailable evidence, and
+distinguishes a Graph observation that is still pending from proof that no
+payment happened. Profile issues and rotates the personal MCP bearer. The P5
+browser acceptance suite runs with Playwright/Chromium in CI.
 
 Authenticated wallet activity is read-only: the API records bounded Graph
-observations, links indexed transfers to settlements in the configured
-workspace, and surfaces unmatched transfers. Graph absence or lag never changes
+observations, links indexed transfers to settlements in the caller's workspace,
+and surfaces unmatched transfers. Every committed settlement captures Graph
+evidence through a durable, idempotent outbox job, including a backfill for
+settlements that predate that capture. Graph absence or lag never changes
 payment authority.
+
+A browser caller's workspace is derived from its verified Privy subject, so
+jobs, results, and activity are scoped to the signed-in operator rather than to
+a caller-supplied identifier.
 
 Integration tests need a database:
 
@@ -184,8 +208,9 @@ Integration tests need a database:
 pnpm test:integration
 ```
 
-Copy `.env.example` to `.env` and fill in placeholders. Never commit a real
-secret; see `docs/settlement/SETTLEMENT_CONFIG_V1.md` for how each variable is
+Copy `.env.example` to `.env` and `apps/web/.env.example` to
+`apps/web/.env.local`, then fill in placeholders. Never commit a real secret;
+see `docs/settlement/SETTLEMENT_CONFIG_V1.md` for how each variable is
 classified.
 
 ### Operator sign-in
@@ -237,12 +262,10 @@ Cloudflare Workers Build checkout.
 ### Arc Testnet transfer demo
 
 The resumable job flow uses a deliberately labelled team-operated supplier
-until an external supplier is selected. In Tools, enter the exact Arc Testnet
-recipient and USDC amount for the purchase. The amount must be within the
-settlement cap. The existing worker authorizes and submits the exact quote
-through Privy on Arc Testnet. A committed job's settlement and ArcScan
-evidence remain authoritative; delivery resume never submits a replacement
-payment.
+until an external supplier is selected. In Payment services, enter the exact Arc
+Testnet recipient and USDC amount for the purchase. The amount must be within
+the settlement cap. A committed job's settlement and ArcScan evidence remain
+authoritative; delivery resume never submits a replacement payment.
 
 `pnpm demo:r4` runs the response-loss drill offline by default. The live mode
 requires an explicit Arc Testnet confirmation and the reviewed worker hook;
@@ -261,25 +284,53 @@ shown for retries; users do not need to invent one. After settlement, the job
 list links directly to ArcScan and keeps the supplier result separate from
 payment evidence.
 
-| Method | Path                             | Purpose                                                       |
-| ------ | -------------------------------- | ------------------------------------------------------------- |
-| `POST` | `/v1/intents`                    | Create an intent; an identical replay returns the same result |
-| `GET`  | `/v1/intents/{id}`               | Authoritative intent, attempts, settlement, evidence          |
-| `POST` | `/v1/intents/{id}/reconcile`     | Trigger read-only reconciliation; never submits               |
-| `GET`  | `/v1/intents/{id}/recovery-view` | Local authority plus labelled provider observations           |
-| `POST` | `/v1/jobs`                       | Start/replay one workspace-scoped team report task            |
-| `POST` | `/v1/jobs/quote`                 | Return a non-chargeable quote before explicit approval        |
-| `GET`  | `/v1/jobs`                       | List workspace jobs and delivery state                        |
-| `GET`  | `/v1/jobs/{jobId}`               | Read a workspace-owned job                                    |
-| `POST` | `/v1/jobs/{jobId}/resume`        | Resume original supplier delivery; never submits payment      |
-| `GET`  | `/v1/jobs/{jobId}/result`        | Retrieve an existing supplier result; never submits payment   |
-| `GET`  | `/v1/activity`                   | Last bounded Graph activity observation and local comparison  |
-| `POST` | `/v1/activity/refresh`           | Manually refresh Graph activity; no settlement action         |
-| `GET`  | `/v1/metrics`                    | Operational metrics                                           |
-| `GET`  | `/health/live`                   | Process liveness                                              |
-| `GET`  | `/health/ready`                  | Configuration and Arc identity readiness                      |
+| Method | Path                                  | Purpose                                                        |
+| ------ | ------------------------------------- | -------------------------------------------------------------- |
+| `POST` | `/v1/intents`                         | Create an intent; an identical replay returns the same result  |
+| `GET`  | `/v1/intents/{id}`                    | Authoritative intent, attempts, settlement, evidence           |
+| `POST` | `/v1/intents/{id}/reconcile`          | Trigger read-only reconciliation; never submits                |
+| `GET`  | `/v1/intents/{id}/recovery-view`      | Local authority plus labelled provider observations            |
+| `POST` | `/v1/jobs`                            | Start/replay one workspace-scoped team report task             |
+| `POST` | `/v1/jobs/quote`                      | Return a non-chargeable quote before explicit approval         |
+| `POST` | `/v1/jobs/user-wallet/prepare`        | Bind a payer wallet and return the exact transfer to sign      |
+| `GET`  | `/v1/jobs`                            | List workspace jobs and delivery state                         |
+| `GET`  | `/v1/jobs/{jobId}`                    | Read a workspace-owned job                                     |
+| `POST` | `/v1/jobs/{jobId}/user-wallet/submit` | Bind a signed transaction hash and verify its receipt          |
+| `POST` | `/v1/jobs/{jobId}/resume`             | Resume original supplier delivery; never submits payment       |
+| `GET`  | `/v1/jobs/{jobId}/result`             | Retrieve an existing supplier result; never submits payment    |
+| `GET`  | `/v1/activity`                        | Last bounded Graph activity observation and local comparison   |
+| `POST` | `/v1/activity/refresh`                | Manually refresh Graph activity; no settlement action          |
+| `GET`  | `/v1/metrics`                         | Operational metrics                                            |
+| `GET`  | `/health/live`                        | Process liveness                                               |
+| `GET`  | `/health/ready`                       | Configuration and Arc identity readiness                       |
 
 The contract is defined in `packages/contracts/openapi/openapi.v1.json`.
+
+### Agent access (MCP)
+
+Agents reach the same durable job path through one Streamable HTTP MCP
+endpoint. The flow is non-custodial: `arc_payment` creates or replays a
+payer-bound job and returns the exact Arc Testnet USDC transaction request, the
+user's own wallet signs and broadcasts it, and `arc_payment_submit` hands back
+the transaction hash so OneShot can bind it and verify the receipt and its
+single matching `Transfer` log.
+
+The MCP bearer authenticates a workspace. It does not authorize a server payer
+and cannot sign or broadcast anything. Personal bearers are issued from the
+authenticated Profile and stored only as SHA-256 digests; the legacy
+operator-controlled `ONESHOT_MCP_BEARER_TOKEN` remains optional.
+
+| Method | Path                           | Purpose                                                        |
+| ------ | ------------------------------ | -------------------------------------------------------------- |
+| `ALL`  | `/mcp`                         | MCP endpoint exposing `arc_payment` and `arc_payment_submit`   |
+| `GET`  | `/v1/profile/mcp-token`        | Report whether this workspace holds a personal MCP bearer      |
+| `POST` | `/v1/profile/mcp-token`        | Issue a personal MCP bearer; only its digest is stored         |
+| `POST` | `/v1/profile/mcp-token/rotate` | Replace the personal MCP bearer                                |
+
+These operator and agent-transport routes sit outside the frozen v1 contract
+pack. See [`docs/MCP_ARC_PAYMENT.md`](docs/MCP_ARC_PAYMENT.md) for deployment,
+client configuration, and the live walkthrough, or open `/docs/mcp` in the
+running web app.
 
 ## Project status
 
@@ -292,7 +343,9 @@ Under active development. **Testnet only.**
 | Recovery evidence and safety core      | Live Graph/Vertex path implemented; deterministic core remains authoritative                   |
 | Graph discovery and LLM recovery agent | Studio GraphQL path implemented; fresh sponsor trace pending; deterministic core remains final |
 | Resumable team report job              | Local code: task/order/intent binding, separate delivery and result retrieval                  |
-| Public landing and cabinet             | Local code at `/` and `/app`; live R4 demonstration evidence remains pending                   |
+| User-wallet payments (browser and MCP) | Local code: payer binding, wallet-side signing, receipt and `Transfer` verification            |
+| Agent MCP endpoint                     | Deployed; bearer authentication and tool discovery verified, no live MCP payment trace yet     |
+| Public landing, agent docs, cabinet    | Local code at `/`, `/docs/mcp`, and `/app`; live R4 demonstration evidence remains pending     |
 
 **One live testnet settlement has been executed.** A Privy-controlled execution
 wallet and scoped policy authorized one 1.00 USDC Arc Testnet transfer; live
@@ -300,7 +353,8 @@ wrong-recipient and above-cap denials produced zero broadcasts. A lost-response
 drill entered `UNKNOWN` and reconciled to that original settlement without a
 replacement payment. Privy and Arc are `QUALIFIED` for the documented testnet
 claim; see `docs/settlement/LIVE_EVIDENCE.md` and
-`packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`. The Graph live
+`packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`.
+
 The Graph recovery path is currently `NOT VERIFIED` for sponsor qualification:
 Studio GraphQL is implemented, but a fresh live trace showing its material
 effect on the model and deterministic core is still required.
