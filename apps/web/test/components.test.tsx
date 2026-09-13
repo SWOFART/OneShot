@@ -181,7 +181,7 @@ describe('IntentStatusView', () => {
 });
 
 describe('JobWorkspace payment inputs', () => {
-  it('observes the queued resume until the existing result is available', async () => {
+  it('refreshes once after the queued resume without polling jobs repeatedly', async () => {
     const user = userEvent.setup();
     const pendingJob = resumableJob('PENDING');
     const availableJob: JobView = {
@@ -197,7 +197,7 @@ describe('JobWorkspace payment inputs', () => {
     const client = {
       list: vi.fn(async () => {
         listCalls += 1;
-        return [listCalls < 3 ? pendingJob : availableJob];
+        return [listCalls === 1 ? pendingJob : availableJob];
       }),
       resume: vi.fn(async () => pendingJob),
     };
@@ -211,7 +211,7 @@ describe('JobWorkspace payment inputs', () => {
       { timeout: 3000 },
     );
     expect(client.resume).toHaveBeenCalledWith(pendingJob.job_id);
-    expect(listCalls).toBeGreaterThanOrEqual(3);
+    expect(listCalls).toBe(2);
     expect(screen.getByText('Result ready:')).toBeTruthy();
   });
 

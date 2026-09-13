@@ -37,8 +37,7 @@ function explorerHref(transactionHash: string | undefined): string | undefined {
 
 const USER_WALLET_PAYMENT_CHECK_DELAY_MS = 500;
 const USER_WALLET_PAYMENT_CHECK_ATTEMPTS = 30;
-const RESULT_CHECK_DELAY_MS = 500;
-const RESULT_CHECK_ATTEMPTS = 30;
+const RESULT_REFRESH_DELAY_MS = 1000;
 
 function waitForPaymentCheck(): Promise<void> {
   return new Promise((resolve) => {
@@ -46,9 +45,9 @@ function waitForPaymentCheck(): Promise<void> {
   });
 }
 
-function waitForResultCheck(): Promise<void> {
+function waitForResultRefresh(): Promise<void> {
   return new Promise((resolve) => {
-    window.setTimeout(resolve, RESULT_CHECK_DELAY_MS);
+    window.setTimeout(resolve, RESULT_REFRESH_DELAY_MS);
   });
 }
 
@@ -66,27 +65,6 @@ async function resolveUserWalletPayment(
   ) {
     await waitForPaymentCheck();
     latest = await client.submitUserWalletPayment(jobId, transactionHash);
-  }
-  return latest;
-}
-
-async function waitForResumedResult(
-  client: JobApiClient,
-  jobId: string,
-  initial: JobView,
-): Promise<JobView> {
-  let latest = initial;
-  for (
-    let attempt = 0;
-    attempt < RESULT_CHECK_ATTEMPTS &&
-    !latest.result &&
-    latest.delivery_state !== 'RETRIEVAL_FAILED';
-    attempt += 1
-  ) {
-    await waitForResultCheck();
-    const matchingJob = (await client.list()).find((job) => job.job_id === jobId);
-    if (!matchingJob) throw new Error('The resumed job is no longer available');
-    latest = matchingJob;
   }
   return latest;
 }
@@ -494,14 +472,16 @@ export function JobList(props: {
   const [resumingJobId, setResumingJobId] = useState<string | null>(null);
   const [checkingPaymentJobId, setCheckingPaymentJobId] = useState<string | null>(null);
 
-  async function refresh(): Promise<void> {
+  async function refresh(): Promise<readonly JobView[] | null> {
     setLoading(true);
     try {
       const listed = await props.client.list();
       setRequests(listed);
       setError('');
+      return listed;
     } catch {
       setError('Requests could not be loaded. Check API readiness and your workspace session.');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -512,9 +492,12 @@ export function JobList(props: {
     setError('');
     try {
       const resumed = await props.client.resume(jobId);
-      const latest = await waitForResumedResult(props.client, jobId, resumed);
-      await refresh();
-      if (!latest.result) {
+      if (!resumed.result && resumed.delivery_state === 'PENDING') {
+        await waitForResultRefresh();
+      }
+      const listed = await refresh();
+      const latest = listed?.find((job) => job.job_id === jobId);
+      if (latest && !latest.result) {
         setError(
           latest.delivery_state === 'RETRIEVAL_FAILED'
             ? 'The supplier result could not be retrieved. No new payment was submitted.'
