@@ -582,6 +582,7 @@ describePostgres('PostgreSQL intent ledger', () => {
       requestFingerprint: 'b'.repeat(64),
       walletId: 'wallet-test',
       policyId: 'policy-test',
+      providerKind: 'DIRECT_ARC',
     });
   });
 
