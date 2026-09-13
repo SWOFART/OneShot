@@ -35,6 +35,33 @@ function explorerHref(transactionHash: string | undefined): string | undefined {
     : undefined;
 }
 
+const USER_WALLET_PAYMENT_CHECK_DELAY_MS = 500;
+const USER_WALLET_PAYMENT_CHECK_ATTEMPTS = 30;
+
+function waitForPaymentCheck(): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, USER_WALLET_PAYMENT_CHECK_DELAY_MS);
+  });
+}
+
+async function resolveUserWalletPayment(
+  client: JobApiClient,
+  jobId: string,
+  transactionHash: string,
+  initial: JobView,
+): Promise<JobView> {
+  let latest = initial;
+  for (
+    let attempt = 0;
+    attempt < USER_WALLET_PAYMENT_CHECK_ATTEMPTS && latest.payment_state === 'UNKNOWN';
+    attempt += 1
+  ) {
+    await waitForPaymentCheck();
+    latest = await client.submitUserWalletPayment(jobId, transactionHash);
+  }
+  return latest;
+}
+
 export function SupplierQuotePanel({
   quote,
   heading = 'Supplier quote',
@@ -221,13 +248,21 @@ export function JobWorkspace(props: {
       const transactionHash = await userWallet.sendTransfer(job.user_payment);
       submittedHash = transactionHash;
       setPaymentHash(transactionHash);
-      const updated = await props.client.submitUserWalletPayment(job.job_id, transactionHash);
+      const initial = await props.client.submitUserWalletPayment(job.job_id, transactionHash);
+      setApprovedJob(initial);
+      setPaymentChecking(initial.payment_state === 'UNKNOWN');
+      const updated = await resolveUserWalletPayment(
+        props.client,
+        job.job_id,
+        transactionHash,
+        initial,
+      );
       setApprovedJob(updated);
       setNotice(
         updated.payment_state === 'COMMITTED'
           ? 'Payment confirmed from your connected wallet. Supplier delivery can now continue.'
           : updated.payment_state === 'UNKNOWN'
-            ? 'Transaction recorded but not final. Check the same transaction later; do not pay again.'
+            ? 'Transaction recorded but not final. Automatic checks ended; use the same transaction check if needed. Do not pay again.'
             : `Payment state: ${updated.payment_state}.`,
       );
     } catch {
@@ -239,6 +274,7 @@ export function JobWorkspace(props: {
             : 'The payment was not prepared. Keep the same task key if you need to inspect it.',
       );
     } finally {
+      setPaymentChecking(false);
       setStarting(false);
     }
   }
@@ -247,7 +283,13 @@ export function JobWorkspace(props: {
     if (!approvedJob || !paymentHash) return;
     setPaymentChecking(true);
     try {
-      const updated = await props.client.submitUserWalletPayment(approvedJob.job_id, paymentHash);
+      const initial = await props.client.submitUserWalletPayment(approvedJob.job_id, paymentHash);
+      const updated = await resolveUserWalletPayment(
+        props.client,
+        approvedJob.job_id,
+        paymentHash,
+        initial,
+      );
       setApprovedJob(updated);
       setNotice(
         updated.payment_state === 'COMMITTED'

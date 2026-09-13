@@ -234,12 +234,22 @@ describe('JobWorkspace payment inputs', () => {
       payment_state: 'COMMITTED' as const,
       user_payment: { ...payment, transaction_hash: paymentHash },
     };
+    const unknownJob = {
+      ...preparedJob,
+      payment_state: 'UNKNOWN' as const,
+      user_payment: { ...payment, transaction_hash: paymentHash },
+    };
     const sendTransfer = vi.fn(async () => paymentHash);
+    let submissionAttempts = 0;
+    const submitUserWalletPayment = vi.fn(async () => {
+      submissionAttempts += 1;
+      return submissionAttempts === 1 ? unknownJob : committedJob;
+    });
     const client = {
       quote: vi.fn(async () => supplier),
       start: vi.fn(),
       prepareUserWalletJob: vi.fn(async () => preparedJob),
-      submitUserWalletPayment: vi.fn(async () => committedJob),
+      submitUserWalletPayment,
     };
 
     render(
@@ -267,9 +277,13 @@ describe('JobWorkspace payment inputs', () => {
       }),
     );
     expect(sendTransfer).toHaveBeenCalledWith(payment);
-    expect(client.submitUserWalletPayment).toHaveBeenCalledWith(
-      preparedJob.job_id,
-      paymentHash,
+    expect(client.submitUserWalletPayment).toHaveBeenCalledWith(preparedJob.job_id, paymentHash);
+    await waitFor(
+      () => {
+        expect(submissionAttempts).toBe(2);
+        expect(screen.getByText(/Payment confirmed from your connected wallet/u)).toBeTruthy();
+      },
+      { timeout: 3000 },
     );
     expect(client.start).not.toHaveBeenCalled();
   });
@@ -440,5 +454,4 @@ describe('JobWorkspace payment inputs', () => {
     );
     expect(client.list).toHaveBeenCalledTimes(2);
   });
-
 });
