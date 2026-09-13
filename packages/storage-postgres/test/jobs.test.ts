@@ -54,6 +54,9 @@ describe('JobLedger delivery recovery', () => {
   it('matches indexed transfers to workspace settlements and surfaces unmatched activity', async () => {
     const recordedHash = `0x${'a'.repeat(64)}`;
     const unmatchedHash = `0x${'b'.repeat(64)}`;
+    const foreignHash = `0x${'d'.repeat(64)}`;
+    const workspaceWallet = '0x2222222222222222222222222222222222222222';
+    const foreignWallet = '0x3333333333333333333333333333333333333333';
     const pool = {
       async query(sql: string) {
         if (sql.includes('FROM wallet_activity_observations')) {
@@ -75,6 +78,14 @@ describe('JobLedger delivery recovery', () => {
                     {
                       transaction_hash: unmatchedHash,
                       log_index: 4,
+                      sender: workspaceWallet,
+                      recipient: failedJob.supplier_quote.recipient,
+                      amount_atomic: failedJob.supplier_quote.amount_atomic,
+                    },
+                    {
+                      transaction_hash: foreignHash,
+                      log_index: 9,
+                      sender: foreignWallet,
                       recipient: failedJob.supplier_quote.recipient,
                       amount_atomic: failedJob.supplier_quote.amount_atomic,
                     },
@@ -95,6 +106,10 @@ describe('JobLedger delivery recovery', () => {
           return { rows: [{ count: '1' }] };
         }
         if (sql.includes("i.state = 'UNKNOWN'")) return { rows: [{ count: '0' }] };
+        if (sql.includes('AS payer_wallet')) return { rows: [{ payer_wallet: workspaceWallet }] };
+        if (sql.includes('workspace_transaction_hashes')) {
+          return { rows: [{ transaction_hash: recordedHash }] };
+        }
         return { rows: [] };
       },
     };
@@ -116,6 +131,52 @@ describe('JobLedger delivery recovery', () => {
         },
         { transaction_hash: unmatchedHash, log_index: 4, match: 'UNMATCHED' },
       ],
+    });
+  });
+
+  it('excludes shared server wallet transfers that belong to another workspace', async () => {
+    const foreignHash = `0x${'e'.repeat(64)}`;
+    const serverWallet = '0x4444444444444444444444444444444444444444';
+    const pool = {
+      async query(sql: string) {
+        if (sql.includes('FROM wallet_activity_observations')) {
+          return {
+            rows: [
+              {
+                freshness: 'FRESH',
+                coverage_note: 'indexed',
+                observed_at: new Date('2026-09-07T12:00:00.000Z'),
+                payload: {
+                  transfers: [
+                    {
+                      transaction_hash: foreignHash,
+                      log_index: 1,
+                      sender: serverWallet,
+                      recipient: failedJob.supplier_quote.recipient,
+                      amount_atomic: failedJob.supplier_quote.amount_atomic,
+                    },
+                  ],
+                },
+              },
+            ],
+          };
+        }
+        if (sql.includes('SELECT count(*)::text AS count FROM (') && sql.includes('recorded')) {
+          return { rows: [{ count: '1' }] };
+        }
+        if (sql.includes("i.state = 'UNKNOWN'")) return { rows: [{ count: '0' }] };
+        return { rows: [] };
+      },
+    };
+    const ledger = new JobLedger(pool as never, {
+      now: () => new Date('2026-09-07T12:01:00.000Z'),
+      nextAttemptId: () => 'unused',
+    });
+
+    await expect(ledger.activity('workspace-unit')).resolves.toMatchObject({
+      recorded_settlement_count: 1,
+      unmatched_transfer_count: 0,
+      transfers: [],
     });
   });
 
@@ -167,6 +228,9 @@ describe('JobLedger delivery recovery', () => {
         }
         if (sql.includes('FROM settlements s')) return { rows: [] };
         if (sql.includes("i.state = 'UNKNOWN'")) return { rows: [{ count: '0' }] };
+        if (sql.includes('workspace_transaction_hashes')) {
+          return { rows: [{ transaction_hash: indexedHash }] };
+        }
         if (sql.includes('SELECT j.job_id, j.business_intent_id')) {
           return { rows: [failedJobActivity, rejectedJob] };
         }
