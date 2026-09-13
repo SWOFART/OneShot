@@ -454,6 +454,100 @@ a:hover {
   margin-bottom: 0;
 }
 
+/* ========================================================================
+   MCP documentation
+   ======================================================================== */
+
+.docs-page {
+  max-width: 960px;
+}
+
+.docs-header,
+.docs-section {
+  width: min(100%, 760px);
+  margin-inline: auto;
+}
+
+.docs-header {
+  margin-bottom: 2rem;
+}
+
+.docs-header h1 {
+  max-width: 720px;
+  margin-bottom: 1rem;
+  color: var(--os-ink);
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  font-weight: 300;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.docs-lead,
+.docs-section p,
+.docs-facts,
+.docs-steps {
+  color: var(--os-ink-muted);
+  line-height: 1.65;
+}
+
+.docs-lead {
+  max-width: 680px;
+  font-size: 1.1rem;
+}
+
+.docs-lead code {
+  color: var(--os-accent-ink);
+  font-family: var(--os-font-mono);
+}
+
+.docs-section {
+  margin-bottom: 1.25rem;
+  padding: 1.5rem;
+  border: 1px solid var(--os-line);
+  border-radius: var(--os-radius-lg);
+  background: var(--os-surface);
+  color: var(--os-ink);
+}
+
+.docs-section h2 {
+  margin-bottom: 0.75rem;
+  color: var(--os-ink);
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+.docs-facts,
+.docs-steps {
+  margin: 0;
+  padding-left: 1.3rem;
+}
+
+.docs-facts li,
+.docs-steps li {
+  margin-bottom: 0.55rem;
+  padding-left: 0.2rem;
+}
+
+.docs-code {
+  margin: 1rem 0 0;
+  padding: 1.15rem;
+  overflow-x: auto;
+  border: 1px solid var(--os-line);
+  border-radius: var(--os-radius);
+  background: var(--os-panel);
+  color: var(--os-panel-ink);
+  font-family: var(--os-font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.docs-note {
+  margin: 1rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--os-line);
+}
+
 /* ==========================================================================
    Console Workspace Container
    ========================================================================== */

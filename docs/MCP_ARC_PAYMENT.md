@@ -5,6 +5,8 @@ replays a durable OneShot Business Intent; the existing worker performs the
 policy-bound Privy server-wallet transfer on Arc Testnet. The MCP endpoint does
 not sign or submit transactions itself.
 
+The web app renders the client setup and walkthrough at `/docs/mcp`.
+
 ## Deploy
 
 Configure the API with one dedicated secret and one fixed demo scope:

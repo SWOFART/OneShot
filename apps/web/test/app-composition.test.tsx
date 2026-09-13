@@ -21,6 +21,9 @@ describe('Gate P5 shell composition', () => {
     expect(screen.getAllByRole('link', { name: /Open workspace/u })[0]?.getAttribute('href')).toBe(
       '/app',
     );
+    expect(screen.getByRole('link', { name: 'Connect an agent' }).getAttribute('href')).toBe(
+      '/docs/mcp',
+    );
     landing.unmount();
 
     render(
@@ -44,6 +47,25 @@ describe('Gate P5 shell composition', () => {
     expect(screen.getByRole('tab', { name: 'Payment services' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Requests' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Payment proof' })).toBeTruthy();
+  });
+
+  it('publishes a safe MCP client configuration and replay walkthrough', () => {
+    render(<App route="/docs/mcp" />);
+
+    expect(
+      screen.getByRole('heading', { name: 'Connect an agent to one safe payment tool.' }),
+    ).toBeTruthy();
+    expect(screen.getByLabelText('MCP client configuration').textContent).toContain(
+      'https://oneshot.kapustazh.dev/mcp',
+    );
+    expect(screen.getByLabelText('MCP client configuration').textContent).toContain(
+      '<ONESHOT_MCP_BEARER_TOKEN>',
+    );
+    expect(screen.getByLabelText('arc_payment tool input').textContent).toContain(
+      '<ONESHOT_MCP_REQUEST_KEY>',
+    );
+    expect(screen.getByText(/1000000 atomic units/u)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /pay|submit|run/iu })).toBeNull();
   });
 
   it('offers only the four working cabinet sections', () => {

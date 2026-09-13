@@ -21,6 +21,15 @@ browser wallet, or a per-payment wallet popup.
 Personal Privy wallets and delegated agent signers remain a separate milestone.
 They must not block the first working `arc_payment` demo.
 
+## Implementation status
+
+- Tasks 1-7 are implemented on `mcp-integration` in commit `1f25bae` and passed
+  Gate A before that commit was pushed.
+- The local `/docs/mcp` page and same-origin Vite proxy complete the local part
+  of Task 8.
+- The real Arc Testnet call, identical replay, and recorded proof remain pending
+  while testing is restricted to the local environment.
+
 ## Non-negotiable behavior
 
 - Arc Testnet (`eip155:5042002`) and Arc USDC are the only network and asset.

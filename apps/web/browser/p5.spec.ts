@@ -226,6 +226,18 @@ for (const theme of ['light', 'dark'] as const) {
         path: test.info().outputPath(`landing-${theme}-${width}.png`),
         fullPage: true,
       });
+      await page.goto('/docs/mcp');
+      await expect(
+        page.getByRole('heading', { name: 'Connect an agent to one safe payment tool.' }),
+      ).toBeVisible();
+      await expect(page.getByLabel('MCP client configuration')).toContainText(
+        '<ONESHOT_MCP_BEARER_TOKEN>',
+      );
+      await checkContrast();
+      await page.screenshot({
+        path: test.info().outputPath(`mcp-docs-${theme}-${width}.png`),
+        fullPage: true,
+      });
       await page.goto('/app');
       await unlockWorkspace(page);
       const identity = await page.locator('.operator-identity').boundingBox();

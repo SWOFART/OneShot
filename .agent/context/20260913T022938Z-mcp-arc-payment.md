@@ -2,99 +2,97 @@
 
 ## Date/time
 
-- UTC: 2026-09-13T02:29:38Z
+- UTC: 2026-09-13T03:01:00Z
 
 ## User goal
 
-Implement and test the PR #112 `arc_payment` MVP in the `mcp-integration`
-worktree, then stop before FreePi Gate A/B.
+Continue implementing the PR #112 `arc_payment` plan on `mcp-integration`,
+test only locally, and leave deployment and the real Arc payment untouched.
 
 ## Original prompt/request
 
-"From now on we are going to use mcp-integration part. And test everything
-there. Start implementing plan. from there. Stop before gates."
+The user supplied a GLM5-3 review confirming Gate A, commit, push, and the MCP
+backend behavior at `1f25bae`, then asked: "Continue implementing plan, this was
+the review of GLM5-3." The standing constraint is: "Пока тестим все локально без
+запуска на develope."
 
 ## Assumptions
 
-- The first release uses the existing Privy server wallet and direct Arc
-  Testnet USDC settlement worker.
-- A configured allowed request key is the one-intent demo quota; changing that
-  deployment setting is an operator action.
-- Tests use fakes or isolated PostgreSQL and must not submit a live payment.
+- The GLM5-3 review is accepted as the checkpoint for commit `1f25bae`.
+- Local tests use mocks and must not submit a live Arc payment.
+- Circle x402 and personal-wallet MCP support remain outside this milestone.
 
 ## Plan
 
-1. Add the official stateless Streamable HTTP MCP handler and one tool.
-2. Isolate MCP bearer authentication from browser/internal API credentials.
-3. Convert exact decimal USDC to atomic units and reuse `createOrReplay`.
-4. Proxy `/mcp`, document configuration, and run focused plus full checks.
-5. Stop before Gate A/B, commit, push, deployment, or live settlement.
+1. Complete the missing public `/docs/mcp` guide and local same-origin proxy.
+2. Verify both themes and responsive layouts without invoking `arc_payment`.
+3. Stop before a fresh Gate A, commit, push, deployment, or live settlement.
 
 ## Key decisions
 
-- Use official `@modelcontextprotocol/server` and Node adapter version 2.0.0.
-- Enforce one configured request key instead of adding quota persistence and a
-  database migration for the literal single-payment demo.
-- Keep the MCP handler free of signing/submission logic; the durable outbox
-  worker remains the only external-effect path.
+- Keep the page static and copy-ready, with no payment button or credential
+  persistence.
+- Reuse the existing brand tokens and theme machinery; add no dependency.
+- Keep the real Arc call pending because it is incompatible with local-only
+  testing.
 
 ## Files/components touched
 
-- `apps/api/src/mcp.ts`: official MCP handler, one `arc_payment` tool, exact
-  money parsing, deterministic identity, one-key quota, bounded status wait.
-- `apps/api/src/app.ts`, `config.ts`, `runtime.ts`: isolated bearer route and
-  fail-closed runtime configuration.
-- `apps/web/worker.ts`: same-origin `/mcp` proxy with MCP headers.
-- `.env.example`, `docs/MCP_ARC_PAYMENT.md`, `README.md`: safe configuration
-  placeholders and a non-hardcoded walkthrough.
-- API/Web unit and PostgreSQL integration test definitions.
+- `apps/web/src/components/McpDocsPage.tsx`: public setup and replay walkthrough.
+- `apps/web/src/App.tsx`: `/docs/mcp` route and landing-page link.
+- `apps/web/src/styles.css`: responsive token-based documentation styles.
+- `apps/web/vite.config.ts`: local `/mcp` proxy to the API.
+- `apps/web/test/app-composition.test.tsx`, `apps/web/browser/p5.spec.ts`: route,
+  safety, contrast, responsive, and screenshot coverage.
+- `docs/MCP_ARC_PAYMENT.md`, `docs/PERSONAL_MCP_PRIVY_AGENT_PAYMENTS_PLAN.md`:
+  public route and implementation status.
 
 ## Commands/checks
 
-- `npm view @modelcontextprotocol/{server,node}` - selected current 2.0.0,
-  Node >=20.
-- `pnpm --filter @oneshot/api test -- mcp.test.ts config.test.ts` - PASS, 25.
-- `pnpm --filter @oneshot/web test -- worker-proxy.test.ts` - PASS, 4.
-- `pnpm test` - PASS, build plus 83 files / 1091 tests.
-- `pnpm test:browser` - PASS, 8 Chromium checks.
+- GLM5-3 reported API 81/81, Web 108/108, TypeScript, lint, diff check, and Gate
+  A PASS for `1f25bae`; PostgreSQL integration was not run locally because no
+  Docker runtime was available.
+- `pnpm --filter @oneshot/web test -- app-composition.test.tsx styles.test.ts` -
+  PASS, 25 tests.
+- `pnpm --filter @oneshot/web test` - PASS, 109 tests.
+- `pnpm --filter @oneshot/web typecheck` - PASS.
+- `pnpm --filter @oneshot/web lint` - PASS.
+- `pnpm --filter @oneshot/web test:browser` - PASS, 8 Chromium checks; the MCP
+  page passed axe color contrast and viewport overflow checks in light/dark at
+  390px and 1440px.
+- `pnpm test` - PASS, 83 files / 1091 tests.
 - `pnpm lint` and `pnpm format:check` - PASS.
-- `pnpm check:generated` - PASS; generated contracts current.
-- `pnpm validate:fixtures` - PASS; 9 contracts and 7 UI fixtures.
-- `TEST_POSTGRES=1 pnpm --filter @oneshot/api test:integration` - BLOCKED
-  before tests because no local Docker/container runtime was available. The
-  added 10-call PostgreSQL concurrency test remains unexecuted locally.
-- Test host ran Node 22.23.2 while the repository pins Node 24.19.0; pnpm
-  reported the existing engine warning. TypeScript/build/tests still passed.
+- `pnpm check:generated` - PASS; generated contracts are current.
+- `pnpm validate:fixtures` - PASS; 9 contract and 7 UI fixtures.
+- The host uses Node 22.23.2 while the repository pins Node 24.19.0; pnpm emits
+  the existing engine warning.
 
 ## External-doc findings
 
-- Official TypeScript SDK HTTP docs use `createMcpHandler(factory)` and
-  `toNodeHandler(handler)` for Fastify/Node; the factory is per request and the
-  default keeps stateless 2025 compatibility:
-  <https://github.com/modelcontextprotocol/typescript-sdk/blob/main/docs/serving/http.md>.
-- SDK migration guidance supports the 2026-07-28 protocol and stateless 2025
-  fallback from one tool factory:
-  <https://github.com/modelcontextprotocol/typescript-sdk/blob/main/docs/migration/support-2026-07-28.md>.
+- No new external research was needed; the implementation follows the MCP SDK
+  and Streamable HTTP findings recorded with commit `1f25bae`.
 
 ## Unresolved questions
 
-- PostgreSQL MCP concurrency test must run in CI or another local environment
-  with Docker before Gate A.
+- The PostgreSQL MCP concurrency test still needs CI or a machine with Docker.
+- The real Arc Testnet call/replay/proof remains pending until live execution is
+  explicitly resumed.
 
 ## Git and PR state
 
 - Branch: `mcp-integration`
 - Base: `origin/develop` at `91a7744bd212d8c2afadf0e08bebd1deea8fc59d`
-- Commit: uncommitted, staged candidate
-- PR: not created
-- CI: not run; no pushed head
+- Commit: `1f25baee09bca4c8431db166a5e7feb72404ada5` plus uncommitted docs-page candidate
+- PR: no `mcp-integration` to `develop` PR created
+- CI: not run for the uncommitted candidate
 
 ## Review gates
 
-- Gate A: NOT RUN, per user instruction to stop before gates.
-- Gate B: NOT RUN, no PR/head.
+- Gate A: PASS for commit `1f25bae` per the supplied GLM5-3 review; NOT RUN for
+  the current uncommitted docs-page candidate.
+- Gate B: NOT RUN; no implementation PR exists.
 
 ## Handoff/next steps
 
-1. Run the PostgreSQL integration suite where Docker is available.
-2. If green, proceed to exact candidate staging/Gate A only when instructed.
+1. Run fresh Gate A only when instructed, then commit and push the exact tree.
+2. Run the real Arc demo only after local-only restrictions are lifted.
