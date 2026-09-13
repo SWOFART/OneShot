@@ -9,6 +9,18 @@ import type {
 } from '@oneshot/contracts';
 import type { ApiClientConfig } from './client.js';
 
+export interface McpCredentialStatus {
+  readonly configured: boolean;
+  readonly created_at?: string;
+  readonly request_key: string;
+}
+
+export interface IssuedMcpCredential {
+  readonly bearer_token: string;
+  readonly created_at: string;
+  readonly request_key: string;
+}
+
 async function responseJson<T>(response: Response): Promise<T | null> {
   if (!response.headers.get('content-type')?.includes('application/json')) return null;
   try {
@@ -117,6 +129,25 @@ export class JobApiClient {
     });
     const body = await responseJson<ActivityResponse>(response);
     if (!response.ok || !body) throw new Error('Activity refresh is unavailable');
+    return body;
+  }
+
+  async mcpCredentialStatus(): Promise<McpCredentialStatus> {
+    const response = await this.#fetch(`${this.#baseUrl}/v1/profile/mcp-token`, {
+      headers: this.#headers(),
+    });
+    const body = await responseJson<McpCredentialStatus>(response);
+    if (!response.ok || !body) throw new Error('Could not load MCP access');
+    return body;
+  }
+
+  async issueMcpCredential(rotate: boolean): Promise<IssuedMcpCredential> {
+    const response = await this.#fetch(
+      `${this.#baseUrl}/v1/profile/mcp-token${rotate ? '/rotate' : ''}`,
+      { method: 'POST', headers: this.#headers() },
+    );
+    const body = await responseJson<IssuedMcpCredential>(response);
+    if (!response.ok || !body) throw new Error('Could not generate MCP bearer token');
     return body;
   }
 }

@@ -21,6 +21,7 @@ import { IntentForm } from './components/IntentForm.js';
 import { IntentStatusView } from './components/IntentStatusView.js';
 import { LoginGate } from './components/LoginGate.js';
 import { McpDocsPage } from './components/McpDocsPage.js';
+import { McpProfile } from './components/McpProfile.js';
 import { ReadinessBanner } from './components/ReadinessBanner.js';
 import { JobList, JobWorkspace } from './components/JobWorkspace.js';
 import { RecoverySurface, SettlementSurface } from './components/FrontendSurfaces.js';
@@ -78,8 +79,8 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
           <p className="eyebrow">RESUMABLE PAID SERVICES / ARC TESTNET</p>
           <h1>Resume the job, not the payment.</h1>
           <p className="hero-lead">
-            Approve one direct Arc payment. If an agent restarts, the original
-            task, payment evidence and result stay together.
+            Approve one direct Arc payment. If an agent restarts, the original task, payment
+            evidence and result stay together.
           </p>
           <p className="hero-sublead">
             One job. Many retries. At most one committed settlement. Team-operated testnet
@@ -142,9 +143,9 @@ function CabinetPage(props: {
   readonly onToggleTheme: () => void;
   readonly userWallet?: UserWalletSession;
 }) {
-  const [section, setSection] = useState<'overview' | 'services' | 'requests' | 'protection'>(
-    'overview',
-  );
+  const [section, setSection] = useState<
+    'overview' | 'services' | 'requests' | 'protection' | 'profile'
+  >('overview');
   const [intentId, setIntentId] = useState('');
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [activityError, setActivityError] = useState<string | null>(null);
@@ -153,6 +154,7 @@ function CabinetPage(props: {
     services: 'Payment services',
     requests: 'Requests',
     protection: 'Payment proof',
+    profile: 'Profile',
   } as const;
 
   function selectRequest(id: string): void {
@@ -217,8 +219,8 @@ function CabinetPage(props: {
               and result.
             </li>
             <li>
-              <strong>Demonstrate recovery.</strong> Resume the existing sample result from Requests.
-              An uncertain payment needs investigation, not a new key.
+              <strong>Demonstrate recovery.</strong> Resume the existing sample result from
+              Requests. An uncertain payment needs investigation, not a new key.
             </li>
           </ol>
           <p>
@@ -307,6 +309,7 @@ function CabinetPage(props: {
               }}
             />
           )}
+          {section === 'profile' && <McpProfile client={props.jobClient} />}
         </div>
       </LoginGate>
     </main>

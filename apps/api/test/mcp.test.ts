@@ -51,7 +51,6 @@ function app(createOrReplay: ApiDependencies['ledger']['createOrReplay']) {
       workspaceId: 'mcp-demo-workspace',
       allowedRequestKey: REQUEST_KEY,
       payerWallet: PAYER,
-      maxAmountAtomic: 1_000_000n,
       waitMs: 0,
     },
   });
@@ -115,6 +114,33 @@ describe('MCP arc_payment', () => {
     expect(arcPaymentBusinessIntentId('mcp-demo-workspace', REQUEST_KEY)).toBe(first);
     expect(arcPaymentBusinessIntentId('another-workspace', REQUEST_KEY)).not.toBe(first);
     expect(first).toMatch(/^intent_[0-9a-f]{64}$/u);
+  });
+
+  it('derives the intent from the personal bearer workspace', async () => {
+    let seenId = '';
+    const createOrReplay = vi.fn(async (request: unknown): Promise<CreateIntentResult> => {
+      seenId = (request as IntentResponse).business_intent_id;
+      return { kind: 'ACCEPTED', intent: intent(request as Partial<IntentResponse>) };
+    });
+    const server = buildApi({
+      ledger: ledger(createOrReplay),
+      authenticator: staticBearerAuthenticator(SERVICE_TOKEN),
+      mcp: {
+        authenticator: {
+          async authenticate() {
+            return { decision: 'AUTHORIZED' as const, workspaceId: 'privy_alice' };
+          },
+        },
+        workspaceId: 'legacy-workspace',
+        allowedRequestKey: REQUEST_KEY,
+        payerWallet: PAYER,
+        waitMs: 0,
+      },
+    });
+
+    await rpc(server, toolRequest(1));
+    expect(seenId).toBe(arcPaymentBusinessIntentId('privy_alice', REQUEST_KEY));
+    await server.close();
   });
 
   it('isolates the MCP credential and lists exactly one tool', async () => {
@@ -225,7 +251,7 @@ describe('MCP arc_payment', () => {
     await server.close();
   });
 
-  it('rejects quota, cap, and immutable-payload conflicts before any new payment right', async () => {
+  it('rejects quota and immutable-payload conflicts before any new payment right', async () => {
     const createOrReplay = vi.fn(async (): Promise<CreateIntentResult> => ({
       kind: 'INTENT_PAYLOAD_CONFLICT',
       intent: intent(),
@@ -233,12 +259,10 @@ describe('MCP arc_payment', () => {
     const server = app(createOrReplay);
 
     const wrongKey = rpcBody(await rpc(server, toolRequest(1, { request_key: 'another-key' })));
-    const aboveCap = rpcBody(await rpc(server, toolRequest(2, { amount_usdc: '1.000001' })));
     expect(wrongKey.result.isError).toBe(true);
-    expect(aboveCap.result.isError).toBe(true);
     expect(createOrReplay).not.toHaveBeenCalled();
 
-    const conflict = rpcBody(await rpc(server, toolRequest(3)));
+    const conflict = rpcBody(await rpc(server, toolRequest(2, { amount_usdc: '1.000001' })));
     expect(conflict.result.isError).toBe(true);
     expect(conflict.result.content[0].text).toContain('different payment');
     expect(createOrReplay).toHaveBeenCalledOnce();

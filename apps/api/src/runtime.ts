@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { IntentLedger, JobLedger, migrate } from '@oneshot/storage-postgres';
+import { IntentLedger, JobLedger, McpCredentialStore, migrate } from '@oneshot/storage-postgres';
 import { createUserWalletVerificationPort } from './user-wallet.js';
 import { TeamReportSupplier } from '@oneshot/supplier-adapter';
 import { Pool } from 'pg';
@@ -8,6 +8,7 @@ import { StudioWalletActivityPort } from './wallet-activity.js';
 import {
   compositeAuthenticator,
   staticBearerAuthenticator,
+  workspaceBearerAuthenticator,
   type ServiceAuthenticator,
 } from './auth.js';
 import { loadApiRuntimeConfig, type ApiRuntimeConfig } from './config.js';
@@ -48,6 +49,7 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
       nextAttemptId: randomUUID,
     });
     const jobs = new JobLedger(pool, { now: () => new Date(), nextAttemptId: randomUUID });
+    const mcpCredentials = new McpCredentialStore(pool);
     const app = buildApi({
       ledger,
       jobs,
@@ -63,14 +65,27 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
           }
         : {}),
       authenticator: buildApiAuthenticator(config),
+      mcpCredentials,
       ...(config.mcp
         ? {
             mcp: {
-              authenticator: staticBearerAuthenticator(config.mcp.bearerToken),
+              authenticator: compositeAuthenticator([
+                ...(config.mcp.bearerToken
+                  ? [
+                      {
+                        matches: () => true,
+                        authenticator: staticBearerAuthenticator(config.mcp.bearerToken),
+                      },
+                    ]
+                  : []),
+                {
+                  matches: () => true,
+                  authenticator: workspaceBearerAuthenticator(mcpCredentials),
+                },
+              ]),
               workspaceId: config.mcp.workspaceId,
               allowedRequestKey: config.mcp.allowedRequestKey,
               payerWallet: config.mcp.payerWallet,
-              maxAmountAtomic: config.mcp.maxAmountAtomic,
               waitMs: config.mcp.waitMs,
               submissionsDisabled: config.submissionsDisabled,
             },

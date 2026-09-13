@@ -42,6 +42,31 @@ describe('JobApiClient quote flow', () => {
     expect(JSON.parse(calledBody)).toEqual(request);
   });
 
+  it('issues a personal MCP credential with the active authorization', async () => {
+    let calledUrl = '';
+    let authorization = '';
+    const credential = {
+      bearer_token: 'personal-token',
+      created_at: '2026-09-13T04:00:00.000Z',
+      request_key: 'profile-request',
+    };
+    const client = new JobApiClient({
+      getAuthToken: () => 'privy-access-token',
+      fetchFn: async (input, init) => {
+        calledUrl = String(input);
+        authorization = new Headers(init?.headers).get('authorization') ?? '';
+        return new Response(JSON.stringify(credential), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      },
+    });
+
+    await expect(client.issueMcpCredential(true)).resolves.toEqual(credential);
+    expect(calledUrl).toBe('/v1/profile/mcp-token/rotate');
+    expect(authorization).toBe('Bearer privy-access-token');
+  });
+
   it('refreshes activity without sending an empty JSON body', async () => {
     let calledInit: RequestInit | undefined;
     const client = new JobApiClient({

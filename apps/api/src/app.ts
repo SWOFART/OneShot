@@ -13,7 +13,7 @@ import {
   type SupplierQuote,
 } from '@oneshot/contracts';
 import { derivedJobId } from '@oneshot/domain';
-import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
+import type { IntentLedger, JobLedger, McpCredentialStore } from '@oneshot/storage-postgres';
 import { toNodeHandler } from '@modelcontextprotocol/node';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { ServiceAuthenticator } from './auth.js';
@@ -65,6 +65,7 @@ export interface ApiDependencies {
   readonly supplier?: SupplierPort;
   readonly walletActivity?: WalletActivityPort;
   readonly userWalletVerifier?: UserWalletVerificationPort;
+  readonly mcpCredentials?: Pick<McpCredentialStore, 'status' | 'issue'>;
   readonly mcp?: ArcPaymentMcpConfig & { readonly authenticator: ServiceAuthenticator };
   readonly authenticator: ServiceAuthenticator;
   readonly rateLimiter?: RateLimiter;
@@ -136,12 +137,11 @@ export function buildApi(dependencies: ApiDependencies) {
   const correlations = new WeakMap<FastifyRequest, string>();
   const nextCorrelationId = dependencies.nextCorrelationId ?? randomUUID;
   const rateLimiter = dependencies.rateLimiter ?? allowAllRateLimiter;
-  const workspaceId = dependencies.config?.workspaceId ?? 'local-test-workspace';
+  const defaultWorkspaceId = dependencies.config?.workspaceId ?? 'local-test-workspace';
+  const requestWorkspaces = new WeakMap<FastifyRequest, string>();
+  const workspaceFor = (request: FastifyRequest): string =>
+    requestWorkspaces.get(request) ?? defaultWorkspaceId;
   const walletActivity = dependencies.walletActivity ?? new UnavailableWalletActivityPort();
-  const mcpHandler = dependencies.mcp
-    ? createArcPaymentMcpHandler({ ledger: dependencies.ledger, config: dependencies.mcp })
-    : undefined;
-  const nodeMcpHandler = mcpHandler ? toNodeHandler(mcpHandler) : undefined;
   const jobsUnavailable = (reply: FastifyReply, request: FastifyRequest): void =>
     sendError(
       reply,
@@ -217,18 +217,21 @@ export function buildApi(dependencies: ApiDependencies) {
     const path = request.url.split('?')[0];
     const isMcp = path === '/mcp';
     if (!request.url.startsWith('/v1/') && !isMcp) return;
-    const decision = await (isMcp
+    const authentication = await (isMcp
       ? dependencies.mcp?.authenticator.authenticate(request.headers.authorization)
       : dependencies.authenticator.authenticate(request.headers.authorization));
-    if (decision !== 'AUTHORIZED') {
+    if (!authentication || authentication.decision !== 'AUTHORIZED') {
       sendError(
         reply,
-        decision === 'FORBIDDEN' ? 403 : 401,
-        decision === 'FORBIDDEN' ? 'FORBIDDEN' : 'UNAUTHORIZED',
+        authentication?.decision === 'FORBIDDEN' ? 403 : 401,
+        authentication?.decision === 'FORBIDDEN' ? 'FORBIDDEN' : 'UNAUTHORIZED',
         'Service authentication failed',
         correlationId,
       );
       return reply;
+    }
+    if (authentication.workspaceId) {
+      requestWorkspaces.set(request, authentication.workspaceId);
     }
     if (
       request.method === 'POST' &&
@@ -243,19 +246,102 @@ export function buildApi(dependencies: ApiDependencies) {
     }
   });
 
-  if (nodeMcpHandler) {
+  if (dependencies.mcp) {
     app.all('/mcp', async (request, reply) => {
+      const mcpHandler = createArcPaymentMcpHandler({
+        ledger: dependencies.ledger,
+        config: {
+          ...dependencies.mcp!,
+          workspaceId: requestWorkspaces.get(request) ?? dependencies.mcp!.workspaceId,
+        },
+      });
+      const nodeMcpHandler = toNodeHandler(mcpHandler);
       reply.hijack();
-      await nodeMcpHandler(
-        request.raw as unknown as Parameters<typeof nodeMcpHandler>[0],
-        reply.raw,
-        request.body,
-      );
-    });
-    app.addHook('onClose', async () => {
-      await mcpHandler?.close();
+      try {
+        await nodeMcpHandler(
+          request.raw as unknown as Parameters<typeof nodeMcpHandler>[0],
+          reply.raw,
+          request.body,
+        );
+      } finally {
+        await mcpHandler.close();
+      }
     });
   }
+
+  app.get('/v1/profile/mcp-token', async (request, reply) => {
+    void reply.header('cache-control', 'no-store');
+    const workspaceId = requestWorkspaces.get(request);
+    if (!workspaceId || !dependencies.mcpCredentials || !dependencies.mcp) {
+      sendError(
+        reply,
+        403,
+        'FORBIDDEN',
+        'Personal MCP access is unavailable',
+        correlationFor(request),
+      );
+      return;
+    }
+    const status = await dependencies.mcpCredentials.status(workspaceId);
+    return {
+      configured: status.configured,
+      ...(status.createdAt ? { created_at: status.createdAt } : {}),
+      request_key: dependencies.mcp.allowedRequestKey,
+    };
+  });
+
+  app.post('/v1/profile/mcp-token', async (request, reply) => {
+    void reply.header('cache-control', 'no-store');
+    const workspaceId = requestWorkspaces.get(request);
+    if (!workspaceId || !dependencies.mcpCredentials || !dependencies.mcp) {
+      sendError(
+        reply,
+        403,
+        'FORBIDDEN',
+        'Personal MCP access is unavailable',
+        correlationFor(request),
+      );
+      return;
+    }
+    const issued = await dependencies.mcpCredentials.issue(workspaceId);
+    if (!issued) {
+      sendError(
+        reply,
+        409,
+        'INTENT_PAYLOAD_CONFLICT',
+        'An MCP token already exists; rotate it instead',
+        correlationFor(request),
+      );
+      return;
+    }
+    return reply.code(201).send({
+      bearer_token: issued.bearerToken,
+      created_at: issued.createdAt,
+      request_key: dependencies.mcp.allowedRequestKey,
+    });
+  });
+
+  app.post('/v1/profile/mcp-token/rotate', async (request, reply) => {
+    void reply.header('cache-control', 'no-store');
+    const workspaceId = requestWorkspaces.get(request);
+    if (!workspaceId || !dependencies.mcpCredentials || !dependencies.mcp) {
+      sendError(
+        reply,
+        403,
+        'FORBIDDEN',
+        'Personal MCP access is unavailable',
+        correlationFor(request),
+      );
+      return;
+    }
+    const issued = await dependencies.mcpCredentials.issue(workspaceId, true);
+    if (!issued) throw new Error('MCP credential rotation did not return a token');
+    return {
+      bearer_token: issued.bearerToken,
+      created_at: issued.createdAt,
+      request_key: dependencies.mcp.allowedRequestKey,
+    };
+  });
 
   app.post('/v1/intents', { schema: { body: createIntentBodySchema } }, async (request, reply) => {
     const result = await dependencies.ledger.createOrReplay(request.body, correlationFor(request));
@@ -281,10 +367,10 @@ export function buildApi(dependencies: ApiDependencies) {
     // Supplier creation is non-chargeable and uses the same durable task scope
     // as its idempotency key. The database transaction binds that order and the
     // settlement intent before the worker can observe payment work.
-    const jobId = derivedJobId(workspaceId, parsed);
+    const jobId = derivedJobId(workspaceFor(request), parsed);
     const order = await dependencies.supplier.createOrder(parsed, jobId);
     const result = await dependencies.jobs.createOrReplay({
-      workspaceId,
+      workspaceId: workspaceFor(request),
       request: parsed,
       supplierOrder: order,
       correlationId: correlationFor(request),
@@ -310,7 +396,7 @@ export function buildApi(dependencies: ApiDependencies) {
     const parsed = parseCreateJobRequest(request.body);
     // Quoting is deliberately non-chargeable: no intent, attempt, settlement,
     // or outbox row is created until the caller explicitly approves via POST /v1/jobs.
-    const jobId = derivedJobId(workspaceId, parsed);
+    const jobId = derivedJobId(workspaceFor(request), parsed);
     const order = await dependencies.supplier.createOrder(parsed, jobId);
     const quote: SupplierQuote = {
       supplier_id: order.supplier_id,
@@ -340,10 +426,10 @@ export function buildApi(dependencies: ApiDependencies) {
         recipient: parsed.recipient,
         amount_atomic: parsed.amount_atomic,
       } as const;
-      const jobId = derivedJobId(workspaceId, jobRequest);
+      const jobId = derivedJobId(workspaceFor(request), jobRequest);
       const order = await dependencies.supplier.createOrder(jobRequest, jobId);
       const result = await dependencies.jobs.createUserWalletOrReplay({
-        workspaceId,
+        workspaceId: workspaceFor(request),
         request: parsed,
         supplierOrder: order,
         correlationId: correlationFor(request),
@@ -367,7 +453,7 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
-    return { jobs: await dependencies.jobs.list(workspaceId) };
+    return { jobs: await dependencies.jobs.list(workspaceFor(request)) };
   });
 
   app.get<{ Params: { jobId: string } }>('/v1/jobs/:jobId', async (request, reply) => {
@@ -375,7 +461,7 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
-    const job = await dependencies.jobs.get(workspaceId, request.params.jobId);
+    const job = await dependencies.jobs.get(workspaceFor(request), request.params.jobId);
     if (!job) {
       sendError(
         reply,
@@ -397,7 +483,7 @@ export function buildApi(dependencies: ApiDependencies) {
         userWalletUnavailable(reply, request);
         return;
       }
-      const job = await dependencies.jobs.get(workspaceId, request.params.jobId);
+      const job = await dependencies.jobs.get(workspaceFor(request), request.params.jobId);
       if (!job) {
         sendError(
           reply,
@@ -428,7 +514,7 @@ export function buildApi(dependencies: ApiDependencies) {
       );
       if (!begun.begun) {
         if (begun.currentState === 'COMMITTED' || begun.currentState === 'FAILED_SAFE') {
-          const current = await dependencies.jobs.get(workspaceId, request.params.jobId);
+          const current = await dependencies.jobs.get(workspaceFor(request), request.params.jobId);
           if (current) return reply.code(200).send(current);
         }
         sendError(
@@ -511,7 +597,7 @@ export function buildApi(dependencies: ApiDependencies) {
             : verification.reason,
         );
       }
-      const updated = await dependencies.jobs.get(workspaceId, request.params.jobId);
+      const updated = await dependencies.jobs.get(workspaceFor(request), request.params.jobId);
       if (!updated) {
         sendError(
           reply,
@@ -531,7 +617,7 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
-    const job = await dependencies.jobs.resumeDelivery(workspaceId, request.params.jobId);
+    const job = await dependencies.jobs.resumeDelivery(workspaceFor(request), request.params.jobId);
     if (!job) {
       sendError(
         reply,
@@ -550,7 +636,7 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
-    const job = await dependencies.jobs.get(workspaceId, request.params.jobId);
+    const job = await dependencies.jobs.get(workspaceFor(request), request.params.jobId);
     if (!job) {
       sendError(
         reply,
@@ -579,7 +665,7 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
-    return dependencies.jobs.activity(workspaceId);
+    return dependencies.jobs.activity(workspaceFor(request));
   });
 
   app.post('/v1/activity/refresh', async (request, reply) => {
@@ -589,12 +675,12 @@ export function buildApi(dependencies: ApiDependencies) {
     }
     const observation = await walletActivity.refresh();
     await dependencies.jobs.recordActivityObservation({
-      workspaceId,
+      workspaceId: workspaceFor(request),
       freshness: observation.freshness,
       coverageNote: observation.coverageNote,
       payload: observation.payload,
     });
-    return reply.code(202).send(await dependencies.jobs.activity(workspaceId));
+    return reply.code(202).send(await dependencies.jobs.activity(workspaceFor(request)));
   });
 
   app.get<{ Params: { id: string } }>('/v1/intents/:id', async (request, reply) => {

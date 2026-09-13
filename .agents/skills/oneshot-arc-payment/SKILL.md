@@ -2,7 +2,7 @@
 name: oneshot-arc-payment
 description: >
   Pay a USDC recipient on Arc Testnet through the OneShot `arc_payment` MCP
-  tool: connect an MCP client with the operator-issued bearer token, create or
+  tool: connect an MCP client with the user's profile bearer token, create or
   replay one durable payment intent, read the authoritative settlement state,
   and verify the ArcScan proof. Use when the user asks to pay via OneShot, send
   USDC on Arc, run the arc_payment MCP tool, or delegate an agent payment task.
@@ -15,15 +15,13 @@ Pay once, safely, through OneShot. This skill is written for any agent
 MCP endpoint. It never handles keys: the payer is OneShot's policy-bound
 server wallet, and the bearer token lives only in the MCP client config.
 
-## Prerequisites (operator-provided, never invented)
+## Prerequisites (user-provided, never invented)
 
 - MCP endpoint URL, e.g. `https://oneshot.kapustazh.dev/mcp` (Streamable HTTP).
-- `ONESHOT_MCP_BEARER_TOKEN` — configured in the MCP client as
+- A bearer generated from the user's OneShot Profile — configured in the MCP client as
   `authorization: Bearer <token>`. It is a secret: never print, log, copy into
   task prompts, or commit it.
-- One allowed `request_key` — the operator binds it to exactly one payment.
-- The per-payment cap (default 1000000 atomic = 1 USDC) is enforced
-  server-side; requests above it are rejected.
+- One allowed `request_key` shown with the generated profile credential.
 
 If any of these is missing, stop and ask the operator. Do not guess values.
 
@@ -46,7 +44,7 @@ UNKNOWN | REJECTED`), `replayed`, `payer.mode` (`SERVER_PRIVY`),
 
 ## How to execute a payment
 
-1. Call `arc_payment` once with the operator's `request_key` and the exact
+1. Call `arc_payment` once with the profile's `request_key` and the exact
    recipient, amount, and purpose the user approved.
 2. If `state` is `COMMITTED`, report `settlement.transaction_hash` and its
    `explorer_url` (ArcScan). Done.
@@ -57,7 +55,7 @@ UNKNOWN | REJECTED`), `replayed`, `payer.mode` (`SERVER_PRIVY`),
    not failure: it never justifies a replacement payment or a new key.
 5. If the tool returns the conflict error ("already belongs to a different
    payment"), the key was reused with changed fields. Stop, report the
-   conflict, and ask the operator for the original fields or a new key.
+   conflict, and ask the user for the original fields or a new credential.
 6. If `state` is `FAILED_SAFE` or `REJECTED`, report it and stop. Do not retry
    with a different key or amount.
 
@@ -67,7 +65,7 @@ UNKNOWN | REJECTED`), `replayed`, `payer.mode` (`SERVER_PRIVY`),
   `recipient`, `amount_usdc`, `purpose`, and this skill.
 - The delegate must use its own MCP client configuration; the bearer token
   must not travel through prompts, task payloads, logs, or screenshots.
-- One request_key funds exactly one intent. To parallelize, ask the operator
+- One request_key funds exactly one intent. To parallelize, ask the user
   for one key per payment; never derive or mutate keys.
 - The delegate reports back the authoritative `state` plus the ArcScan proof
   for `COMMITTED`, or the exact tool error. "It probably went through" is not
@@ -77,6 +75,5 @@ UNKNOWN | REJECTED`), `replayed`, `payer.mode` (`SERVER_PRIVY`),
 
 - Walkthrough: `docs/MCP_ARC_PAYMENT.md` in the OneShot repository.
 - Human-readable page: `https://oneshot.kapustazh.dev/docs/mcp`.
-- Install: copy this folder into the agent's skills directory, or add the
-  GitHub source `SWOFART/OneShot` with skill path
-  `.agents/skills/oneshot-arc-payment/SKILL.md`.
+- Install (requires Node.js/npm; `npx` ships with npm):
+  `npx --yes skills@latest add https://github.com/SWOFART/OneShot/tree/develop --skill oneshot-arc-payment`.

@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { AuthenticationDecision, ServiceAuthenticator } from '../src/auth.js';
-import { compositeAuthenticator, staticBearerAuthenticator } from '../src/auth.js';
+import {
+  compositeAuthenticator,
+  staticBearerAuthenticator,
+  workspaceBearerAuthenticator,
+} from '../src/auth.js';
 import { isJwtCredential } from '../src/privy-auth.js';
 
 function fixed(decision: AuthenticationDecision, calls: string[] = []): ServiceAuthenticator {
   return {
     async authenticate() {
       calls.push(decision);
-      return decision;
+      return { decision };
     },
   };
 }
@@ -18,7 +22,7 @@ describe('composite authenticator', () => {
       { matches: () => true, authenticator: fixed('UNAUTHORIZED') },
       { matches: () => true, authenticator: fixed('AUTHORIZED') },
     ]);
-    expect(await auth.authenticate('Bearer anything')).toBe('AUTHORIZED');
+    expect(await auth.authenticate('Bearer anything')).toEqual({ decision: 'AUTHORIZED' });
   });
 
   it('prefers FORBIDDEN over UNAUTHORIZED when nothing authorizes', async () => {
@@ -26,21 +30,21 @@ describe('composite authenticator', () => {
       { matches: () => true, authenticator: fixed('UNAUTHORIZED') },
       { matches: () => true, authenticator: fixed('FORBIDDEN') },
     ]);
-    expect(await auth.authenticate('Bearer anything')).toBe('FORBIDDEN');
+    expect(await auth.authenticate('Bearer anything')).toEqual({ decision: 'FORBIDDEN' });
   });
 
   it('returns UNAUTHORIZED when no route matches', async () => {
     const auth = compositeAuthenticator([
       { matches: () => false, authenticator: fixed('AUTHORIZED') },
     ]);
-    expect(await auth.authenticate('Bearer anything')).toBe('UNAUTHORIZED');
+    expect(await auth.authenticate('Bearer anything')).toEqual({ decision: 'UNAUTHORIZED' });
   });
 
   it('returns UNAUTHORIZED when the header is absent', async () => {
     const auth = compositeAuthenticator([
       { matches: () => true, authenticator: fixed('AUTHORIZED') },
     ]);
-    expect(await auth.authenticate(undefined)).toBe('UNAUTHORIZED');
+    expect(await auth.authenticate(undefined)).toEqual({ decision: 'UNAUTHORIZED' });
   });
 
   it('never shows an opaque service token to the JWT route', async () => {
@@ -53,7 +57,9 @@ describe('composite authenticator', () => {
         authenticator: fixed('AUTHORIZED', bearerCalls),
       },
     ]);
-    expect(await auth.authenticate('Bearer opaque-service-token')).toBe('AUTHORIZED');
+    expect(await auth.authenticate('Bearer opaque-service-token')).toEqual({
+      decision: 'AUTHORIZED',
+    });
     expect(jwtCalls).toEqual([]);
     expect(bearerCalls).toEqual(['AUTHORIZED']);
   });
@@ -67,15 +73,28 @@ describe('composite authenticator', () => {
         authenticator: fixed('AUTHORIZED', bearerCalls),
       },
     ]);
-    expect(await auth.authenticate('Bearer aaa.bbb.ccc')).toBe('FORBIDDEN');
+    expect(await auth.authenticate('Bearer aaa.bbb.ccc')).toEqual({ decision: 'FORBIDDEN' });
     expect(bearerCalls).toEqual([]);
   });
 
   it('leaves the existing static bearer behavior unchanged', async () => {
     const bearer = staticBearerAuthenticator('service-token');
-    expect(await bearer.authenticate('Bearer service-token')).toBe('AUTHORIZED');
-    expect(await bearer.authenticate('Bearer wrong-token-x')).toBe('FORBIDDEN');
-    expect(await bearer.authenticate('Bearer short')).toBe('UNAUTHORIZED');
-    expect(await bearer.authenticate(undefined)).toBe('UNAUTHORIZED');
+    expect(await bearer.authenticate('Bearer service-token')).toEqual({ decision: 'AUTHORIZED' });
+    expect(await bearer.authenticate('Bearer wrong-token-x')).toEqual({ decision: 'FORBIDDEN' });
+    expect(await bearer.authenticate('Bearer short')).toEqual({ decision: 'UNAUTHORIZED' });
+    expect(await bearer.authenticate(undefined)).toEqual({ decision: 'UNAUTHORIZED' });
+  });
+
+  it('binds a personal bearer to its stored workspace', async () => {
+    const authenticator = workspaceBearerAuthenticator({
+      async workspaceForToken(token) {
+        return token === 'personal-token' ? 'privy_alice' : undefined;
+      },
+    });
+    expect(await authenticator.authenticate('Bearer personal-token')).toEqual({
+      decision: 'AUTHORIZED',
+      workspaceId: 'privy_alice',
+    });
+    expect(await authenticator.authenticate('Bearer wrong')).toEqual({ decision: 'UNAUTHORIZED' });
   });
 });

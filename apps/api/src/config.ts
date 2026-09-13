@@ -28,11 +28,10 @@ export interface ApiRuntimeConfig {
   /** Credential-free read-only RPC used to verify user-submitted receipts. */
   readonly userWalletRpcUrl?: string;
   readonly mcp?: {
-    readonly bearerToken: string;
+    readonly bearerToken?: string;
     readonly workspaceId: string;
     readonly allowedRequestKey: string;
     readonly payerWallet: string;
-    readonly maxAmountAtomic: bigint;
     readonly waitMs: number;
   };
 }
@@ -86,14 +85,16 @@ function mcpConfig(environment: NodeJS.ProcessEnv, workspaceId: string): ApiRunt
     'ONESHOT_MCP_BEARER_TOKEN',
     'ONESHOT_MCP_REQUEST_KEY',
     'ONESHOT_MCP_PAYER_ADDRESS',
-    'ONESHOT_MCP_MAX_AMOUNT_ATOMIC',
     'ONESHOT_MCP_WAIT_MS',
   ] as const;
   if (names.every((name) => !environment[name]?.trim())) return undefined;
   if (!environment.ONESHOT_WORKSPACE_ID?.trim()) {
     throw new Error('ONESHOT_WORKSPACE_ID is required when MCP is enabled');
   }
-  const bearerToken = required(environment, 'ONESHOT_MCP_BEARER_TOKEN', 32);
+  const bearerToken = environment.ONESHOT_MCP_BEARER_TOKEN?.trim();
+  if (bearerToken && bearerToken.length < 32) {
+    throw new Error('Environment variable ONESHOT_MCP_BEARER_TOKEN must be at least 32 characters');
+  }
   const allowedRequestKey = required(environment, 'ONESHOT_MCP_REQUEST_KEY');
   if (
     allowedRequestKey.length > 128 ||
@@ -107,21 +108,11 @@ function mcpConfig(environment: NodeJS.ProcessEnv, workspaceId: string): ApiRunt
   if (!/^0x[0-9a-f]{40}$/u.test(payerWallet)) {
     throw new Error('Invalid environment variable: ONESHOT_MCP_PAYER_ADDRESS');
   }
-  const rawMax = environment.ONESHOT_MCP_MAX_AMOUNT_ATOMIC?.trim() || '1000000';
-  if (rawMax.length > 78 || !/^[1-9][0-9]*$/u.test(rawMax)) {
-    throw new Error('Invalid environment variable: ONESHOT_MCP_MAX_AMOUNT_ATOMIC');
-  }
-  const maxAmountAtomic = BigInt(rawMax);
-  const workerCap = environment.ONESHOT_SETTLEMENT_CAP_ATOMIC?.trim();
-  if (workerCap && /^[1-9][0-9]*$/u.test(workerCap) && maxAmountAtomic > BigInt(workerCap)) {
-    throw new Error('ONESHOT_MCP_MAX_AMOUNT_ATOMIC must not exceed ONESHOT_SETTLEMENT_CAP_ATOMIC');
-  }
   return {
-    bearerToken,
+    ...(bearerToken ? { bearerToken } : {}),
     workspaceId,
     allowedRequestKey,
     payerWallet,
-    maxAmountAtomic,
     waitMs: integer(environment, 'ONESHOT_MCP_WAIT_MS', 2_500, 0, 5_000),
   };
 }

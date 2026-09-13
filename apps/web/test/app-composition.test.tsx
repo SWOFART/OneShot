@@ -47,6 +47,7 @@ describe('Gate P5 shell composition', () => {
     expect(screen.getByRole('tab', { name: 'Payment services' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Requests' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Payment proof' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Profile' })).toBeTruthy();
   });
 
   it('publishes a safe MCP client configuration and replay walkthrough', () => {
@@ -64,11 +65,14 @@ describe('Gate P5 shell composition', () => {
     expect(screen.getByLabelText('arc_payment tool input').textContent).toContain(
       '<ONESHOT_MCP_REQUEST_KEY>',
     );
-    expect(screen.getByText(/1000000 atomic units/u)).toBeTruthy();
+    expect(screen.getByLabelText('Agent skill install command').textContent).toContain(
+      'npx --yes skills@latest add',
+    );
+    expect(screen.queryByText(/1000000 atomic units/u)).toBeNull();
     expect(screen.queryByRole('button', { name: /pay|submit|run/iu })).toBeNull();
   });
 
-  it('offers only the four working cabinet sections', () => {
+  it('offers only the working cabinet sections', () => {
     render(
       <App
         route="/app"
@@ -92,11 +96,44 @@ describe('Gate P5 shell composition', () => {
       'Payment services',
       'Requests',
       'Payment proof',
+      'Profile',
     ]);
     // Spending rules and Team & access were read-only restatements of facts the
     // other sections already show, and neither had a control behind it.
     expect(screen.queryByRole('tab', { name: 'Spending rules' })).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Team & access' })).toBeNull();
+  });
+
+  it('generates a personal MCP bearer in Profile', async () => {
+    const user = userEvent.setup();
+    const jobClient = {
+      async mcpCredentialStatus() {
+        return { configured: false, request_key: 'profile-request' };
+      },
+      async issueMcpCredential() {
+        return {
+          bearer_token: 'personal-secret-token',
+          created_at: '2026-09-13T04:00:00.000Z',
+          request_key: 'profile-request',
+        };
+      },
+    } as unknown as JobApiClient;
+    render(
+      <App
+        route="/app"
+        useOperatorSession={() => signedInSession()}
+        jobClient={jobClient}
+        settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
+        recoveryClient={createInMemoryRecoveryClient('lagging')}
+      />,
+    );
+
+    await user.click(screen.getByRole('tab', { name: 'Profile' }));
+    await user.click(await screen.findByRole('button', { name: 'Generate bearer token' }));
+    expect(
+      (await screen.findByLabelText('Personal MCP client configuration')).textContent,
+    ).toContain('Bearer personal-secret-token');
+    expect(screen.getByText('profile-request')).toBeTruthy();
   });
 
   it('gives Payment services and Requests distinct responsibilities', async () => {

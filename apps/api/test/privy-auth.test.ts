@@ -2,7 +2,11 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { exportSPKI, generateKeyPair, SignJWT } from 'jose';
 
 type GeneratedPrivateKey = Awaited<ReturnType<typeof generateKeyPair>>['privateKey'];
-import { createPrivyAccessTokenAuthenticator, looksLikeJwt } from '../src/privy-auth.js';
+import {
+  createPrivyAccessTokenAuthenticator,
+  looksLikeJwt,
+  privyWorkspaceId,
+} from '../src/privy-auth.js';
 
 const APP_ID = 'test-app-id';
 const OPERATOR = 'did:privy:operator-one';
@@ -47,7 +51,16 @@ function authenticator(overrides: { onForbiddenSubject?: (subject: string) => vo
 describe('Privy access token authenticator', () => {
   it('authorizes an allowlisted operator', async () => {
     const token = await sign();
-    expect(await authenticator().authenticate(`Bearer ${token}`)).toBe('AUTHORIZED');
+    expect(await authenticator().authenticate(`Bearer ${token}`)).toEqual({
+      decision: 'AUTHORIZED',
+      workspaceId: privyWorkspaceId(OPERATOR),
+    });
+  });
+
+  it('derives stable, distinct, opaque workspaces from Privy subjects', () => {
+    expect(privyWorkspaceId(OPERATOR)).toBe(privyWorkspaceId(OPERATOR));
+    expect(privyWorkspaceId(OPERATOR)).not.toBe(privyWorkspaceId(OUTSIDER));
+    expect(privyWorkspaceId(OPERATOR)).not.toContain(OPERATOR);
   });
 
   it('forbids a verified but unlisted subject', async () => {
@@ -56,37 +69,38 @@ describe('Privy access token authenticator', () => {
     const decision = await authenticator({
       onForbiddenSubject: (subject) => seen.push(subject),
     }).authenticate(`Bearer ${token}`);
-    expect(decision).toBe('FORBIDDEN');
+    const outcome = decision.decision;
+    expect(outcome).toBe('FORBIDDEN');
     expect(seen).toEqual([OUTSIDER]);
   });
 
   it('rejects a wrong audience', async () => {
     const token = await sign({ audience: 'someone-elses-app' });
-    expect(await authenticator().authenticate(`Bearer ${token}`)).toBe('UNAUTHORIZED');
+    expect((await authenticator().authenticate(`Bearer ${token}`)).decision).toBe('UNAUTHORIZED');
   });
 
   it('rejects a wrong issuer', async () => {
     const token = await sign({ issuer: 'evil.example' });
-    expect(await authenticator().authenticate(`Bearer ${token}`)).toBe('UNAUTHORIZED');
+    expect((await authenticator().authenticate(`Bearer ${token}`)).decision).toBe('UNAUTHORIZED');
   });
 
   it('rejects a verified token whose subject is not a Privy DID', async () => {
     const token = await sign({ subject: 'operator@example.com' });
-    expect(await authenticator().authenticate(`Bearer ${token}`)).toBe('UNAUTHORIZED');
+    expect((await authenticator().authenticate(`Bearer ${token}`)).decision).toBe('UNAUTHORIZED');
   });
 
   it('rejects an expired token', async () => {
     const token = await sign({ expiresIn: '-10m' });
-    expect(await authenticator().authenticate(`Bearer ${token}`)).toBe('UNAUTHORIZED');
+    expect((await authenticator().authenticate(`Bearer ${token}`)).decision).toBe('UNAUTHORIZED');
   });
 
   it('rejects a tampered signature', async () => {
     const token = await sign();
     const parts = token.split('.');
     const flipped = parts[2]?.startsWith('A') ? `B${parts[2].slice(1)}` : `A${parts[2]?.slice(1)}`;
-    expect(await authenticator().authenticate(`Bearer ${parts[0]}.${parts[1]}.${flipped}`)).toBe(
-      'UNAUTHORIZED',
-    );
+    expect(
+      (await authenticator().authenticate(`Bearer ${parts[0]}.${parts[1]}.${flipped}`)).decision,
+    ).toBe('UNAUTHORIZED');
   });
 
   it('rejects an unsigned token that claims alg none', async () => {
@@ -94,13 +108,15 @@ describe('Privy access token authenticator', () => {
     const payload = Buffer.from(
       JSON.stringify({ sub: OPERATOR, iss: 'privy.io', aud: APP_ID, exp: 4_102_444_800 }),
     ).toString('base64url');
-    expect(await authenticator().authenticate(`Bearer ${header}.${payload}.`)).toBe('UNAUTHORIZED');
+    expect((await authenticator().authenticate(`Bearer ${header}.${payload}.`)).decision).toBe(
+      'UNAUTHORIZED',
+    );
   });
 
   it('rejects a missing or malformed authorization header', async () => {
-    expect(await authenticator().authenticate(undefined)).toBe('UNAUTHORIZED');
-    expect(await authenticator().authenticate('Bearer not-a-jwt')).toBe('UNAUTHORIZED');
-    expect(await authenticator().authenticate('Basic abc.def.ghi')).toBe('UNAUTHORIZED');
+    expect((await authenticator().authenticate(undefined)).decision).toBe('UNAUTHORIZED');
+    expect((await authenticator().authenticate('Bearer not-a-jwt')).decision).toBe('UNAUTHORIZED');
+    expect((await authenticator().authenticate('Basic abc.def.ghi')).decision).toBe('UNAUTHORIZED');
   });
 
   it('authorizes any verified subject when configured with wildcard allow-all', async () => {
@@ -110,7 +126,7 @@ describe('Privy access token authenticator', () => {
       allowedSubjects: ['*'],
     });
     const token = await sign({ subject: OUTSIDER });
-    expect(await auth.authenticate(`Bearer ${token}`)).toBe('AUTHORIZED');
+    expect((await auth.authenticate(`Bearer ${token}`)).decision).toBe('AUTHORIZED');
   });
 
   it('refuses to construct without an allowlist', () => {
