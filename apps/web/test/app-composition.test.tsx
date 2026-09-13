@@ -5,14 +5,17 @@ import {
 } from '@oneshot/settlement-ui';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from '../src/App.js';
 import { OneShotApiClient } from '../src/api/client.js';
 import type { JobApiClient } from '../src/api/job-client.js';
 import { signedInSession } from './support/fake-session.js';
 
-afterEach(cleanup);
+afterEach(() => {
+  vi.restoreAllMocks();
+  cleanup();
+});
 
 describe('Gate P5 shell composition', () => {
   it('separates the public landing page from the authenticated cabinet route', () => {
@@ -106,6 +109,7 @@ describe('Gate P5 shell composition', () => {
 
   it('generates a personal MCP bearer in Profile', async () => {
     const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
     const jobClient = {
       async mcpCredentialStatus() {
         return { configured: false, request_key: 'profile-request' };
@@ -129,10 +133,16 @@ describe('Gate P5 shell composition', () => {
     );
 
     await user.click(screen.getByRole('tab', { name: 'Profile' }));
+    expect(screen.getByRole('link', { name: 'Open MCP documentation' }).getAttribute('href')).toBe(
+      '/docs/mcp',
+    );
     await user.click(await screen.findByRole('button', { name: 'Generate bearer token' }));
     expect(
       (await screen.findByLabelText('Personal MCP client configuration')).textContent,
     ).toContain('Bearer personal-secret-token');
+    await user.click(screen.getByRole('button', { name: 'Copy bearer token' }));
+    expect(writeText).toHaveBeenCalledWith('personal-secret-token');
+    expect(screen.getByRole('button', { name: 'Bearer copied' })).toBeTruthy();
     expect(screen.getByText('profile-request')).toBeTruthy();
   });
 
