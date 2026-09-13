@@ -39,7 +39,7 @@ The Team Report browser flow is user-funded and does not use this wallet. The
 connected Privy Ethereum wallet signs the reviewed ERC-20 transfer in the
 browser; the API verifies its Arc receipt through the credential-free
 `ONESHOT_ARC_RPC_URL` read-only endpoint. This runbook still applies to the
-worker-owned and Circle x402 integrations.
+worker-owned Arc integrations.
 
 ## 4. Recipient and cap
 
@@ -74,8 +74,7 @@ drift. Record the **policy ID** and the digest.
 
 ## 6. Funding
 
-1. Fund the execution wallet from the Circle faucet at
-   <https://faucet.circle.com> for Arc Testnet.
+1. Fund the execution wallet from an Arc Testnet faucet.
 2. Fund only what the demo needs.
 3. Confirm the balance on the explorer at <https://testnet.arcscan.app>.
 

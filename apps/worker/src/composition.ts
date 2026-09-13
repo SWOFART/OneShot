@@ -117,7 +117,6 @@ export interface CompositionOptions {
     readonly contractVersion?: string;
     readonly network?: string;
   };
-  readonly paidApiSettlementPort?: SettlementPort;
   readonly authorizationPort?: AuthorizationPort & {
     readonly contractVersion?: string;
   };
@@ -176,9 +175,6 @@ export function composeWorker(
     pool,
     ledger,
     settlementPort,
-    ...(options.paidApiSettlementPort
-      ? { paidApiSettlementPort: options.paidApiSettlementPort }
-      : {}),
     authorizationPort,
     recoveryService,
     jobLedger: new JobLedger(pool, { now: () => new Date(), nextAttemptId: randomUUID }),

@@ -83,7 +83,7 @@ export function IntentForm({ client, onIntentCreatedOrSelected }: Props) {
   const [intentId, setIntentId] = useState<string>(() => crypto.randomUUID());
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('1.00');
-  const [purpose, setPurpose] = useState('Paid API job');
+  const [purpose, setPurpose] = useState('Direct Arc payment');
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);

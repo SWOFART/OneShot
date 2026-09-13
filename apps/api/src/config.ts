@@ -27,10 +27,6 @@ export interface ApiRuntimeConfig {
   };
   /** Credential-free read-only RPC used to verify user-submitted receipts. */
   readonly userWalletRpcUrl?: string;
-  readonly paidApi?: {
-    readonly url: string;
-    readonly maxAmountAtomic: bigint;
-  };
 }
 
 function required(environment: NodeJS.ProcessEnv, name: string, minimumLength = 1): string {
@@ -75,14 +71,6 @@ function optionalHttpsUrl(environment: NodeJS.ProcessEnv, name: string): string 
     throw new Error(`${name} must not contain credentials, query parameters, or fragments`);
   }
   return parsed.toString();
-}
-
-function optionalAtomicAmount(environment: NodeJS.ProcessEnv, name: string): bigint {
-  const raw = environment[name]?.trim() || '10000';
-  if (!/^(0|[1-9][0-9]*)$/.test(raw) || raw === '0') {
-    throw new Error(`Invalid environment variable: ${name}`);
-  }
-  return BigInt(raw);
 }
 
 function optionalRpcUrl(environment: NodeJS.ProcessEnv, name: string): string | undefined {
@@ -176,8 +164,6 @@ export function loadApiRuntimeConfig(
   const privyAuth = privyAuthConfig(environment);
   const activityEndpoint = environment.ONESHOT_GRAPH_QUERY_URL?.trim();
   const activityWallet = environment.ONESHOT_ACTIVITY_WALLET_ADDRESS?.trim();
-  const paidApiUrl = optionalHttpsUrl(environment, 'ONESHOT_X402_URL');
-  const paidApiMaxAmount = optionalAtomicAmount(environment, 'ONESHOT_X402_MAX_AMOUNT_ATOMIC');
   const userWalletRpcUrl = optionalRpcUrl(environment, 'ONESHOT_ARC_RPC_URL');
   if ((activityEndpoint && !activityWallet) || (!activityEndpoint && activityWallet)) {
     throw new Error(
@@ -216,7 +202,6 @@ export function loadApiRuntimeConfig(
           },
         }
       : {}),
-    ...(paidApiUrl ? { paidApi: { url: paidApiUrl, maxAmountAtomic: paidApiMaxAmount } } : {}),
     ...(userWalletRpcUrl ? { userWalletRpcUrl } : {}),
   };
 }

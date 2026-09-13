@@ -10,7 +10,7 @@ This document explains how each domain part contributes to the product promise:
 flowchart LR
     Operator[Company operator] -->|configures policy| Privy[Privy]
     Agent[Autonomous agent] -->|creates or reuses intent| API[OneShot API]
-    Agent -.->|requests business job| Supplier[Paid API or supplier]
+    Agent -.->|requests business job| Supplier[Supplier]
     API --> Domain[OneShot domain]
     Domain --> Ledger[(Authoritative ledger)]
     Ledger --> Worker[Execution worker]

@@ -30,7 +30,6 @@ export const DEMO_RESETTABLE_TABLES = [
   'outbox_jobs',
   'evidence_observations',
   'settlements',
-  'paid_api_requests',
   'attempts',
   'business_intents',
 ] as const;

@@ -10,14 +10,6 @@ team-controlled Arc Testnet wallet. The transfer is a real Privy-authorized
 settlement, but the result remains labelled as a team-operated demo until an
 external supplier is integrated.
 
-The second, separately labelled mode is **Paid API purchase via Circle x402**.
-Configure `ONESHOT_X402_URL` and `ONESHOT_X402_MAX_AMOUNT_ATOMIC` in the API
-and worker, fund the Gateway testnet balance, and use the Tools page to quote
-and approve one stable task key. The site displays the provider transaction on
-ArcScan as soon as the hash is durable; COMMITTED still requires an exact Arc
-receipt. An ambiguous response remains `UNKNOWN` and is never blindly retried.
-`pnpm demo:x402` remains an operator fallback.
-
 ## Existing offline rehearsal
 
 Run `pnpm demo:e2e` to build, run invariant scenarios and validate sanitized

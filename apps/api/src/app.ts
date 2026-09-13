@@ -5,30 +5,20 @@ import {
   asProviderReferenceId,
   asTransactionHash,
   ContractValidationError,
-  parseCreatePaidApiRequest,
   parseCreateJobRequest,
   parseCreateUserWalletJobRequest,
   type SupplierPort,
   type ErrorCode,
   type ErrorResponse,
   type SupplierQuote,
-  type ApprovePaidApiRequest,
-  type PreparePaidApiUserWalletRequest,
-  type SubmitPaidApiUserWalletRequest,
 } from '@oneshot/contracts';
 import { derivedJobId } from '@oneshot/domain';
-import { CircleX402PreSubmitError } from '@oneshot/supplier-adapter';
 import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { ServiceAuthenticator } from './auth.js';
 import { allowAllRateLimiter, type RateLimiter } from './rate-limit.js';
 import { UnavailableWalletActivityPort, type WalletActivityPort } from './wallet-activity.js';
-import {
-  PaidApiQuoteChangedError,
-  PaidApiUserWalletConflictError,
-  PaidApiUserWalletNotReadyError,
-  type PaidApiService,
-} from './paid-api.js';
+
 import type { UserWalletVerificationPort } from './user-wallet.js';
 
 export interface ServiceConfig {
@@ -71,7 +61,6 @@ export interface ApiDependencies {
     | 'activity'
   >;
   readonly supplier?: SupplierPort;
-  readonly paidApi?: PaidApiService;
   readonly walletActivity?: WalletActivityPort;
   readonly userWalletVerifier?: UserWalletVerificationPort;
   readonly authenticator: ServiceAuthenticator;
@@ -110,16 +99,6 @@ const createJobBodySchema = {
   },
 } as const;
 
-const createPaidApiBodySchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['task_key', 'tool_id'],
-  properties: {
-    task_key: { type: 'string', minLength: 1, maxLength: 128 },
-    tool_id: { type: 'string', const: 'circle-x402-api-v1' },
-  },
-} as const;
-
 const createUserWalletJobBodySchema = {
   ...createJobBodySchema,
   required: [...createJobBodySchema.required, 'payer_wallet'],
@@ -135,60 +114,6 @@ const userWalletPaymentBodySchema = {
   required: ['transaction_hash'],
   properties: {
     transaction_hash: { type: 'string', pattern: '^0x[0-9a-fA-F]{64}$' },
-  },
-} as const;
-
-const approvePaidApiBodySchema = {
-  ...createPaidApiBodySchema,
-  required: ['task_key', 'tool_id', 'approved_quote'],
-  properties: {
-    ...createPaidApiBodySchema.properties,
-    approved_quote: {
-      type: 'object',
-      additionalProperties: false,
-      required: [
-        'supplier_id',
-        'resource_url',
-        'recipient',
-        'amount_atomic',
-        'asset',
-        'network',
-        'x402_version',
-        'max_timeout_seconds',
-      ],
-      properties: {
-        supplier_id: { type: 'string', const: 'circle-x402-v1' },
-        resource_url: { type: 'string', minLength: 1, maxLength: 2048 },
-        recipient: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
-        amount_atomic: { type: 'string', pattern: '^(0|[1-9][0-9]*)$', maxLength: 78 },
-        asset: { type: 'string', const: 'USDC' },
-        network: { type: 'string', const: 'eip155:5042002' },
-        x402_version: { type: 'integer', const: 2 },
-        max_timeout_seconds: { type: 'integer', minimum: 1, maximum: 604900 },
-      },
-    },
-  },
-} as const;
-
-const prepareUserWalletPaidApiBodySchema = {
-  ...approvePaidApiBodySchema,
-  required: ['task_key', 'tool_id', 'approved_quote', 'payer_wallet'],
-  properties: {
-    ...approvePaidApiBodySchema.properties,
-    payer_wallet: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
-  },
-} as const;
-
-const submitUserWalletPaidApiBodySchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['payer_wallet', 'payment_payload'],
-  properties: {
-    payer_wallet: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
-    payment_payload: {
-      type: 'object',
-      additionalProperties: true,
-    },
   },
 } as const;
 
@@ -216,14 +141,6 @@ export function buildApi(dependencies: ApiDependencies) {
       503,
       'NOT_READY',
       'Resumable jobs are not configured',
-      correlationFor(request),
-    );
-  const paidApiUnavailable = (reply: FastifyReply, request: FastifyRequest): void =>
-    sendError(
-      reply,
-      503,
-      'NOT_READY',
-      'Paid API integration is not configured',
       correlationFor(request),
     );
   const userWalletUnavailable = (reply: FastifyReply, request: FastifyRequest): void =>
@@ -419,259 +336,6 @@ export function buildApi(dependencies: ApiDependencies) {
       return reply.code(result.kind === 'ACCEPTED' ? 202 : 200).send(result.job);
     },
   );
-
-  app.post(
-    '/v1/paid-api/quote',
-    { schema: { body: createPaidApiBodySchema } },
-    async (request, reply) => {
-      if (!dependencies.paidApi) {
-        paidApiUnavailable(reply, request);
-        return;
-      }
-      const parsed = parseCreatePaidApiRequest(request.body);
-      try {
-        return reply.code(200).send(await dependencies.paidApi.quote(parsed));
-      } catch {
-        sendError(
-          reply,
-          503,
-          'NOT_READY',
-          'Paid API quote is unavailable',
-          correlationFor(request),
-        );
-      }
-    },
-  );
-
-  app.post(
-    '/v1/paid-api',
-    { schema: { body: approvePaidApiBodySchema } },
-    async (request, reply) => {
-      if (!dependencies.paidApi) {
-        paidApiUnavailable(reply, request);
-        return;
-      }
-      const body = request.body as ApprovePaidApiRequest;
-      const parsed = parseCreatePaidApiRequest({ task_key: body.task_key, tool_id: body.tool_id });
-      try {
-        const result = await dependencies.paidApi.start(
-          parsed,
-          correlationFor(request),
-          body.approved_quote,
-        );
-        if (result.kind === 'INTENT_PAYLOAD_CONFLICT') {
-          sendError(
-            reply,
-            409,
-            'INTENT_PAYLOAD_CONFLICT',
-            'Task key already has a different immutable paid API quote',
-            correlationFor(request),
-          );
-          return;
-        }
-        return reply.code(result.kind === 'ACCEPTED' ? 202 : 200).send(result.request);
-      } catch (error) {
-        if (error instanceof PaidApiQuoteChangedError) {
-          sendError(reply, 409, 'INTENT_PAYLOAD_CONFLICT', error.message, correlationFor(request));
-          return;
-        }
-        sendError(
-          reply,
-          503,
-          'NOT_READY',
-          'Paid API request could not be created',
-          correlationFor(request),
-        );
-      }
-    },
-  );
-
-  app.post(
-    '/v1/paid-api/user-wallet/prepare',
-    { schema: { body: prepareUserWalletPaidApiBodySchema } },
-    async (request, reply) => {
-      if (!dependencies.paidApi) {
-        paidApiUnavailable(reply, request);
-        return;
-      }
-      const body = request.body as PreparePaidApiUserWalletRequest;
-      const parsed = parseCreatePaidApiRequest({ task_key: body.task_key, tool_id: body.tool_id });
-      try {
-        const result = await dependencies.paidApi.prepareUserWallet(
-          parsed,
-          correlationFor(request),
-          body.approved_quote,
-          body.payer_wallet,
-        );
-        if (result.kind === 'INTENT_PAYLOAD_CONFLICT') {
-          sendError(
-            reply,
-            409,
-            'INTENT_PAYLOAD_CONFLICT',
-            'Task key already has a different immutable quote or payer wallet',
-            correlationFor(request),
-          );
-          return;
-        }
-        return reply.code(result.kind === 'ACCEPTED' ? 202 : 200).send(result.request);
-      } catch (error) {
-        if (error instanceof PaidApiQuoteChangedError) {
-          sendError(reply, 409, 'INTENT_PAYLOAD_CONFLICT', error.message, correlationFor(request));
-          return;
-        }
-        sendError(
-          reply,
-          503,
-          'NOT_READY',
-          'User-wallet paid API request could not be prepared',
-          correlationFor(request),
-        );
-      }
-    },
-  );
-
-  app.post<{ Params: { id: string } }>(
-    '/v1/paid-api/:id/user-wallet/submit',
-    { schema: { body: submitUserWalletPaidApiBodySchema } },
-    async (request, reply) => {
-      if (!dependencies.paidApi) {
-        paidApiUnavailable(reply, request);
-        return;
-      }
-      const body = request.body as SubmitPaidApiUserWalletRequest;
-      try {
-        const result = await dependencies.paidApi.submitUserWallet(
-          request.params.id,
-          body.payer_wallet,
-          body.payment_payload,
-          correlationFor(request),
-        );
-        return reply
-          .code(
-            result.payment_state === 'COMMITTED' || result.payment_state === 'FAILED_SAFE'
-              ? 200
-              : 202,
-          )
-          .send(result);
-      } catch (error) {
-        if (error instanceof CircleX402PreSubmitError) {
-          sendError(
-            reply,
-            400,
-            'INVALID_REQUEST',
-            'The Circle authorization is no longer valid. No payment was sent; sign a fresh authorization.',
-            correlationFor(request),
-          );
-          return;
-        }
-        if (error instanceof PaidApiUserWalletConflictError) {
-          sendError(
-            reply,
-            409,
-            'RECONCILIATION_NOT_ALLOWED',
-            error.message,
-            correlationFor(request),
-          );
-          return;
-        }
-        if (error instanceof PaidApiUserWalletNotReadyError) {
-          sendError(reply, 503, 'NOT_READY', error.message, correlationFor(request));
-          return;
-        }
-        sendError(
-          reply,
-          503,
-          'NOT_READY',
-          'User-wallet payment processing is temporarily unavailable; check the same request later',
-          correlationFor(request),
-        );
-      }
-    },
-  );
-
-  app.post<{ Params: { id: string } }>(
-    '/v1/paid-api/:id/user-wallet/reconcile',
-    async (request, reply) => {
-      if (!dependencies.paidApi) {
-        paidApiUnavailable(reply, request);
-        return;
-      }
-      try {
-        const result = await dependencies.paidApi.reconcileUserWallet(
-          request.params.id,
-          correlationFor(request),
-        );
-        return reply
-          .code(
-            result.payment_state === 'COMMITTED' || result.payment_state === 'FAILED_SAFE'
-              ? 200
-              : 202,
-          )
-          .send(result);
-      } catch (error) {
-        if (error instanceof PaidApiUserWalletConflictError) {
-          sendError(
-            reply,
-            409,
-            'RECONCILIATION_NOT_ALLOWED',
-            error.message,
-            correlationFor(request),
-          );
-          return;
-        }
-        sendError(
-          reply,
-          503,
-          'NOT_READY',
-          'User-wallet payment reconciliation is temporarily unavailable; no new payment was submitted',
-          correlationFor(request),
-        );
-      }
-    },
-  );
-
-  app.get<{ Params: { id: string } }>('/v1/paid-api/:id', async (request, reply) => {
-    if (!dependencies.paidApi) {
-      paidApiUnavailable(reply, request);
-      return;
-    }
-    const paidApi = await dependencies.paidApi.get(request.params.id);
-    if (!paidApi) {
-      sendError(
-        reply,
-        404,
-        'INTENT_NOT_FOUND',
-        'Paid API request was not found in this workspace',
-        correlationFor(request),
-      );
-      return;
-    }
-    return paidApi;
-  });
-
-  app.get('/v1/requests', async (request, reply) => {
-    if (!dependencies.jobs && !dependencies.paidApi) {
-      sendError(
-        reply,
-        503,
-        'NOT_READY',
-        'Durable request listing is not configured',
-        correlationFor(request),
-      );
-      return;
-    }
-    const [jobs, paidApi] = await Promise.all([
-      dependencies.jobs?.list(workspaceId) ?? Promise.resolve([]),
-      dependencies.paidApi?.list() ?? Promise.resolve([]),
-    ]);
-    const requests = [...jobs, ...paidApi]
-      .sort((left, right) => {
-        const updated = Date.parse(right.updated_at) - Date.parse(left.updated_at);
-        return updated || right.business_intent_id.localeCompare(left.business_intent_id);
-      })
-      .slice(0, 100);
-    return { requests };
-  });
 
   app.get('/v1/jobs', async (request, reply) => {
     if (!dependencies.jobs) {
