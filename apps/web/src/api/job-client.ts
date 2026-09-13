@@ -108,19 +108,6 @@ export class JobApiClient {
     return body;
   }
 
-  async resume(jobId: string): Promise<JobView> {
-    const response = await this.#fetch(
-      `${this.#baseUrl}/v1/jobs/${encodeURIComponent(jobId)}/resume`,
-      {
-        method: 'POST',
-        headers: this.#headers(),
-      },
-    );
-    const body = await responseJson<JobView>(response);
-    if (!response.ok || !body) throw new Error('Could not resume supplier delivery');
-    return body;
-  }
-
   async result(jobId: string): Promise<SupplierResult | null> {
     const response = await this.#fetch(
       `${this.#baseUrl}/v1/jobs/${encodeURIComponent(jobId)}/result`,

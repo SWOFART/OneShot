@@ -181,41 +181,17 @@ describe('IntentStatusView', () => {
 });
 
 describe('JobWorkspace payment inputs', () => {
-  it('reads the resumed job until the supplier result is available without listing jobs repeatedly', async () => {
-    const user = userEvent.setup();
+  it('keeps a pending paid delivery explicit without a resume action', async () => {
     const pendingJob = resumableJob('PENDING');
-    const availableJob: JobView = {
-      ...pendingJob,
-      delivery_state: 'AVAILABLE',
-      result: {
-        order_reference: pendingJob.supplier.order_reference,
-        result_reference: 'team_report_result_resume',
-        report: 'Recovered original supplier report.',
-      },
-    };
-    let getCalls = 0;
     const client = {
       list: vi.fn(async () => [pendingJob]),
-      get: vi.fn(async () => {
-        getCalls += 1;
-        return getCalls === 1 ? pendingJob : availableJob;
-      }),
-      resume: vi.fn(async () => pendingJob),
     };
 
     render(<JobList client={client as never} onSelectIntent={() => undefined} />);
 
-    await user.click(await screen.findByRole('button', { name: 'Resume result (no new payment)' }));
-
-    await waitFor(
-      () => expect(screen.getByText('Recovered original supplier report.')).toBeTruthy(),
-      { timeout: 5000 },
-    );
-    expect(client.resume).toHaveBeenCalledWith(pendingJob.job_id);
-    expect(client.resume).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('Retrieving result')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Resume result/u })).toBeNull();
     expect(client.list).toHaveBeenCalledTimes(1);
-    expect(getCalls).toBe(2);
-    expect(screen.getByText('Result ready:')).toBeTruthy();
   });
 
   it('sends the entered recipient and integer atomic amount to the quote boundary', async () => {

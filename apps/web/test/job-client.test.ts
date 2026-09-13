@@ -22,9 +22,9 @@ const quote: SupplierQuote = {
 };
 
 describe('JobApiClient quote flow', () => {
-  it('reads one job without listing the workspace jobs', async () => {
+  it('loads one MCP-prepared job without listing the workspace jobs', async () => {
     let calledUrl = '';
-    const job = { job_id: 'job-1', delivery_state: 'PENDING' };
+    const job = { job_id: 'job-mcp-link', payment_state: 'READY' };
     const client = new JobApiClient({
       fetchFn: async (input) => {
         calledUrl = String(input);
@@ -35,8 +35,8 @@ describe('JobApiClient quote flow', () => {
       },
     });
 
-    await expect(client.get('job-1')).resolves.toEqual(job);
-    expect(calledUrl).toBe('/v1/jobs/job-1');
+    await expect(client.get(job.job_id)).resolves.toEqual(job);
+    expect(calledUrl).toBe('/v1/jobs/job-mcp-link');
   });
 
   it('requests a non-chargeable quote with the authenticated task payload', async () => {

@@ -41,36 +41,10 @@ function mcpPaymentStillSignable(job: JobView): boolean {
 
 const USER_WALLET_PAYMENT_CHECK_DELAY_MS = 500;
 const USER_WALLET_PAYMENT_CHECK_ATTEMPTS = 30;
-const RESULT_REFRESH_DELAY_MS = 1000;
-const RESULT_REFRESH_ATTEMPTS = 15;
-
 function waitForPaymentCheck(): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, USER_WALLET_PAYMENT_CHECK_DELAY_MS);
   });
-}
-
-function waitForResultRefresh(): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, RESULT_REFRESH_DELAY_MS);
-  });
-}
-
-async function waitForSupplierResult(
-  client: JobApiClient,
-  jobId: string,
-  initial: JobView,
-): Promise<JobView> {
-  let latest = initial;
-  for (
-    let attempt = 0;
-    attempt < RESULT_REFRESH_ATTEMPTS && latest.delivery_state === 'PENDING' && !latest.result;
-    attempt += 1
-  ) {
-    await waitForResultRefresh();
-    latest = await client.get(jobId);
-  }
-  return latest;
 }
 
 async function resolveUserWalletPayment(
@@ -584,46 +558,18 @@ export function JobList(props: {
   const [requests, setRequests] = useState<readonly JobView[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [resumingJobId, setResumingJobId] = useState<string | null>(null);
   const [checkingPaymentJobId, setCheckingPaymentJobId] = useState<string | null>(null);
 
-  async function refresh(): Promise<readonly JobView[] | null> {
+  async function refresh(): Promise<void> {
     setLoading(true);
     try {
       const listed = await props.client.list();
       setRequests(listed);
       setError('');
-      return listed;
     } catch {
       setError('Requests could not be loaded. Check API readiness and your workspace session.');
-      return null;
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function resume(jobId: string): Promise<void> {
-    setResumingJobId(jobId);
-    setError('');
-    try {
-      const resumed = await props.client.resume(jobId);
-      setRequests((current) => current.map((job) => (job.job_id === jobId ? resumed : job)));
-      const latest =
-        resumed.result || resumed.delivery_state !== 'PENDING'
-          ? resumed
-          : await waitForSupplierResult(props.client, jobId, resumed);
-      setRequests((current) => current.map((job) => (job.job_id === jobId ? latest : job)));
-      if (!latest.result) {
-        setError(
-          latest.delivery_state === 'RETRIEVAL_FAILED'
-            ? 'The supplier result could not be retrieved. No new payment was submitted.'
-            : 'The supplier result is still being retrieved. Refresh requests to check again. No new payment was submitted.',
-        );
-      }
-    } catch {
-      setError('The result could not be resumed. No new payment was submitted.');
-    } finally {
-      setResumingJobId(null);
     }
   }
 
@@ -650,7 +596,7 @@ export function JobList(props: {
     <section
       className="panel"
       aria-label="Requests and results"
-      aria-busy={loading || resumingJobId !== null || checkingPaymentJobId !== null}
+      aria-busy={loading || checkingPaymentJobId !== null}
     >
       <header className="panel-heading">
         <div>
@@ -660,7 +606,7 @@ export function JobList(props: {
         <button
           type="button"
           className="secondary compact"
-          disabled={loading || resumingJobId !== null || checkingPaymentJobId !== null}
+          disabled={loading || checkingPaymentJobId !== null}
           onClick={() => void refresh()}
         >
           {loading ? 'Refreshing…' : 'Refresh requests'}
@@ -721,22 +667,11 @@ export function JobList(props: {
                       )}
                     </p>
                   )}
-                  {job.result ? (
+                  {job.result && (
                     <p>
                       <strong>Result ready:</strong> {job.result.report}
                     </p>
-                  ) : job.payment_state === 'COMMITTED' ? (
-                    <button
-                      type="button"
-                      className="secondary compact"
-                      disabled={resumingJobId !== null}
-                      onClick={() => void resume(job.job_id)}
-                    >
-                      {resumingJobId === job.job_id
-                        ? 'Resuming…'
-                        : 'Resume result (no new payment)'}
-                    </button>
-                  ) : null}
+                  )}
                   {job.payment_mode === 'USER_WALLET' &&
                     job.payment_state === 'UNKNOWN' &&
                     job.user_payment?.transaction_hash && (
@@ -744,7 +679,7 @@ export function JobList(props: {
                         type="button"
                         className="secondary compact"
                         disabled={
-                          loading || resumingJobId !== null || checkingPaymentJobId !== null
+                          loading || checkingPaymentJobId !== null
                         }
                         onClick={() => void checkRecordedPayment(job)}
                       >
