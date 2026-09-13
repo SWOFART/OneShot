@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="63" viewBox="0 0 1000 63" role="img" aria-label="OneShot settlement engine — Arc Testnet, USDC, open workspace">
+  <title>OneShot — settlement engine</title>
+  <rect x="0.5" y="0.5" width="999" height="62" rx="22" fill="#12211c" stroke="rgba(238, 247, 230, 0.12)" />
+  <g transform="translate(20 13.5) scale(0.5625)">
+    <rect width="64" height="64" rx="19" fill="#0b332c" />
+    <g transform="translate(10 10) scale(0.6875)">
+      <path d="M45.93 25.20 A15.5 15.5 0 0 1 47.38 33.89" fill="none" stroke="#4a7a60" stroke-width="4.6" stroke-linecap="round" />
+      <path d="M45.29 39.98 A15.5 15.5 0 0 1 38.79 45.93" fill="none" stroke="#4a7a60" stroke-width="4.6" stroke-linecap="round" />
+      <path d="M32.54 47.49 A15.5 15.5 0 0 1 24.02 45.29" fill="none" stroke="#4a7a60" stroke-width="4.6" stroke-linecap="round" />
+      <path d="M19.30 40.89 A15.5 15.5 0 0 1 41.96 20.13" fill="none" stroke="#00dc5f" stroke-width="6.4" stroke-linecap="round" />
+      <circle cx="41.96" cy="20.13" r="5.6" fill="#00dc5f" />
+    </g>
+  </g>
+  <text x="68" y="30.1" font-family="Rubik, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="300" letter-spacing="1.6" fill="#eef7e6">OneShot</text>
+  <text x="68" y="45.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.4" font-weight="300" letter-spacing="1.248" fill="#00dc5f">SETTLEMENT ENGINE</text>
+  <g>
+    <rect x="351.6" y="19.5" width="109.5" height="24" rx="12" fill="none" stroke="rgba(238, 247, 230, 0.12)" />
+    <circle cx="367.1" cy="31.5" r="3.5" fill="#00dc5f" />
+    <text x="377.8" y="35.7" font-family="Rubik, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" font-weight="300" fill="#eef7e6">Arc Testnet</text>
+    <rect x="470.6" y="19.5" width="52.8" height="24" rx="12" fill="none" stroke="#00dc5f" />
+    <text x="482.6" y="35.7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="300" fill="#00dc5f">USDC</text>
+    <rect x="533.0" y="14.5" width="115.4" height="34" rx="17" fill="none" stroke="#3f7059" />
+    <text x="547.4" y="35.868" font-family="Rubik, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.48" font-weight="300" letter-spacing="1.248" fill="#eef7e6">LIGHT THEME</text>
+  </g>
+  <rect x="851.2" y="16.5" width="128.8" height="30" rx="15" fill="none" stroke="rgba(238, 247, 230, 0.12)" />
+  <text x="867.2" y="35.98" font-family="Rubik, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.8" font-weight="300" fill="#eef7e6">Open workspace</text>
+</svg>
