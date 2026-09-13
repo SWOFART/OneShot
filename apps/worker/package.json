@@ -1,0 +1,41 @@
+{
+  "name": "@oneshot/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "lint": "eslint src test",
+    "start": "node dist/server.js",
+    "start:local": "node --env-file=../../.env dist/server.js",
+    "test": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@oneshot/arc-adapter": "workspace:*",
+    "@oneshot/contracts": "workspace:*",
+    "@oneshot/domain": "workspace:*",
+    "@oneshot/privy-adapter": "workspace:*",
+    "@oneshot/reconciliation": "workspace:*",
+    "@oneshot/storage-postgres": "workspace:*",
+    "@oneshot/supplier-adapter": "workspace:*",
+    "@privy-io/node": "0.34.0",
+    "google-auth-library": "11.0.2",
+    "graphile-worker": "0.17.3",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@oneshot/testkit-domain": "workspace:*",
+    "@testcontainers/postgresql": "12.1.0"
+  }
+}

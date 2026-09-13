@@ -1,0 +1,147 @@
+import type {
+  ActivityResponse,
+  CreateJobRequest,
+  CreateUserWalletJobRequest,
+  JobListResponse,
+  JobView,
+  SupplierQuote,
+  SupplierResult,
+} from '@oneshot/contracts';
+import type { ApiClientConfig } from './client.js';
+
+export interface McpCredentialStatus {
+  readonly configured: boolean;
+  readonly created_at?: string;
+}
+
+export interface IssuedMcpCredential {
+  readonly bearer_token: string;
+  readonly created_at: string;
+}
+
+async function responseJson<T>(response: Response): Promise<T | null> {
+  if (!response.headers.get('content-type')?.includes('application/json')) return null;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+export class JobApiClient {
+  readonly #baseUrl: string;
+  readonly #getAuthToken: () => string | null;
+  readonly #fetch: typeof fetch;
+
+  constructor(config: ApiClientConfig = {}) {
+    this.#baseUrl = config.baseUrl ?? '';
+    this.#getAuthToken = config.getAuthToken ?? (() => null);
+    this.#fetch = config.fetchFn ?? fetch.bind(globalThis);
+  }
+
+  #headers(withJsonBody = false): HeadersInit {
+    const token = this.#getAuthToken();
+    return {
+      ...(withJsonBody ? { 'content-type': 'application/json' } : {}),
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    };
+  }
+
+  async list(): Promise<readonly JobView[]> {
+    const response = await this.#fetch(`${this.#baseUrl}/v1/jobs`, { headers: this.#headers() });
+    return response.ok ? ((await responseJson<JobListResponse>(response))?.jobs ?? []) : [];
+  }
+
+  async get(jobId: string): Promise<JobView> {
+    const response = await this.#fetch(`${this.#baseUrl}/v1/jobs/${encodeURIComponent(jobId)}`, {
+      headers: this.#headers(),
+    });
+    const body = await responseJson<JobView>(response);
+    if (!response.ok || !body) throw new Error('Could not load the job status');
+    return body;
+  }
+
+  async start(request: CreateJobRequest): Promise<JobView> {
+    const response = await this.#fetch(`${this.#baseUrl}/v1/jobs`, {
+      method: 'POST',
+      headers: this.#headers(true),
+      body: JSON.stringify(request),
+    });
+    const body = await responseJson<JobView>(response);
+    if (!response.ok || !body) throw new Error('Could not start the approved job');
+    return body;
+  }
+
+  async prepareUserWalletJob(request: CreateUserWalletJobRequest): Promise<JobView> {
+    const response = await this.#fetch(`${this.#baseUrl}/v1/jobs/user-wallet/prepare`, {
+      method: 'POST',
+      headers: this.#headers(true),
+      body: JSON.stringify(request),
+    });
+    const body = await responseJson<JobView>(response);
+    if (!response.ok || !body) throw new Error('Could not prepare the user-wallet payment');
+    return body;
+  }
+
+  async submitUserWalletPayment(jobId: string, transactionHash: string): Promise<JobView> {
+    const response = await this.#fetch(
+      `${this.#baseUrl}/v1/jobs/${encodeURIComponent(jobId)}/user-wallet/submit`,
+      {
+        method: 'POST',
+        headers: this.#headers(true),
+        body: JSON.stringify({ transaction_hash: transactionHash }),
+      },
+    );
+    const body = await responseJson<JobView>(response);
+    if (!response.ok || !body) throw new Error('Could not verify the user-wallet payment');
+    return body;
+  }
+
+  async quote(request: CreateJobRequest): Promise<SupplierQuote> {
+    const response = await this.#fetch(`${this.#baseUrl}/v1/jobs/quote`, {
+      method: 'POST',
+      headers: this.#headers(true),
+      body: JSON.stringify(request),
+    });
+    const body = await responseJson<SupplierQuote>(response);
+    if (!response.ok || !body) throw new Error('Could not load a live supplier quote');
+    return body;
+  }
+
+  async result(jobId: string): Promise<SupplierResult | null> {
+    const response = await this.#fetch(
+      `${this.#baseUrl}/v1/jobs/${encodeURIComponent(jobId)}/result`,
+      { headers: this.#headers() },
+    );
+    return response.ok ? await responseJson<SupplierResult>(response) : null;
+  }
+
+  async refreshActivity(): Promise<ActivityResponse> {
+    const response = await this.#fetch(`${this.#baseUrl}/v1/activity/refresh`, {
+      method: 'POST',
+      headers: this.#headers(),
+    });
+    const body = await responseJson<ActivityResponse>(response);
+    if (!response.ok || !body) throw new Error('Activity refresh is unavailable');
+    return body;
+  }
+
+  async mcpCredentialStatus(): Promise<McpCredentialStatus> {
+    const response = await this.#fetch(`${this.#baseUrl}/v1/profile/mcp-token`, {
+      headers: this.#headers(),
+    });
+    const body = await responseJson<McpCredentialStatus>(response);
+    if (!response.ok || !body) throw new Error('Could not load MCP access');
+    return body;
+  }
+
+  async issueMcpCredential(rotate: boolean): Promise<IssuedMcpCredential> {
+    const response = await this.#fetch(
+      `${this.#baseUrl}/v1/profile/mcp-token${rotate ? '/rotate' : ''}`,
+      { method: 'POST', headers: this.#headers() },
+    );
+    const body = await responseJson<IssuedMcpCredential>(response);
+    if (!response.ok || !body) throw new Error('Could not generate MCP bearer token');
+    return body;
+  }
+}

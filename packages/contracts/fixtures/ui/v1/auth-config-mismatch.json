@@ -1,0 +1,35 @@
+{
+  "scenario": "auth-config-mismatch",
+  "description": "Policy configuration mismatch resulting in rejected intent",
+  "intent": {
+    "business_intent_id": "018f-ui-mismatch-006",
+    "payload_fingerprint": "a000000000000000000000000000000000000000000000000000000000000006",
+    "recipient": "0x1111111111111111111111111111111111111111",
+    "amount_atomic": "1250000",
+    "asset": "USDC",
+    "network": "eip155:5042002",
+    "purpose": "Invoice INV-1006",
+    "state": "REJECTED",
+    "version": 2,
+    "policy": {
+      "policy_id": "privy-policy-mismatch",
+      "status": "NOT_CONFIGURED"
+    },
+    "attempts": [
+      {
+        "attempt_id": "attempt-ui-006",
+        "stage": "REJECTED",
+        "created_at": "2026-09-08T12:25:00.000Z",
+        "sanitized_error": "Policy configuration mismatch: expected configured Arc testnet wallet",
+        "authorization_status": "CONFIG_MISMATCH"
+      }
+    ],
+    "evidence": []
+  },
+  "recovery_view": {
+    "business_intent_id": "018f-ui-mismatch-006",
+    "authoritative_state": "REJECTED",
+    "recommended_action": "RETURN_EXISTING_RESULT",
+    "evidence": []
+  }
+}

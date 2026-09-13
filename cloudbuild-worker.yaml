@@ -1,0 +1,11 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--file'
+      - 'Dockerfile.worker'
+      - '--tag'
+      - 'europe-west1-docker.pkg.dev/oneshot-508002/oneshot-repo/oneshot-worker:wait-for-receipt'
+      - '.'
+images:
+  - 'europe-west1-docker.pkg.dev/oneshot-508002/oneshot-repo/oneshot-worker:wait-for-receipt'

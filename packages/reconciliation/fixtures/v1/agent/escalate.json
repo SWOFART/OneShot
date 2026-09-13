@@ -1,0 +1,21 @@
+{
+  "version": "recovery-advisor-v1",
+  "recommendation": {
+    "action": "ESCALATE",
+    "decisionId": "dec-escalate-001",
+    "reason": "Contradictory or anomalous transfer observations detected",
+    "referencedEvidenceIds": ["thegraph:candidate-1"],
+    "modelIdentity": {
+      "modelName": "recovery-advisor-llm",
+      "modelVersion": "1.0.0",
+      "promptVersion": "recovery-v1"
+    },
+    "timestamp": "2026-09-07T12:00:00.000Z"
+  },
+  "expected": {
+    "disposition": "OPERATOR_ESCALATION",
+    "commandType": "ESCALATE_UNKNOWN",
+    "targetState": "UNKNOWN",
+    "external_submission_count": 0
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "b06-evidence-index-v1",
+  "milestone": "B06",
+  "lane": "B",
+  "scope": "Privy authorization boundary and Arc Testnet settlement rail",
+  "settlement_proof": "evidence/c06/sanitized-proof.json",
+  "live_evidence": "docs/settlement/LIVE_EVIDENCE.md",
+  "handoff": "docs/settlement/B06_SPONSOR_EVIDENCE.md",
+  "verification_command": "pnpm --filter @oneshot/testkit-settlement evidence:b06",
+  "network": {
+    "profile": "arc-testnet",
+    "caip2": "eip155:5042002",
+    "token_contract": "0x3600000000000000000000000000000000000000",
+    "explorer_host": "testnet.arcscan.app"
+  },
+  "mainnet": {
+    "profile": "arc-mainnet",
+    "enabled": false,
+    "verification": "UNPUBLISHED",
+    "claim": "No mainnet transaction exists and none is claimed.",
+    "activation_gates": [
+      "Official Arc mainnet chain id, RPC, explorer, and token values published by Circle",
+      "Explicit human authorization for real-value activation",
+      "Readiness probe re-verifies the live chain id before any use"
+    ]
+  },
+  "code_references": [
+    "packages/privy-adapter/src/adapters.ts",
+    "packages/privy-adapter/src/hardening.ts",
+    "packages/privy-adapter/src/policy.ts",
+    "packages/arc-adapter/src/receipt.ts",
+    "packages/arc-adapter/src/profiles.ts",
+    "packages/arc-adapter/src/readiness.ts",
+    "packages/testkit-settlement/src/b06-evidence.ts"
+  ],
+  "test_references": [
+    "packages/testkit-settlement/test/b06-evidence.test.ts",
+    "packages/privy-adapter/test",
+    "packages/arc-adapter/test"
+  ],
+  "limitations": [
+    "Testnet only. Arc Mainnet stays disabled and unpinned.",
+    "Live evidence is one recorded run per drill, re-verified here rather than re-executed.",
+    "The Graph verdict belongs to Lane C and is not claimed by this bundle."
+  ]
+}

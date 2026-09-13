@@ -1,0 +1,340 @@
+{
+  "schemaVersion": "sponsor-qualification-v1",
+  "captured_at": "2026-09-09T01:13:25.038Z",
+  "sponsor_status": {
+    "PRIVY": "QUALIFIED",
+    "ARC": "QUALIFIED",
+    "THE_GRAPH": "QUALIFIED"
+  },
+  "graph_evidence": {
+    "track": "AI Tooling or AI Use Case",
+    "studio_url": "https://api.studio.thegraph.com/query/1758917/oneshot-arc-testnet/v0.2.1",
+    "canonical_subgraph_id": "69FEby7GetXpJVWJShPL6XjMsWWDowLuqf6cE5MvTHdy",
+    "duplicate_subgraph_id": "FnXJmkEuxCDeqr4tTejszcLgpodazPoy2ifeNrA5VnBw",
+    "manifest_cid": "QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7",
+    "deployment_id": "0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0",
+    "subgraph_meta": {
+      "deployment": "QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7",
+      "hasIndexingErrors": false,
+      "block": {
+        "number": 61143086,
+        "hash": "0x9ba4694bda24eb939938c27463a0c532100e46a20804c01f48202eca74c9b8e9",
+        "timestamp": "1788907745"
+      }
+    },
+    "discovered_candidates": [
+      {
+        "id": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000",
+        "transactionHash": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7",
+        "logIndex": "23",
+        "blockNumber": "61116056",
+        "blockHash": "0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b",
+        "blockTimestamp": "1788893876",
+        "network": "eip155:5042002",
+        "tokenContract": "0x3600000000000000000000000000000000000000",
+        "sender": "0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943",
+        "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+        "amountAtomic": "1000000",
+        "memoId": null
+      }
+    ],
+    "mcp_trace": {
+      "callId": "mcp-call-1788916400145",
+      "serverName": "subgraph-mcp",
+      "serverVersion": "1.0.0",
+      "toolName": "execute_query_by_deployment_id",
+      "arguments": {
+        "deployment_id": "0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0",
+        "query": "query OneShotRecoveryCandidatesV1(\n  $tokenContract: Bytes!\n  $recipient: Bytes!\n  $amountAtomic: BigInt!\n  $sender: Bytes\n  $fromBlock: BigInt!\n  $toBlock: BigInt!\n) {\n  settlementCandidates(\n    first: 26\n    orderBy: blockNumber\n    orderDirection: asc\n    where: {\n      tokenContract: $tokenContract\n      recipient: $recipient\n      amountAtomic: $amountAtomic\n      sender: $sender\n      blockNumber_gte: $fromBlock\n      blockNumber_lte: $toBlock\n    }\n  ) {\n    id\n    transactionHash\n    logIndex\n    blockNumber\n    blockHash\n    blockTimestamp\n    network\n    tokenContract\n    sender\n    recipient\n    amountAtomic\n    memoId\n  }\n  _meta {\n    deployment\n    hasIndexingErrors\n    block {\n      number\n      hash\n      timestamp\n    }\n  }\n}",
+        "variables": {
+          "tokenContract": "0x3600000000000000000000000000000000000000",
+          "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+          "amountAtomic": "1000000",
+          "sender": "0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943",
+          "fromBlock": "61116000",
+          "toBlock": "61116100"
+        }
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"data\":{\"settlementCandidates\":[{\"id\":\"0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000\",\"transactionHash\":\"0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7\",\"logIndex\":\"23\",\"blockNumber\":\"61116056\",\"blockHash\":\"0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b\",\"blockTimestamp\":\"1788893876\",\"network\":\"eip155:5042002\",\"tokenContract\":\"0x3600000000000000000000000000000000000000\",\"sender\":\"0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943\",\"recipient\":\"0xa605ee031e41f04f8e193059a39a24407f83677c\",\"amountAtomic\":\"1000000\",\"memoId\":null}],\"_meta\":{\"deployment\":\"QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7\",\"hasIndexingErrors\":false,\"block\":{\"number\":61143086,\"hash\":\"0x9ba4694bda24eb939938c27463a0c532100e46a20804c01f48202eca74c9b8e9\",\"timestamp\":\"1788907745\"}}}}"
+          }
+        ],
+        "isError": false
+      },
+      "retrievedAt": "2026-09-09T01:13:20.144Z",
+      "chainHead": {
+        "blockNumber": "61143086",
+        "observedAt": "2026-09-09T01:13:20.144Z"
+      }
+    },
+    "normalized_index_view": {
+      "schemaVersion": "index-view-v1",
+      "source": {
+        "provider": "THE_GRAPH",
+        "retrieval": "SUBGRAPH_MCP",
+        "authority": "NON_AUTHORITATIVE_CANDIDATE_DISCOVERY"
+      },
+      "binding": {
+        "businessIntentId": "int-live-graph-001",
+        "requestFingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+        "network": "eip155:5042002",
+        "tokenContract": "0x3600000000000000000000000000000000000000",
+        "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+        "amountAtomic": "1000000"
+      },
+      "correlation": {
+        "strategy": "TRANSFER_TUPLE_WINDOW",
+        "sender": "0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943",
+        "fromBlock": "61116000",
+        "toBlock": "61116100"
+      },
+      "mcp": {
+        "callId": "mcp-call-1788916400145",
+        "serverName": "subgraph-mcp",
+        "serverVersion": "1.0.0",
+        "toolName": "execute_query_by_deployment_id",
+        "deploymentId": "0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0",
+        "manifestCid": "QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7",
+        "queryName": "OneShotRecoveryCandidatesV1",
+        "queryDigest": "bda358a663504bffd0736d2eeb5ac8bbb8192ad8b4e02d50d4037357c4331d58"
+      },
+      "observedThrough": {
+        "blockNumber": "61143086",
+        "blockHash": "0x9ba4694bda24eb939938c27463a0c532100e46a20804c01f48202eca74c9b8e9",
+        "blockTimestamp": "1788907745"
+      },
+      "chainHead": {
+        "blockNumber": "61143086",
+        "observedAt": "2026-09-09T01:13:20.144Z"
+      },
+      "lagBlocks": "0",
+      "health": "FRESH",
+      "retrievedAt": "2026-09-09T01:13:20.144Z",
+      "candidates": [
+        {
+          "id": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000",
+          "transactionHash": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7",
+          "logIndex": "23",
+          "blockNumber": "61116056",
+          "blockHash": "0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b",
+          "blockTimestamp": "1788893876",
+          "network": "eip155:5042002",
+          "tokenContract": "0x3600000000000000000000000000000000000000",
+          "sender": "0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943",
+          "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+          "amountAtomic": "1000000",
+          "memoId": null,
+          "evidenceId": "graph:0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7:23",
+          "bindingStatus": "MATCH",
+          "contradictionCodes": []
+        }
+      ],
+      "candidateCount": 1,
+      "contradiction": false,
+      "contradictionCodes": [],
+      "diagnostics": [],
+      "settlementPermission": "NEVER"
+    },
+    "vertex_ai_input": {
+      "binding": {
+        "businessIntentId": "int-live-graph-001",
+        "requestFingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+        "network": "eip155:5042002",
+        "tokenContract": "[REDACTED]",
+        "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+        "amountAtomic": "1000000"
+      },
+      "durableState": {
+        "state": "UNKNOWN",
+        "stateVersion": "1",
+        "attemptCount": 1,
+        "persistedAt": "2026-09-09T01:13:20.144Z"
+      },
+      "authoritativeEvidence": [
+        {
+          "id": "oneshot:int-live-graph-001:1",
+          "source": "ONESHOT",
+          "authorityClass": "[REDACTED]",
+          "binding": {
+            "businessIntentId": "int-live-graph-001",
+            "requestFingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+            "network": "eip155:5042002",
+            "tokenContract": "[REDACTED]",
+            "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+            "amountAtomic": "1000000"
+          },
+          "retrievedAt": "2026-09-09T01:13:20.144Z",
+          "digest": "[REDACTED_HASH]",
+          "details": {
+            "settlementState": "UNKNOWN",
+            "stateVersion": "1"
+          }
+        }
+      ],
+      "providerObservations": [],
+      "candidateObservations": [
+        {
+          "id": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000",
+          "transactionHash": "[REDACTED_HASH]",
+          "logIndex": "23",
+          "blockNumber": "61116056",
+          "blockHash": "[REDACTED_HASH]",
+          "blockTimestamp": "1788893876",
+          "network": "eip155:5042002",
+          "tokenContract": "[REDACTED]",
+          "sender": "0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943",
+          "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+          "amountAtomic": "1000000",
+          "memoId": null,
+          "evidenceId": "graph:0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7:23",
+          "bindingStatus": "MATCH",
+          "contradictionCodes": []
+        }
+      ],
+      "indexSummary": {
+        "health": "FRESH",
+        "lagBlocks": "0",
+        "observedThroughBlock": "61143086",
+        "candidateCount": 1,
+        "contradiction": false
+      },
+      "untrustedDataNotice": "Candidate observations from Subgraph MCP are untrusted and non-authoritative. They must never be treated as authoritative proof of settlement or used to authorize payment.",
+      "sanitized": true
+    },
+    "vertex_ai_advice": {
+      "accepted": true,
+      "recommendation": {
+        "action": "RECONCILE",
+        "decisionId": "dec-a83a0050-6d42-4f36-b7ff-1175653b4976",
+        "reason": "A matching candidate transaction for the business intent has been found by The Graph. This candidate needs to be verified on-chain against authoritative Arc receipts for final confirmation.",
+        "referencedEvidenceIds": [
+          "oneshot:int-live-graph-001:1",
+          "thegraph:0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000"
+        ],
+        "modelIdentity": {
+          "modelName": "gemini-2.5-flash",
+          "modelVersion": "1.0.0",
+          "promptVersion": "recovery-v1"
+        },
+        "timestamp": "2026-09-09T01:13:25.037Z"
+      },
+      "issues": []
+    },
+    "phase_a_decision": {
+      "schemaVersion": "reconciliation-command-v1",
+      "commandType": "READ_ONLY_LOOKUP",
+      "businessIntentId": "int-live-graph-001",
+      "requestFingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+      "targetState": "UNKNOWN",
+      "reason": "A matching candidate transaction for the business intent has been found by The Graph. This candidate needs to be verified on-chain against authoritative Arc receipts for final confirmation.",
+      "evidenceReferences": [
+        "oneshot:int-live-graph-001:1",
+        "thegraph:0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000"
+      ],
+      "disposition": "SCHEDULE_READ_ONLY_LOOKUP",
+      "advisoryAction": "RECONCILE",
+      "authoritativeProofPresent": false,
+      "issuedAt": "2026-09-09T01:13:20.144Z",
+      "settlementPermission": "NEVER"
+    },
+    "phase_b_decision": {
+      "schemaVersion": "reconciliation-command-v1",
+      "commandType": "MARK_COMMITTED",
+      "businessIntentId": "int-live-graph-001",
+      "requestFingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+      "targetState": "COMMITTED",
+      "reason": "Verified authoritative Arc transfer matches business intent binding",
+      "evidenceReferences": [
+        "oneshot:int-live-graph-001:1",
+        "arc:0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7",
+        "thegraph:0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000"
+      ],
+      "disposition": "CONFIRMED_ON_CHAIN",
+      "advisoryAction": "RECONCILE",
+      "authoritativeProofPresent": true,
+      "issuedAt": "2026-09-09T01:13:20.144Z",
+      "settlementPermission": "NEVER"
+    },
+    "final_recovery_view": {
+      "schemaVersion": "recovery-view-v1",
+      "businessIntentId": "int-live-graph-001",
+      "authoritativeState": "UNKNOWN",
+      "coreDisposition": "MARK_COMMITTED",
+      "recommendedAction": "RECONCILE",
+      "authoritativeEvidence": [
+        {
+          "id": "oneshot:int-live-graph-001:1",
+          "source": "ONESHOT",
+          "authorityClass": "AUTHORITATIVE_ONESHOT",
+          "binding": {
+            "businessIntentId": "int-live-graph-001",
+            "requestFingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+            "network": "eip155:5042002",
+            "tokenContract": "0x3600000000000000000000000000000000000000",
+            "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+            "amountAtomic": "1000000"
+          },
+          "retrievedAt": "2026-09-09T01:13:20.144Z",
+          "digest": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "details": {
+            "settlementState": "UNKNOWN",
+            "stateVersion": "1"
+          }
+        },
+        {
+          "id": "arc:0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7",
+          "source": "ARC",
+          "authorityClass": "AUTHORITATIVE_CHAIN_EVIDENCE",
+          "binding": {
+            "businessIntentId": "int-live-graph-001",
+            "requestFingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+            "network": "eip155:5042002",
+            "tokenContract": "0x3600000000000000000000000000000000000000",
+            "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+            "amountAtomic": "1000000"
+          },
+          "retrievedAt": "2026-09-09T01:13:20.144Z",
+          "digest": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "finality": "FINAL",
+          "blockNumber": "61116056",
+          "blockHash": "0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b",
+          "details": {
+            "receiptStatus": "SUCCESS",
+            "transactionHash": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7",
+            "logIndex": "23"
+          }
+        }
+      ],
+      "providerObservations": [],
+      "indexedCandidates": [
+        {
+          "id": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf717000000",
+          "transactionHash": "0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7",
+          "logIndex": "23",
+          "blockNumber": "61116056",
+          "blockHash": "0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b",
+          "blockTimestamp": "1788893876",
+          "network": "eip155:5042002",
+          "tokenContract": "0x3600000000000000000000000000000000000000",
+          "sender": "0xfcc366c88a0c980e2fd5a7cf7a36494e4457d943",
+          "recipient": "0xa605ee031e41f04f8e193059a39a24407f83677c",
+          "amountAtomic": "1000000",
+          "memoId": null,
+          "evidenceId": "graph:0x72ab1e93c95e5295b2dfa9b3abc8cc5130330f3bba07ad18af2c5b7784f57cf7:23",
+          "bindingStatus": "MATCH",
+          "contradictionCodes": []
+        }
+      ],
+      "indexHealth": "FRESH",
+      "contradiction": false,
+      "contradictionCodes": [],
+      "diagnostics": [],
+      "settlementPermission": "NEVER",
+      "evaluatedAt": "2026-09-09T01:13:20.144Z",
+      "summary": "Disposition: MARK_COMMITTED (CONFIRMED_ON_CHAIN) for intent int-live-graph-001. Authoritative proof: PRESENT."
+    }
+  }
+}

@@ -1,0 +1,787 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { Pool } from 'pg';
+import {
+  TRANSFER_EVENT_TOPIC,
+  type SettlementConfig,
+  type TransactionReceipt,
+} from '@oneshot/arc-adapter';
+import type {
+  CompleteSubmissionResult,
+  EvidenceView,
+  IntentResponse,
+  SettlementResult,
+} from '@oneshot/contracts';
+import type { IntentLedger } from '@oneshot/storage-postgres';
+import {
+  ArcSettlementAdapter,
+  type EvidencePort as LaneBEvidencePort,
+  PrivyAuthorizationAdapter,
+  type SettlementBaseline,
+} from '@oneshot/privy-adapter';
+import {
+  createRecoverySimulatorComposition,
+  LiveSubgraphMcpRecoveryPort,
+  RecoveryService,
+  VertexAiRecoveryAdvisor,
+  type DetailedRecoveryView,
+  type SubgraphMcpRecoveryPort,
+} from '@oneshot/reconciliation';
+import { composeWorker, createProductionRecoveryService } from '../src/composition.js';
+import { executeReconcileIntent } from '../src/worker.js';
+import {
+  IntentLedgerLocalRecoveryStatePort,
+  IntentLedgerRecoveryCommandStore,
+  PrivyArcEvidenceBridge,
+} from '../src/recovery-bridge.js';
+
+describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
+  const sampleRequest = {
+    business_intent_id: 'intent-p4-1',
+    recipient: '0x1111111111111111111111111111111111111111',
+    amount_atomic: '1000000',
+    asset: 'USDC' as const,
+    network: 'eip155:5042002' as const,
+    purpose: 'Gate P4 integration test intent',
+  };
+
+  const sampleBaseline: SettlementBaseline = {
+    rpcUrl: 'https://testnet.arc.network',
+    chainId: 5042002,
+    usdcContract: '0x3333333333333333333333333333333333333333',
+    maxPaymentAtomic: 10000000n,
+    allowedRecipients: ['0x1111111111111111111111111111111111111111'],
+  };
+
+  const sampleConfig: SettlementConfig = {
+    network: 'eip155:5042002',
+    rpcUrl: 'https://testnet.arc.network',
+    usdcContract: '0x3333333333333333333333333333333333333333',
+    maxPaymentAtomic: 10000000n,
+    allowedRecipients: ['0x1111111111111111111111111111111111111111'],
+  };
+
+  const realTxHash = '0x' + 'e'.repeat(64);
+  const realBlockHash = '0x' + 'b'.repeat(64);
+  const realSender = '0x2222222222222222222222222222222222222222';
+  const requestFingerprint = 'f'.repeat(64);
+  const recoveryLocalState = {
+    tokenContract: sampleConfig.usdcContract,
+    correlationSender: realSender,
+    fromBlock: '999000',
+    toBlock: '999200',
+    mcpPolicy: {
+      serverName: 'subgraph-mcp',
+      serverVersion: '1.0.0',
+      deploymentId: `0x${'d'.repeat(64)}`,
+      manifestCid: `Qm${'a'.repeat(44)}`,
+      maxLagBlocks: '5',
+      maxCandidates: 5,
+      maxResultBytes: 65536,
+    },
+  } as const;
+
+  const realReceipt: TransactionReceipt = {
+    transactionHash: realTxHash,
+    chainId: 5042002,
+    from: realSender,
+    to: '0x3333333333333333333333333333333333333333',
+    status: 1,
+    blockNumber: 999123n,
+    blockHash: realBlockHash,
+    logs: [
+      {
+        address: '0x3333333333333333333333333333333333333333',
+        topics: [
+          TRANSFER_EVENT_TOPIC,
+          '0x0000000000000000000000002222222222222222222222222222222222222222',
+          '0x0000000000000000000000001111111111111111111111111111111111111111',
+        ],
+        data: '0x00000000000000000000000000000000000000000000000000000000000f4240',
+        logIndex: 0,
+      },
+    ],
+  };
+
+  const mockWalletProvider = {
+    sendTransaction: async () => ({
+      transactionHash: realTxHash,
+      providerReferenceId: 'privy-ref-p4',
+    }),
+    getReceipt: async () => realReceipt,
+  };
+
+  const explicitMcpStub: SubgraphMcpRecoveryPort = {
+    lookup: async () => {
+      throw new Error('MCP stub is not used by this composition test');
+    },
+  };
+
+  it('composes worker under production profile with real ArcSettlementAdapter, PrivyAuthorizationAdapter, and RecoveryService', async () => {
+    const mockLedger = {
+      ping: async () => {},
+      getIntent: async () => undefined,
+    } as unknown as IntentLedger;
+    const mockPool = {} as unknown as Pool;
+
+    const settlementAdapter = new ArcSettlementAdapter(sampleConfig, mockWalletProvider);
+    const authorizationAdapter = new PrivyAuthorizationAdapter(
+      sampleConfig,
+      sampleBaseline,
+      () => sampleBaseline,
+    );
+
+    const composed = composeWorker(mockPool, mockLedger, {
+      profile: 'production',
+      settlementPort: settlementAdapter,
+      authorizationPort: authorizationAdapter,
+      recovery: {
+        localState: recoveryLocalState,
+        subgraphMcp: explicitMcpStub,
+        bridge: {
+          defaultArcTxHash: realTxHash,
+          defaultReceipt: realReceipt,
+        },
+      },
+    });
+
+    const readiness = await composed.checkReadiness();
+    expect(readiness.ready).toBe(true);
+    expect(composed.options.settlementPort).toBe(settlementAdapter);
+    expect(composed.options.authorizationPort).toBe(authorizationAdapter);
+    expect(composed.options.recoveryService).toBeInstanceOf(RecoveryService);
+  });
+
+  it('rejects production recovery composition without an explicit MCP port', () => {
+    expect(() =>
+      createProductionRecoveryService(
+        {} as IntentLedger,
+        {
+          localState: recoveryLocalState,
+        } as never,
+      ),
+    ).toThrow('explicit subgraphMcp port');
+  });
+
+  it('IntentLedgerLocalRecoveryStatePort produces valid snapshot from IntentLedger', async () => {
+    const mockIntent: IntentResponse = {
+      ...sampleRequest,
+      payload_fingerprint: requestFingerprint,
+      state: 'UNKNOWN',
+      version: 2,
+      attempts: [
+        {
+          attempt_id: 'att-p4-1',
+          stage: 'UNKNOWN',
+          created_at: new Date().toISOString(),
+        },
+      ],
+      evidence: [],
+    };
+
+    const mockLedger = {
+      getIntent: async (id: string) =>
+        id === mockIntent.business_intent_id ? mockIntent : undefined,
+    } as unknown as IntentLedger;
+
+    const port = new IntentLedgerLocalRecoveryStatePort(mockLedger, recoveryLocalState);
+    const snapshot = await port.read('intent-p4-1');
+
+    expect(snapshot.schemaVersion).toBe('local-recovery-snapshot-v1');
+    expect(snapshot.binding.businessIntentId).toBe('intent-p4-1');
+    expect(snapshot.binding.recipient).toBe(sampleRequest.recipient);
+    expect(snapshot.durable.state).toBe('UNKNOWN');
+    expect(snapshot.durable.stateVersion).toBe('2');
+    expect(snapshot.durable.attemptCount).toBe(1);
+    expect(snapshot.indexRequest.correlation).toEqual({
+      strategy: 'TRANSFER_TUPLE_WINDOW',
+      sender: realSender,
+      fromBlock: '999000',
+      toBlock: '999200',
+    });
+    expect(snapshot.mcpPolicy).toEqual(recoveryLocalState.mcpPolicy);
+  });
+
+  it('uses the current Arc head as the recovery upper block when available', async () => {
+    const mockLedger = {
+      getIntent: async () => ({
+        ...sampleRequest,
+        payload_fingerprint: requestFingerprint,
+        state: 'UNKNOWN',
+        version: 2,
+        attempts: [],
+        evidence: [],
+      }),
+    } as unknown as IntentLedger;
+    const port = new IntentLedgerLocalRecoveryStatePort(mockLedger, {
+      ...recoveryLocalState,
+      getToBlock: async () => '1000000',
+    });
+
+    const snapshot = await port.read('intent-p4-1');
+
+    expect(snapshot.indexRequest.correlation.toBlock).toBe('1000000');
+  });
+
+  it('rejects placeholder recovery lookup identity before an MCP call', async () => {
+    const mockLedger = {
+      getIntent: async () => ({
+        ...sampleRequest,
+        payload_fingerprint: requestFingerprint,
+        state: 'UNKNOWN',
+        version: 2,
+        attempts: [],
+        evidence: [],
+      }),
+    } as unknown as IntentLedger;
+    const port = new IntentLedgerLocalRecoveryStatePort(mockLedger, {
+      ...recoveryLocalState,
+      mcpPolicy: { ...recoveryLocalState.mcpPolicy, deploymentId: 'oneshot-arc-testnet' },
+    });
+
+    await expect(port.read('intent-p4-1')).rejects.toThrow(
+      'Invalid Subgraph MCP recovery lookup input',
+    );
+  });
+
+  it('IntentLedgerRecoveryCommandStore enforces durable deduplication, real CAS transitions, and fails closed', async () => {
+    let currentState: 'UNKNOWN' | 'COMMITTED' | 'FAILED_SAFE' = 'UNKNOWN';
+    let currentVersion = 2;
+    const evidenceAppended: EvidenceView[] = [];
+    const persistedEvents = new Map<string, unknown>();
+    let completion: SettlementResult | null = null;
+
+    const mockIntent: IntentResponse = {
+      ...sampleRequest,
+      payload_fingerprint: requestFingerprint,
+      get state() {
+        return currentState;
+      },
+      get version() {
+        return currentVersion;
+      },
+      attempts: [
+        {
+          attempt_id: 'att-p4-1',
+          stage: 'UNKNOWN',
+          created_at: new Date().toISOString(),
+        },
+      ],
+      evidence: [],
+    };
+
+    const mockLedger = {
+      getIntent: async () => mockIntent,
+      appendEvidence: async (_id: string, ev: EvidenceView) => {
+        evidenceAppended.push(ev);
+      },
+      completeSubmission: async (
+        _id: string,
+        _att: string,
+        res: SettlementResult,
+      ): Promise<CompleteSubmissionResult> => {
+        completion = res;
+        if (currentState !== 'UNKNOWN' && currentState !== 'SUBMITTING') {
+          return { completed: false, reason: 'INVALID_STATE', currentState };
+        }
+        currentVersion += 1;
+        if (res.kind === 'CONFIRMED') {
+          currentState = 'COMMITTED';
+          return { completed: true, state: 'COMMITTED', version: currentVersion };
+        }
+        if (res.kind === 'DEFINITELY_NOT_SUBMITTED') {
+          currentState = 'FAILED_SAFE';
+          return { completed: true, state: 'FAILED_SAFE', version: currentVersion };
+        }
+        return { completed: true, state: 'UNKNOWN', version: currentVersion };
+      },
+      recordRecoveryEvent: async (_id: string, eventId: string, payload: unknown) => {
+        if (persistedEvents.has(eventId)) {
+          return { inserted: false };
+        }
+        persistedEvents.set(eventId, payload);
+        return { inserted: true };
+      },
+      getRecoveryEventPayload: async (eventId: string) => persistedEvents.get(eventId),
+    } as unknown as IntentLedger;
+
+    const store = new IntentLedgerRecoveryCommandStore(mockLedger);
+
+    const pack = {
+      schemaVersion: 'recovery-command-pack-v1' as const,
+      packId: 'pack-p4-1',
+      eventId: 'evt-reconcile-p4-1',
+      businessIntentId: 'intent-p4-1',
+      sourceStateVersion: '2',
+      generatedAt: new Date().toISOString(),
+      appendCommands: [
+        {
+          schemaVersion: 'append-recovery-record-v1' as const,
+          commandId: 'cmd-p4-1',
+          operation: 'APPEND_RECOVERY_RECORD' as const,
+          businessIntentId: 'intent-p4-1',
+          expectedStateVersion: '2',
+          record: {
+            schemaVersion: 'recovery-record-v1' as const,
+            recordType: 'OBSERVATION' as const,
+            id: 'rec-1',
+            source: 'ARC' as const,
+            authorityClass: 'AUTHORITATIVE_CHAIN_EVIDENCE' as const,
+            binding: {
+              businessIntentId: 'intent-p4-1',
+              requestFingerprint,
+              network: 'eip155:5042002',
+              tokenContract: '0x0000000000000000000000000000000000000000',
+              recipient: sampleRequest.recipient,
+              amountAtomic: '1000000',
+            },
+            blockNumber: '999123',
+            transferLogIndex: 2,
+            retrievedAt: new Date().toISOString(),
+            digest: 'digest-1',
+          },
+        },
+      ],
+      reconciliationCommand: {
+        schemaVersion: 'reconciliation-command-v1' as const,
+        commandType: 'MARK_COMMITTED' as const,
+        businessIntentId: 'intent-p4-1',
+        requestFingerprint,
+        targetState: 'COMMITTED' as const,
+        reason: 'Arc proof verified',
+        evidenceReferences: ['privy:oneshot-intent-p4-1', 'arc:0x' + 'e'.repeat(64)],
+        disposition: 'MARK_COMMITTED',
+        advisoryAction: 'RETURN_EXISTING_RESULT' as const,
+        authoritativeProofPresent: true,
+        issuedAt: new Date().toISOString(),
+        settlementPermission: 'NEVER' as const,
+      },
+      recoveryView: {} as DetailedRecoveryView,
+      externalSubmissionCount: 0 as const,
+    };
+
+    // First append succeeds and transitions UNKNOWN -> COMMITTED
+    const res1 = await store.append(pack);
+    expect(res1.status).toBe('APPENDED');
+    expect(evidenceAppended).toHaveLength(1);
+    expect(completion).toMatchObject({
+      kind: 'CONFIRMED',
+      transfer_log_index: 2,
+    });
+    expect(currentState).toBe('COMMITTED');
+    expect(currentVersion).toBe(3);
+
+    // Second append with same eventId deduplicates durably
+    const res2 = await store.append(pack);
+    expect(res2.status).toBe('DUPLICATE');
+
+    // Fail closed: missing arc reference in MARK_COMMITTED throws
+    const missingArcPack = {
+      ...pack,
+      eventId: 'evt-missing-arc',
+      sourceStateVersion: '3',
+      reconciliationCommand: {
+        ...pack.reconciliationCommand,
+        evidenceReferences: [],
+      },
+    };
+    await expect(store.append(missingArcPack)).rejects.toThrow(
+      'authoritative Arc transaction reference',
+    );
+
+    // Fail closed: state version mismatch throws and does NOT record/wedge the event
+    const stalePack = {
+      ...pack,
+      eventId: 'evt-stale',
+      sourceStateVersion: '99',
+    };
+    await expect(store.append(stalePack)).rejects.toThrow('State version mismatch');
+    expect(await store.findByEventId('evt-stale')).toBeNull();
+  });
+
+  it('PrivyArcEvidenceBridge derives verified proof envelope from real receipt and avoids fabricated data', async () => {
+    const mockEvidencePort = {
+      lookup: async () => 'FINAL_SUCCESS' as const,
+    };
+
+    const bridge = new PrivyArcEvidenceBridge({
+      evidencePort: mockEvidencePort as unknown as LaneBEvidencePort,
+      receiptSource: {
+        getReceipt: async () => realReceipt,
+      },
+      walletAddress: realSender,
+      chainId: 5042002,
+      defaultArcTxHash: realTxHash,
+      localStatePort: {
+        read: async () =>
+          ({
+            providerIdentity: {
+              referenceId: 'privy-ref-p4',
+              requestFingerprint,
+            },
+            durable: { state: 'UNKNOWN', stateVersion: '2', attemptCount: 1 },
+          }) as never,
+      },
+    });
+
+    const binding = {
+      businessIntentId: 'intent-p4-1',
+      requestFingerprint,
+      network: 'eip155:5042002',
+      tokenContract: '0x3333333333333333333333333333333333333333',
+      recipient: sampleRequest.recipient,
+      amountAtomic: '1000000',
+    };
+
+    const evidence = await bridge.read(binding);
+    expect(evidence.schemaVersion).toBe('recovery-evidence-v1');
+    expect(evidence.binding.businessIntentId).toBe('intent-p4-1');
+    expect(evidence.local.submissionReference).toBe('privy-ref-p4');
+    expect(evidence.privy?.referenceId).toBe('privy-ref-p4');
+    expect(evidence.privy?.requestStatus).toBe('SUCCEEDED');
+    expect(evidence.arc?.receiptStatus).toBe('SUCCESS');
+    expect(evidence.arc?.submissionReference).toBe('privy-ref-p4'); // Must match durable identity
+    expect(evidence.arc?.finality).toBe('FINAL');
+    expect(evidence.arc?.blockNumber).toBe('999123');
+    expect(evidence.arc?.blockHash).toBe(realBlockHash);
+    expect(evidence.arc?.transfer?.sender).toBe(realSender);
+    expect(evidence.arc?.transfer?.amountAtomic).toBe('1000000');
+
+    const mismatchedReceiptBridge = new PrivyArcEvidenceBridge({
+      receiptSource: {
+        getReceipt: async () => ({
+          ...realReceipt,
+          from: '0x4444444444444444444444444444444444444444',
+        }),
+      },
+      walletAddress: realSender,
+      chainId: 5042002,
+      defaultArcTxHash: realTxHash,
+      localStatePort: {
+        read: async () =>
+          ({
+            providerIdentity: {
+              referenceId: 'privy-ref-p4',
+              requestFingerprint,
+            },
+            durable: { state: 'UNKNOWN', stateVersion: '2', attemptCount: 1 },
+          }) as never,
+      },
+    });
+    const mismatchedEvidence = await mismatchedReceiptBridge.read(binding);
+    expect(mismatchedEvidence.arc?.receiptStatus).toBe('PENDING');
+    expect(mismatchedEvidence.arc?.finality).toBe('UNKNOWN');
+    expect(mismatchedEvidence.arc?.transfer).toBeNull();
+
+    // Without receipt source or verified tx, arc evidence is null (not fabricated)
+    const emptyBridge = new PrivyArcEvidenceBridge();
+    const emptyEvidence = await emptyBridge.read(binding);
+    expect(emptyEvidence.arc).toBeNull();
+
+    const fabricatedIdentityBridge = new PrivyArcEvidenceBridge({
+      receiptSource: { getReceipt: async () => realReceipt },
+      walletAddress: realSender,
+      chainId: 5042002,
+      defaultArcTxHash: realTxHash,
+    });
+    await expect(fabricatedIdentityBridge.read(binding)).rejects.toThrow(
+      'durable provider identity',
+    );
+  });
+
+  it('PrivyArcEvidenceBridge integrated with RecoveryService converges UNKNOWN intent to COMMITTED without UNBOUND_EVIDENCE contradiction', async () => {
+    let ledgerState: IntentResponse['state'] = 'UNKNOWN';
+    let ledgerVersion = 2;
+
+    const mockIntent: IntentResponse = {
+      ...sampleRequest,
+      payload_fingerprint: requestFingerprint,
+      get state() {
+        return ledgerState;
+      },
+      get version() {
+        return ledgerVersion;
+      },
+      attempts: [
+        {
+          attempt_id: 'att-p4-1',
+          stage: 'UNKNOWN',
+          created_at: new Date().toISOString(),
+        },
+      ],
+      evidence: [],
+    };
+
+    const mockLedger = {
+      getIntent: async () => mockIntent,
+      getProviderRequestIdentity: async () => ({
+        idempotencyKey: `0x${'a'.repeat(64)}`,
+        referenceId: 'oneshot-intent-p4-1',
+        requestFingerprint,
+      }),
+      appendEvidence: async () => {},
+      completeSubmission: async (
+        _id: string,
+        _att: string,
+        res: SettlementResult,
+      ): Promise<CompleteSubmissionResult> => {
+        if (ledgerState !== 'UNKNOWN' && ledgerState !== 'SUBMITTING') {
+          return { completed: false, reason: 'INVALID_STATE', currentState: ledgerState };
+        }
+        ledgerVersion += 1;
+        ledgerState = res.kind === 'CONFIRMED' ? 'COMMITTED' : 'FAILED_SAFE';
+        return { completed: true, state: ledgerState, version: ledgerVersion };
+      },
+    } as unknown as IntentLedger;
+
+    const mockEvidencePort = {
+      lookup: async () => 'FINAL_SUCCESS' as const,
+    };
+
+    const recoveryService = createProductionRecoveryService(mockLedger, {
+      localState: recoveryLocalState,
+      subgraphMcp: explicitMcpStub,
+      bridge: {
+        evidencePort: mockEvidencePort as unknown as LaneBEvidencePort,
+        receiptSource: {
+          getReceipt: async () => realReceipt,
+        },
+        walletAddress: realSender,
+        chainId: 5042002,
+        defaultArcTxHash: realTxHash,
+      },
+    });
+
+    const job = {
+      schemaVersion: 'recovery-job-v1' as const,
+      eventId: 'reconcile:intent-p4-1:2',
+      businessIntentId: 'intent-p4-1',
+      requestedAt: new Date().toISOString(),
+    };
+
+    const result = await recoveryService.handle(job);
+    expect(result.status).toBe('PROCESSED');
+    expect(result.pack?.reconciliationCommand.commandType).toBe('MARK_COMMITTED');
+    expect(result.pack?.reconciliationCommand.targetState).toBe('COMMITTED');
+    expect(result.externalSubmissionCount).toBe(0);
+    expect(ledgerState).toBe('COMMITTED');
+    expect(ledgerVersion).toBe(3);
+  });
+
+  it('executeReconcileIntent handles UNKNOWN intent through RecoveryService with zero submissions', async () => {
+    let completedWith: SettlementResult | null = null;
+    let ledgerState: IntentResponse['state'] = 'UNKNOWN';
+
+    const mockIntent: IntentResponse = {
+      ...sampleRequest,
+      payload_fingerprint: requestFingerprint,
+      get state() {
+        return ledgerState;
+      },
+      version: 7,
+      attempts: [
+        {
+          attempt_id: 'att-p4-1',
+          stage: 'UNKNOWN',
+          created_at: new Date().toISOString(),
+        },
+      ],
+      evidence: [],
+    };
+
+    const mockLedger = {
+      getIntent: async () => mockIntent,
+      getProviderRequestIdentity: async () => ({
+        idempotencyKey: `0x${'a'.repeat(64)}`,
+        referenceId: 'oneshot-intent-p4-1',
+        requestFingerprint,
+      }),
+      appendEvidence: async () => {},
+      completeSubmission: async (
+        _id: string,
+        _att: string,
+        res: SettlementResult,
+      ): Promise<CompleteSubmissionResult> => {
+        completedWith = res;
+        ledgerState = res.kind === 'CONFIRMED' ? 'COMMITTED' : 'FAILED_SAFE';
+        return { completed: true, state: ledgerState, version: 8 };
+      },
+    } as unknown as IntentLedger;
+
+    const commandStore = new IntentLedgerRecoveryCommandStore(mockLedger);
+    const composition = createRecoverySimulatorComposition({
+      businessIntentId: mockIntent.business_intent_id,
+      commandStore,
+    });
+
+    const mockPool = {} as unknown as Pool;
+    const worker = composeWorker(mockPool, mockLedger, {
+      profile: 'simulator',
+      recoveryService: composition.service,
+    });
+
+    await executeReconcileIntent(
+      mockIntent.business_intent_id,
+      worker.options,
+      composition.job.eventId,
+    );
+
+    expect(completedWith).not.toBeNull();
+    expect(completedWith?.kind).toBe('CONFIRMED');
+    expect(ledgerState).toBe('COMMITTED');
+    const stored = await commandStore.findByEventId(composition.job.eventId);
+    expect(stored).not.toBeNull();
+    expect(stored?.externalSubmissionCount).toBe(0);
+  });
+
+  it('composes hashless Graph candidate recovery with Arc verification and zero external submissions', async () => {
+    let ledgerState: IntentResponse['state'] = 'UNKNOWN';
+    let ledgerVersion = 3;
+    let completedWith: SettlementResult | null = null;
+
+    const mockIntent: IntentResponse = {
+      ...sampleRequest,
+      payload_fingerprint: requestFingerprint,
+      get state() {
+        return ledgerState;
+      },
+      get version() {
+        return ledgerVersion;
+      },
+      attempts: [
+        {
+          attempt_id: 'att-live-1',
+          stage: 'UNKNOWN',
+          created_at: new Date().toISOString(),
+        },
+      ],
+      evidence: [],
+    };
+
+    const mockLedger = {
+      getIntent: async () => mockIntent,
+      getProviderRequestIdentity: async () => ({
+        idempotencyKey: `0x${'a'.repeat(64)}`,
+        referenceId: 'oneshot-intent-p4-1',
+        requestFingerprint,
+      }),
+      appendEvidence: async () => {},
+      completeSubmission: async (
+        _id: string,
+        _att: string,
+        res: SettlementResult,
+      ): Promise<CompleteSubmissionResult> => {
+        completedWith = res;
+        ledgerState = res.kind === 'CONFIRMED' ? 'COMMITTED' : 'FAILED_SAFE';
+        ledgerVersion += 1;
+        return { completed: true, state: ledgerState, version: ledgerVersion };
+      },
+    } as unknown as IntentLedger;
+
+    const candidateRecord = {
+      id: 'cand-live-1',
+      transactionHash: realTxHash,
+      logIndex: '0',
+      blockNumber: '999123',
+      blockHash: realBlockHash,
+      blockTimestamp: '1788786010',
+      network: 'eip155:5042002',
+      tokenContract: sampleConfig.usdcContract,
+      sender: realSender,
+      recipient: sampleRequest.recipient,
+      amountAtomic: sampleRequest.amount_atomic,
+      memoId: null,
+    };
+
+    const graphQlBody = {
+      data: {
+        settlementCandidates: [candidateRecord],
+        _meta: {
+          deployment: recoveryLocalState.mcpPolicy.manifestCid,
+          hasIndexingErrors: false,
+          block: {
+            number: 999125,
+            hash: realBlockHash,
+            timestamp: '1788786020',
+          },
+        },
+      },
+    };
+
+    const mockGraphFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => graphQlBody,
+    } as Response);
+
+    const subgraphMcp = new LiveSubgraphMcpRecoveryPort({
+      graphApiKey: 'test-graph-key',
+      getChainHead: async () => ({
+        blockNumber: '999126',
+        observedAt: '2026-09-08T22:00:00.000Z',
+      }),
+      fetchFn: mockGraphFetch as unknown as typeof fetch,
+      now: () => '2026-09-08T22:00:00.000Z',
+    });
+
+    const mockVertexFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    action: 'RECONCILE',
+                    decisionId: 'dec-live-1',
+                    reason: 'Discovered matching candidate via Subgraph MCP',
+                    referencedEvidenceIds: ['thegraph:cand-live-1'],
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    } as Response);
+
+    const advisor = new VertexAiRecoveryAdvisor({
+      projectId: 'oneshot-508002',
+      getAuthToken: () => 'mock-vertex-token',
+      fetchFn: mockVertexFetch as unknown as typeof fetch,
+      now: () => '2026-09-08T22:00:00.000Z',
+    });
+
+    const recoveryService = createProductionRecoveryService(mockLedger, {
+      localState: recoveryLocalState,
+      bridge: {
+        receiptSource: {
+          getReceipt: async () => realReceipt,
+        },
+        walletAddress: realSender,
+        chainId: 5042002,
+      },
+      subgraphMcp,
+      advisor,
+    });
+
+    const mockPool = {} as unknown as Pool;
+    const worker = composeWorker(mockPool, mockLedger, {
+      profile: 'simulator',
+      recoveryService,
+    });
+
+    const eventId = 'reconcile:live-drill:1';
+    await executeReconcileIntent(mockIntent.business_intent_id, worker.options, eventId);
+
+    expect(mockGraphFetch).toHaveBeenCalled();
+    expect(mockVertexFetch).toHaveBeenCalled();
+    expect(completedWith).not.toBeNull();
+    expect(completedWith?.kind).toBe('CONFIRMED');
+    if (completedWith?.kind === 'CONFIRMED') {
+      expect(completedWith.provider_reference_id).toBe('oneshot-intent-p4-1');
+    }
+    expect(ledgerState).toBe('COMMITTED');
+  });
+});

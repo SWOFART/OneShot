@@ -1,0 +1,18 @@
+{
+  "version": "v1",
+  "kind": "intent.replay-conflict",
+  "intent": {
+    "business_intent_id": "018f-example-stable-id",
+    "recipient": "0x1111111111111111111111111111111111111111",
+    "amount_atomic": "1250000",
+    "asset": "USDC",
+    "network": "eip155:5042002",
+    "purpose": "Invoice INV-1001"
+  },
+  "result_kind": "INTENT_PAYLOAD_CONFLICT",
+  "expected": {
+    "intent_state": "AUTHORIZING",
+    "external_submission_count": 0,
+    "error_code": "INTENT_PAYLOAD_CONFLICT"
+  }
+}

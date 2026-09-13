@@ -1,0 +1,21 @@
+{
+  "version": "recovery-advisor-v1",
+  "recommendation": {
+    "action": "RECONCILE",
+    "decisionId": "dec-reconcile-001",
+    "reason": "Requesting read-only indexer re-check for in-flight transfer",
+    "referencedEvidenceIds": [],
+    "modelIdentity": {
+      "modelName": "recovery-advisor-llm",
+      "modelVersion": "1.0.0",
+      "promptVersion": "recovery-v1"
+    },
+    "timestamp": "2026-09-07T12:00:00.000Z"
+  },
+  "expected": {
+    "disposition": "SCHEDULE_READ_ONLY_LOOKUP",
+    "commandType": "READ_ONLY_LOOKUP",
+    "targetState": "UNKNOWN",
+    "external_submission_count": 0
+  }
+}

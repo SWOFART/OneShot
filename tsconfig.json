@@ -1,0 +1,50 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/brand"
+    },
+    {
+      "path": "./packages/contracts"
+    },
+    {
+      "path": "./packages/domain"
+    },
+    {
+      "path": "./packages/reconciliation"
+    },
+    {
+      "path": "./packages/storage-postgres"
+    },
+    {
+      "path": "./packages/testkit-domain"
+    },
+    {
+      "path": "./packages/arc-adapter"
+    },
+    {
+      "path": "./packages/privy-adapter"
+    },
+    {
+      "path": "./packages/supplier-adapter"
+    },
+    {
+      "path": "./packages/testkit-settlement"
+    },
+    {
+      "path": "./apps/api"
+    },
+    {
+      "path": "./apps/worker"
+    },
+    {
+      "path": "./packages/recovery-ui"
+    },
+    {
+      "path": "./packages/settlement-ui"
+    },
+    {
+      "path": "./apps/web"
+    }
+  ]
+}

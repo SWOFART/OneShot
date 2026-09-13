@@ -1,0 +1,29 @@
+{
+  "name": "@oneshot/privy-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Privy authorization policy modelling, canonical settlement requests, drift hardening, and frozen adapter ports.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "lint": "eslint src test",
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@oneshot/arc-adapter": "workspace:*",
+    "@oneshot/contracts": "workspace:*",
+    "@privy-io/node": "0.34.0",
+    "viem": "2.56.3"
+  }
+}

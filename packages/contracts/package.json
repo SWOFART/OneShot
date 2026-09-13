@@ -1,0 +1,33 @@
+{
+  "name": "@oneshot/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "generated",
+    "openapi"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "check:generated": "node scripts/generate-contracts.mjs --check",
+    "clean": "tsc -b --clean",
+    "generate": "node scripts/generate-contracts.mjs",
+    "lint": "eslint src test scripts",
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc -b --pretty false",
+    "validate:fixtures": "node scripts/validate-fixtures.mjs"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1"
+  }
+}

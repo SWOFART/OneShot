@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneshot.invalid/schemas/reconciliation-command-v1.schema.json",
+  "title": "OneShot Reconciliation safety-core command v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "commandType",
+    "businessIntentId",
+    "requestFingerprint",
+    "targetState",
+    "reason",
+    "evidenceReferences",
+    "disposition",
+    "advisoryAction",
+    "authoritativeProofPresent",
+    "issuedAt",
+    "settlementPermission"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "reconciliation-command-v1" },
+    "commandType": {
+      "enum": [
+        "HOLD_UNKNOWN",
+        "READ_ONLY_LOOKUP",
+        "ESCALATE_UNKNOWN",
+        "MARK_COMMITTED",
+        "MARK_FAILED_SAFE"
+      ]
+    },
+    "businessIntentId": { "type": "string", "maxLength": 128 },
+    "requestFingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "targetState": { "enum": ["UNKNOWN", "COMMITTED", "FAILED_SAFE"] },
+    "reason": { "type": "string", "maxLength": 1000 },
+    "evidenceReferences": {
+      "type": "array",
+      "items": { "type": "string", "maxLength": 256 }
+    },
+    "disposition": { "type": "string", "maxLength": 128 },
+    "advisoryAction": {
+      "enum": ["WAIT", "RECONCILE", "ESCALATE", "RETURN_EXISTING_RESULT"]
+    },
+    "authoritativeProofPresent": { "type": "boolean" },
+    "issuedAt": { "type": "string", "format": "date-time", "maxLength": 35 },
+    "settlementPermission": { "const": "NEVER" }
+  }
+}

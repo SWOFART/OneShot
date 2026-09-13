@@ -1,0 +1,144 @@
+import { useState, type ReactNode } from 'react';
+import type { OperatorSession, UserWalletSession } from '../auth/session.js';
+import { maskIdentifier } from './workspace-copy.js';
+
+export interface LoginGateProps {
+  readonly session: OperatorSession;
+  readonly machineToken: string;
+  readonly onMachineTokenChange: (value: string) => void;
+  readonly showMachineToken?: boolean;
+  readonly userWallet?: UserWalletSession;
+  readonly children: ReactNode;
+}
+
+function MachineTokenField(props: {
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+}) {
+  return (
+    <details className="machine-token">
+      <summary>Machine token (advanced)</summary>
+      <label htmlFor="machine-token-input">Machine token</label>
+      <input
+        id="machine-token-input"
+        type="password"
+        autoComplete="off"
+        value={props.value}
+        onChange={(event) => props.onChange(event.target.value)}
+      />
+      <small>
+        Memory only, never stored. Use the service token issued to the worker and agent clients.
+      </small>
+    </details>
+  );
+}
+
+export function LoginGate(props: LoginGateProps) {
+  const [copiedSessionId, setCopiedSessionId] = useState(false);
+  const [copiedWalletAddress, setCopiedWalletAddress] = useState(false);
+  const machineTokenPresent = props.machineToken.trim().length > 0;
+  const unlocked = props.session.status === 'SIGNED_IN' || machineTokenPresent;
+  const showMachineToken = props.showMachineToken ?? import.meta.env.MODE === 'test';
+
+  async function copySubject(subject: string): Promise<void> {
+    try {
+      await navigator.clipboard?.writeText(subject);
+      setCopiedSessionId(true);
+    } catch {
+      setCopiedSessionId(false);
+    }
+  }
+
+  async function copyWalletAddress(address: string | null | undefined): Promise<void> {
+    if (!address) return;
+    try {
+      await navigator.clipboard?.writeText(address);
+      setCopiedWalletAddress(true);
+    } catch {
+      setCopiedWalletAddress(false);
+    }
+  }
+
+  if (!unlocked) {
+    return (
+      <section className="login-gate" aria-label="Operator sign-in">
+        {props.session.status === 'LOADING' ? (
+          <p className="loading-text">Checking your session…</p>
+        ) : props.session.status === 'UNCONFIGURED' ? (
+          <p role="status" className="gate-unconfigured">
+            Privy login is not configured for this build. Set <code>VITE_PRIVY_APP_ID</code> to
+            enable it.
+          </p>
+        ) : (
+          <div className="gate-action-box">
+            <h2>Operator sign-in</h2>
+            <p className="gate-subtitle">
+              The workspace reads trusted payment status. Sign in to continue.
+            </p>
+            <button type="button" className="btn-privy" onClick={() => props.session.login()}>
+              Sign in with Privy
+            </button>
+          </div>
+        )}
+        {showMachineToken && (
+          <MachineTokenField value={props.machineToken} onChange={props.onMachineTokenChange} />
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <>
+      <section className="operator-identity" aria-label="Operator identity">
+        {props.session.status === 'SIGNED_IN' && props.session.subject ? (
+          <>
+            <span className="operator-badge">PRIVY CONNECTED</span>
+            <span>Workspace session active</span>
+            <details className="technical-details operator-details">
+              <summary>Session details</summary>
+              <code className="operator-did" title="Technical session identifier">
+                {maskIdentifier(props.session.subject, 8)}
+              </code>
+              <button
+                type="button"
+                className="btn-copy"
+                onClick={() => void copySubject(props.session.subject ?? '')}
+              >
+                {copiedSessionId ? 'Copied' : 'Copy session ID'}
+              </button>
+              <div className="session-wallet-address">
+                <span>Wallet address</span>
+                <code
+                  className="operator-wallet-address"
+                  title="Wallet address used for user-wallet payments"
+                >
+                  {props.userWallet?.address ?? 'No wallet connected'}
+                </code>
+                <button
+                  type="button"
+                  className="btn-copy"
+                  disabled={!props.userWallet?.address}
+                  onClick={() => void copyWalletAddress(props.userWallet?.address)}
+                >
+                  {copiedWalletAddress ? 'Copied' : 'Copy wallet address'}
+                </button>
+              </div>
+            </details>
+            <small className="operator-note">Authenticated through a Privy wallet session.</small>
+            <button type="button" className="btn-signout" onClick={() => props.session.logout()}>
+              Sign out
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="operator-badge">Using a machine token</span>
+            {showMachineToken && (
+              <MachineTokenField value={props.machineToken} onChange={props.onMachineTokenChange} />
+            )}
+          </>
+        )}
+      </section>
+      {props.children}
+    </>
+  );
+}

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneshot.invalid/schemas/chaos-timeline-v1.schema.json",
+  "title": "OneShot Chaos timeline scenario v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "seed",
+    "injectionPoint",
+    "failureEvents",
+    "mcpDegradations",
+    "expectedTargetState",
+    "expectedCommandType",
+    "expectedSettlementPermission",
+    "expectedExternalSubmissions"
+  ],
+  "properties": {
+    "id": { "type": "string", "maxLength": 128 },
+    "name": { "type": "string", "maxLength": 256 },
+    "seed": { "type": "integer" },
+    "injectionPoint": {
+      "enum": ["BEFORE_SUBMISSION", "POSSIBLY_SUBMITTED", "CONFIRMED"]
+    },
+    "failureEvents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "atStep", "description"],
+        "properties": {
+          "type": {
+            "enum": [
+              "PROCESS_KILL",
+              "TIMEOUT",
+              "DISCONNECT",
+              "RESPONSE_LOSS",
+              "DELAYED_EVIDENCE",
+              "RESTART"
+            ]
+          },
+          "atStep": { "type": "integer", "minimum": 1 },
+          "description": { "type": "string", "maxLength": 256 }
+        }
+      }
+    },
+    "mcpDegradations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "description"],
+        "properties": {
+          "type": {
+            "enum": [
+              "DELAYED_RESULT",
+              "EMPTY_RESULT",
+              "LAGGING_HEAD",
+              "PROVIDER_HEALTH_ERROR",
+              "OMIT_FRESHNESS_METADATA",
+              "QUERY_FAILURE",
+              "DUPLICATE_EVENTS",
+              "OUT_OF_ORDER_EVENTS",
+              "WRONG_DEPLOYMENT",
+              "WRONG_TOOL",
+              "OVERSIZED_RESULT",
+              "MALFORMED_RESULT",
+              "PROMPT_INJECTION_TEXT"
+            ]
+          },
+          "description": { "type": "string", "maxLength": 256 }
+        }
+      }
+    },
+    "contradictionSetup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "privyStatus": {
+          "enum": ["PENDING", "SUCCEEDED", "FAILED", "NOT_FOUND", "UNAVAILABLE"]
+        },
+        "arcStatus": {
+          "enum": ["PENDING", "SUCCESS", "REVERT", "NOT_FOUND", "UNAVAILABLE"]
+        },
+        "recipientMismatch": { "type": "boolean" },
+        "tokenMismatch": { "type": "boolean" },
+        "amountMismatch": { "type": "boolean" },
+        "networkMismatch": { "type": "boolean" }
+      }
+    },
+    "agentScenario": {
+      "enum": [
+        "wait",
+        "reconcile",
+        "escalate",
+        "return-existing-result",
+        "unsupported-action",
+        "malformed-output",
+        "prompt-injection",
+        "fabricated-binding",
+        "auto"
+      ]
+    },
+    "expectedTargetState": {
+      "enum": ["UNKNOWN", "COMMITTED", "FAILED_SAFE"]
+    },
+    "expectedCommandType": {
+      "enum": [
+        "HOLD_UNKNOWN",
+        "READ_ONLY_LOOKUP",
+        "ESCALATE_UNKNOWN",
+        "MARK_COMMITTED",
+        "MARK_FAILED_SAFE"
+      ]
+    },
+    "expectedSettlementPermission": { "const": "NEVER" },
+    "expectedExternalSubmissions": { "const": 0 }
+  }
+}

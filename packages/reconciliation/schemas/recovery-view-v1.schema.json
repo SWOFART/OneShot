@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneshot.invalid/schemas/recovery-view-v1.schema.json",
+  "title": "OneShot Detailed recovery view v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "businessIntentId",
+    "authoritativeState",
+    "coreDisposition",
+    "recommendedAction",
+    "authoritativeEvidence",
+    "providerObservations",
+    "indexedCandidates",
+    "indexHealth",
+    "contradiction",
+    "contradictionCodes",
+    "diagnostics",
+    "settlementPermission",
+    "evaluatedAt",
+    "summary"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "recovery-view-v1" },
+    "businessIntentId": { "type": "string", "maxLength": 128 },
+    "authoritativeState": {
+      "enum": ["SUBMITTING", "UNKNOWN", "COMMITTED", "FAILED_SAFE"]
+    },
+    "coreDisposition": {
+      "enum": [
+        "HOLD_UNKNOWN",
+        "READ_ONLY_LOOKUP",
+        "ESCALATE_UNKNOWN",
+        "MARK_COMMITTED",
+        "MARK_FAILED_SAFE"
+      ]
+    },
+    "recommendedAction": {
+      "enum": ["WAIT", "RECONCILE", "ESCALATE", "RETURN_EXISTING_RESULT"]
+    },
+    "authoritativeEvidence": { "type": "array" },
+    "providerObservations": { "type": "array" },
+    "indexedCandidates": { "type": "array" },
+    "indexHealth": {
+      "enum": ["FRESH", "LAGGING", "UNHEALTHY", "UNAVAILABLE", "UNKNOWN_FRESHNESS"]
+    },
+    "contradiction": { "type": "boolean" },
+    "contradictionCodes": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "settlementPermission": { "const": "NEVER" },
+    "evaluatedAt": { "type": "string", "format": "date-time", "maxLength": 35 },
+    "summary": { "type": "string", "maxLength": 500 }
+  }
+}

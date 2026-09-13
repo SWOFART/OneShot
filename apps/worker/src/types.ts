@@ -1,0 +1,67 @@
+import type {
+  AuthorizationResult,
+  CreateIntentRequest,
+  EvidenceView,
+  SettlementResult,
+} from '@oneshot/contracts';
+import type { IntentLedger } from '@oneshot/storage-postgres';
+import type { JobLedger } from '@oneshot/storage-postgres';
+import type { SupplierPort } from '@oneshot/contracts';
+import type { Pool } from 'pg';
+
+import type { RecoveryService } from '@oneshot/reconciliation';
+
+export interface AuthorizationPort {
+  authorize(request: CreateIntentRequest): Promise<AuthorizationResult>;
+}
+
+export interface SettlementContext {
+  readonly attemptId: string;
+  readonly correlationId: string;
+}
+
+export interface ProviderRequestIdentity {
+  readonly idempotencyKey: string;
+  readonly referenceId: string;
+  readonly requestFingerprint: string;
+  readonly walletId?: string | undefined;
+  readonly policyId?: string | undefined;
+  readonly providerKind?: 'DIRECT_ARC' | undefined;
+  readonly transactionHash?: string | undefined;
+}
+
+export interface SettlementPort {
+  getSubmissionIdentity?(request: CreateIntentRequest): ProviderRequestIdentity;
+  submit(request: CreateIntentRequest, context: SettlementContext): Promise<SettlementResult>;
+}
+
+export interface GraphEvidenceCaptureRequest {
+  readonly businessIntentId: string;
+  readonly transactionHash?: string;
+  readonly blockNumber?: string;
+}
+
+export interface GraphEvidenceCapturePort {
+  capture(request: GraphEvidenceCaptureRequest): Promise<EvidenceView>;
+}
+
+export interface WorkerConfig {
+  readonly submissionsDisabled?: boolean | undefined;
+  readonly authorizationRetryDelayMs?: number | undefined;
+  readonly submissionLeaseMs?: number | undefined;
+  readonly contractVersion?: string | undefined;
+  readonly network?: string | undefined;
+}
+
+export interface WorkerOptions {
+  readonly pool: Pool;
+  readonly ledger: IntentLedger;
+  readonly authorizationPort?: AuthorizationPort | undefined;
+  readonly settlementPort: SettlementPort;
+  readonly recoveryService?: RecoveryService | undefined;
+  readonly graphEvidence?: GraphEvidenceCapturePort | undefined;
+  readonly jobLedger?: JobLedger | undefined;
+  readonly supplier?: SupplierPort | undefined;
+  readonly concurrency?: number | undefined;
+  readonly config?: WorkerConfig | undefined;
+}

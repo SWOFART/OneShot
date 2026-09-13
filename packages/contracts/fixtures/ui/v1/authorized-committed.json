@@ -1,0 +1,66 @@
+{
+  "scenario": "authorized-committed",
+  "description": "Authorized intent successfully settled on Arc testnet",
+  "intent": {
+    "business_intent_id": "018f-ui-committed-001",
+    "payload_fingerprint": "a000000000000000000000000000000000000000000000000000000000000001",
+    "recipient": "0x1111111111111111111111111111111111111111",
+    "amount_atomic": "1250000",
+    "asset": "USDC",
+    "network": "eip155:5042002",
+    "purpose": "Invoice INV-1001",
+    "state": "COMMITTED",
+    "version": 3,
+    "policy": {
+      "policy_id": "privy-policy-arc-prod",
+      "status": "CONFIGURED",
+      "settlement_cap_atomic": "10000000",
+      "allowed_recipients": ["0x1111111111111111111111111111111111111111"]
+    },
+    "attempts": [
+      {
+        "attempt_id": "attempt-ui-001",
+        "stage": "COMMITTED",
+        "created_at": "2026-09-08T12:00:00.000Z",
+        "authorization_status": "AUTHORIZED"
+      }
+    ],
+    "settlement": {
+      "provider_reference_id": "arc-tx-001",
+      "transaction_hash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "block_number": "100",
+      "transfer_log_index": 0,
+      "token_contract": "0x3600000000000000000000000000000000000000",
+      "explorer_url": "https://testnet.arcscan.io/tx/0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "evidence": [
+      {
+        "source": "PRIVY",
+        "authority_class": "AUTHORITATIVE",
+        "retrieved_at": "2026-09-08T12:00:01.000Z",
+        "digest": "digest-privy-001"
+      },
+      {
+        "source": "ARC",
+        "authority_class": "AUTHORITATIVE",
+        "retrieved_at": "2026-09-08T12:00:02.000Z",
+        "digest": "digest-arc-001",
+        "block_number": "100"
+      }
+    ]
+  },
+  "recovery_view": {
+    "business_intent_id": "018f-ui-committed-001",
+    "authoritative_state": "COMMITTED",
+    "recommended_action": "RETURN_EXISTING_RESULT",
+    "evidence": [
+      {
+        "source": "ARC",
+        "authority_class": "AUTHORITATIVE",
+        "retrieved_at": "2026-09-08T12:00:02.000Z",
+        "digest": "digest-arc-001",
+        "block_number": "100"
+      }
+    ]
+  }
+}

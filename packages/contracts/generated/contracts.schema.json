@@ -1,0 +1,1354 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneshot.example/schemas/contracts-v1.json",
+  "title": "OneShot contracts-v1",
+  "$defs": {
+    "CreateIntentRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "business_intent_id",
+        "recipient",
+        "amount_atomic",
+        "asset",
+        "network",
+        "purpose"
+      ],
+      "properties": {
+        "business_intent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$",
+          "examples": [
+            "018f-example-stable-id"
+          ]
+        },
+        "recipient": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "amount_atomic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "asset": {
+          "type": "string",
+          "const": "USDC"
+        },
+        "network": {
+          "type": "string",
+          "const": "eip155:5042002"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "examples": [
+            "Invoice INV-1001"
+          ]
+        }
+      }
+    },
+    "PolicySummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "CONFIGURED",
+            "EXCEEDED",
+            "NOT_CONFIGURED",
+            "UNKNOWN"
+          ]
+        },
+        "settlement_cap_atomic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "allowed_recipients": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "examples": [
+              "0x1111111111111111111111111111111111111111"
+            ]
+          }
+        }
+      }
+    },
+    "Attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt_id",
+        "stage",
+        "created_at"
+      ],
+      "properties": {
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "AUTHORIZING",
+            "READY",
+            "SUBMITTING",
+            "COMMITTED",
+            "FAILED_SAFE",
+            "UNKNOWN",
+            "REJECTED"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sanitized_error": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "authorization_status": {
+          "type": "string",
+          "enum": [
+            "CHECKING",
+            "AUTHORIZED",
+            "DENIED",
+            "UNAVAILABLE",
+            "CONFIG_MISMATCH"
+          ]
+        }
+      }
+    },
+    "Settlement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_reference_id",
+        "transaction_hash",
+        "block_number",
+        "transfer_log_index"
+      ],
+      "properties": {
+        "provider_reference_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "transaction_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{64}$"
+        },
+        "block_number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "transfer_log_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "token_contract": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "explorer_url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "EvidenceObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "authority_class",
+        "retrieved_at",
+        "digest"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "ONESHOT",
+            "PRIVY",
+            "ARC",
+            "THE_GRAPH",
+            "LLM"
+          ]
+        },
+        "authority_class": {
+          "type": "string",
+          "enum": [
+            "AUTHORITATIVE",
+            "OBSERVATION",
+            "ADVISORY"
+          ]
+        },
+        "retrieved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "digest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "block_number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "freshness": {
+          "type": "string",
+          "enum": [
+            "FRESH",
+            "LAGGING",
+            "UNHEALTHY",
+            "UNAVAILABLE",
+            "UNKNOWN_FRESHNESS"
+          ]
+        }
+      }
+    },
+    "IntentResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "business_intent_id",
+        "payload_fingerprint",
+        "recipient",
+        "amount_atomic",
+        "asset",
+        "network",
+        "purpose",
+        "state",
+        "version",
+        "attempts",
+        "evidence"
+      ],
+      "properties": {
+        "business_intent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "payload_fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "recipient": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "amount_atomic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "asset": {
+          "type": "string",
+          "const": "USDC"
+        },
+        "network": {
+          "type": "string",
+          "const": "eip155:5042002"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "AUTHORIZING",
+            "READY",
+            "SUBMITTING",
+            "COMMITTED",
+            "FAILED_SAFE",
+            "UNKNOWN",
+            "REJECTED"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "payment_mode": {
+          "type": "string",
+          "enum": [
+            "SERVER_PRIVY",
+            "USER_WALLET"
+          ]
+        },
+        "policy": {
+          "$ref": "#/$defs/PolicySummary"
+        },
+        "attempts": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/Attempt"
+          }
+        },
+        "settlement": {
+          "$ref": "#/$defs/Settlement"
+        },
+        "evidence": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/EvidenceObservation"
+          }
+        }
+      }
+    },
+    "ReconcileResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "business_intent_id",
+        "queued",
+        "state"
+      ],
+      "properties": {
+        "business_intent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "queued": {
+          "type": "boolean"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "AUTHORIZING",
+            "READY",
+            "SUBMITTING",
+            "COMMITTED",
+            "FAILED_SAFE",
+            "UNKNOWN",
+            "REJECTED"
+          ]
+        }
+      }
+    },
+    "CreateJobRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_key",
+        "tool_id",
+        "report_subject",
+        "recipient",
+        "amount_atomic"
+      ],
+      "properties": {
+        "task_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "tool_id": {
+          "type": "string",
+          "const": "team-report-v1"
+        },
+        "report_subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "recipient": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "amount_atomic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        }
+      }
+    },
+    "CreateUserWalletJobRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_key",
+        "tool_id",
+        "report_subject",
+        "recipient",
+        "amount_atomic",
+        "payer_wallet"
+      ],
+      "properties": {
+        "task_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "tool_id": {
+          "type": "string",
+          "const": "team-report-v1"
+        },
+        "report_subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "recipient": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "amount_atomic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "payer_wallet": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        }
+      }
+    },
+    "UserWalletPayment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chain_id",
+        "network",
+        "token_contract",
+        "payer_wallet",
+        "recipient",
+        "amount_atomic"
+      ],
+      "properties": {
+        "chain_id": {
+          "type": "integer",
+          "const": 5042002
+        },
+        "network": {
+          "type": "string",
+          "const": "eip155:5042002"
+        },
+        "token_contract": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "payer_wallet": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "recipient": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "amount_atomic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "transaction_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{64}$"
+        }
+      }
+    },
+    "SupplierQuote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supplier_id",
+        "order_reference",
+        "recipient",
+        "amount_atomic",
+        "asset",
+        "network",
+        "expires_at"
+      ],
+      "properties": {
+        "supplier_id": {
+          "type": "string",
+          "const": "team-report-v1"
+        },
+        "order_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "recipient": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "amount_atomic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "asset": {
+          "type": "string",
+          "const": "USDC"
+        },
+        "network": {
+          "type": "string",
+          "const": "eip155:5042002"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "SupplierResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order_reference",
+        "result_reference",
+        "report"
+      ],
+      "properties": {
+        "order_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "result_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "report": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      }
+    },
+    "JobResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "task_key",
+        "tool_id",
+        "business_intent_id",
+        "supplier",
+        "payment_state",
+        "payment_mode",
+        "delivery_state",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "task_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "tool_id": {
+          "type": "string",
+          "const": "team-report-v1"
+        },
+        "business_intent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "supplier": {
+          "$ref": "#/$defs/SupplierQuote"
+        },
+        "payment_state": {
+          "type": "string",
+          "enum": [
+            "AUTHORIZING",
+            "READY",
+            "SUBMITTING",
+            "COMMITTED",
+            "FAILED_SAFE",
+            "UNKNOWN",
+            "REJECTED"
+          ]
+        },
+        "payment_mode": {
+          "type": "string",
+          "enum": [
+            "SERVER_PRIVY",
+            "USER_WALLET"
+          ]
+        },
+        "user_payment": {
+          "$ref": "#/$defs/UserWalletPayment"
+        },
+        "delivery_state": {
+          "type": "string",
+          "enum": [
+            "NOT_REQUESTED",
+            "PENDING",
+            "AVAILABLE",
+            "RETRIEVAL_FAILED"
+          ]
+        },
+        "settlement": {
+          "$ref": "#/$defs/Settlement"
+        },
+        "result": {
+          "$ref": "#/$defs/SupplierResult"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "JobListResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jobs"
+      ],
+      "properties": {
+        "jobs": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/JobResponse"
+          }
+        }
+      }
+    },
+    "ActivityTransfer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transaction_hash",
+        "log_index",
+        "recipient",
+        "amount_atomic",
+        "match"
+      ],
+      "properties": {
+        "transaction_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{64}$"
+        },
+        "log_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sender": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "token_contract": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "block_number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "block_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "network": {
+          "type": "string",
+          "const": "eip155:5042002"
+        },
+        "recipient": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "amount_atomic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "match": {
+          "type": "string",
+          "enum": [
+            "RECORDED_SETTLEMENT",
+            "UNMATCHED"
+          ]
+        },
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        }
+      }
+    },
+    "ActivityTransaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "business_intent_id",
+        "payment_state",
+        "payment_mode",
+        "recipient",
+        "amount_atomic",
+        "graph_status"
+      ],
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "business_intent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "payment_state": {
+          "type": "string",
+          "enum": [
+            "AUTHORIZING",
+            "READY",
+            "SUBMITTING",
+            "COMMITTED",
+            "FAILED_SAFE",
+            "UNKNOWN",
+            "REJECTED"
+          ]
+        },
+        "payment_mode": {
+          "type": "string",
+          "enum": [
+            "SERVER_PRIVY",
+            "USER_WALLET"
+          ]
+        },
+        "transaction_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{64}$"
+        },
+        "recipient": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "examples": [
+            "0x1111111111111111111111111111111111111111"
+          ]
+        },
+        "amount_atomic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "graph_status": {
+          "type": "string",
+          "enum": [
+            "INDEXED_TRANSFER",
+            "NOT_INDEXED",
+            "NO_TRANSACTION_HASH",
+            "UNAVAILABLE"
+          ]
+        },
+        "graph_block_number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "graph_log_index": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "ActivityResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recorded_settlement_count",
+        "uncertain_job_count",
+        "unmatched_transfer_count",
+        "transactions",
+        "transfers"
+      ],
+      "properties": {
+        "recorded_settlement_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uncertain_job_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unmatched_transfer_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "transactions": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/ActivityTransaction"
+          }
+        },
+        "transfers": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/ActivityTransfer"
+          }
+        },
+        "observation": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "RecoveryAgentDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accepted",
+        "reason",
+        "model_name",
+        "model_version",
+        "prompt_version",
+        "evidence_references"
+      ],
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "model_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "prompt_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "evidence_references": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        }
+      }
+    },
+    "RecoveryCoreDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "disposition",
+        "target_state",
+        "reason",
+        "authoritative_proof_present",
+        "evidence_references"
+      ],
+      "properties": {
+        "disposition": {
+          "type": "string",
+          "enum": [
+            "HOLD_UNKNOWN",
+            "READ_ONLY_LOOKUP",
+            "ESCALATE_UNKNOWN",
+            "MARK_COMMITTED",
+            "MARK_FAILED_SAFE"
+          ]
+        },
+        "target_state": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "COMMITTED",
+            "FAILED_SAFE"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "authoritative_proof_present": {
+          "type": "boolean"
+        },
+        "evidence_references": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        }
+      }
+    },
+    "RecoveryCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "transaction_hash",
+        "block_number",
+        "binding_status",
+        "contradiction_codes"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "transaction_hash": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{64}$"
+        },
+        "block_number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "binding_status": {
+          "type": "string",
+          "enum": [
+            "MATCH",
+            "CONTRADICTORY"
+          ]
+        },
+        "contradiction_codes": {
+          "type": "array",
+          "maxItems": 25,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        }
+      }
+    },
+    "RecoveryGraphObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "retrieval_path",
+        "endpoint_url",
+        "deployment_id",
+        "manifest_cid",
+        "health",
+        "available",
+        "candidate_count",
+        "diagnostics",
+        "candidates"
+      ],
+      "properties": {
+        "retrieval_path": {
+          "type": "string",
+          "enum": [
+            "STUDIO_GRAPHQL",
+            "SUBGRAPH_MCP",
+            "UNKNOWN"
+          ]
+        },
+        "endpoint_url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "server_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "server_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "tool_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "deployment_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "manifest_cid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "observed_through_block": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 78,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "examples": [
+            "1250000"
+          ]
+        },
+        "observed_through_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "health": {
+          "type": "string",
+          "enum": [
+            "FRESH",
+            "LAGGING",
+            "UNHEALTHY",
+            "UNAVAILABLE",
+            "UNKNOWN_FRESHNESS"
+          ]
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "candidate_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25
+        },
+        "diagnostics": {
+          "type": "array",
+          "maxItems": 25,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        },
+        "candidates": {
+          "type": "array",
+          "maxItems": 25,
+          "items": {
+            "$ref": "#/$defs/RecoveryCandidate"
+          }
+        }
+      }
+    },
+    "RecoveryView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "business_intent_id",
+        "authoritative_state",
+        "recommended_action",
+        "evidence"
+      ],
+      "properties": {
+        "business_intent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "authoritative_state": {
+          "type": "string",
+          "enum": [
+            "AUTHORIZING",
+            "READY",
+            "SUBMITTING",
+            "COMMITTED",
+            "FAILED_SAFE",
+            "UNKNOWN",
+            "REJECTED"
+          ]
+        },
+        "recommended_action": {
+          "type": "string",
+          "enum": [
+            "WAIT",
+            "RECONCILE",
+            "ESCALATE",
+            "RETURN_EXISTING_RESULT"
+          ]
+        },
+        "recommendation_source": {
+          "type": "string",
+          "enum": [
+            "RECOVERY_AGENT",
+            "SAFE_FALLBACK"
+          ]
+        },
+        "core_disposition": {
+          "type": "string",
+          "enum": [
+            "HOLD_UNKNOWN",
+            "READ_ONLY_LOOKUP",
+            "ESCALATE_UNKNOWN",
+            "MARK_COMMITTED",
+            "MARK_FAILED_SAFE"
+          ]
+        },
+        "settlement_permission": {
+          "type": "string",
+          "const": "NEVER"
+        },
+        "agent_decision": {
+          "$ref": "#/$defs/RecoveryAgentDecision"
+        },
+        "core_decision": {
+          "$ref": "#/$defs/RecoveryCoreDecision"
+        },
+        "graph_observation": {
+          "$ref": "#/$defs/RecoveryGraphObservation"
+        },
+        "contradiction": {
+          "type": "boolean"
+        },
+        "contradiction_codes": {
+          "type": "array",
+          "maxItems": 25,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        },
+        "diagnostics": {
+          "type": "array",
+          "maxItems": 25,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/EvidenceObservation"
+          }
+        }
+      }
+    },
+    "HealthResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "not_ready"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "correlation_id"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "INVALID_REQUEST",
+            "UNAUTHORIZED",
+            "FORBIDDEN",
+            "INTENT_PAYLOAD_CONFLICT",
+            "INTENT_NOT_FOUND",
+            "RECONCILIATION_NOT_ALLOWED",
+            "RATE_LIMITED",
+            "EVIDENCE_UNAVAILABLE",
+            "NOT_READY",
+            "INTERNAL_ERROR"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "correlation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        }
+      }
+    }
+  }
+}

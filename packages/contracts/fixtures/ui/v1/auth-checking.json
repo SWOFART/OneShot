@@ -1,0 +1,36 @@
+{
+  "scenario": "auth-checking",
+  "description": "Intent submitted and currently undergoing authorization check",
+  "intent": {
+    "business_intent_id": "018f-ui-checking-002",
+    "payload_fingerprint": "a000000000000000000000000000000000000000000000000000000000000002",
+    "recipient": "0x1111111111111111111111111111111111111111",
+    "amount_atomic": "1250000",
+    "asset": "USDC",
+    "network": "eip155:5042002",
+    "purpose": "Invoice INV-1002",
+    "state": "AUTHORIZING",
+    "version": 1,
+    "policy": {
+      "policy_id": "privy-policy-arc-prod",
+      "status": "CONFIGURED",
+      "settlement_cap_atomic": "10000000",
+      "allowed_recipients": ["0x1111111111111111111111111111111111111111"]
+    },
+    "attempts": [
+      {
+        "attempt_id": "attempt-ui-002",
+        "stage": "AUTHORIZING",
+        "created_at": "2026-09-08T12:05:00.000Z",
+        "authorization_status": "CHECKING"
+      }
+    ],
+    "evidence": []
+  },
+  "recovery_view": {
+    "business_intent_id": "018f-ui-checking-002",
+    "authoritative_state": "AUTHORIZING",
+    "recommended_action": "WAIT",
+    "evidence": []
+  }
+}

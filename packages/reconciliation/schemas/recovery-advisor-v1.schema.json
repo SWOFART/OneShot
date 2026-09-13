@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oneshot.invalid/schemas/recovery-advisor-v1.schema.json",
+  "title": "OneShot Recovery Advisor recommendation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "action",
+    "decisionId",
+    "reason",
+    "referencedEvidenceIds",
+    "modelIdentity",
+    "timestamp"
+  ],
+  "properties": {
+    "action": {
+      "enum": ["WAIT", "RECONCILE", "ESCALATE", "RETURN_EXISTING_RESULT"]
+    },
+    "decisionId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9:._-]{0,127}$"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "referencedEvidenceIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 256
+      },
+      "maxItems": 25
+    },
+    "modelIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelName", "modelVersion", "promptVersion"],
+      "properties": {
+        "modelName": { "type": "string", "maxLength": 64 },
+        "modelVersion": { "type": "string", "maxLength": 32 },
+        "promptVersion": { "type": "string", "maxLength": 32 }
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 35
+    }
+  }
+}

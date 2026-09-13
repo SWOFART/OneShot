@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="381" height="112" viewBox="0 0 381 112" role="img" aria-label="OneShot — settlement engine">
+  <title>OneShot — settlement engine</title>
+  <rect x="0.5" y="0.5" width="380" height="111" rx="39.1" fill="#f7f9f4" stroke="rgba(11, 51, 44, 0.14)" />
+  <g transform="translate(35.6 24.0) scale(1.0000)">
+    <rect width="64" height="64" rx="19" fill="#0b332c" />
+    <g transform="translate(10 10) scale(0.6875)">
+      <path d="M45.93 25.20 A15.5 15.5 0 0 1 47.38 33.89" fill="none" stroke="#4a7a60" stroke-width="4.6" stroke-linecap="round" />
+      <path d="M45.29 39.98 A15.5 15.5 0 0 1 38.79 45.93" fill="none" stroke="#4a7a60" stroke-width="4.6" stroke-linecap="round" />
+      <path d="M32.54 47.49 A15.5 15.5 0 0 1 24.02 45.29" fill="none" stroke="#4a7a60" stroke-width="4.6" stroke-linecap="round" />
+      <path d="M19.30 40.89 A15.5 15.5 0 0 1 41.96 20.13" fill="none" stroke="#00dc5f" stroke-width="6.4" stroke-linecap="round" />
+      <circle cx="41.96" cy="20.13" r="5.6" fill="#00dc5f" />
+    </g>
+  </g>
+  <text x="120.9" y="53.4" font-family="Rubik, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="28.4" font-weight="300" letter-spacing="2.84" fill="#0b332c">OneShot</text>
+  <text x="120.9" y="81.0" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18.5" font-weight="300" letter-spacing="2.22" fill="#007a34">SETTLEMENT ENGINE</text>
+</svg>

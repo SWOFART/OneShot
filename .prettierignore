@@ -1,0 +1,14 @@
+dist
+coverage
+apps/web/test-results
+apps/web/playwright-report
+node_modules
+pnpm-lock.yaml
+packages/contracts/generated
+packages/contracts/openapi
+packages/contracts/src/generated
+packages/arc-adapter/
+packages/privy-adapter/
+packages/testkit-settlement/
+subgraph/generated
+subgraph/build
