@@ -81,7 +81,7 @@ Continuation of the PR #120 integration session. The user said: "мы должн
 - Branch: `mcp-integration`
 - Base: `develop` at `94f2438` (PR #120 base is `mcp-integration -> develop`)
 - Commit: see Review gates / PR body for the exact SHA after push
-- PR: https://github.com/SWOFART/OneShot/pull/120 (draft, updates in place)
+- PR: <https://github.com/SWOFART/OneShot/pull/120> (draft, updates in place)
 - CI: to be captured on the new head after push
 
 ## Review gates
