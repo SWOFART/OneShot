@@ -280,6 +280,9 @@ describe('OpenAPI contract endpoints', () => {
         async get() {
           return paidRequest;
         },
+        async list() {
+          return [paidRequest];
+        },
       },
       authenticator: staticBearerAuthenticator('test-token'),
       config: { workspaceId: 'workspace-paid-api' },
@@ -338,6 +341,14 @@ describe('OpenAPI contract endpoints', () => {
     });
     expect(found.statusCode).toBe(200);
     expect(found.json()).toEqual(paidRequest);
+
+    const listed = await app.inject({
+      method: 'GET',
+      url: '/v1/requests',
+      headers: { authorization: 'Bearer test-token' },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json()).toEqual({ requests: [paidRequest] });
     await app.close();
   });
 
@@ -401,6 +412,9 @@ describe('OpenAPI contract endpoints', () => {
         },
         async get() {
           return committed;
+        },
+        async list() {
+          return [committed];
         },
       },
       authenticator: staticBearerAuthenticator('test-token'),
@@ -477,6 +491,9 @@ describe('OpenAPI contract endpoints', () => {
         },
         async get() {
           return undefined;
+        },
+        async list() {
+          return [];
         },
       },
       authenticator: staticBearerAuthenticator('test-token'),

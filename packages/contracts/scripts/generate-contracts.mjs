@@ -391,6 +391,17 @@ const schemas = {
     required: ['jobs'],
     properties: { jobs: { type: 'array', maxItems: 100, items: { $ref: '#/$defs/JobResponse' } } },
   },
+  RequestListItem: {
+    oneOf: [{ $ref: '#/$defs/JobResponse' }, { $ref: '#/$defs/PaidApiResponse' }],
+  },
+  RequestListResponse: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['requests'],
+    properties: {
+      requests: { type: 'array', maxItems: 100, items: { $ref: '#/$defs/RequestListItem' } },
+    },
+  },
   ActivityTransfer: {
     type: 'object',
     additionalProperties: false,
@@ -675,6 +686,19 @@ const openapi = {
           409: errorResponse('Task payload conflict'),
           401: errorResponse('UNAUTHORIZED'),
           403: errorResponse('FORBIDDEN'),
+        },
+      },
+    },
+    '/v1/requests': {
+      get: {
+        operationId: 'listRequests',
+        summary: 'List durable team-report and paid-API requests in the authorized workspace',
+        security: serviceSecurity,
+        responses: {
+          200: response('Durable requests.', 'RequestListResponse'),
+          401: errorResponse('UNAUTHORIZED'),
+          403: errorResponse('FORBIDDEN'),
+          503: errorResponse('NOT_READY'),
         },
       },
     },
@@ -1149,6 +1173,12 @@ export interface JobResponse {
 
 export interface JobListResponse {
   readonly jobs: readonly JobResponse[];
+}
+
+export type RequestListItem = JobResponse | PaidApiResponse;
+
+export interface RequestListResponse {
+  readonly requests: readonly RequestListItem[];
 }
 
 export interface ActivityTransferView {

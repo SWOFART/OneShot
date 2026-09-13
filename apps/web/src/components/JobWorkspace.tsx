@@ -908,7 +908,7 @@ export function JobList(props: {
   readonly client: JobApiClient;
   readonly onSelectIntent: (id: string) => void;
 }) {
-  const [jobs, setJobs] = useState<readonly JobView[]>([]);
+  const [requests, setRequests] = useState<readonly (JobView | PaidApiResponse)[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [resumingJobId, setResumingJobId] = useState<string | null>(null);
@@ -917,7 +917,11 @@ export function JobList(props: {
   async function refresh(): Promise<void> {
     setLoading(true);
     try {
-      setJobs(await props.client.list());
+      const listed =
+        typeof props.client.listRequests === 'function'
+          ? await props.client.listRequests()
+          : (await props.client.list()).map((job) => job);
+      setRequests(listed);
       setError('');
     } catch {
       setError('Requests could not be loaded. Check API readiness and your workspace session.');
@@ -990,11 +994,96 @@ export function JobList(props: {
         )}
         {loading ? (
           <p role="status">Checking requests…</p>
-        ) : jobs.length === 0 ? (
+        ) : requests.length === 0 ? (
           <p>No requests yet. Open Payment services to start a supported request.</p>
         ) : (
           <ul className="attempts job-list">
-            {jobs.map((job, index) => {
+            {requests.map((request, index) => {
+              if (request.tool_id === 'circle-x402-api-v1') {
+                const payment = paymentStatusCopy(request.payment_state);
+                return (
+                  <li key={request.business_intent_id}>
+                    <div className="job-row-heading">
+                      <button
+                        type="button"
+                        className="secondary compact"
+                        onClick={() => props.onSelectIntent(request.business_intent_id)}
+                      >
+                        Open request {index + 1}
+                      </button>
+                      <span className={`badge tone-${payment.tone}`}>{payment.label}</span>
+                    </div>
+                    <p>
+                      <strong>OneShot x402 Dataset</strong> Â· {payment.label}
+                    </p>
+                    <p className="job-quote-summary">
+                      Price:{' '}
+                      <span className="mono">
+                        {formatAtomicUsdcWithAsset(
+                          request.quote.amount_atomic,
+                          request.quote.asset,
+                        ) ?? 'Unavailable'}
+                      </span>{' '}
+                      Â· {request.resource_url}
+                    </p>
+                    {request.response !== undefined && (
+                      <p>
+                        <strong>API result recorded.</strong> Open this request to inspect payment
+                        proof.
+                      </p>
+                    )}
+                    {request.settlement ? (
+                      <p className="job-settlement-summary">
+                        <strong>Payment confirmed:</strong>{' '}
+                        {explorerHref(request.settlement.transaction_hash) ? (
+                          <a
+                            href={explorerHref(request.settlement.transaction_hash)}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                          >
+                            View the ArcScan transaction
+                          </a>
+                        ) : (
+                          <span className="mono">{request.settlement.transaction_hash}</span>
+                        )}
+                      </p>
+                    ) : request.provider_transaction_hash ? (
+                      <p className="job-settlement-summary">
+                        <strong>Transaction recorded:</strong> payment proof is still being checked.
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="secondary compact"
+                      onClick={() => props.onSelectIntent(request.business_intent_id)}
+                    >
+                      Open payment proof
+                    </button>
+                    <details className="technical-details">
+                      <summary>Show request details</summary>
+                      <dl className="facts">
+                        <div>
+                          <dt>Request key</dt>
+                          <dd className="mono break-all">{maskIdentifier(request.task_key)}</dd>
+                        </div>
+                        <div>
+                          <dt>Business intent</dt>
+                          <dd className="mono break-all">
+                            {maskIdentifier(request.business_intent_id, 10)}
+                          </dd>
+                        </div>
+                        {request.payer_wallet && (
+                          <div>
+                            <dt>Payer wallet</dt>
+                            <dd className="mono break-all">{request.payer_wallet}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    </details>
+                  </li>
+                );
+              }
+              const job = request;
               const payment = paymentStatusCopy(job.payment_state);
               const delivery = deliveryStatusCopy(job.delivery_state);
               return (

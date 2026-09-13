@@ -46,6 +46,7 @@ export interface PaidApiService {
   ): Promise<PaidApiResponse>;
   reconcileUserWallet(businessIntentId: string, correlationId: string): Promise<PaidApiResponse>;
   get(businessIntentId: string): Promise<PaidApiResponse | undefined>;
+  list(): Promise<readonly PaidApiResponse[]>;
 }
 
 function publicQuote(quote: CircleX402Quote): PaidApiQuote {
@@ -82,6 +83,7 @@ export class CircleX402PaidApiService implements PaidApiService {
   readonly #ledger: Pick<
     IntentLedger,
     | 'getPaidApi'
+    | 'listPaidApi'
     | 'getPaidApiTarget'
     | 'getIntent'
     | 'getProviderRequestIdentity'
@@ -102,6 +104,7 @@ export class CircleX402PaidApiService implements PaidApiService {
     readonly ledger: Pick<
       IntentLedger,
       | 'getPaidApi'
+      | 'listPaidApi'
       | 'getPaidApiTarget'
       | 'getIntent'
       | 'getProviderRequestIdentity'
@@ -531,12 +534,17 @@ export class CircleX402PaidApiService implements PaidApiService {
   async get(businessIntentId: string): Promise<PaidApiResponse | undefined> {
     return this.#ledger.getPaidApi(this.#workspaceId, businessIntentId);
   }
+
+  async list(): Promise<readonly PaidApiResponse[]> {
+    return this.#ledger.listPaidApi(this.#workspaceId);
+  }
 }
 
 export function createCircleX402PaidApiService(options: {
   readonly ledger: Pick<
     IntentLedger,
     | 'getPaidApi'
+    | 'listPaidApi'
     | 'getPaidApiTarget'
     | 'getIntent'
     | 'getProviderRequestIdentity'

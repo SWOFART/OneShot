@@ -392,4 +392,39 @@ describe('JobWorkspace payment inputs', () => {
     );
     expect(client.list).toHaveBeenCalledTimes(2);
   });
+
+  it('renders a durable paid-API request and opens its payment proof', async () => {
+    const user = userEvent.setup();
+    const onSelectIntent = vi.fn();
+    const paidApiRequest = {
+      business_intent_id: 'intent-paid-api-request-row',
+      task_key: 'circle-api-request-row',
+      tool_id: 'circle-x402-api-v1' as const,
+      resource_url: 'https://supplier.example.test/api/dataset',
+      payment_state: 'UNKNOWN' as const,
+      quote: {
+        supplier_id: 'circle-x402-v1' as const,
+        resource_url: 'https://supplier.example.test/api/dataset',
+        recipient: '0x2222222222222222222222222222222222222222',
+        amount_atomic: '10000',
+        asset: 'USDC' as const,
+        network: 'eip155:5042002' as const,
+        x402_version: 2,
+        max_timeout_seconds: 60,
+      },
+      provider_transaction_hash: `0x${'c'.repeat(64)}`,
+      created_at: '2026-09-13T00:00:00.000Z',
+      updated_at: '2026-09-13T00:00:00.000Z',
+    };
+    const client = {
+      listRequests: vi.fn(async () => [paidApiRequest]),
+    };
+
+    render(<JobList client={client as never} onSelectIntent={onSelectIntent} />);
+
+    expect(await screen.findByText('OneShot x402 Dataset')).toBeTruthy();
+    expect(screen.getByText(/Transaction recorded/u)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Open payment proof/u }));
+    expect(onSelectIntent).toHaveBeenCalledWith(paidApiRequest.business_intent_id);
+  });
 });

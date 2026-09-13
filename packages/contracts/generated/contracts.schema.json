@@ -961,6 +961,32 @@
         }
       }
     },
+    "RequestListItem": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/JobResponse"
+        },
+        {
+          "$ref": "#/$defs/PaidApiResponse"
+        }
+      ]
+    },
+    "RequestListResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requests"
+      ],
+      "properties": {
+        "requests": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/RequestListItem"
+          }
+        }
+      }
+    },
     "ActivityTransfer": {
       "type": "object",
       "additionalProperties": false,

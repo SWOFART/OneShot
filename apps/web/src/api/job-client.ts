@@ -4,6 +4,7 @@ import type {
   CreateUserWalletJobRequest,
   JobListResponse,
   JobView,
+  RequestListResponse,
   SupplierQuote,
   SupplierResult,
 } from '@oneshot/contracts';
@@ -40,6 +41,18 @@ export class JobApiClient {
   async list(): Promise<readonly JobView[]> {
     const response = await this.#fetch(`${this.#baseUrl}/v1/jobs`, { headers: this.#headers() });
     return response.ok ? ((await responseJson<JobListResponse>(response))?.jobs ?? []) : [];
+  }
+
+  async listRequests(): Promise<RequestListResponse['requests']> {
+    const response = await this.#fetch(`${this.#baseUrl}/v1/requests`, {
+      headers: this.#headers(),
+    });
+    if (response.status === 404) {
+      return (await this.list()).map((job) => job);
+    }
+    const body = await responseJson<RequestListResponse>(response);
+    if (!response.ok || !body) throw new Error('Could not load durable requests');
+    return body.requests;
   }
 
   async start(request: CreateJobRequest): Promise<JobView> {
