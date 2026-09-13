@@ -649,6 +649,30 @@ export function buildApi(dependencies: ApiDependencies) {
     return paidApi;
   });
 
+  app.get('/v1/requests', async (request, reply) => {
+    if (!dependencies.jobs && !dependencies.paidApi) {
+      sendError(
+        reply,
+        503,
+        'NOT_READY',
+        'Durable request listing is not configured',
+        correlationFor(request),
+      );
+      return;
+    }
+    const [jobs, paidApi] = await Promise.all([
+      dependencies.jobs?.list(workspaceId) ?? Promise.resolve([]),
+      dependencies.paidApi?.list() ?? Promise.resolve([]),
+    ]);
+    const requests = [...jobs, ...paidApi]
+      .sort((left, right) => {
+        const updated = Date.parse(right.updated_at) - Date.parse(left.updated_at);
+        return updated || right.business_intent_id.localeCompare(left.business_intent_id);
+      })
+      .slice(0, 100);
+    return { requests };
+  });
+
   app.get('/v1/jobs', async (request, reply) => {
     if (!dependencies.jobs) {
       jobsUnavailable(reply, request);

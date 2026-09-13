@@ -26,6 +26,7 @@ const saved: PaidApiResponse = {
 };
 function setup(live: PaidApiQuote = approved) {
   const getPaidApi = vi.fn<IntentLedger['getPaidApi']>().mockResolvedValue(undefined);
+  const listPaidApi = vi.fn<IntentLedger['listPaidApi']>().mockResolvedValue([]);
   const createPaidApiOrReplay = vi
     .fn<IntentLedger['createPaidApiOrReplay']>()
     .mockResolvedValue({ kind: 'ACCEPTED', request: saved });
@@ -59,7 +60,7 @@ function setup(live: PaidApiQuote = approved) {
       }),
   );
   const service = new CircleX402PaidApiService({
-    ledger: { getPaidApi, createPaidApiOrReplay },
+    ledger: { getPaidApi, listPaidApi, createPaidApiOrReplay },
     workspaceId: 'workspace',
     url: approved.resource_url,
     maxAmountAtomic: 1000000n,

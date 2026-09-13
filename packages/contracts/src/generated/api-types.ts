@@ -189,6 +189,12 @@ export interface JobListResponse {
   readonly jobs: readonly JobResponse[];
 }
 
+export type RequestListItem = JobResponse | PaidApiResponse;
+
+export interface RequestListResponse {
+  readonly requests: readonly RequestListItem[];
+}
+
 export interface ActivityTransferView {
   readonly transaction_hash: string;
   readonly log_index: number;

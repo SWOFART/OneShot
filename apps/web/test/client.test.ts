@@ -1,7 +1,8 @@
-import type { CreateIntentRequest, IntentResponse } from '@oneshot/contracts';
+import type { CreateIntentRequest, IntentResponse, RequestListResponse } from '@oneshot/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { OneShotApiClient } from '../src/api/client.js';
+import { JobApiClient } from '../src/api/job-client.js';
 
 const request: CreateIntentRequest = {
   business_intent_id: 'intent-web-1',
@@ -68,5 +69,61 @@ describe('OneShotApiClient', () => {
       kind: 'ERROR',
       code: 'NETWORK_ERROR',
     });
+  });
+});
+
+describe('JobApiClient durable request listing', () => {
+  it('loads team-report and paid-API requests from the unified request endpoint', async () => {
+    const body: RequestListResponse = {
+      requests: [
+        {
+          business_intent_id: 'intent-paid-api-list',
+          task_key: 'circle-api-list',
+          tool_id: 'circle-x402-api-v1',
+          resource_url: 'https://supplier.example.test/api/dataset',
+          payment_state: 'UNKNOWN',
+          quote: {
+            supplier_id: 'circle-x402-v1',
+            resource_url: 'https://supplier.example.test/api/dataset',
+            recipient: '0x1111111111111111111111111111111111111111',
+            amount_atomic: '10000',
+            asset: 'USDC',
+            network: 'eip155:5042002',
+            x402_version: 2,
+            max_timeout_seconds: 60,
+          },
+          created_at: '2026-09-13T00:00:00.000Z',
+          updated_at: '2026-09-13T00:00:00.000Z',
+        },
+      ],
+    };
+    const calls: string[] = [];
+    const client = new JobApiClient({
+      baseUrl: 'https://oneshot.example.test',
+      fetchFn: async (input) => {
+        calls.push(String(input));
+        return json(200, body);
+      },
+    });
+
+    await expect(client.listRequests()).resolves.toEqual(body.requests);
+    expect(calls).toEqual(['https://oneshot.example.test/v1/requests']);
+  });
+
+  it('falls back to the legacy job list when the unified endpoint is unavailable', async () => {
+    const calls: string[] = [];
+    const client = new JobApiClient({
+      baseUrl: 'https://oneshot.example.test',
+      fetchFn: async (input) => {
+        calls.push(String(input));
+        return calls.length === 1 ? json(404, {}) : json(200, { jobs: [] });
+      },
+    });
+
+    await expect(client.listRequests()).resolves.toEqual([]);
+    expect(calls).toEqual([
+      'https://oneshot.example.test/v1/requests',
+      'https://oneshot.example.test/v1/jobs',
+    ]);
   });
 });
