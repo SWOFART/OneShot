@@ -104,6 +104,7 @@ async function unlockWorkspace(page: Page): Promise<void> {
 test.describe('resumable job workspace', () => {
   test('keeps the public landing separate from the authenticated cabinet', async ({ page }) => {
     await page.goto('/');
+    expect(await page.evaluate(() => typeof globalThis.Buffer)).toBe('function');
     await expect(
       page.getByRole('heading', { name: 'Resume the job, not the payment.' }),
     ).toBeVisible();
