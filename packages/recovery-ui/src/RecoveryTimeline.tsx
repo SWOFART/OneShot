@@ -109,8 +109,15 @@ function graphSourceLabel(graph: GraphObservationSummary): string {
       : 'The Graph provider';
 }
 
-function GraphPanel({ graph }: { readonly graph: GraphObservationSummary | null }) {
+function GraphPanel({
+  graph,
+  state,
+}: {
+  readonly graph: GraphObservationSummary | null;
+  readonly state: RecoveryTimelinePage['authoritativeState'];
+}) {
   if (graph === null) {
+    const committed = state === 'COMMITTED';
     return (
       <section className="panel graph-panel graph-unavailable" aria-labelledby="graph-heading">
         <div className="section-heading">
@@ -118,11 +125,15 @@ function GraphPanel({ graph }: { readonly graph: GraphObservationSummary | null 
             <p className="eyebrow">Candidate discovery</p>
             <h2 id="graph-heading">The Graph</h2>
           </div>
-          <span className="health health-unavailable">NOT REPORTED</span>
+          <span className="health health-unavailable">
+            {committed ? 'CAPTURE PENDING' : 'NOT YET REPORTED'}
+          </span>
         </div>
         <p className="observation-copy">
-          No Graph observation was returned for this request. This is not proof that no payment
-          happened; Arc and OneShot evidence remain the authority.
+          {committed
+            ? 'No Graph observation is recorded for this confirmed settlement yet. Historical settlements are queued for capture; refresh after the evidence worker completes.'
+            : 'No Graph observation is recorded for this request yet. This is not proof that no payment happened.'}{' '}
+          Arc and OneShot evidence remain authoritative.
         </p>
       </section>
     );
@@ -288,7 +299,7 @@ export function RecoveryTimeline({
         </div>
       )}
 
-      <GraphPanel graph={current.graph} />
+      <GraphPanel graph={current.graph} state={current.authoritativeState} />
 
       <div className="action-row" aria-label="Safe recovery actions">
         <button
