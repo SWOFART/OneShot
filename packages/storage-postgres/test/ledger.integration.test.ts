@@ -612,6 +612,25 @@ describePostgres('PostgreSQL intent ledger', () => {
     }
   });
 
+  it('deduplicates redelivered post-commit Graph evidence', async () => {
+    const ledger = newLedger();
+    await ledger.createOrReplay(request, 'correlation-graph-evidence');
+    const observation = {
+      source: 'THE_GRAPH' as const,
+      authority_class: 'OBSERVATION' as const,
+      retrieved_at: '2026-09-07T12:03:00.000Z',
+      digest: 'graph-capture:duplicate-safe',
+      block_number: '12345',
+      freshness: 'FRESH' as const,
+    };
+
+    await ledger.appendEvidence(request.business_intent_id, observation);
+    await ledger.appendEvidence(request.business_intent_id, observation);
+
+    const intent = await ledger.getIntent(request.business_intent_id);
+    expect(intent?.evidence.filter((entry) => entry.source === 'THE_GRAPH')).toHaveLength(1);
+  });
+
   it('returns the persisted Recovery Agent and deterministic-core decision', async () => {
     const ledger = newLedger();
     await ledger.createOrReplay(request, 'correlation-recovery-view');

@@ -13,6 +13,7 @@ import { TeamReportSupplier } from '@oneshot/supplier-adapter';
 import type { Pool } from 'pg';
 import type {
   AuthorizationPort,
+  GraphEvidenceCapturePort,
   SettlementContext,
   SettlementPort,
   WorkerOptions,
@@ -27,6 +28,7 @@ import {
   IntentLedgerLocalRecoveryStatePort,
   IntentLedgerRecoveryCommandStore,
   PrivyArcEvidenceBridge,
+  IntentLedgerGraphEvidenceCapturePort,
   type IntentLedgerLocalRecoveryStatePortOptions,
   type PrivyArcEvidenceBridgeOptions,
 } from './recovery-bridge.js';
@@ -121,6 +123,7 @@ export interface CompositionOptions {
     readonly contractVersion?: string;
   };
   readonly recoveryService?: RecoveryService;
+  readonly graphEvidence?: GraphEvidenceCapturePort;
   readonly recovery?: ProductionRecoveryServiceOptions;
   readonly submissionsDisabled?: boolean;
   readonly expectedContractVersion?: string;
@@ -164,11 +167,22 @@ export function composeWorker(
   }
 
   let recoveryService = options.recoveryService;
+  let graphEvidence = options.graphEvidence;
   if (!recoveryService && options.profile === 'production' && options.recovery) {
     recoveryService = createProductionRecoveryService(ledger, options.recovery);
   }
+  if (!graphEvidence && options.profile === 'production' && options.recovery) {
+    const localState = new IntentLedgerLocalRecoveryStatePort(ledger, options.recovery.localState);
+    graphEvidence = new IntentLedgerGraphEvidenceCapturePort(
+      localState,
+      options.recovery.subgraphMcp,
+    );
+  }
   if (options.profile === 'production' && !recoveryService) {
     throw new Error('Production composition profile requires an injected recoveryService');
+  }
+  if (options.profile === 'production' && !graphEvidence) {
+    throw new Error('Production composition profile requires an injected graphEvidence port');
   }
 
   const workerOptions: WorkerOptions = {
@@ -177,6 +191,7 @@ export function composeWorker(
     settlementPort,
     authorizationPort,
     recoveryService,
+    graphEvidence,
     jobLedger: new JobLedger(pool, { now: () => new Date(), nextAttemptId: randomUUID }),
     supplier: options.supplier ?? new TeamReportSupplier(),
     config: {

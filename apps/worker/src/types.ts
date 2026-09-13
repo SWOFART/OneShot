@@ -1,6 +1,7 @@
 import type {
   AuthorizationResult,
   CreateIntentRequest,
+  EvidenceView,
   SettlementResult,
 } from '@oneshot/contracts';
 import type { IntentLedger } from '@oneshot/storage-postgres';
@@ -34,6 +35,16 @@ export interface SettlementPort {
   submit(request: CreateIntentRequest, context: SettlementContext): Promise<SettlementResult>;
 }
 
+export interface GraphEvidenceCaptureRequest {
+  readonly businessIntentId: string;
+  readonly transactionHash: string;
+  readonly blockNumber: string;
+}
+
+export interface GraphEvidenceCapturePort {
+  capture(request: GraphEvidenceCaptureRequest): Promise<EvidenceView>;
+}
+
 export interface WorkerConfig {
   readonly submissionsDisabled?: boolean | undefined;
   readonly authorizationRetryDelayMs?: number | undefined;
@@ -48,6 +59,7 @@ export interface WorkerOptions {
   readonly authorizationPort?: AuthorizationPort | undefined;
   readonly settlementPort: SettlementPort;
   readonly recoveryService?: RecoveryService | undefined;
+  readonly graphEvidence?: GraphEvidenceCapturePort | undefined;
   readonly jobLedger?: JobLedger | undefined;
   readonly supplier?: SupplierPort | undefined;
   readonly concurrency?: number | undefined;

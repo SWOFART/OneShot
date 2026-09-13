@@ -497,6 +497,21 @@ export class IntentLedger {
     }
   }
 
+  async getPaymentPayerWallet(idValue: unknown): Promise<string | undefined> {
+    const id = asBusinessIntentId(idValue);
+    const result = await this.#pool.query<{
+      payment_mode: PaymentMode;
+      payer_wallet: string | null;
+    }>(
+      `SELECT payment_mode, payer_wallet
+       FROM resumable_jobs
+       WHERE business_intent_id = $1`,
+      [id],
+    );
+    const row = result.rows[0];
+    return row?.payment_mode === 'USER_WALLET' ? (row.payer_wallet ?? undefined) : undefined;
+  }
+
   async getRecoveryView(idValue: unknown): Promise<RecoveryView | undefined> {
     const intent = await this.getIntent(idValue);
     if (!intent) return undefined;
@@ -583,7 +598,8 @@ export class IntentLedger {
       `INSERT INTO evidence_observations (
         business_intent_id, source, authority_class, retrieved_at,
         digest, block_number, freshness
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT DO NOTHING`,
       [
         id,
         evidence.source,
@@ -1164,6 +1180,22 @@ export class IntentLedger {
             ],
           );
         }
+        await client.query(
+          `INSERT INTO outbox_jobs (
+             business_intent_id, job_key, task_identifier, payload, available_at, created_at
+           ) VALUES ($1, $2, 'capture_graph_evidence', $3::jsonb, $4, $4)
+           ON CONFLICT (job_key) DO NOTHING`,
+          [
+            id,
+            `graph-evidence:${id}:${newVersion}`,
+            JSON.stringify({
+              business_intent_id: id,
+              transaction_hash: result.transaction_hash,
+              block_number: result.block_number,
+            }),
+            now,
+          ],
+        );
         await client.query('COMMIT');
         return { completed: true, state: 'COMMITTED', version: newVersion };
       }

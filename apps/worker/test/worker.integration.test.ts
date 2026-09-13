@@ -93,6 +93,13 @@ describePostgres('Atomic at-most-once worker (A03)', () => {
       [sampleRequest.business_intent_id],
     );
     expect(counts.rows[0]?.settlements).toBe('1');
+
+    const graphJobs = await pool.query<{ count: string }>(
+      `SELECT count(*)::text AS count FROM outbox_jobs
+       WHERE business_intent_id = $1 AND task_identifier = 'capture_graph_evidence'`,
+      [sampleRequest.business_intent_id],
+    );
+    expect(graphJobs.rows[0]?.count).toBe('1');
   });
 
   it('concurrency storm: 10 parallel workers converge on exactly 1 submission and 1 settlement', async () => {
@@ -287,9 +294,11 @@ describePostgres('Atomic at-most-once worker (A03)', () => {
     expect(committedIntent?.state).toBe('COMMITTED');
     expect(portCalls).toBe(1);
 
-    // Third drain confirms all outbox jobs are drained
+    // Third drain delivers the durable Graph evidence task. This test profile
+    // does not inject a Graph port, so the handler safely becomes a no-op.
     const processedThird = await drainOutboxJobs(workerOptions, 1);
-    expect(processedThird).toBe(0);
+    expect(processedThird).toBe(1);
+    expect(await drainOutboxJobs(workerOptions, 1)).toBe(0);
   });
 
   it('safe disable leaves submission work pending and re-enable settles exactly once', async () => {

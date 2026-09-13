@@ -97,6 +97,7 @@ describe('Worker composition and simulator profile (A04.4)', () => {
       settlementPort: incompatiblePort,
       authorizationPort: new SimulatorAuthorizationPort(),
       recoveryService: { handle: async () => ({}) } as never,
+      graphEvidence: { capture: async () => ({}) } as never,
     });
 
     const readiness = await composed.checkReadiness();
@@ -152,6 +153,7 @@ describe('Worker composition and simulator profile (A04.4)', () => {
       settlementPort: wrongNetworkPort,
       authorizationPort: new SimulatorAuthorizationPort(),
       recoveryService: { handle: async () => ({}) } as never,
+      graphEvidence: { capture: async () => ({}) } as never,
     });
 
     const readiness = await composed.checkReadiness();

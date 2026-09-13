@@ -93,6 +93,7 @@ describePostgres('production worker API to adapter path', () => {
             },
           },
           recoveryService: { handle: async () => ({}) } as never,
+          graphEvidence: { capture: async () => ({}) } as never,
         }),
     });
     let attemptCounter = 0;
