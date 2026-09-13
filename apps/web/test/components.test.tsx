@@ -190,8 +190,66 @@ describe('JobWorkspace payment inputs', () => {
     render(<JobList client={client as never} onSelectIntent={() => undefined} />);
 
     expect(await screen.findByText('Retrieving result')).toBeTruthy();
+    // The list never offers to resume: only the worker may retrieve a result,
+    // and nothing here may lead to a second payment.
     expect(screen.queryByRole('button', { name: /Resume result/u })).toBeNull();
     expect(client.list).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Delivery completes in the worker after the browser has read the list, so a
+   * request whose delivery was still `PENDING` at read time kept claiming
+   * "Retrieving result" long after the result was durably available. The reads
+   * below are the fix; they are read-only and they stop on their own.
+   */
+  it('re-reads a pending delivery until the worker reports the result', async () => {
+    vi.useFakeTimers();
+    try {
+      const list = vi
+        .fn<[], Promise<readonly JobView[]>>()
+        .mockResolvedValueOnce([resumableJob('PENDING')])
+        .mockResolvedValue([resumableJob('AVAILABLE')]);
+
+      render(<JobList client={{ list } as never} onSelectIntent={() => undefined} />);
+      await vi.waitFor(() => expect(screen.getByText('Retrieving result')).toBeTruthy());
+
+      await vi.advanceTimersByTimeAsync(4000);
+      await vi.waitFor(() => expect(screen.getByText('Result ready')).toBeTruthy());
+      expect(list).toHaveBeenCalledTimes(2);
+
+      // Nothing is pending any more, so the reads stop rather than continuing
+      // to poll a settled list.
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(list).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('gives up re-reading a delivery that stays pending', async () => {
+    vi.useFakeTimers();
+    try {
+      const list = vi.fn(async () => [resumableJob('PENDING')]);
+
+      render(<JobList client={{ list } as never} onSelectIntent={() => undefined} />);
+      await vi.waitFor(() => expect(screen.getByText('Retrieving result')).toBeTruthy());
+
+      // Far beyond the attempt budget: a stuck delivery must not read forever.
+      // Stepped, so each re-read's effect can schedule the next one.
+      for (let tick = 0; tick < 30; tick += 1) await vi.advanceTimersByTimeAsync(4000);
+      const spent = list.mock.calls.length;
+      // It kept looking while the delivery was pending, but never past the
+      // mount read plus the fifteen-attempt budget.
+      expect(spent).toBeGreaterThan(2);
+      expect(spent).toBeLessThanOrEqual(1 + 15);
+
+      // The budget is spent, so a stuck delivery stops being read.
+      for (let tick = 0; tick < 30; tick += 1) await vi.advanceTimersByTimeAsync(4000);
+      expect(list).toHaveBeenCalledTimes(spent);
+      expect(screen.getByText('Retrieving result')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('sends the entered recipient and integer atomic amount to the quote boundary', async () => {

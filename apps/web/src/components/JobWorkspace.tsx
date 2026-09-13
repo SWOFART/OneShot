@@ -41,6 +41,21 @@ function mcpPaymentStillSignable(job: JobView): boolean {
 
 const USER_WALLET_PAYMENT_CHECK_DELAY_MS = 500;
 const USER_WALLET_PAYMENT_CHECK_ATTEMPTS = 30;
+
+/**
+ * Supplier delivery finishes in the worker, after the browser has already read
+ * the list, so a request opened while its delivery is `PENDING` kept saying
+ * "Retrieving result" until someone pressed refresh — even once the result was
+ * durably available. These bounded re-reads close that window.
+ *
+ * They are `GET /v1/jobs` only: never the resume endpoint, and never anything
+ * that could pay. They run only while a delivery is actually `PENDING`, stop as
+ * soon as none is, and give up after the attempts below (about a minute) so a
+ * delivery that is genuinely stuck does not read forever. Past that, the manual
+ * refresh stays the way to look again.
+ */
+const DELIVERY_READ_DELAY_MS = 4000;
+const DELIVERY_READ_ATTEMPTS = 15;
 function waitForPaymentCheck(): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, USER_WALLET_PAYMENT_CHECK_DELAY_MS);
@@ -559,9 +574,23 @@ export function JobList(props: {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [checkingPaymentJobId, setCheckingPaymentJobId] = useState<string | null>(null);
+  const [deliveryReadsLeft, setDeliveryReadsLeft] = useState(DELIVERY_READ_ATTEMPTS);
+  // Which deliveries are pending, not how many reads have happened: a new
+  // pending delivery is a new wait and gets the full budget, while the same one
+  // staying pending keeps spending the budget it already started.
+  const pendingDeliveryIds = requests
+    .filter((request) => request.delivery_state === 'PENDING')
+    .map((request) => request.job_id)
+    .join(' ');
 
-  async function refresh(): Promise<void> {
-    setLoading(true);
+  /**
+   * `quiet` reads keep the panel as it is while they run: the spinner and the
+   * disabled refresh button belong to a read the operator asked for, and the
+   * list body is keyed on `loading`, so flipping it would replay the tab fade
+   * every few seconds.
+   */
+  async function refresh(options: { readonly quiet?: boolean } = {}): Promise<void> {
+    if (!options.quiet) setLoading(true);
     try {
       const listed = await props.client.list();
       setRequests(listed);
@@ -569,7 +598,7 @@ export function JobList(props: {
     } catch {
       setError('Requests could not be loaded. Check API readiness and your workspace session.');
     } finally {
-      setLoading(false);
+      if (!options.quiet) setLoading(false);
     }
   }
 
@@ -591,6 +620,19 @@ export function JobList(props: {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    setDeliveryReadsLeft(DELIVERY_READ_ATTEMPTS);
+  }, [pendingDeliveryIds]);
+
+  useEffect(() => {
+    if (pendingDeliveryIds === '' || deliveryReadsLeft <= 0) return;
+    const timer = window.setTimeout(() => {
+      setDeliveryReadsLeft((left) => left - 1);
+      void refresh({ quiet: true });
+    }, DELIVERY_READ_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [pendingDeliveryIds, deliveryReadsLeft]);
 
   return (
     <section
