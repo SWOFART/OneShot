@@ -1,6 +1,5 @@
 import {
   asAttemptId,
-  asAtomicAmount,
   asBusinessIntentId,
   asCorrelationId,
   asEvmAddress,
@@ -14,20 +13,13 @@ import {
   type IntentResponse,
   type IntentState,
   type PaymentMode,
-  type PaidApiResponse,
   type RecoveryView,
   type ReconcileResponse,
   type AuthorizationResult,
   type SettlementResult,
   type SettlementView,
-  parseCreatePaidApiRequest,
 } from '@oneshot/contracts';
-import {
-  derivedPaidApiBusinessIntentId,
-  fingerprintIntent,
-  paidApiFingerprint,
-  type SystemMetrics,
-} from '@oneshot/domain';
+import { fingerprintIntent, type SystemMetrics } from '@oneshot/domain';
 import type { Pool, PoolClient } from 'pg';
 
 export interface LedgerDependencies {
@@ -45,33 +37,9 @@ export interface ProviderRequestIdentity {
   readonly requestFingerprint: string;
   readonly walletId?: string | undefined;
   readonly policyId?: string | undefined;
-  readonly providerKind?: 'DIRECT_ARC' | 'CIRCLE_X402' | undefined;
+  readonly providerKind?: 'DIRECT_ARC' | undefined;
   readonly transactionHash?: string | undefined;
-  readonly providerTransferId?: string | undefined;
 }
-
-export interface PaidApiQuoteSnapshot {
-  readonly resourceUrl: string;
-  readonly x402Version: number;
-  readonly maxTimeoutSeconds: number;
-  readonly recipient: string;
-  readonly amountAtomic: string;
-  readonly quotePayload: unknown;
-}
-
-export interface PaidApiTarget {
-  readonly businessIntentId: string;
-  readonly resourceUrl: string;
-  readonly method: 'GET';
-  readonly quotePayload: unknown;
-  readonly paymentMode: PaymentMode;
-  readonly payerWallet?: string;
-}
-
-export type CreatePaidApiResult =
-  | { readonly kind: 'ACCEPTED'; readonly request: PaidApiResponse }
-  | { readonly kind: 'REPLAY_IDENTICAL'; readonly request: PaidApiResponse }
-  | { readonly kind: 'INTENT_PAYLOAD_CONFLICT'; readonly request: PaidApiResponse };
 
 export type CreateIntentResult =
   | { readonly kind: 'ACCEPTED'; readonly intent: IntentResponse }
@@ -179,91 +147,6 @@ function texts(value: unknown): readonly string[] {
         return parsed === null ? [] : [parsed];
       })
     : [];
-}
-
-function jsonPayload(value: unknown, name: string, maxBytes = 32_768): string {
-  let serialized: string | undefined;
-  try {
-    serialized = JSON.stringify(value);
-  } catch {
-    throw new ContractValidationError(`${name} must be JSON serializable`);
-  }
-  if (!serialized || Buffer.byteLength(serialized, 'utf8') > maxBytes) {
-    throw new ContractValidationError(`${name} exceeds the bounded storage limit`);
-  }
-  return serialized;
-}
-
-interface PaidApiRow {
-  readonly business_intent_id: string;
-  readonly task_key: string;
-  readonly tool_id: 'circle-x402-api-v1';
-  readonly resource_url: string;
-  readonly quote_recipient: string;
-  readonly quote_amount_atomic: string;
-  readonly quote_x402_version: number;
-  readonly quote_max_timeout_seconds: number;
-  readonly quote_payload: unknown;
-  readonly response_payload: unknown;
-  readonly provider_transaction_hash: string | null;
-  readonly provider_transfer_id: string | null;
-  readonly payment_mode: PaymentMode;
-  readonly payer_wallet: string | null;
-  readonly created_at: Date;
-  readonly updated_at: Date;
-  readonly payment_state: IntentState;
-  readonly settlement_provider_reference_id: string | null;
-  readonly settlement_transaction_hash: string | null;
-  readonly settlement_block_number: string | null;
-  readonly settlement_transfer_log_index: number | null;
-}
-
-function paidApiQuoteForView(row: PaidApiRow): PaidApiResponse['quote'] {
-  return {
-    supplier_id: 'circle-x402-v1',
-    resource_url: row.resource_url,
-    recipient: row.quote_recipient,
-    amount_atomic: row.quote_amount_atomic,
-    asset: 'USDC',
-    network: 'eip155:5042002',
-    x402_version: row.quote_x402_version,
-    max_timeout_seconds: row.quote_max_timeout_seconds,
-  };
-}
-
-function paidApiView(row: PaidApiRow): PaidApiResponse {
-  const settlement =
-    row.settlement_provider_reference_id &&
-    row.settlement_transaction_hash &&
-    row.settlement_block_number &&
-    row.settlement_transfer_log_index !== null
-      ? {
-          provider_reference_id: row.settlement_provider_reference_id,
-          transaction_hash: row.settlement_transaction_hash,
-          block_number: row.settlement_block_number,
-          transfer_log_index: row.settlement_transfer_log_index,
-          explorer_url: `https://testnet.arcscan.app/tx/${row.settlement_transaction_hash}`,
-        }
-      : undefined;
-  return {
-    business_intent_id: row.business_intent_id,
-    task_key: row.task_key,
-    tool_id: row.tool_id,
-    resource_url: row.resource_url,
-    payment_state: row.payment_state,
-    ...(row.payment_mode ? { payment_mode: row.payment_mode } : {}),
-    ...(row.payer_wallet ? { payer_wallet: row.payer_wallet } : {}),
-    quote: paidApiQuoteForView(row),
-    ...(row.provider_transaction_hash
-      ? { provider_transaction_hash: row.provider_transaction_hash }
-      : {}),
-    ...(settlement ? { settlement } : {}),
-    ...(row.response_payload !== null && row.response_payload !== undefined
-      ? { response: row.response_payload }
-      : {}),
-    created_at: row.created_at.toISOString(),
-    updated_at: row.updated_at.toISOString(),
-  };
 }
 
 function persistedRecovery(payload: unknown): {
@@ -601,343 +484,6 @@ export class IntentLedger {
     }
   }
 
-  async createPaidApiOrReplay(params: {
-    readonly workspaceId: string;
-    readonly request: unknown;
-    readonly quote: PaidApiQuoteSnapshot;
-    readonly correlationId: string;
-    readonly paymentMode?: PaymentMode;
-    readonly payerWallet?: string;
-  }): Promise<CreatePaidApiResult> {
-    const request = parseCreatePaidApiRequest(params.request);
-    const paymentMode = params.paymentMode ?? 'SERVER_PRIVY';
-    const payerWallet =
-      params.payerWallet === undefined ? undefined : asEvmAddress(params.payerWallet);
-    if (paymentMode === 'USER_WALLET' && !payerWallet) {
-      throw new ContractValidationError('User-wallet paid API requests require a payer wallet');
-    }
-    if (paymentMode === 'SERVER_PRIVY' && payerWallet) {
-      throw new ContractValidationError('Server-paid API requests cannot bind a payer wallet');
-    }
-    const businessIntentId = asBusinessIntentId(
-      derivedPaidApiBusinessIntentId(params.workspaceId, request),
-    );
-    const requestFingerprint = paidApiFingerprint(request, params.quote.resourceUrl, payerWallet);
-    const recipient = asEvmAddress(params.quote.recipient);
-    const amountAtomic = asAtomicAmount(params.quote.amountAtomic);
-    const quotePayload = jsonPayload(params.quote.quotePayload, 'x402 quote');
-    const intent = fingerprintIntent({
-      business_intent_id: businessIntentId,
-      recipient,
-      amount_atomic: amountAtomic,
-      asset: 'USDC',
-      network: 'eip155:5042002',
-      purpose: `Paid API purchase: ${request.task_key}`,
-    });
-    const now = this.#dependencies.now();
-    const client = await this.#pool.connect();
-    try {
-      await client.query('BEGIN');
-      const existing = await client.query<{ request_fingerprint: string }>(
-        `SELECT request_fingerprint FROM paid_api_requests
-         WHERE workspace_id = $1 AND task_key = $2 FOR UPDATE`,
-        [params.workspaceId, request.task_key],
-      );
-      if (existing.rows[0]) {
-        const view = await this.#readPaidApi(client, params.workspaceId, businessIntentId);
-        if (!view) throw new Error('Paid API request binding is missing its Business Intent');
-        const kind =
-          existing.rows[0].request_fingerprint === requestFingerprint
-            ? 'REPLAY_IDENTICAL'
-            : 'INTENT_PAYLOAD_CONFLICT';
-        await this.#recordMetricEventOnClient(client, businessIntentId, 'DUPLICATE_REQUEST', kind);
-        await client.query('COMMIT');
-        return { kind, request: view };
-      }
-
-      const insertedIntent = await client.query(
-        `INSERT INTO business_intents (
-          business_intent_id, payload_fingerprint, recipient, amount_atomic,
-          asset, network, purpose, state, version, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, 'USDC', 'eip155:5042002', $5, $6, 1, $7, $7)
-        ON CONFLICT (business_intent_id) DO NOTHING`,
-        [
-          businessIntentId,
-          intent.payload_fingerprint,
-          intent.request.recipient,
-          intent.request.amount_atomic,
-          intent.request.purpose,
-          paymentMode === 'USER_WALLET' ? 'READY' : 'AUTHORIZING',
-          now,
-        ],
-      );
-      if (insertedIntent.rowCount !== 1) {
-        const existingIntent = await client.query<{ payload_fingerprint: string }>(
-          'SELECT payload_fingerprint FROM business_intents WHERE business_intent_id = $1',
-          [businessIntentId],
-        );
-        if (existingIntent.rows[0]?.payload_fingerprint !== intent.payload_fingerprint) {
-          throw new Error('Paid API task identity is already bound to a different intent');
-        }
-      }
-
-      const insertedRequest = await client.query(
-        `INSERT INTO paid_api_requests (
-          business_intent_id, workspace_id, task_key, tool_id, request_fingerprint,
-          resource_url, method, quote_payload, quote_recipient, quote_amount_atomic,
-          quote_x402_version, quote_max_timeout_seconds, created_at, updated_at,
-          payment_mode, payer_wallet
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'GET', $7::jsonb, $8, $9, $10, $11, $12, $12, $13, $14)
-        ON CONFLICT (workspace_id, task_key) DO NOTHING
-        RETURNING business_intent_id`,
-        [
-          businessIntentId,
-          params.workspaceId,
-          request.task_key,
-          request.tool_id,
-          requestFingerprint,
-          params.quote.resourceUrl,
-          quotePayload,
-          recipient,
-          amountAtomic,
-          params.quote.x402Version,
-          params.quote.maxTimeoutSeconds,
-          now,
-          paymentMode,
-          payerWallet ?? null,
-        ],
-      );
-      if (insertedRequest.rowCount !== 1) {
-        const raced = await client.query<{
-          request_fingerprint: string;
-          business_intent_id: string;
-        }>(
-          `SELECT request_fingerprint, business_intent_id FROM paid_api_requests
-           WHERE workspace_id = $1 AND task_key = $2 FOR UPDATE`,
-          [params.workspaceId, request.task_key],
-        );
-        const racedRow = raced.rows[0];
-        if (!racedRow) throw new Error('Paid API request race lost without a durable binding');
-        const view = await this.#readPaidApi(
-          client,
-          params.workspaceId,
-          asBusinessIntentId(racedRow.business_intent_id),
-        );
-        if (!view) throw new Error('Paid API request race lost without a readable binding');
-        const kind =
-          racedRow.request_fingerprint === requestFingerprint
-            ? 'REPLAY_IDENTICAL'
-            : 'INTENT_PAYLOAD_CONFLICT';
-        await this.#recordMetricEventOnClient(
-          client,
-          asBusinessIntentId(racedRow.business_intent_id),
-          'DUPLICATE_REQUEST',
-          kind,
-        );
-        await client.query('COMMIT');
-        return { kind, request: view };
-      }
-
-      const attemptId = asAttemptId(this.#dependencies.nextAttemptId());
-      await client.query(
-        `INSERT INTO attempts (
-          attempt_id, business_intent_id, attempt_sequence, stage,
-          correlation_id, request_body_fingerprint, token_contract,
-          method, native_value_atomic, provider_kind, created_at
-        ) VALUES ($1, $2, 1, $3, $4, $5,
-                  '0x3600000000000000000000000000000000000000', 'x402', '0', 'CIRCLE_X402', $6)`,
-        [
-          attemptId,
-          businessIntentId,
-          paymentMode === 'USER_WALLET' ? 'READY' : 'AUTHORIZING',
-          params.correlationId,
-          intent.payload_fingerprint,
-          now,
-        ],
-      );
-      if (paymentMode === 'SERVER_PRIVY') {
-        await client.query(
-          `INSERT INTO outbox_jobs (
-            business_intent_id, job_key, task_identifier, payload,
-            available_at, created_at
-          ) VALUES ($1, $2, 'authorize_intent', $3::jsonb, $4, $4)`,
-          [
-            businessIntentId,
-            `authorize:${businessIntentId}:1`,
-            JSON.stringify({ business_intent_id: businessIntentId }),
-            now,
-          ],
-        );
-      }
-      const view = await this.#readPaidApi(client, params.workspaceId, businessIntentId);
-      if (!view) throw new Error('Created paid API request was not readable');
-      await client.query('COMMIT');
-      return { kind: 'ACCEPTED', request: view };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
-  }
-
-  async getPaidApiByTaskKey(
-    workspaceIdValue: unknown,
-    taskKey: string,
-  ): Promise<PaidApiResponse | undefined> {
-    const workspaceId = String(workspaceIdValue);
-    const client = await this.#pool.connect();
-    try {
-      return await this.#readPaidApiByTaskKey(client, workspaceId, taskKey);
-    } finally {
-      client.release();
-    }
-  }
-
-  async getPaidApi(
-    workspaceIdValue: unknown,
-    businessIntentIdValue: unknown,
-  ): Promise<PaidApiResponse | undefined> {
-    const workspaceId = String(workspaceIdValue);
-    const businessIntentId = asBusinessIntentId(businessIntentIdValue);
-    const client = await this.#pool.connect();
-    try {
-      return await this.#readPaidApi(client, workspaceId, businessIntentId);
-    } finally {
-      client.release();
-    }
-  }
-
-  async listPaidApi(workspaceIdValue: unknown, limit = 50): Promise<readonly PaidApiResponse[]> {
-    const workspaceId = String(workspaceIdValue);
-    const bounded = Number.isSafeInteger(limit) && limit > 0 && limit <= 100 ? limit : 50;
-    const client = await this.#pool.connect();
-    try {
-      const result = await client.query<{ business_intent_id: string }>(
-        `SELECT business_intent_id
-         FROM paid_api_requests
-         WHERE workspace_id = $1
-         ORDER BY updated_at DESC, business_intent_id DESC
-         LIMIT $2`,
-        [workspaceId, bounded],
-      );
-      const requests = await Promise.all(
-        result.rows.map((row) =>
-          this.#readPaidApi(client, workspaceId, asBusinessIntentId(row.business_intent_id)),
-        ),
-      );
-      return requests.filter((request): request is PaidApiResponse => request !== undefined);
-    } finally {
-      client.release();
-    }
-  }
-
-  async getPaidApiTarget(businessIntentIdValue: unknown): Promise<PaidApiTarget | undefined> {
-    const businessIntentId = asBusinessIntentId(businessIntentIdValue);
-    const result = await this.#pool.query<{
-      business_intent_id: string;
-      resource_url: string;
-      method: 'GET';
-      quote_payload: unknown;
-      payment_mode: PaymentMode;
-      payer_wallet: string | null;
-    }>(
-      `SELECT business_intent_id, resource_url, method, quote_payload, payment_mode, payer_wallet
-       FROM paid_api_requests WHERE business_intent_id = $1`,
-      [businessIntentId],
-    );
-    const row = result.rows[0];
-    return row
-      ? {
-          businessIntentId: row.business_intent_id,
-          resourceUrl: row.resource_url,
-          method: row.method,
-          quotePayload: row.quote_payload,
-          paymentMode: row.payment_mode,
-          ...(row.payer_wallet ? { payerWallet: row.payer_wallet } : {}),
-        }
-      : undefined;
-  }
-
-  async recordProviderTransaction(
-    attemptIdValue: unknown,
-    transactionHashValue: unknown,
-  ): Promise<void> {
-    const attemptId = asAttemptId(attemptIdValue);
-    const transactionHash = asTransactionHash(transactionHashValue);
-    const result = await this.#pool.query(
-      `UPDATE attempts
-       SET provider_transaction_hash = $1
-       WHERE attempt_id = $2 AND provider_kind = 'CIRCLE_X402'`,
-      [transactionHash, attemptId],
-    );
-    if (result.rowCount !== 1) {
-      throw new Error(`Cannot persist provider transaction for attempt ${attemptId}`);
-    }
-    await this.#pool.query(
-      `UPDATE paid_api_requests p SET provider_transaction_hash = $1, updated_at = $2
-       FROM attempts a
-       WHERE a.attempt_id = $3 AND p.business_intent_id = a.business_intent_id`,
-      [transactionHash, this.#dependencies.now(), attemptId],
-    );
-  }
-
-  async recordPaidApiResponse(
-    businessIntentIdValue: unknown,
-    response: unknown,
-    transactionHashValue?: unknown,
-  ): Promise<void> {
-    const businessIntentId = asBusinessIntentId(businessIntentIdValue);
-    const transactionHash =
-      transactionHashValue === undefined ? undefined : asTransactionHash(transactionHashValue);
-    const result = await this.#pool.query(
-      `UPDATE paid_api_requests
-       SET response_payload = $1::jsonb,
-           provider_transaction_hash = COALESCE($2, provider_transaction_hash),
-           updated_at = $3
-       WHERE business_intent_id = $4`,
-      [
-        jsonPayload(response, 'paid API response'),
-        transactionHash ?? null,
-        this.#dependencies.now(),
-        businessIntentId,
-      ],
-    );
-    if (result.rowCount !== 1) {
-      throw new Error(`Cannot persist paid API response for intent ${businessIntentId}`);
-    }
-  }
-
-  async recordPaidApiTransfer(
-    businessIntentIdValue: unknown,
-    response: unknown,
-    providerTransferIdValue: unknown,
-  ): Promise<void> {
-    const businessIntentId = asBusinessIntentId(businessIntentIdValue);
-    const providerTransferId = String(providerTransferIdValue);
-    if (
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
-        providerTransferId,
-      )
-    ) {
-      throw new ContractValidationError('Circle x402 transfer ID is malformed');
-    }
-    const result = await this.#pool.query(
-      `UPDATE paid_api_requests
-       SET response_payload = $1::jsonb, provider_transfer_id = $2, updated_at = $3
-       WHERE business_intent_id = $4`,
-      [
-        jsonPayload(response, 'paid API response'),
-        providerTransferId,
-        this.#dependencies.now(),
-        businessIntentId,
-      ],
-    );
-    if (result.rowCount !== 1) {
-      throw new Error(`Cannot persist Circle transfer for intent ${businessIntentId}`);
-    }
-  }
-
   async getIntent(
     idValue: unknown,
     limits: { readonly attempts?: number; readonly evidence?: number } = {},
@@ -1195,13 +741,9 @@ export class IntentLedger {
         )
         SELECT $1, $2, $3, 'SUBMITTING', $4, $5,
           '0x3600000000000000000000000000000000000000',
-          CASE WHEN EXISTS (
-            SELECT 1 FROM paid_api_requests WHERE business_intent_id = $2
-          ) THEN 'x402' ELSE 'transfer' END,
+          'transfer',
           '0',
-          COALESCE($7::text, CASE WHEN EXISTS (
-            SELECT 1 FROM paid_api_requests WHERE business_intent_id = $2
-          ) THEN 'CIRCLE_X402' ELSE 'DIRECT_ARC' END),
+          COALESCE($7::text, 'DIRECT_ARC'),
           $8::text, $9::text, $10::text, $11::text,
           $6`,
         [
@@ -1272,15 +814,12 @@ export class IntentLedger {
       request_body_fingerprint: string;
       wallet_id: string | null;
       policy_id: string | null;
-      provider_kind: 'DIRECT_ARC' | 'CIRCLE_X402';
+      provider_kind: 'DIRECT_ARC';
       provider_transaction_hash: string | null;
-      provider_transfer_id: string | null;
     }>(
       `SELECT a.privy_idempotency_key, a.privy_reference_id, a.request_body_fingerprint,
-              a.wallet_id, a.policy_id, a.provider_kind, a.provider_transaction_hash,
-              p.provider_transfer_id
+              a.wallet_id, a.policy_id, a.provider_kind, a.provider_transaction_hash
        FROM attempts a
-       LEFT JOIN paid_api_requests p ON p.business_intent_id = a.business_intent_id
        WHERE a.business_intent_id = $1
        ORDER BY a.attempt_sequence DESC
        LIMIT 1`,
@@ -1294,9 +833,8 @@ export class IntentLedger {
       requestFingerprint: row.request_body_fingerprint,
       ...(row.wallet_id ? { walletId: row.wallet_id } : {}),
       ...(row.policy_id ? { policyId: row.policy_id } : {}),
-      ...(row.provider_kind === 'CIRCLE_X402' ? { providerKind: row.provider_kind } : {}),
+      providerKind: row.provider_kind,
       ...(row.provider_transaction_hash ? { transactionHash: row.provider_transaction_hash } : {}),
-      ...(row.provider_transfer_id ? { providerTransferId: row.provider_transfer_id } : {}),
     };
   }
 
@@ -1781,48 +1319,6 @@ export class IntentLedger {
     }
   }
 
-  async #readPaidApiByTaskKey(
-    client: PoolClient,
-    workspaceId: string,
-    taskKey: string,
-  ): Promise<PaidApiResponse | undefined> {
-    const result = await client.query<{ business_intent_id: string }>(
-      `SELECT business_intent_id FROM paid_api_requests
-       WHERE workspace_id = $1 AND task_key = $2`,
-      [workspaceId, taskKey],
-    );
-    const businessIntentId = result.rows[0]?.business_intent_id;
-    return businessIntentId
-      ? this.#readPaidApi(client, workspaceId, asBusinessIntentId(businessIntentId))
-      : undefined;
-  }
-
-  async #readPaidApi(
-    client: PoolClient,
-    workspaceId: string,
-    businessIntentId: BusinessIntentId,
-  ): Promise<PaidApiResponse | undefined> {
-    const result = await client.query<PaidApiRow>(
-      `SELECT p.business_intent_id, p.task_key, p.tool_id, p.resource_url,
-          p.quote_recipient, p.quote_amount_atomic, p.quote_x402_version,
-          p.quote_max_timeout_seconds, p.quote_payload, p.response_payload,
-          p.provider_transaction_hash, p.provider_transfer_id, p.payment_mode, p.payer_wallet,
-          p.created_at, p.updated_at,
-          i.state AS payment_state,
-          s.provider_reference_id AS settlement_provider_reference_id,
-          s.transaction_hash AS settlement_transaction_hash,
-          s.block_number AS settlement_block_number,
-          s.transfer_log_index AS settlement_transfer_log_index
-       FROM paid_api_requests p
-       JOIN business_intents i ON i.business_intent_id = p.business_intent_id
-       LEFT JOIN settlements s ON s.business_intent_id = p.business_intent_id
-       WHERE p.workspace_id = $1 AND p.business_intent_id = $2`,
-      [workspaceId, businessIntentId],
-    );
-    const row = result.rows[0];
-    return row ? paidApiView(row) : undefined;
-  }
-
   async #readIntent(
     client: PoolClient,
     id: BusinessIntentId,
@@ -1831,10 +1327,9 @@ export class IntentLedger {
     const intentResult = await client.query<IntentRow>(
       `SELECT i.business_intent_id, i.payload_fingerprint, i.recipient, i.amount_atomic,
         i.asset, i.network, i.purpose, i.state, i.version,
-        COALESCE(j.payment_mode, p.payment_mode) AS payment_mode
+        j.payment_mode AS payment_mode
       FROM business_intents i
       LEFT JOIN resumable_jobs j ON j.business_intent_id = i.business_intent_id
-      LEFT JOIN paid_api_requests p ON p.business_intent_id = i.business_intent_id
       WHERE i.business_intent_id = $1`,
       [id],
     );

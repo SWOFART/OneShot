@@ -21,8 +21,8 @@ The cardinality it protects is:
 
 ## The problem
 
-An autonomous agent is told to buy a paid API result for 1.25 USDC. It submits
-the payment. The connection drops before the response arrives.
+An autonomous agent is told to make a business payment for 1.25 USDC. It
+submits the payment. The connection drops before the response arrives.
 
 The agent now cannot tell the difference between:
 
@@ -201,8 +201,8 @@ The Team Report browser flow uses a separate user-funded path: after the quote,
 the connected Privy Ethereum wallet is shown the exact Arc Testnet USDC
 transfer and signs it in the browser. The API stores the payer binding and
 accepts the job only after verifying the submitted receipt. The server-side
-Privy execution wallet remains for worker-owned integrations such as the
-Circle x402 demo; it is not the payer for a Team Report started from Tools.
+Privy execution wallet remains for worker-owned settlement operations; it is
+not the payer for a Team Report started from Tools.
 
 Bootstrap an operator by setting `VITE_PRIVY_APP_ID`, starting the web app,
 signing in, copying the DID shown by the console, adding that DID to
@@ -261,22 +261,6 @@ shown for retries; users do not need to invent one. After settlement, the job
 list links directly to ArcScan and keeps the supplier result separate from
 payment evidence.
 
-The Tools cabinet also supports **Paid API purchase via Circle x402**. Deploy
-the repository's Circle Arc Testnet seller from
-[`docs/CIRCLE_X402_SELLER.md`](docs/CIRCLE_X402_SELLER.md), then configure its
-same-domain dataset endpoint in the API environment. The connected Privy
-wallet is durably bound to the quote and signs the Circle Gateway authorization;
-OneShot forwards that signed authorization to the seller and verifies the Arc
-receipt. The server-side Privy wallet remains available for the legacy worker
-buyer adapter and is not used for the website's user-funded path. Approval
-includes the exact quote shown to the operator; the API rejects a changed
-price, recipient or destination before creating durable payment work.
-`pnpm demo:x402` remains an operator fallback. A lost or ambiguous x402
-response is held as `UNKNOWN`; it is never retried blindly. See
-[`docs/CIRCLE_X402_DEMO.md`](docs/CIRCLE_X402_DEMO.md). This rail is not the
-direct Arc settlement proof; the paid API result has its own durable payment
-state and recovery evidence.
-
 | Method | Path                             | Purpose                                                       |
 | ------ | -------------------------------- | ------------------------------------------------------------- |
 | `POST` | `/v1/intents`                    | Create an intent; an identical replay returns the same result |
@@ -285,11 +269,6 @@ state and recovery evidence.
 | `GET`  | `/v1/intents/{id}/recovery-view` | Local authority plus labelled provider observations           |
 | `POST` | `/v1/jobs`                       | Start/replay one workspace-scoped team report task            |
 | `POST` | `/v1/jobs/quote`                 | Return a non-chargeable quote before explicit approval        |
-| `POST` | `/v1/paid-api/quote`             | Return a non-chargeable Circle x402 quote                     |
-| `POST` | `/v1/paid-api`                   | Start/replay one workspace-scoped paid API request            |
-| `POST` | `/v1/paid-api/user-wallet/prepare` | Bind quote and connected payer before signing                |
-| `POST` | `/v1/paid-api/{id}/user-wallet/submit` | Forward signed x402 payment and verify settlement       |
-| `GET`  | `/v1/paid-api/{id}`              | Read paid API state, transaction hash, and result             |
 | `GET`  | `/v1/jobs`                       | List workspace jobs and delivery state                        |
 | `GET`  | `/v1/jobs/{jobId}`               | Read a workspace-owned job                                    |
 | `POST` | `/v1/jobs/{jobId}/resume`        | Resume original supplier delivery; never submits payment      |

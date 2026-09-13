@@ -12,8 +12,8 @@ silently edited or automatically reversed.
 
 ## Current schema digest
 
-The append-only ledger plus resumable-jobs, paid-API, and Circle x402 transfer
-identity migration set (`001` through `010`) has SHA-256 digest:
+The append-only ledger, resumable-jobs, and historical provider-identity
+migration set (`001` through `010`) has SHA-256 digest:
 
 ```text
 e073e3f13db1be93c3f1359b6359cdb683ad3d7c46f26022e8fd388a36570275
