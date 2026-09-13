@@ -58,7 +58,7 @@ const DELIVERY_STATUS: Readonly<Record<DeliveryState, StatusCopy>> = {
   AVAILABLE: {
     label: 'Result ready',
     tone: 'success',
-    description: 'The paid API result is available.',
+    description: 'The supplier result is available.',
   },
   RETRIEVAL_FAILED: {
     label: 'Result needs attention',
@@ -77,12 +77,10 @@ export function deliveryStatusCopy(state: DeliveryState): StatusCopy {
 
 export function serviceLabel(toolId: string): string {
   switch (toolId) {
-    case 'circle-x402-api-v1':
-      return 'OneShot x402 Dataset';
     case 'team-report-v1':
       return 'Direct Arc payment';
     default:
-      return 'Paid API service';
+      return 'Arc payment';
   }
 }
 

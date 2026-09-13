@@ -504,10 +504,6 @@ export class JobLedger {
            SELECT j.business_intent_id FROM resumable_jobs j
            JOIN settlements s ON s.business_intent_id = j.business_intent_id
            WHERE j.workspace_id = $1
-           UNION ALL
-           SELECT p.business_intent_id FROM paid_api_requests p
-           JOIN settlements s ON s.business_intent_id = p.business_intent_id
-           WHERE p.workspace_id = $1
          ) recorded`,
         [workspaceId],
       ),
@@ -516,10 +512,6 @@ export class JobLedger {
            SELECT j.business_intent_id FROM resumable_jobs j
            JOIN business_intents i ON i.business_intent_id = j.business_intent_id
            WHERE j.workspace_id = $1 AND i.state = 'UNKNOWN'
-           UNION ALL
-           SELECT p.business_intent_id FROM paid_api_requests p
-           JOIN business_intents i ON i.business_intent_id = p.business_intent_id
-           WHERE p.workspace_id = $1 AND i.state = 'UNKNOWN'
          ) uncertain`,
         [workspaceId],
       ),
@@ -531,12 +523,7 @@ export class JobLedger {
         `SELECT s.transaction_hash, s.transfer_log_index, j.job_id
          FROM settlements s
          JOIN resumable_jobs j ON j.business_intent_id = s.business_intent_id
-         WHERE j.workspace_id = $1
-         UNION ALL
-         SELECT s.transaction_hash, s.transfer_log_index, p.business_intent_id AS job_id
-         FROM settlements s
-         JOIN paid_api_requests p ON p.business_intent_id = s.business_intent_id
-         WHERE p.workspace_id = $1`,
+         WHERE j.workspace_id = $1`,
         [workspaceId],
       ),
     ]);

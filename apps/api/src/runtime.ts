@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { createArcReceiptSource } from '@oneshot/arc-adapter';
 import { IntentLedger, JobLedger, migrate } from '@oneshot/storage-postgres';
 import { createUserWalletVerificationPort } from './user-wallet.js';
 import { TeamReportSupplier } from '@oneshot/supplier-adapter';
@@ -14,8 +13,6 @@ import {
 import { loadApiRuntimeConfig, type ApiRuntimeConfig } from './config.js';
 import { createPrivyAccessTokenAuthenticator, isJwtCredential } from './privy-auth.js';
 import { PostgresRateLimiter } from './rate-limit.js';
-import { createCircleX402PaidApiService } from './paid-api.js';
-import { CircleX402UserWalletForwarder } from '@oneshot/supplier-adapter';
 
 export interface ApiRuntime {
   readonly address: string;
@@ -44,16 +41,6 @@ export function buildApiAuthenticator(
 
 export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRuntime> {
   const pool = new Pool(config.database);
-  const boundedFetch: typeof fetch = (input, init = {}) =>
-    fetch(input, {
-      ...init,
-      signal: init.signal
-        ? AbortSignal.any([init.signal, AbortSignal.timeout(10_000)])
-        : AbortSignal.timeout(10_000),
-    });
-  const userWalletReceiptSource = config.userWalletRpcUrl
-    ? createArcReceiptSource({ rpcUrl: config.userWalletRpcUrl })
-    : undefined;
   try {
     await migrate(pool);
     const ledger = new IntentLedger(pool, {
@@ -65,30 +52,6 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
       ledger,
       jobs,
       supplier: new TeamReportSupplier(),
-      ...(config.paidApi
-        ? {
-            paidApi: createCircleX402PaidApiService({
-              ledger,
-              workspaceId: config.workspaceId ?? 'default-workspace',
-              url: config.paidApi.url,
-              maxAmountAtomic: config.paidApi.maxAmountAtomic,
-              fetchFn: boundedFetch,
-              ...(userWalletReceiptSource
-                ? {
-                    userWalletForwarder: new CircleX402UserWalletForwarder({
-                      allowedUrl: config.paidApi.url,
-                      maxAmountAtomic: config.paidApi.maxAmountAtomic,
-                      fetchFn: boundedFetch,
-                      getReceipt: userWalletReceiptSource.getReceipt,
-                      ...(userWalletReceiptSource.getTransactionInput
-                        ? { getTransactionInput: userWalletReceiptSource.getTransactionInput }
-                        : {}),
-                    }),
-                  }
-                : {}),
-            }),
-          }
-        : {}),
       ...(config.walletActivity
         ? { walletActivity: new StudioWalletActivityPort(config.walletActivity) }
         : {}),

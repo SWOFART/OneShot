@@ -8,7 +8,6 @@ import '@oneshot/settlement-ui/styles.css';
 
 import { OneShotApiClient } from './api/client.js';
 import { JobApiClient } from './api/job-client.js';
-import { PaidApiClient } from './api/paid-api-client.js';
 import { createApiRecoveryClient } from './api/recovery-client.js';
 import {
   selectCredential,
@@ -23,7 +22,7 @@ import { IntentStatusView } from './components/IntentStatusView.js';
 import { LoginGate } from './components/LoginGate.js';
 import { McpDocsPage } from './components/McpDocsPage.js';
 import { ReadinessBanner } from './components/ReadinessBanner.js';
-import { CircleX402DemoPanel, JobList, JobWorkspace } from './components/JobWorkspace.js';
+import { JobList, JobWorkspace } from './components/JobWorkspace.js';
 import { RecoverySurface, SettlementSurface } from './components/FrontendSurfaces.js';
 import { PaymentProtectionPanel } from './components/WorkspacePanels.js';
 import { applyTheme, readStoredTheme, type Theme } from './theme.js';
@@ -41,7 +40,6 @@ const TAB_LABELS: Readonly<Record<Tab, string>> = {
 export interface AppProps {
   readonly apiClient?: OneShotApiClient;
   readonly jobClient?: JobApiClient;
-  readonly paidApiClient?: PaidApiClient;
   readonly settlementClient?: SettlementClient;
   readonly recoveryClient?: RecoveryClient;
   readonly useOperatorSession?: UseOperatorSession;
@@ -80,7 +78,7 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
           <p className="eyebrow">RESUMABLE PAID SERVICES / ARC TESTNET</p>
           <h1>Resume the job, not the payment.</h1>
           <p className="hero-lead">
-            Approve one direct Arc payment or paid x402 request. If an agent restarts, the original
+            Approve one direct Arc payment. If an agent restarts, the original
             task, payment evidence and result stay together.
           </p>
           <p className="hero-sublead">
@@ -138,7 +136,6 @@ function CabinetPage(props: {
   readonly setMachineToken: (value: string) => void;
   readonly apiClient: OneShotApiClient;
   readonly jobClient: JobApiClient;
-  readonly paidApiClient: PaidApiClient;
   readonly settlementClient: SettlementClient;
   readonly recoveryClient: RecoveryClient;
   readonly theme: Theme;
@@ -190,7 +187,7 @@ function CabinetPage(props: {
             <p className="eyebrow">WORKSPACE</p>
             <h1>Your payment workspace</h1>
             <p className="hero-lead">
-              Run approved paid APIs, keep one payment identity per request, and recover results
+              Run approved Arc payments, keep one payment identity per request, and recover results
               without paying twice.
             </p>
           </Hero>
@@ -208,8 +205,7 @@ function CabinetPage(props: {
             </li>
             <li>
               <strong>Prepare a request.</strong> Open Payment services. For a direct Arc payment,
-              enter its purpose, recipient and amount, then review the details. OneShot x402 Dataset
-              gets its price from the team-operated demo seller.
+              enter its purpose, recipient and amount, then review the exact payment details.
             </li>
             <li>
               <strong>Approve deliberately.</strong> Read “Recipient receives”, the destination and
@@ -217,14 +213,12 @@ function CabinetPage(props: {
               payment request.
             </li>
             <li>
-              <strong>Read the result.</strong> Open Requests for a direct Arc payment. For OneShot
-              x402 Dataset, use Check payment status in its service card. Inspect the actual payment
-              state and result.
+              <strong>Read the result.</strong> Open Requests and inspect the actual payment state
+              and result.
             </li>
             <li>
-              <strong>Demonstrate recovery.</strong> For a direct Arc payment, resume the existing
-              sample result from Requests. For x402, replay the same request only when its payment
-              is confirmed. An uncertain payment needs investigation, not a new key.
+              <strong>Demonstrate recovery.</strong> Resume the existing sample result from Requests.
+              An uncertain payment needs investigation, not a new key.
             </li>
           </ol>
           <p>
@@ -285,11 +279,6 @@ function CabinetPage(props: {
             <div className="panel-stack">
               <JobWorkspace
                 client={props.jobClient}
-                {...(props.userWallet ? { userWallet: props.userWallet } : {})}
-                onSelectIntent={selectRequest}
-              />
-              <CircleX402DemoPanel
-                client={props.paidApiClient}
                 {...(props.userWallet ? { userWallet: props.userWallet } : {})}
                 onSelectIntent={selectRequest}
               />
@@ -363,10 +352,6 @@ export function App(props: AppProps = {}) {
     () => props.jobClient ?? new JobApiClient({ baseUrl: apiBaseUrl, getAuthToken }),
     [apiBaseUrl, getAuthToken, props.jobClient],
   );
-  const paidApiClient = useMemo(
-    () => props.paidApiClient ?? new PaidApiClient({ baseUrl: apiBaseUrl, getAuthToken }),
-    [apiBaseUrl, getAuthToken, props.paidApiClient],
-  );
 
   if (props.route === '/') return <LandingPage theme={theme} onToggleTheme={toggleTheme} />;
   if (props.route?.startsWith('/docs/mcp')) {
@@ -380,7 +365,6 @@ export function App(props: AppProps = {}) {
         setMachineToken={setMachineToken}
         apiClient={apiClient}
         jobClient={jobClient}
-        paidApiClient={paidApiClient}
         settlementClient={settlementClient}
         recoveryClient={recoveryClient}
         {...(props.userWallet ? { userWallet: props.userWallet } : {})}

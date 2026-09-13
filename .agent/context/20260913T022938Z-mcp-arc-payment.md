@@ -75,24 +75,30 @@ the review of GLM5-3." The standing constraint is: "Пока тестим все
 ## Unresolved questions
 
 - The PostgreSQL MCP concurrency test still needs CI or a machine with Docker.
-- The real Arc Testnet call/replay/proof remains pending until live execution is
-  explicitly resumed.
+- Deployment still needs the MCP bearer, request key, payer address, workspace,
+  and cap configuration in Cloud Run.
+- The real Arc Testnet call, identical replay, and proof capture remain pending.
 
 ## Git and PR state
 
 - Branch: `mcp-integration`
-- Base: `origin/develop` at `91a7744bd212d8c2afadf0e08bebd1deea8fc59d`
-- Commit: `1f25baee09bca4c8431db166a5e7feb72404ada5` plus uncommitted docs-page candidate
-- PR: no `mcp-integration` to `develop` PR created
-- CI: not run for the uncommitted candidate
+- Merged current `origin/develop` at
+  `94f2438fd2032a0cfa28699b0515c8ce6ed5300f` without restoring the removed
+  Circle paid API or seller.
+- MCP implementation commits: `1f25bae` and `f8baee7`; merge candidate is ready
+  for push and a draft implementation PR.
+- Post-merge local validation: `pnpm test` PASS, 78 files / 1043 tests;
+  `pnpm lint`, `pnpm format:check`, `pnpm check:generated`, and
+  `pnpm validate:fixtures` PASS; browser tests PASS, 8/8.
 
 ## Review gates
 
-- Gate A: PASS for commit `1f25bae` per the supplied GLM5-3 review; NOT RUN for
-  the current uncommitted docs-page candidate.
-- Gate B: NOT RUN; no implementation PR exists.
+- Gate A: skipped for the merged implementation by explicit user instruction.
+- Gate B: skipped by explicit user instruction.
 
 ## Handoff/next steps
 
-1. Run fresh Gate A only when instructed, then commit and push the exact tree.
-2. Run the real Arc demo only after local-only restrictions are lifted.
+1. Commit and push the merge, open a draft PR, and wait for CI.
+2. Deploy the API and Worker with MCP configuration.
+3. Run one real Arc payment, replay the same request, and capture proof that no
+   replacement settlement was created.

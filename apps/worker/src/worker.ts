@@ -36,15 +36,7 @@ export async function executeSubmitSettlement(
     return false;
   }
 
-  const paidApiTarget =
-    typeof options.ledger.getPaidApiTarget === 'function'
-      ? await options.ledger.getPaidApiTarget(businessIntentId)
-      : undefined;
-  // User-funded paid API intents are submitted by the API only after it has
-  // received the browser's signed x402 payload. A stray or legacy outbox row
-  // must never route that intent to the server-wallet Circle port.
-  if (paidApiTarget?.paymentMode === 'USER_WALLET') return true;
-  const settlementPort = paidApiTarget ? options.paidApiSettlementPort : options.settlementPort;
+  const settlementPort = options.settlementPort;
 
   // Derive the provider identity before the database claim so the ledger can
   // persist it in the same transaction as READY -> SUBMITTING. A database
@@ -68,7 +60,7 @@ export async function executeSubmitSettlement(
   if (!settlementPort) {
     await options.ledger.completeSubmission(businessIntentId, claim.attemptId, {
       kind: 'POSSIBLY_SUBMITTED',
-      reason: 'Paid API settlement adapter is not configured',
+      reason: 'Arc settlement adapter is not configured',
     });
     return true;
   }

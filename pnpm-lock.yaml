@@ -93,26 +93,8 @@ importers:
         specifier: 12.1.0
         version: 12.1.0(supports-color@10.2.2)
 
-  apps/seller:
-    dependencies:
-      '@circle-fin/x402-batching':
-        specifier: 3.4.0
-        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@4.2.1))
-      '@x402/core':
-        specifier: 2.25.0
-        version: 2.25.0
-      '@x402/evm':
-        specifier: 2.25.0
-        version: 2.25.0(typescript@6.0.3)
-      viem:
-        specifier: 2.56.3
-        version: 2.56.3(typescript@6.0.3)(zod@4.2.1)
-
   apps/web:
     dependencies:
-      '@circle-fin/x402-batching':
-        specifier: 3.4.0
-        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.36.0(typescript@6.0.3)(zod@3.25.76))
       '@oneshot/brand':
         specifier: workspace:*
         version: link:../../packages/brand
@@ -128,9 +110,6 @@ importers:
       '@privy-io/react-auth':
         specifier: 3.6.1
         version: 3.6.1(@types/react@19.2.18)(encoding@0.1.13)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)(use-sync-external-store@1.4.0(react@19.2.8))(zod@3.25.76)
-      '@x402/core':
-        specifier: 2.25.0
-        version: 2.25.0
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -409,9 +388,6 @@ importers:
 
   packages/supplier-adapter:
     dependencies:
-      '@circle-fin/x402-batching':
-        specifier: 3.4.0
-        version: 3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@4.2.1))
       '@oneshot/arc-adapter':
         specifier: workspace:*
         version: link:../arc-adapter
@@ -421,9 +397,6 @@ importers:
       '@oneshot/domain':
         specifier: workspace:*
         version: link:../domain
-      '@x402/core':
-        specifier: 2.25.0
-        version: 2.25.0
 
   packages/testkit-domain:
     dependencies:
@@ -495,17 +468,6 @@ packages:
 
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
-
-  '@circle-fin/x402-batching@3.4.0':
-    resolution: {integrity: sha512-oUwIX8ltS3Tto9Ac23/7ISeVmYQLLxy14/8EopSchBF7K4wNGwzIwlQG5CMJ7iprxy/Br1ipcsW41qBy5h6/EQ==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      '@x402/core': ^2.3.0
-      '@x402/evm': ^2.3.0
-      viem: ^2.0.0
-    peerDependenciesMeta:
-      '@x402/evm':
-        optional: true
 
   '@cloudflare/kv-asset-handler@0.5.0':
     resolution: {integrity: sha512-jxQYkj8dSIzc0cD6cMMNdOc1UVjqSqu8BZdor5s8cGjW2I8BjODt/kWPVdY+u9zj3ms75Q5qaZgnxUad83+eAg==}
@@ -5435,20 +5397,6 @@ snapshots:
     dependencies:
       '@chainsafe/is-ip': 2.1.0
 
-  '@circle-fin/x402-batching@3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.36.0(typescript@6.0.3)(zod@3.25.76))':
-    dependencies:
-      '@x402/core': 2.25.0
-      viem: 2.36.0(typescript@6.0.3)(zod@3.25.76)
-    optionalDependencies:
-      '@x402/evm': 2.25.0(typescript@6.0.3)
-
-  '@circle-fin/x402-batching@3.4.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@6.0.3))(viem@2.56.3(typescript@6.0.3)(zod@4.2.1))':
-    dependencies:
-      '@x402/core': 2.25.0
-      viem: 2.56.3(typescript@6.0.3)(zod@4.2.1)
-    optionalDependencies:
-      '@x402/evm': 2.25.0(typescript@6.0.3)
-
   '@cloudflare/kv-asset-handler@0.5.0': {}
 
   '@cloudflare/unenv-preset@2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260826.1)':
@@ -7740,6 +7688,7 @@ snapshots:
   '@x402/core@2.25.0':
     dependencies:
       zod: 3.25.76
+    optional: true
 
   '@x402/evm@2.25.0(typescript@6.0.3)':
     dependencies:
@@ -7750,6 +7699,7 @@ snapshots:
       - bufferutil
       - typescript
       - utf-8-validate
+    optional: true
 
   abitype@0.7.1(typescript@6.0.3)(zod@3.25.76):
     dependencies:

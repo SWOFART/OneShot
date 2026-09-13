@@ -68,21 +68,6 @@ describe('API runtime configuration', () => {
     });
   });
 
-  it('loads the optional Circle x402 resource and bounded amount', () => {
-    const config = loadApiRuntimeConfig({
-      ...base,
-      ONESHOT_X402_URL: 'https://x402.example.test/api/dataset',
-      ONESHOT_X402_MAX_AMOUNT_ATOMIC: '10000',
-    });
-    expect(config.paidApi).toEqual({
-      url: 'https://x402.example.test/api/dataset',
-      maxAmountAtomic: 10000n,
-    });
-    expect(() =>
-      loadApiRuntimeConfig({ ...base, ONESHOT_X402_URL: 'http://remote.example.test/api' }),
-    ).toThrow('HTTPS');
-  });
-
   it('loads an isolated one-intent MCP configuration', () => {
     const config = loadApiRuntimeConfig({
       ...base,

@@ -108,51 +108,6 @@ export interface UserWalletPayment {
   readonly transaction_hash?: string;
 }
 
-export interface CreatePaidApiRequest {
-  readonly task_key: string;
-  readonly tool_id: 'circle-x402-api-v1';
-}
-
-export interface ApprovePaidApiRequest extends CreatePaidApiRequest {
-  readonly approved_quote: PaidApiQuote;
-}
-
-export interface PreparePaidApiUserWalletRequest extends ApprovePaidApiRequest {
-  readonly payer_wallet: string;
-}
-
-export interface SubmitPaidApiUserWalletRequest {
-  readonly payer_wallet: string;
-  readonly payment_payload: Record<string, unknown>;
-}
-
-export interface PaidApiQuote {
-  readonly supplier_id: 'circle-x402-v1';
-  readonly resource_url: string;
-  readonly recipient: string;
-  readonly amount_atomic: string;
-  readonly asset: 'USDC';
-  readonly network: 'eip155:5042002';
-  readonly x402_version: number;
-  readonly max_timeout_seconds: number;
-}
-
-export interface PaidApiResponse {
-  readonly business_intent_id: string;
-  readonly task_key: string;
-  readonly tool_id: 'circle-x402-api-v1';
-  readonly resource_url: string;
-  readonly payment_state: IntentState;
-  readonly payment_mode?: PaymentMode;
-  readonly payer_wallet?: string;
-  readonly quote: PaidApiQuote;
-  readonly provider_transaction_hash?: string;
-  readonly settlement?: SettlementView;
-  readonly response?: unknown;
-  readonly created_at: string;
-  readonly updated_at: string;
-}
-
 export interface SupplierQuote {
   readonly supplier_id: 'team-report-v1';
   readonly order_reference: string;
@@ -187,12 +142,6 @@ export interface JobResponse {
 
 export interface JobListResponse {
   readonly jobs: readonly JobResponse[];
-}
-
-export type RequestListItem = JobResponse | PaidApiResponse;
-
-export interface RequestListResponse {
-  readonly requests: readonly RequestListItem[];
 }
 
 export interface ActivityTransferView {

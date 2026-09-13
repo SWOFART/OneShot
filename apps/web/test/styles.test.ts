@@ -61,10 +61,6 @@ describe('web stylesheet', () => {
     // The hero copy sits on --os-panel, which is forest in both themes.
     expect(css).toMatch(/\.hero-copy,\s*\.hero-plain \{[^}]*color:\s*var\(--os-panel-ink\)/u);
 
-    // The paid-API summary sits on the lime --os-field and rebinds the ink
-    // tokens its descendants inherit.
-    expect(css).toMatch(/\.paid-api-status \{[^}]*--os-panel-ink:\s*var\(--os-on-field\)/u);
-
     // The settlement box paints --os-panel inside `.job-list li`, which rebinds
     // --os-accent-ink to the page ink for the card around it. Without its own
     // rebind, the ArcScan link was forest ink on the forest box: invisible in
@@ -140,17 +136,6 @@ describe('web stylesheet', () => {
     expect(mismatches).toEqual([]);
   });
 
-  /**
-   * A rule whose class nothing renders is not a fix, it is decoration.
-   *
-   * This branch merged develop's redesigned `JobWorkspace.tsx` wholesale and
-   * silently took back `<section className="panel">`, dropping the
-   * `paid-api-panel` class the grid rules depend on. The stylesheet still said
-   * the right thing, so the text assertions above passed, lint and typecheck
-   * passed, 1064 unit tests and 8 browser tests passed, and CI went green on a
-   * tree where two of the requested fixes did not apply at all. Nothing checked
-   * that any element wore the class.
-   */
   it('defines no class that no component renders', async () => {
     const css = await readFile(stylesheet, 'utf8');
     const componentRoot = fileURLToPath(new URL('../src', import.meta.url));

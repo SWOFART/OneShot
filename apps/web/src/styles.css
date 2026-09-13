@@ -872,9 +872,7 @@ a:hover {
   margin-bottom: 0;
 }
 
-/* Two or more panels stacked in one tab (Tools renders the report workspace
-   and the x402 demo back to back). Without this they met with no gap and the
-   lower panel's rounded corners cut into the one above. */
+/* Two or more panels stacked in one tab. */
 .panel-stack {
   display: grid;
   gap: 1.25rem;
@@ -1162,57 +1160,6 @@ a:hover {
   margin-bottom: 0.5rem;
 }
 
-.gateway-funding-panel {
-  display: grid;
-  gap: 0.65rem;
-  margin-top: 0.25rem;
-  padding: 1rem;
-}
-
-.gateway-funding-panel > p {
-  margin: 0;
-  line-height: 1.5;
-}
-
-.gateway-funding-panel > label {
-  color: var(--os-panel-ink);
-  font-size: 0.85rem;
-  font-weight: 300;
-}
-
-.gateway-funding-panel > input {
-  width: 100%;
-  min-height: 42px;
-  padding: 0.65rem 0.85rem;
-  border: 1px solid var(--os-line);
-  border-radius: 0.6rem;
-  color: var(--os-ink);
-  background: var(--os-surface);
-  font-family: var(--os-font-mono);
-  font-size: 0.9rem;
-}
-
-.paid-api-status {
-  display: grid;
-  gap: 0.65rem;
-  margin-top: 1.25rem;
-  padding: 1rem;
-  border: 1px solid var(--os-line);
-  border-radius: 0.75rem;
-  background: var(--os-field);
-}
-
-.paid-api-status p {
-  margin: 0;
-}
-
-/* The lime field never flips, so its fact rows need a border that does not
-   either. Everything else about ink on these two surfaces is handled by the
-   token rebinding further down, which is the general form of this. */
-.paid-api-status .facts div {
-  border-bottom-color: var(--os-field-line);
-}
-
 .response-output {
   max-height: 260px;
   margin: 0;
@@ -1243,30 +1190,14 @@ a:hover {
   margin-bottom: 0.25rem;
 }
 
-/* The x402 demo and the recovery section lay their controls out the same way
+/* The recovery section lays its controls out the same way
    the report workspace does. Both used to render label, input and help text in
    plain inline flow, so the input sat on the same line as the text before it
    and the help text ran on after it. */
-.paid-api-panel {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.paid-api-panel > p {
-  margin: 0;
-  line-height: 1.6;
-}
-
 /* Buttons and links inside these grids size to their content instead of
    stretching the full column, and sit at the start of the row — which is where
-   the x402 runbook link belongs. */
-.paid-api-panel > button,
-.paid-api-panel > a {
-  justify-self: start;
-}
-
-.job-workspace > label,
-.paid-api-panel > label {
+   the supporting evidence links belong. */
+.job-workspace > label {
   color: var(--os-panel-ink);
   font-size: 0.85rem;
   font-weight: 300;
@@ -1281,8 +1212,7 @@ a:hover {
 }
 
 .job-workspace > input,
-.advanced-fields input,
-.paid-api-panel > input {
+.advanced-fields input {
   width: 100%;
   min-height: 42px;
   padding: 0.65rem 0.85rem;
@@ -1296,13 +1226,12 @@ a:hover {
 }
 
 .job-workspace > input:focus,
-.advanced-fields input:focus,
-.paid-api-panel > input:focus {
+.advanced-fields input:focus {
   border-color: var(--os-signal);
 }
 
-/* `.secondary` was only ever styled for <button>. The x402 runbook link and
-   the evidence links carry the same class and were rendering as bare text. */
+/* `.secondary` was only ever styled for <button>. Evidence links carry the
+   same class and should use the same visual treatment. */
 a.secondary {
   display: inline-flex;
   align-items: center;
@@ -2028,18 +1957,11 @@ a.secondary:hover {
   color: var(--os-ink);
 }
 
-.paid-api-status {
-  --os-panel-ink: var(--os-on-field);
-  --os-panel-ink-muted: var(--os-on-field-muted);
-  --os-accent-ink: var(--os-on-field);
-  color: var(--os-on-field);
-}
-
 /* The settlement box repaints --os-panel inside `.job-list li`, which rebinds
    --os-accent-ink to the page ink for the lighter card around it. That ink is
    dark forest in the light theme, so the ArcScan link inside the forest box was
    invisible there. Rebind the ink tokens this box's own descendants inherit,
-   exactly as .paid-api-status does for the lime field. */
+   so the ArcScan link remains visible in both themes. */
 .job-settlement-summary {
   --os-accent-ink: var(--os-state-committed);
   --os-panel-ink: var(--os-state-committed);
