@@ -355,6 +355,72 @@ describe('JobWorkspace payment inputs', () => {
     expect(client.start).not.toHaveBeenCalled();
   });
 
+  it('opens an MCP-prepared job and signs it without importing transaction JSON', async () => {
+    const user = userEvent.setup();
+    const payerWallet = '0x3333333333333333333333333333333333333333';
+    const recipient = '0x292d3FCA76142E0C6136B934563f3A0750b633eb';
+    const paymentHash = `0x${'b'.repeat(64)}`;
+    const payment = {
+      chain_id: 5042002 as const,
+      network: 'eip155:5042002' as const,
+      token_contract: '0x3600000000000000000000000000000000000000',
+      payer_wallet: payerWallet,
+      recipient,
+      amount_atomic: '1000000',
+    };
+    const preparedJob = {
+      job_id: 'job-mcp-signing-link',
+      task_key: 'mcp-console-payment',
+      tool_id: 'team-report-v1' as const,
+      business_intent_id: 'intent-mcp-signing-link',
+      supplier: {
+        supplier_id: 'team-report-v1' as const,
+        order_reference: 'team-report-mcp-signing-link',
+        recipient,
+        amount_atomic: '1000000',
+        asset: 'USDC' as const,
+        network: 'eip155:5042002' as const,
+        expires_at: '2099-09-13T02:00:00.000Z',
+      },
+      payment_state: 'READY' as const,
+      payment_mode: 'USER_WALLET' as const,
+      user_payment: payment,
+      delivery_state: 'PENDING' as const,
+      created_at: '2026-09-13T01:30:00.000Z',
+      updated_at: '2026-09-13T01:30:00.000Z',
+    };
+    const committedJob = {
+      ...preparedJob,
+      payment_state: 'COMMITTED' as const,
+      user_payment: { ...payment, transaction_hash: paymentHash },
+    };
+    const sendTransfer = vi.fn(async () => paymentHash);
+    const client = {
+      get: vi.fn(async () => preparedJob),
+      submitUserWalletPayment: vi.fn(async () => committedJob),
+    };
+
+    render(
+      <JobWorkspace
+        client={client as never}
+        initialJobId={preparedJob.job_id}
+        userWallet={{
+          address: payerWallet,
+          connect: vi.fn(async () => payerWallet),
+          sendTransfer,
+        }}
+        onSelectIntent={() => undefined}
+      />,
+    );
+
+    expect(await screen.findByText(/MCP payment is ready/u)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Confirm and sign in wallet' }));
+    await waitFor(() => expect(sendTransfer).toHaveBeenCalledWith(payment));
+    expect(client.get).toHaveBeenCalledWith(preparedJob.job_id);
+    expect(client.submitUserWalletPayment).toHaveBeenCalledWith(preparedJob.job_id, paymentHash);
+    expect(await screen.findByText(/Payment confirmed from your connected wallet/u)).toBeTruthy();
+  });
+
   it('requires a connected wallet instead of falling back to a server-wallet payment', async () => {
     const user = userEvent.setup();
     const request = {

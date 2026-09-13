@@ -85,6 +85,7 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
                 },
               ]),
               workspaceId: config.mcp.workspaceId,
+              ...(config.mcp.signingAppUrl ? { signingAppUrl: config.mcp.signingAppUrl } : {}),
               submissionsDisabled: config.submissionsDisabled,
               /*
                * НЕ УДАЛЯТЬ: config.mcp.payerWallet and config.mcp.waitMs are
