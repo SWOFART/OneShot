@@ -37,10 +37,18 @@ function explorerHref(transactionHash: string | undefined): string | undefined {
 
 const USER_WALLET_PAYMENT_CHECK_DELAY_MS = 500;
 const USER_WALLET_PAYMENT_CHECK_ATTEMPTS = 30;
+const RESULT_CHECK_DELAY_MS = 500;
+const RESULT_CHECK_ATTEMPTS = 30;
 
 function waitForPaymentCheck(): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, USER_WALLET_PAYMENT_CHECK_DELAY_MS);
+  });
+}
+
+function waitForResultCheck(): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, RESULT_CHECK_DELAY_MS);
   });
 }
 
@@ -58,6 +66,27 @@ async function resolveUserWalletPayment(
   ) {
     await waitForPaymentCheck();
     latest = await client.submitUserWalletPayment(jobId, transactionHash);
+  }
+  return latest;
+}
+
+async function waitForResumedResult(
+  client: JobApiClient,
+  jobId: string,
+  initial: JobView,
+): Promise<JobView> {
+  let latest = initial;
+  for (
+    let attempt = 0;
+    attempt < RESULT_CHECK_ATTEMPTS &&
+    !latest.result &&
+    latest.delivery_state !== 'RETRIEVAL_FAILED';
+    attempt += 1
+  ) {
+    await waitForResultCheck();
+    const matchingJob = (await client.list()).find((job) => job.job_id === jobId);
+    if (!matchingJob) throw new Error('The resumed job is no longer available');
+    latest = matchingJob;
   }
   return latest;
 }
@@ -482,8 +511,16 @@ export function JobList(props: {
     setResumingJobId(jobId);
     setError('');
     try {
-      await props.client.resume(jobId);
+      const resumed = await props.client.resume(jobId);
+      const latest = await waitForResumedResult(props.client, jobId, resumed);
       await refresh();
+      if (!latest.result) {
+        setError(
+          latest.delivery_state === 'RETRIEVAL_FAILED'
+            ? 'The supplier result could not be retrieved. No new payment was submitted.'
+            : 'The supplier result is still being retrieved. Refresh requests to check again. No new payment was submitted.',
+        );
+      }
     } catch {
       setError('The result could not be resumed. No new payment was submitted.');
     } finally {

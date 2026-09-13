@@ -34,7 +34,8 @@ function MachineTokenField(props: {
 }
 
 export function LoginGate(props: LoginGateProps) {
-  const [copied, setCopied] = useState(false);
+  const [copiedSessionId, setCopiedSessionId] = useState(false);
+  const [copiedWalletAddress, setCopiedWalletAddress] = useState(false);
   const machineTokenPresent = props.machineToken.trim().length > 0;
   const unlocked = props.session.status === 'SIGNED_IN' || machineTokenPresent;
   const showMachineToken = props.showMachineToken ?? import.meta.env.MODE === 'test';
@@ -42,9 +43,19 @@ export function LoginGate(props: LoginGateProps) {
   async function copySubject(subject: string): Promise<void> {
     try {
       await navigator.clipboard?.writeText(subject);
-      setCopied(true);
+      setCopiedSessionId(true);
     } catch {
-      setCopied(false);
+      setCopiedSessionId(false);
+    }
+  }
+
+  async function copyWalletAddress(address: string | null | undefined): Promise<void> {
+    if (!address) return;
+    try {
+      await navigator.clipboard?.writeText(address);
+      setCopiedWalletAddress(true);
+    } catch {
+      setCopiedWalletAddress(false);
     }
   }
 
@@ -88,19 +99,30 @@ export function LoginGate(props: LoginGateProps) {
               <code className="operator-did" title="Technical session identifier">
                 {maskIdentifier(props.session.subject, 8)}
               </code>
-              <div className="session-wallet-address">
-                <span>Wallet address</span>
-                <code title="Wallet address used for user-wallet payments">
-                  {props.userWallet?.address ?? 'No wallet connected'}
-                </code>
-              </div>
               <button
                 type="button"
                 className="btn-copy"
                 onClick={() => void copySubject(props.session.subject ?? '')}
               >
-                {copied ? 'Copied' : 'Copy session ID'}
+                {copiedSessionId ? 'Copied' : 'Copy session ID'}
               </button>
+              <div className="session-wallet-address">
+                <span>Wallet address</span>
+                <code
+                  className="operator-wallet-address"
+                  title="Wallet address used for user-wallet payments"
+                >
+                  {props.userWallet?.address ?? 'No wallet connected'}
+                </code>
+                <button
+                  type="button"
+                  className="btn-copy"
+                  disabled={!props.userWallet?.address}
+                  onClick={() => void copyWalletAddress(props.userWallet?.address)}
+                >
+                  {copiedWalletAddress ? 'Copied' : 'Copy wallet address'}
+                </button>
+              </div>
             </details>
             <small className="operator-note">Authenticated through a Privy wallet session.</small>
             <button type="button" className="btn-signout" onClick={() => props.session.logout()}>

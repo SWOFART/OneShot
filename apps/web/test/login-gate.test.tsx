@@ -55,6 +55,32 @@ describe('LoginGate', () => {
     expect(screen.queryByText('did:privy:abc123')).toBeNull();
   });
 
+  it('copies the connected wallet address from session details', async () => {
+    const walletAddress = '0x1111111111111111111111111111111111111111';
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+    const user = userEvent.setup();
+
+    render(
+      <LoginGate
+        session={signedInSession('did:privy:abc123')}
+        machineToken=""
+        onMachineTokenChange={() => {}}
+        userWallet={{
+          address: walletAddress,
+          connect: async () => walletAddress,
+          sendTransfer: async () => `0x${'a'.repeat(64)}`,
+        }}
+      >
+        <p>{CONSOLE_TEXT}</p>
+      </LoginGate>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Copy wallet address' }));
+
+    expect(writeText).toHaveBeenCalledWith(walletAddress);
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeTruthy();
+  });
+
   it('never renders the access token', () => {
     const { container } = render(
       <LoginGate
