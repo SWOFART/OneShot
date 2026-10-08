@@ -62,9 +62,11 @@ work@kapustazh.dev for enquiries; website changes come later.
 
 - Branch: feature/readme-b2b-positioning
 - Base: origin/develop a60836b1acdb4a71aa1aaffd09f0a40f25903924
-- Commit: uncommitted.
-- PR: draft to be created after push; GitHub authentication verified.
-- CI: not run.
+- Documentation commit: bbb72194687b8e9604f06c8ef0d9a276723ddf5a.
+- PR: https://github.com/SWOFART/OneShot/pull/148 (draft, targets develop).
+- CI: triggered; repository-policy, Markdown/Mermaid, ESLint/TypeScript,
+  browser acceptance, and Workers build pending at creation.
+- This context-only follow-up records PR state; CI must validate final head.
 
 ## Review gates
 
@@ -74,5 +76,5 @@ work@kapustazh.dev for enquiries; website changes come later.
 
 ## Handoff/next steps
 
-1. Create draft PR and report validation and gate deviation.
+1. PR created; local validation passed. CI remains pending at handoff.
 2. A human reviews and merges; do not mark ready or merge automatically.
