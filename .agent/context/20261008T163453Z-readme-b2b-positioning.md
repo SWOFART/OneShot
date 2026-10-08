@@ -13,7 +13,7 @@ Refresh README for investors and partners and create a PR.
 Create a more structured startup README. Interview clarified B2B agent builders
 as initial focus, internal agent operators as prospective buyers, and service
 platforms as prospective partners. No customers or pilot feedback yet. Use
-work@kapustazh.dev for enquiries; website changes come later.
+`work@kapustazh.dev` for enquiries; website changes come later.
 
 ## Assumptions
 
@@ -63,10 +63,13 @@ work@kapustazh.dev for enquiries; website changes come later.
 - Branch: feature/readme-b2b-positioning
 - Base: origin/develop a60836b1acdb4a71aa1aaffd09f0a40f25903924
 - Documentation commit: bbb72194687b8e9604f06c8ef0d9a276723ddf5a.
-- PR: https://github.com/SWOFART/OneShot/pull/148 (draft, targets develop).
+- PR: [#148](https://github.com/SWOFART/OneShot/pull/148) (draft, targets develop).
 - CI: triggered; repository-policy, Markdown/Mermaid, ESLint/TypeScript,
   browser acceptance, and Workers build pending at creation.
-- This context-only follow-up records PR state; CI must validate final head.
+- CI Markdown failure: two bare links in this context record (email and PR URL).
+  Corrected link formatting; repository-wide pinned Markdown check rerun.
+- Pinned CI Markdown command on all 213 Markdown files: PASS (zero errors).
+- Local initial check omitted context files; full Markdown scope now checked.
 
 ## Review gates
 
