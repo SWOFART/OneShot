@@ -34,7 +34,7 @@ const REQUIRED_MAINNET_ARTIFACTS = [
   'docs/SERVER_RUNTIME.md',
   'docs/settlement/SETTLEMENT_CONFIG_V1.md',
   'docs/settlement/PROVIDER_SETUP.md',
-  'Dockerfile.api',
+  'Dockerfile',
 ];
 
 function readJson(path) {

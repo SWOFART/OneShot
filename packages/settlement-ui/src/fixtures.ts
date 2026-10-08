@@ -238,7 +238,3 @@ export const SETTLEMENT_SCENARIO_INTENTS: Readonly<Record<string, IntentResponse
     ]),
   ),
 );
-
-export function scenarioNames(): readonly string[] {
-  return Object.keys(SETTLEMENT_SCENARIOS);
-}

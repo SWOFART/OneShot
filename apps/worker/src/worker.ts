@@ -173,15 +173,6 @@ export async function runStartupRecovery(
   return recovered.length;
 }
 
-export async function resumeSafeJobs(
-  options: WorkerOptions,
-  maxJobs = 100,
-): Promise<{ readonly recoveredOrphans: number; readonly drainedJobs: number }> {
-  const recoveredOrphans = await runStartupRecovery(options);
-  const drainedJobs = await drainOutboxJobs(options, maxJobs);
-  return { recoveredOrphans, drainedJobs };
-}
-
 export async function executeReconcileIntent(
   businessIntentId: string,
   options: WorkerOptions,
