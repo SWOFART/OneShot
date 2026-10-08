@@ -68,8 +68,9 @@ Prior session instructions: do not reopen closed PRs; omit FreePi.
 
 - Branch: feature/remove-legacy-leftovers.
 - Base develop: 55a387abad228d61c7a0a7a911299c103495bda0.
-- Commit/PR: pending validation; new draft PR, never reopen a closed PR.
-- CI: pending push.
+- Implementation commit: b7683c9.
+- PR: [#151](https://github.com/SWOFART/OneShot/pull/151), new draft against develop.
+- CI: triggered on pushed head; pending at creation.
 
 ## Review gates
 
@@ -78,5 +79,5 @@ Prior session instructions: do not reopen closed PRs; omit FreePi.
 
 ## Handoff/next steps
 
-1. Finish browser checks, push focused change, and create new draft PR.
+1. Local checks pass; draft PR created. Monitor remote CI.
 2. Human reviews and merges; agent does not merge.
