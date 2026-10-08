@@ -393,16 +393,6 @@ a:hover {
   margin-bottom: 2.5rem;
 }
 
-.section-eyebrow {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 300;
-  letter-spacing: 0.16em;
-  color: var(--os-accent-ink);
-  font-family: var(--os-font-mono);
-}
-
 .section-header h2 {
   font-size: clamp(1.6rem, 3.5vw, 2.2rem);
   font-weight: 300;
@@ -428,15 +418,6 @@ a:hover {
 
 .invariant-card:hover {
   transform: translateY(-3px);
-}
-
-.invariant-index {
-  font-family: var(--os-font-mono);
-  font-size: 0.72rem;
-  font-weight: 300;
-  letter-spacing: 0.14em;
-  color: var(--os-accent-ink);
-  margin-bottom: 0.9rem;
 }
 
 .invariant-card h3 {
@@ -546,38 +527,6 @@ a:hover {
   margin: 1rem 0 0;
   padding-top: 1rem;
   border-top: 1px solid var(--os-line);
-}
-
-/* ==========================================================================
-   Console Workspace Container
-   ========================================================================== */
-
-.console-container {
-  margin: 3rem 0;
-  padding: 2rem;
-  border-radius: var(--os-radius-lg);
-  background: var(--os-panel);
-  color: var(--os-panel-ink);
-}
-
-.console-header {
-  margin-bottom: 1.75rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--os-panel-line);
-}
-
-.console-header h2 {
-  font-size: 1.6rem;
-  font-weight: 300;
-  color: var(--os-panel-ink);
-  margin-bottom: 0.4rem;
-}
-
-.console-subtitle {
-  color: var(--os-panel-ink-muted);
-  font-size: 0.92rem;
-  line-height: 1.5;
-  margin-bottom: 0;
 }
 
 /* ==========================================================================
@@ -796,47 +745,6 @@ a:hover {
 
 .operator-identity .machine-token small {
   color: var(--os-ink-muted);
-}
-
-/* ==========================================================================
-   Active Intent Context Bar
-   ========================================================================== */
-
-.intent-context {
-  display: grid;
-  grid-template-columns: auto minmax(200px, 1fr);
-  align-items: center;
-  gap: 1rem;
-  margin: 1.25rem 0;
-  padding: 0.85rem 1.25rem;
-  background: var(--os-surface);
-  border: 1px solid var(--os-line);
-  border-radius: var(--os-radius-lg);
-  color: var(--os-ink);
-}
-
-.intent-context label {
-  font-size: 0.85rem;
-  font-weight: 300;
-  color: var(--os-ink);
-  white-space: nowrap;
-}
-
-.intent-context input {
-  width: 100%;
-  min-height: 42px;
-  padding: 0.65rem 0.9rem;
-  border: 1px solid var(--os-line);
-  border-radius: 999px;
-  background: var(--os-surface);
-  color: var(--os-ink);
-  font-family: var(--os-font-mono);
-  font-size: 0.9rem;
-  transition: border-color 0.2s ease;
-}
-
-.intent-context input:focus {
-  border-color: var(--os-accent-ink);
 }
 
 /* ==========================================================================
@@ -1387,62 +1295,6 @@ a.secondary:hover {
   font: inherit;
 }
 
-/* ==========================================================================
-   Footer
-   ========================================================================== */
-
-.app-footer {
-  margin-top: 5rem;
-  padding: 3rem 1.5rem 1.5rem;
-  border-top: 1px solid var(--os-line);
-  color: var(--os-ink-muted);
-  font-size: 0.85rem;
-}
-
-.footer-top {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 2.5rem;
-  margin-bottom: 2.5rem;
-}
-
-.footer-brand {
-  max-width: 360px;
-  display: grid;
-  gap: 0.75rem;
-}
-
-.footer-desc {
-  line-height: 1.6;
-  color: var(--os-ink-muted);
-  margin-bottom: 0;
-}
-
-.footer-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
-}
-
-.meta-col {
-  display: grid;
-  gap: 0.3rem;
-}
-
-.meta-label {
-  font-size: 0.7rem;
-  font-weight: 300;
-  letter-spacing: 0.12em;
-  color: var(--os-ink-muted);
-  font-family: var(--os-font-mono);
-}
-
-.meta-value {
-  color: var(--os-ink);
-  font-weight: 300;
-}
-
 .meta-code {
   font-family: var(--os-font-mono);
   color: var(--os-accent-ink);
@@ -1450,30 +1302,6 @@ a.secondary:hover {
   padding: 0.2rem 0.4rem;
   border-radius: 999px;
   border: 1px solid var(--os-line);
-}
-
-.footer-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--os-line);
-  font-size: 0.8rem;
-  color: var(--os-ink-muted);
-}
-
-.footer-links {
-  display: flex;
-  gap: 1.25rem;
-}
-
-.footer-links a {
-  color: var(--os-ink-muted);
-}
-
-.footer-links a:hover {
-  color: var(--os-accent-ink);
 }
 
 /* ==========================================================================
@@ -1606,9 +1434,7 @@ a.secondary:hover {
   body,
   .top-nav,
   .panel,
-  .console-container,
   .login-gate,
-  .intent-context,
   .job-list li,
   .advanced-fields,
   .composed-surface,
@@ -1683,14 +1509,6 @@ a.secondary:hover {
     grid-template-columns: 1fr;
   }
 
-  .console-container {
-    padding: 1.25rem 1rem;
-  }
-
-  .intent-context {
-    grid-template-columns: 1fr;
-  }
-
   .payment-grid {
     grid-template-columns: 1fr;
   }
@@ -1708,11 +1526,6 @@ a.secondary:hover {
 
   .fixture-toolbar select {
     width: 100%;
-  }
-
-  .footer-bottom {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 
@@ -2036,7 +1849,6 @@ a.secondary:hover {
 }
 
 /* Match ink to its actual surface, including cards nested in dark panels. */
-.console-container,
 .login-gate,
 .invariant-card,
 .panel,
@@ -2044,14 +1856,6 @@ a.secondary:hover {
 .hero-plain,
 .hero-copy {
   --os-accent-ink: var(--os-signal);
-}
-
-.console-container .tabs button {
-  color: var(--os-panel-ink);
-}
-
-.console-container .tabs button[aria-selected='true'] {
-  color: var(--os-on-signal);
 }
 
 .hero-plain h1,

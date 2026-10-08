@@ -37,7 +37,7 @@ const HASH = PROOF.settlement.transaction_hash;
 
 const ARTIFACTS = [
   { path: 'docs/SAFE_DISABLE_RUNBOOK.md', present: true },
-  { path: 'Dockerfile.api', present: true },
+  { path: 'Dockerfile', present: true },
 ];
 
 function mutate(patch: Record<string, unknown>): SanitizedSettlementProof {

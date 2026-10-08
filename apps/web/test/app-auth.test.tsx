@@ -41,8 +41,10 @@ describe('App operator gating', () => {
           headers: { 'content-type': 'application/json' },
         }),
     );
-    render(<App apiClient={okClient(fetchFn)} useOperatorSession={() => fakeSession()} />);
-    expect(screen.queryByRole('tab', { name: 'Create request' })).toBeNull();
+    render(
+      <App route="/app" apiClient={okClient(fetchFn)} useOperatorSession={() => fakeSession()} />,
+    );
+    expect(screen.queryByRole('tab', { name: 'Payment services' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Sign in with Privy' })).toBeTruthy();
   });
 
@@ -54,20 +56,23 @@ describe('App operator gating', () => {
           headers: { 'content-type': 'application/json' },
         }),
     );
-    render(<App apiClient={okClient(fetchFn)} useOperatorSession={() => signedInSession()} />);
-    expect(screen.getByRole('tab', { name: 'Create request' })).toBeTruthy();
+    render(
+      <App
+        route="/app"
+        apiClient={okClient(fetchFn)}
+        useOperatorSession={() => signedInSession()}
+      />,
+    );
+    expect(screen.getByRole('tab', { name: 'Payment services' })).toBeTruthy();
   });
 
   it('sends the Privy access token on an authenticated request', async () => {
     const seen: string[] = [];
     vi.stubGlobal('fetch', respondingFetch(seen));
 
-    const user = userEvent.setup();
-    render(<App useOperatorSession={() => signedInSession('did:privy:x', 'aaa.bbb.ccc')} />);
-
-    await user.click(screen.getByRole('tab', { name: 'Payment status' }));
-    await user.type(screen.getByPlaceholderText('Request identifier'), 'intent-1');
-    await user.click(screen.getByRole('button', { name: 'Look up' }));
+    render(
+      <App route="/app" useOperatorSession={() => signedInSession('did:privy:x', 'aaa.bbb.ccc')} />,
+    );
 
     await waitFor(() => expect(seen).toContain('Bearer aaa.bbb.ccc'));
   });
@@ -77,14 +82,12 @@ describe('App operator gating', () => {
     vi.stubGlobal('fetch', respondingFetch(seen));
 
     const user = userEvent.setup();
-    render(<App useOperatorSession={() => fakeSession({ status: 'UNCONFIGURED' })} />);
+    render(<App route="/app" useOperatorSession={() => fakeSession({ status: 'UNCONFIGURED' })} />);
 
     await user.click(screen.getByText('Machine token (advanced)'));
     await user.type(screen.getByLabelText('Machine token'), 'service-token');
-    await user.click(screen.getByRole('tab', { name: 'Payment status' }));
-    await user.type(screen.getByPlaceholderText('Request identifier'), 'intent-1');
-    await user.click(screen.getByRole('button', { name: 'Look up' }));
 
+    await user.click(screen.getByRole('tab', { name: 'Payment proof' }));
     await waitFor(() => expect(seen).toContain('Bearer service-token'));
   });
 });
