@@ -22,9 +22,9 @@ describe('Arc testnet profile', () => {
     expect(ARC_MAINNET.enabled).toBe(ARC_MAINNET_CHAIN.enabled);
   });
 
-  it('is the only enabled profile', () => {
+  it('enables the published testnet and the published mainnet', () => {
     const enabled = ARC_PROFILES.filter((profile) => profile.enabled);
-    expect(enabled).toEqual([ARC_TESTNET]);
+    expect(enabled).toEqual([ARC_TESTNET, ARC_MAINNET]);
   });
 
   it('is not a mainnet profile', () => {
@@ -42,29 +42,18 @@ describe('Arc testnet profile', () => {
 });
 
 describe('Arc mainnet profile', () => {
-  it('is disabled', () => {
-    expect(ARC_MAINNET.enabled).toBe(false);
-  });
-
-  it('carries no network values at all', () => {
-    // develop@d6758dd removed a previously asserted mainnet chain ID and launch
-    // date as unverified guesses. This test is what keeps them from returning:
-    // a plausible-looking default is more dangerous than an absent one.
-    const keys = Object.keys(ARC_MAINNET);
-    expect(keys).not.toContain('chainId');
-    expect(keys).not.toContain('caip2');
-    expect(keys).not.toContain('rpcUrl');
-    expect(keys).not.toContain('explorerUrl');
-    expect(keys).not.toContain('tokenContract');
-  });
-
-  it('explains why it is empty', () => {
-    expect(ARC_MAINNET.verification).toBe('UNPUBLISHED');
-    expect(ARC_MAINNET.reason).toMatch(/has not published/i);
-  });
-
-  it('does not narrow to a pinned profile', () => {
-    expect(isPinned(ARC_MAINNET)).toBe(false);
+  it('pins the values published by Arc and Circle', () => {
+    expect(ARC_MAINNET.enabled).toBe(true);
+    expect(ARC_MAINNET.isMainnet).toBe(true);
+    expect(isPinned(ARC_MAINNET)).toBe(true);
+    expect(ARC_MAINNET.chainId).toBe(5042);
+    expect(ARC_MAINNET.caip2).toBe('eip155:5042');
+    expect(ARC_MAINNET.tokenContract).toBe('0x3600000000000000000000000000000000000000');
+    expect(ARC_MAINNET.tokenDecimals).toBe(6);
+    expect(ARC_MAINNET.nativeDecimals).toBe(18);
+    expect(ARC_MAINNET.chainId).toBe(ARC_MAINNET_CHAIN.chainId);
+    expect(ARC_MAINNET.caip2).toBe(ARC_MAINNET_CHAIN.caip2);
+    expect(ARC_MAINNET.tokenContract).toBe(ARC_MAINNET_CHAIN.settlementAsset.contract);
   });
 });
 

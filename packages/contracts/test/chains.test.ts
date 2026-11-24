@@ -22,15 +22,16 @@ const intent = {
 };
 
 describe('settlement chain registry', () => {
-  it('keeps Arc Testnet as the first enabled chain', () => {
-    expect(settlementChainRegistry.list()[0]).toBe(ARC_TESTNET_CHAIN);
+  it('keeps Arc Mainnet as the default rail and the testnets selectable', () => {
+    expect(settlementChainRegistry.list()[0]).toBe(ARC_MAINNET_CHAIN);
     expect(settlementChainRegistry.enabled().map((chain) => chain.id)).toEqual([
+      'arc-mainnet',
       'arc-testnet',
       'base-sepolia',
     ]);
   });
 
-  it('pins Base Sepolia USDC and leaves Arc Mainnet unpublished', () => {
+  it('pins Base Sepolia USDC and the published Arc Mainnet constants', () => {
     expect(BASE_SEPOLIA_CHAIN.chainId).toBe(84532);
     expect(BASE_SEPOLIA_CHAIN.caip2).toBe('eip155:84532');
     expect(BASE_SEPOLIA_CHAIN.settlementAsset).toEqual({
@@ -39,8 +40,14 @@ describe('settlement chain registry', () => {
       contract: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
     });
     expect(BASE_SEPOLIA_CHAIN.nativeAsset).toEqual({ symbol: 'ETH', decimals: 18 });
-    expect(ARC_MAINNET_CHAIN.enabled).toBe(false);
-    expect(ARC_MAINNET_CHAIN.verification).toBe('UNPUBLISHED');
+    expect(ARC_MAINNET_CHAIN.enabled).toBe(true);
+    expect(ARC_MAINNET_CHAIN.isMainnet).toBe(true);
+    expect(ARC_MAINNET_CHAIN.chainId).toBe(5042);
+    expect(ARC_MAINNET_CHAIN.caip2).toBe('eip155:5042');
+    expect(ARC_MAINNET_CHAIN.settlementAsset.contract).toBe(
+      '0x3600000000000000000000000000000000000000',
+    );
+    expect(ARC_MAINNET_CHAIN.graphQueryEnv).toBeUndefined();
     expect(JSON.stringify(settlementChainRegistry.list())).not.toMatch(/https?:\/\//);
   });
 
@@ -105,8 +112,9 @@ describe('direct intent network validation', () => {
 });
 
 describe('selectSettlementChain', () => {
-  it('defaults to Arc Testnet when no selector is set', () => {
-    expect(selectSettlementChain({}).id).toBe('arc-testnet');
+  it('defaults to Arc Mainnet when no selector is set', () => {
+    expect(selectSettlementChain({}).id).toBe('arc-mainnet');
+    expect(selectSettlementChain({}).caip2).toBe('eip155:5042');
   });
 
   it('selects Base Sepolia from ONESHOT_CHAIN', () => {
@@ -119,7 +127,7 @@ describe('selectSettlementChain', () => {
     ).toThrow(/different chains/u);
   });
 
-  it('refuses unpublished mainnet', () => {
-    expect(() => selectSettlementChain({ ONESHOT_CHAIN: 'arc-mainnet' })).toThrow(/no pinned/u);
+  it('selects the pinned Arc Mainnet rail', () => {
+    expect(selectSettlementChain({ ONESHOT_CHAIN: 'arc-mainnet' }).chainId).toBe(5042);
   });
 });

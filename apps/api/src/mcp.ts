@@ -89,7 +89,7 @@ const outputSchema = z.strictObject({
   }),
   transaction: z
     .strictObject({
-      chain_id: z.union([z.literal(5042002), z.literal(84532)]),
+      chain_id: z.union([z.literal(5042), z.literal(5042002), z.literal(84532)]),
       from: z.string(),
       to: z.string(),
       data: z.string(),

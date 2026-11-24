@@ -3,7 +3,7 @@
  *
  * OneShot settles one USDC transfer on exactly one configured chain. The chain
  * is data: an id, a CAIP-2 network, and pinned asset constants. Arc Testnet is
- * the first implementation and the default. Adding a chain means appending a
+ * the default rail. Testnets are for integration testing. Adding a chain means appending a
  * record here and teaching the OpenAPI generator the same CAIP-2 list. A test
  * locks those two lists together.
  *
@@ -117,30 +117,47 @@ export const BASE_SEPOLIA_CHAIN = {
   nativeAsset: { symbol: 'ETH', decimals: 18 },
 } as const satisfies PinnedSettlementChain;
 
-/** Arc Mainnet stays empty until official parameters are published and a human authorizes it. */
-export const ARC_MAINNET_CHAIN: UnpublishedSettlementChain = {
+/**
+ * Arc Mainnet.
+ *
+ * Pinned from official Arc documentation on 2026-11-24:
+ * https://docs.arc.io/arc/references/connect-to-arc (chain id 5042, CAIP-2
+ * eip155:5042) and https://docs.arc.io/arc/references/contract-addresses
+ * (USDC ERC-20 0x3600…0000, 6 decimals; native gas USDC uses 18). Circle lists
+ * the same Arc mainnet USDC address. No RPC URL is stored here.
+ *
+ * This is the default rail. Settlement still refuses to run until an operator
+ * sets ONESHOT_ALLOW_MAINNET_ACTIVATION=true. There is no Graph indexer for
+ * this chain in this build.
+ */
+export const ARC_MAINNET_CHAIN = {
   id: 'arc-mainnet',
   displayName: 'Arc Mainnet',
   family: 'evm',
   settlementMethod: 'erc20-transfer',
-  verification: 'UNPUBLISHED',
-  enabled: false,
+  verification: 'PINNED',
+  enabled: true,
   isMainnet: true,
-  reason:
-    'Arc has not published mainnet network parameters. This chain carries no ' +
-    'chain ID, RPC, explorer, or token value. Pinning requires official Arc ' +
-    'documentation plus explicit human authorization.',
-};
+  chainId: 5042,
+  caip2: 'eip155:5042',
+  settlementAsset: {
+    symbol: 'USDC',
+    decimals: 6,
+    contract: '0x3600000000000000000000000000000000000000',
+  },
+  nativeAsset: { symbol: 'USDC', decimals: 18 },
+} as const satisfies PinnedSettlementChain;
 
-/** Arc Testnet is first. Later entries are additional implementations. */
+/** Arc Mainnet is the default. Testnets follow it. */
 export const SETTLEMENT_CHAINS: readonly SettlementChain[] = [
+  ARC_MAINNET_CHAIN,
   ARC_TESTNET_CHAIN,
   BASE_SEPOLIA_CHAIN,
-  ARC_MAINNET_CHAIN,
 ];
 
-/** CAIP-2 networks a direct settlement intent may name. Arc Testnet stays first. */
+/** CAIP-2 networks a direct settlement intent may name. Mainnet is first. */
 export const ENABLED_SETTLEMENT_NETWORKS = [
+  ARC_MAINNET_CHAIN.caip2,
   ARC_TESTNET_CHAIN.caip2,
   BASE_SEPOLIA_CHAIN.caip2,
 ] as const;
@@ -196,10 +213,9 @@ export interface ChainSelectionEnv {
  *
  * An explicit `ONESHOT_CHAIN` wins. `ONESHOT_ARC_PROFILE` is the original
  * selector and must name the same chain when both are set. When neither is
- * set, the result is Arc Testnet, which is the chain this product hardcoded
- * before selection existed. Unknown, unpublished, or disabled ids throw.
- * Mainnet is refused here; settlement configuration applies the human
- * authorization flag before any real-value chain can load.
+ * set, the result is Arc Mainnet. Loading a mainnet settlement still requires
+ * ONESHOT_ALLOW_MAINNET_ACTIVATION=true. Unknown, unpublished, or disabled ids
+ * throw.
  */
 export function selectSettlementChain(env: ChainSelectionEnv = {}): PinnedSettlementChain {
   const chainId = env.ONESHOT_CHAIN?.trim();
@@ -209,7 +225,7 @@ export function selectSettlementChain(env: ChainSelectionEnv = {}): PinnedSettle
       `ONESHOT_CHAIN=${chainId} and ONESHOT_ARC_PROFILE=${arcProfile} select different chains.`,
     );
   }
-  const id = chainId || arcProfile || ARC_TESTNET_CHAIN.id;
+  const id = chainId || arcProfile || ARC_MAINNET_CHAIN.id;
   const chain = getSettlementChain(id);
   if (!chain) {
     throw new Error(
@@ -221,9 +237,6 @@ export function selectSettlementChain(env: ChainSelectionEnv = {}): PinnedSettle
   }
   if (!chain.enabled) {
     throw new Error(`Settlement chain "${id}" is disabled.`);
-  }
-  if (chain.isMainnet) {
-    throw new Error(`Settlement chain "${id}" moves real value and is not selectable here.`);
   }
   if (!isEnabledSettlementNetwork(chain.caip2)) {
     throw new Error(`Settlement chain "${id}" is not an enabled settlement network.`);

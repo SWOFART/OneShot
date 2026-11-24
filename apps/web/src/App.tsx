@@ -1,10 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  isPinnedChain,
-  SETTLEMENT_CHAINS,
-  type ActivityResponse,
-  type SettlementChain,
-} from '@oneshot/contracts';
+import { type ActivityResponse } from '@oneshot/contracts';
 import { createSettlementClient, type SettlementClient } from '@oneshot/settlement-ui';
 import type { RecoveryClient } from '@oneshot/recovery-ui';
 import { CommitRing } from '@oneshot/brand';
@@ -44,20 +39,12 @@ export interface AppProps {
   readonly route?: string;
 }
 
-function chainStatus(chain: SettlementChain): string {
-  if (!isPinnedChain(chain)) return 'Unpublished';
-  if (chain.id === 'arc-testnet') return 'Default rail';
-  if (chain.isMainnet) return 'Mainnet disabled';
-  return chain.enabled ? 'Selectable testnet' : 'Disabled';
-}
-
 function SiteFooter() {
   return (
     <footer className="site-footer">
       <p>One job. Many retries. At most one committed settlement.</p>
       <nav aria-label="Footer">
         <a href="#how-it-works">How it works</a>
-        <a href="#chains">Settlement chains</a>
         <a href="/docs/mcp">Agent docs</a>
         <a href="mailto:work@kapustazh.dev">work@kapustazh.dev</a>
       </nav>
@@ -80,10 +67,6 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
           </div>
         </div>
         <div className="nav-status-group">
-          <span className="status-badge network-badge">
-            <span className="status-dot" />
-            {browserSettlementChain().displayName}
-          </span>
           <span className="status-badge token-badge">USDC</span>
           <button type="button" className="theme-toggle" onClick={props.onToggleTheme}>
             {props.theme === 'dark' ? 'Light theme' : 'Dark theme'}
@@ -103,8 +86,8 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
             replaced.
           </p>
           <p className="hero-sublead">
-            Arc Testnet is the default rail. Base Sepolia is a selectable testnet. Mainnet is not
-            enabled.
+            Built for businesses and the platforms that sell to their agents. The settlement rail
+            is chosen per deployment.
           </p>
           <div className="hero-actions">
             <a className="btn-hero-cta" href="/app">
@@ -173,56 +156,16 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
           <article className="invariant-card">
             <h3>Platforms selling to agents</h3>
             <p>
-              Connect an agent with the MCP payment tools. The user wallet signs on the selected
-              chain. OneShot prepares the request and verifies the receipt.
+              Connect an agent with the MCP payment tools. The user wallet signs the payment.
+              OneShot prepares the request and verifies the receipt.
             </p>
           </article>
         </div>
       </section>
-      <section id="chains" className="chains-section" aria-labelledby="chains-heading">
-        <div className="section-header">
-          <h2 id="chains-heading">Rails a company can select</h2>
-          <p>
-            The library settles USDC through a chain adapter. Operators choose the rail with{' '}
-            <code>ONESHOT_CHAIN</code>. The browser wallet, MCP tools, and team-report supplier
-            follow that choice. The guarantee does not change with the chain.
-          </p>
-        </div>
-        <div className="chains-grid">
-          {SETTLEMENT_CHAINS.map((chain) => (
-            <article key={chain.id} className="chain-card">
-              <p className="chain-status">{chainStatus(chain)}</p>
-              <h3>{chain.displayName}</h3>
-              {isPinnedChain(chain) ? (
-                <dl>
-                  <div>
-                    <dt>Chain id</dt>
-                    <dd>{chain.chainId}</dd>
-                  </div>
-                  <div>
-                    <dt>Network</dt>
-                    <dd>{chain.caip2}</dd>
-                  </div>
-                  <div>
-                    <dt>Asset</dt>
-                    <dd>
-                      {chain.settlementAsset.symbol} · {chain.settlementAsset.decimals} decimals
-                    </dd>
-                  </div>
-                </dl>
-              ) : (
-                <p>{chain.reason}</p>
-              )}
-            </article>
-          ))}
-        </div>
-        <p className="chains-note">
-          The browser wallet, MCP payments, and the team-report supplier use the chain selected by{' '}
-          <code>ONESHOT_CHAIN</code>. Graph recovery runs only where that chain has an indexer. Arc
-          Testnet keeps its subgraph. Base Sepolia has none, so Graph recovery is skipped and
-          settlement still runs. Arc Mainnet is unpublished and cannot be selected.
-        </p>
-      </section>
+      <p className="chains-note">
+        OneShot is chain-agnostic. Each deployment settles on the rail its operator selects, and
+        the payment identity stays the same. Chain configuration is documented for operators.
+      </p>
       <SiteFooter />
     </main>
   );

@@ -7,17 +7,16 @@ afterEach(() => {
   cleanup();
 });
 
-describe('public settlement chains', () => {
-  it('shows Arc Testnet as the default rail and Base Sepolia as a selectable testnet', () => {
+describe('public landing scope', () => {
+  it('leads with the business guarantee and does not catalog chains', () => {
     render(<App route="/" />);
-    expect(screen.getByRole('heading', { name: 'Rails a company can select' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Arc Testnet' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Base Sepolia' })).toBeTruthy();
-    expect(screen.getByText('Default rail')).toBeTruthy();
-    expect(screen.getByText('Selectable testnet')).toBeTruthy();
-    expect(screen.getByText('Unpublished')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Skip to content' }).getAttribute('href')).toBe(
-      '#main-content',
-    );
+    expect(
+      screen.getByRole('heading', { name: /One payment identity across every retry/u }),
+    ).toBeTruthy();
+    expect(screen.getByText(/chain-agnostic/u)).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Rails a company can select' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Arc Testnet' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Base Sepolia' })).toBeNull();
+    expect(screen.queryByText(/eip155:/u)).toBeNull();
   });
 });

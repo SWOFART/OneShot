@@ -99,7 +99,7 @@ test.describe('resumable job workspace', () => {
     await page.goto('/');
     expect(await page.evaluate(() => typeof globalThis.Buffer)).toBe('function');
     await expect(
-      page.getByRole('heading', { name: 'Resume the job, not the payment.' }),
+      page.getByRole('heading', { name: 'One payment identity across every retry.' }),
     ).toBeVisible();
     await expect(page.getByRole('link', { name: 'Open workspace' }).first()).toHaveAttribute(
       'href',
@@ -126,7 +126,7 @@ test.describe('resumable job workspace', () => {
     await page.getByText('Request key (advanced)').click();
     await expect(page.locator('#generated-task-key')).toHaveValue(/report-acme-com-/u);
     await page
-      .getByRole('region', { name: 'Direct Arc payment' })
+      .getByRole('region', { name: 'Direct Arc Mainnet payment' })
       .getByRole('button', { name: 'Review payment details' })
       .click();
     await expect.poll(() => calls.filter((call) => call === 'POST /v1/jobs/quote')).toHaveLength(1);
@@ -134,7 +134,7 @@ test.describe('resumable job workspace', () => {
     await expect(page.getByRole('heading', { name: 'Review before approval' })).toBeVisible();
     await expect(page.getByText('Nothing has been paid yet.')).toBeVisible();
     const approve = page
-      .getByRole('region', { name: 'Direct Arc payment' })
+      .getByRole('region', { name: 'Direct Arc Mainnet payment' })
       .locator('button')
       .last();
     await approve.click();
@@ -237,7 +237,7 @@ for (const theme of ['light', 'dark'] as const) {
             .fill('0x1111111111111111111111111111111111111111');
           await page.getByLabel('Amount (USDC)').fill('2.5');
           await page
-            .getByRole('region', { name: 'Direct Arc payment' })
+            .getByRole('region', { name: 'Direct Arc Mainnet payment' })
             .getByRole('button', { name: 'Review payment details' })
             .click();
           await expect(page.getByRole('heading', { name: 'Review before approval' })).toBeVisible();

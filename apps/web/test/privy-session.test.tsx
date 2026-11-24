@@ -108,8 +108,8 @@ describe('usePrivyOperatorSession — native Privy login', () => {
 
     expect(mocks.providerConfig).toMatchObject({
       embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
-      defaultChain: { id: 5042002 },
-      supportedChains: [{ id: 5042002 }],
+      defaultChain: { id: 5042 },
+      supportedChains: [{ id: 5042 }],
       appearance: {
         walletList: ['detected_ethereum_wallets', 'wallet_connect'],
         walletChainType: 'ethereum-only',

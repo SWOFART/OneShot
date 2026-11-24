@@ -1,5 +1,5 @@
 import {
-  ARC_TESTNET_CHAIN,
+  ARC_MAINNET_CHAIN,
   selectSettlementChain,
   type PinnedSettlementChain,
 } from '@oneshot/contracts';
@@ -12,6 +12,10 @@ import { defineChain } from 'viem';
  */
 const WALLET_TRANSPORT: Record<string, { readonly rpcUrl: string; readonly explorerUrl: string }> =
   {
+    'arc-mainnet': {
+      rpcUrl: 'https://rpc.mainnet.arc.io',
+      explorerUrl: 'https://explorer.arc.io',
+    },
     'arc-testnet': {
       rpcUrl: 'https://rpc.testnet.arc.network',
       explorerUrl: 'https://testnet.arcscan.app',
@@ -25,7 +29,7 @@ const WALLET_TRANSPORT: Record<string, { readonly rpcUrl: string; readonly explo
 /** The chain this site build pays on. Unset matches the server default, Arc Testnet. */
 export function browserSettlementChain(): PinnedSettlementChain {
   const selected = import.meta.env.VITE_ONESHOT_CHAIN;
-  if (typeof selected !== 'string' || selected.trim() === '') return ARC_TESTNET_CHAIN;
+  if (typeof selected !== 'string' || selected.trim() === '') return ARC_MAINNET_CHAIN;
   return selectSettlementChain({ ONESHOT_CHAIN: selected.trim() });
 }
 

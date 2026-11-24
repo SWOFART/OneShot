@@ -250,13 +250,7 @@ function selectConfiguredChain(env: RawEnv): PinnedSettlementChain {
     );
   }
 
-  if (!chainId) {
-    if (!arcProfileId) {
-      throw new ConfigError(
-        'Required configuration variable ONESHOT_ARC_PROFILE is missing.',
-        'MISSING_VARIABLE',
-      );
-    }
+  if (!chainId && arcProfileId) {
     const profile = getProfile(arcProfileId);
     if (!profile) {
       throw new ConfigError(
@@ -275,20 +269,15 @@ function selectConfiguredChain(env: RawEnv): PinnedSettlementChain {
     }
     if (profile.isMainnet && env.ONESHOT_ALLOW_MAINNET_ACTIVATION?.trim() !== 'true') {
       throw new ConfigError(
-        `Arc profile "${arcProfileId}" moves real value and requires explicit human ` +
-          'authorization via ONESHOT_ALLOW_MAINNET_ACTIVATION=true.',
+        `Arc Mainnet is the default settlement rail and moves real value. Confirm it with ` +
+          'ONESHOT_ALLOW_MAINNET_ACTIVATION=true, or select a testnet with ' +
+          'ONESHOT_CHAIN=arc-testnet or ONESHOT_CHAIN=base-sepolia.',
         'MAINNET_NOT_AUTHORIZED',
       );
     }
   }
 
-  const selectedId = chainId || arcProfileId;
-  if (!selectedId) {
-    throw new ConfigError(
-      'Required configuration variable ONESHOT_ARC_PROFILE is missing.',
-      'MISSING_VARIABLE',
-    );
-  }
+  const selectedId = chainId || arcProfileId || 'arc-mainnet';
   const chain = getSettlementChain(selectedId);
   if (!chain) {
     throw new ConfigError(
@@ -307,8 +296,9 @@ function selectConfiguredChain(env: RawEnv): PinnedSettlementChain {
   }
   if (chain.isMainnet && env.ONESHOT_ALLOW_MAINNET_ACTIVATION?.trim() !== 'true') {
     throw new ConfigError(
-      `Settlement chain "${selectedId}" moves real value and requires explicit human ` +
-        'authorization via ONESHOT_ALLOW_MAINNET_ACTIVATION=true.',
+      `Arc Mainnet is the default settlement rail and moves real value. Confirm it with ` +
+        'ONESHOT_ALLOW_MAINNET_ACTIVATION=true, or select a testnet with ' +
+        'ONESHOT_CHAIN=arc-testnet or ONESHOT_CHAIN=base-sepolia.',
       'MAINNET_NOT_AUTHORIZED',
     );
   }

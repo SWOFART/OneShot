@@ -225,9 +225,18 @@ export function loadApiRuntimeConfig(
   const activityEndpoint =
     environment.ONESHOT_GRAPH_QUERY_URL?.trim() || environment.ONESHOT_SUBGRAPH_QUERY_URL?.trim();
   const activityWallet = environment.ONESHOT_ACTIVITY_WALLET_ADDRESS?.trim();
+  const serviceBearerToken = required(environment, 'SERVICE_BEARER_TOKEN', 16);
+  const database = databaseConfig(environment);
   const userWalletRpcUrl = optionalRpcUrl(environment, 'ONESHOT_ARC_RPC_URL');
   const mcp = mcpConfig(environment, workspaceId);
   const chain = selectSettlementChain(environment);
+  if (chain.isMainnet && environment.ONESHOT_ALLOW_MAINNET_ACTIVATION?.trim() !== 'true') {
+    throw new Error(
+      'Arc Mainnet is the default settlement rail and moves real value. Set ' +
+        'ONESHOT_ALLOW_MAINNET_ACTIVATION=true after confirming the pinned chain, or select a ' +
+        'testnet with ONESHOT_CHAIN=arc-testnet or ONESHOT_CHAIN=base-sepolia.',
+    );
+  }
   const settlementNetwork = chain.caip2;
   if (!isEnabledSettlementNetwork(settlementNetwork)) {
     throw new Error(`Settlement chain "${chain.id}" is not an enabled settlement network.`);
@@ -246,8 +255,8 @@ export function loadApiRuntimeConfig(
   return {
     host: environment.HOST?.trim() || '0.0.0.0',
     port: integer(environment, 'PORT', 3000, 1, 65_535),
-    serviceBearerToken: required(environment, 'SERVICE_BEARER_TOKEN', 16),
-    database: databaseConfig(environment),
+    serviceBearerToken,
+    database,
     submissionsDisabled: environment.ONESHOT_SUBMISSIONS_DISABLED === 'true',
     // One fixed workspace is safer than accepting a caller-selected tenant.
     // Deployments should configure this explicit value; the default keeps local

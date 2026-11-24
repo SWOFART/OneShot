@@ -5,9 +5,12 @@ hardcoded inside the settlement adapter. A chain record supplies the chain id,
 CAIP-2 network, settlement asset, and native gas asset. The adapter submits
 only on the chain selected for that process.
 
-Arc Testnet is the first implementation and the default. Base Sepolia is a
-second pinned testnet. Arc Mainnet is present and unpublished: it carries no
-chain id, token, RPC, or explorer, and it cannot be selected.
+Arc Mainnet is the default rail. Its chain id `5042`, CAIP-2 `eip155:5042`,
+and USDC address `0x3600000000000000000000000000000000000000` are pinned from
+Arc's published network and contract pages and from Circle's USDC address list,
+checked on 2026-11-24. Settlement still refuses to run until the operator sets
+`ONESHOT_ALLOW_MAINNET_ACTIVATION=true`. Arc Testnet and Base Sepolia stay
+selectable for testing.
 
 The browser wallet, MCP payments, the team-report supplier, and direct
 settlement intents all use the selected chain. A site build sets
@@ -19,8 +22,8 @@ Set one selector. If both are set, they must be the same id.
 
 | Variable              | Required                             | Values                                  |
 | --------------------- | ------------------------------------ | --------------------------------------- |
-| `ONESHOT_CHAIN`       | One of the two selectors             | `arc-testnet`, `base-sepolia`           |
-| `ONESHOT_ARC_PROFILE` | Used when `ONESHOT_CHAIN` is omitted | `arc-testnet`. `arc-mainnet` is refused |
+| `ONESHOT_CHAIN`       | Defaults to `arc-mainnet`            | `arc-mainnet`, `arc-testnet`, `base-sepolia` |
+| `ONESHOT_ARC_PROFILE` | Legacy selector; must match `ONESHOT_CHAIN` when both are set | `arc-mainnet`, `arc-testnet` |
 
 `ONESHOT_ARC_RPC_URL` is the HTTPS JSON-RPC endpoint for the selected chain.
 The readiness probe reads `eth_chainId` and the token `decimals()` and refuses
@@ -32,12 +35,14 @@ ONESHOT_CHAIN=base-sepolia
 ONESHOT_ARC_RPC_URL=https://<base-sepolia-rpc-host>
 ```
 
-Leaving both selectors unset fails settlement configuration. API startup with
-neither variable still advertises Arc Testnet, which is the chain the API used
-before selection existed.
+Leaving both selectors unset selects Arc Mainnet. The process then fails until
+`ONESHOT_ALLOW_MAINNET_ACTIVATION=true`. A test deployment sets
+`ONESHOT_CHAIN=arc-testnet` or `ONESHOT_CHAIN=base-sepolia` instead.
 
-Mainnet still requires a pinned profile, an enabled flag, and
-`ONESHOT_ALLOW_MAINNET_ACTIVATION=true`. Authorization alone is not enough.
+Mainnet settlement requires the pinned profile, which this build already
+carries, and `ONESHOT_ALLOW_MAINNET_ACTIVATION=true`. The flag is the
+operator confirmation. The profile does not store an RPC URL. The readiness
+probe still checks that the operator's endpoint reports chain id `5042`.
 
 ## What a chain record contains
 
@@ -62,15 +67,15 @@ chain record.
 
 | Id             | Network          | Chain id  | Settlement asset                                              | Status                                                                                           |
 | -------------- | ---------------- | --------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `arc-testnet`  | `eip155:5042002` | `5042002` | USDC `0x3600000000000000000000000000000000000000`, 6 decimals | Default. Native gas is also named USDC and uses 18 decimals.                                     |
-| `base-sepolia` | `eip155:84532`   | `84532`   | USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, 6 decimals | Selectable testnet. Native gas is ETH at 18 decimals. Address from Circle's published USDC list. |
-| `arc-mainnet`  | none             | none      | none                                                          | Unpublished and disabled.                                                                        |
+| `arc-mainnet`  | `eip155:5042`    | `5042`    | USDC `0x3600000000000000000000000000000000000000`, 6 decimals | Default. Native gas is USDC at 18 decimals. Settlement requires `ONESHOT_ALLOW_MAINNET_ACTIVATION=true`. No Graph indexer in this build. |
+| `arc-testnet`  | `eip155:5042002` | `5042002` | USDC `0x3600000000000000000000000000000000000000`, 6 decimals | Testnet. Native gas is USDC at 18 decimals. Graph indexer uses `ONESHOT_SUBGRAPH_QUERY_URL`. |
+| `base-sepolia` | `eip155:84532`   | `84532`   | USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, 6 decimals | Testnet. Native gas is ETH at 18 decimals. No Graph indexer. |
 
 ## Graph recovery
 
 Graph recovery is optional per chain. Arc Testnet sets `graphQueryEnv` to
-`ONESHOT_SUBGRAPH_QUERY_URL`, so an Arc deployment keeps its existing subgraph.
-Base Sepolia does not set `graphQueryEnv`.
+`ONESHOT_SUBGRAPH_QUERY_URL`, so a testnet deployment keeps its existing
+subgraph. Arc Mainnet and Base Sepolia do not set `graphQueryEnv`.
 
 When the selected chain has no indexer, the API and worker log
 `Graph recovery disabled` and continue. Settlement, receipt verification, MCP
@@ -85,7 +90,7 @@ That endpoint is for the wallet only. Settlement still uses
 ## Add a chain
 
 1. Add a pinned record to `SETTLEMENT_CHAINS` in `packages/contracts/src/chains.ts`.
-   Put Arc Testnet first. Copy the Base Sepolia record and replace the id,
+   Keep Arc Mainnet first. Copy a testnet record and replace the id,
    display name, chain id, CAIP-2, and token contract with values from the
    asset issuer. Do not invent an address, and do not add an RPC URL.
 2. Add the same CAIP-2 string to `settlementNetworks` in

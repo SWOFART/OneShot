@@ -75,11 +75,18 @@ function quoteForView(order: SupplierOrder) {
 }
 
 function settlementPaymentIdentity(network: string): {
-  readonly chain_id: 5042002 | 84532;
-  readonly network: 'eip155:5042002' | 'eip155:84532';
+  readonly chain_id: 5042 | 5042002 | 84532;
+  readonly network: 'eip155:5042' | 'eip155:5042002' | 'eip155:84532';
   readonly token_contract: `0x${string}`;
 } {
   const chain = settlementChainByNetwork(network);
+  if (chain?.caip2 === 'eip155:5042' && chain.chainId === 5042) {
+    return {
+      chain_id: 5042,
+      network: 'eip155:5042',
+      token_contract: chain.settlementAsset.contract,
+    };
+  }
   if (chain?.caip2 === 'eip155:84532' && chain.chainId === 84532) {
     return {
       chain_id: 84532,
@@ -99,9 +106,11 @@ function settlementPaymentIdentity(network: string): {
 
 function explorerTransactionUrl(network: string, transactionHash: string): string {
   const prefix =
-    network === 'eip155:84532'
-      ? 'https://sepolia.basescan.org/tx/'
-      : 'https://testnet.arcscan.app/tx/';
+    network === 'eip155:5042'
+      ? 'https://explorer.arc.io/tx/'
+      : network === 'eip155:84532'
+        ? 'https://sepolia.basescan.org/tx/'
+        : 'https://testnet.arcscan.app/tx/';
   return `${prefix}${transactionHash}`;
 }
 

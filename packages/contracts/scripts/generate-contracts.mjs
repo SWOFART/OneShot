@@ -46,10 +46,10 @@ const policyStatuses = ['CONFIGURED', 'EXCEEDED', 'NOT_CONFIGURED', 'UNKNOWN'];
 const deliveryStates = ['NOT_REQUESTED', 'PENDING', 'AVAILABLE', 'RETRIEVAL_FAILED'];
 const paymentModes = ['SERVER_PRIVY', 'USER_WALLET'];
 // Keep this list identical to ENABLED_SETTLEMENT_NETWORKS in src/chains.ts.
-const settlementNetworks = ['eip155:5042002', 'eip155:84532'];
+const settlementNetworks = ['eip155:5042', 'eip155:5042002', 'eip155:84532'];
 const settlementNetworkType = settlementNetworks.map((network) => `'${network}'`).join(' | ');
 const settlementNetworkSchema = { type: 'string', enum: settlementNetworks };
-const settlementChainIds = [5042002, 84532];
+const settlementChainIds = [5042, 5042002, 84532];
 const settlementChainIdType = settlementChainIds.join(' | ');
 const settlementChainIdSchema = { type: 'integer', enum: settlementChainIds };
 

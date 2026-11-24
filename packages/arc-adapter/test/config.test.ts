@@ -47,10 +47,23 @@ describe('loadSettlementConfig', () => {
     );
   });
 
-  it('refuses the mainnet profile because it carries no pinned values', () => {
-    expect(() => loadSettlementConfig(withEnv({ ONESHOT_ARC_PROFILE: 'arc-mainnet' }))).toThrow(
-      expect.objectContaining({ code: 'PROFILE_UNPUBLISHED' }),
+  it('refuses the default mainnet rail until an operator confirms it', () => {
+    expect(() => loadSettlementConfig(withEnv({ ONESHOT_ARC_PROFILE: undefined }))).toThrow(
+      expect.objectContaining({ code: 'MAINNET_NOT_AUTHORIZED' }),
     );
+  });
+
+  it('loads Arc Mainnet when the operator confirms activation', () => {
+    const config = loadSettlementConfig(
+      withEnv({
+        ONESHOT_ARC_PROFILE: 'arc-mainnet',
+        ONESHOT_ALLOW_MAINNET_ACTIVATION: 'true',
+      }),
+    );
+    expect(config.profile.chainId).toBe(5042);
+    expect(config.profile.caip2).toBe('eip155:5042');
+    expect(config.profile.tokenContract).toBe('0x3600000000000000000000000000000000000000');
+    expect(config.profile.graphQueryEnv).toBeUndefined();
   });
 
   it('selects Base Sepolia when ONESHOT_CHAIN names it', () => {
@@ -83,18 +96,6 @@ describe('loadSettlementConfig', () => {
     ).toThrow(expect.objectContaining({ code: 'UNKNOWN_PROFILE' }));
   });
 
-  it('refuses the mainnet profile even when activation is authorized', () => {
-    // Human authorization alone is not enough. Without pinned values there is
-    // nothing safe to authorize.
-    expect(() =>
-      loadSettlementConfig(
-        withEnv({
-          ONESHOT_ARC_PROFILE: 'arc-mainnet',
-          ONESHOT_ALLOW_MAINNET_ACTIVATION: 'true',
-        }),
-      ),
-    ).toThrow(expect.objectContaining({ code: 'PROFILE_UNPUBLISHED' }));
-  });
 });
 
 describe('URL validation', () => {

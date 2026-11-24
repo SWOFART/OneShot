@@ -481,8 +481,7 @@ a:focus-visible {
 }
 
 .guarantee-section,
-.audience-section,
-.chains-section {
+.audience-section {
   margin: 0 0 4.5rem;
 }
 
@@ -493,78 +492,18 @@ a:focus-visible {
   text-align: center;
 }
 
-.guarantee-section h2,
-.chains-section h2 {
+.guarantee-section h2 {
   margin-bottom: 0.8rem;
   font-size: clamp(1.6rem, 3.5vw, 2.2rem);
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .guarantee-section p,
 .section-header p,
-.chains-note,
-.chain-card p {
+.chains-note {
   color: var(--os-ink-muted);
   line-height: 1.6;
-}
-
-.chains-section .section-header {
-  max-width: 720px;
-  margin-inline: auto;
-}
-
-.chains-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-}
-
-.chain-card {
-  display: grid;
-  gap: 0.55rem;
-  padding: 1.25rem 1.2rem;
-  border: 1px solid var(--os-line);
-  border-radius: var(--os-radius-lg);
-  background: var(--os-surface);
-}
-
-.chain-status {
-  margin: 0;
-  color: var(--os-accent-ink);
-  font-family: var(--os-font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.chain-card h3 {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 400;
-}
-
-.chain-card dl {
-  display: grid;
-  gap: 0.45rem;
-  margin: 0;
-}
-
-.chain-card dl div {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.chain-card dt {
-  color: var(--os-ink-muted);
-  font-size: 0.78rem;
-}
-
-.chain-card dd {
-  margin: 0;
-  font-family: var(--os-font-mono);
-  font-size: 0.78rem;
 }
 
 .chains-note {
