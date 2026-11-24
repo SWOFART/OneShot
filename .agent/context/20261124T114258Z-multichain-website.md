@@ -63,13 +63,13 @@ The owner asked for two things: review and improve the website (design, UX, resp
 
 - Branch: `cursor/multichain-website-c94d`
 - Base: `develop`
-- Commit: uncommitted at the time this section was drafted
+- Commit: `bb5b922019d7a85b02d05eeb297d5c597807d2e8`
 - PR: not created yet
 - CI: not started
 
 ## Review gates
 
-- Gate A: NOT RUN. `free-pi-cli` was not executed in this session before commit. The cloud run requires the pull request, so the commit proceeds with this gap recorded.
+- Gate A: NOT RUN. `free-pi-cli` is installed but starts an interactive GitHub sign-in, which this session cannot complete. The review was not executed.
 - Gate B: NOT RUN
 
 ## Handoff/next steps
