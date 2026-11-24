@@ -5,9 +5,8 @@
  * and no credential, which is what allows the B01 packet to close on its own.
  *
  * The simulator never invents a result. An unknown scenario name throws rather
- * than falling back to a healthy response: `.agent/AGENTS.md` requires that
- * simulators never silently default an unknown enum to a successful or
- * retryable result.
+ * than falling back to a healthy response. Simulators never silently default
+ * an unknown enum to a successful or retryable result.
  */
 
 /** Minimal probe surface, structurally identical to the adapter's `RpcProbe`. */

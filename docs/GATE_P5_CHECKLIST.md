@@ -69,8 +69,7 @@ data. Graph and model observations never grant settlement permission.
 - No credentials, keys, wallet material, generated build output, or ignored
   runtime files are part of this change.
 
-## Gate state
+## Review state
 
 This comparison branch records implementation and local automated evidence only.
-It does not claim Gate A or Gate B. A fresh Gate A is required for the final
-candidate tree after this merge is committed or otherwise submitted for review.
+Required CI and human review still apply before merge.

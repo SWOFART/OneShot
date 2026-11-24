@@ -13,8 +13,7 @@ Chain selection beyond the Arc profiles below is documented in
 
 ## 1. Arc deployment profiles
 
-Verified 2026-09-07 against official Arc documentation. Evidence and source URLs
-are in `.agent/research/20260907-b01-arc-privy-verification.md`.
+Verified 2026-09-07 against official Arc documentation at docs.arc.io.
 
 | Field                        | Arc Testnet                                  | Arc Mainnet   |
 | ---------------------------- | -------------------------------------------- | ------------- |
@@ -109,7 +108,7 @@ the forwarded transfer's recipient and amount cannot be constrained or denied.
 B01.3 permits `SUPPORTED` only with deny fixtures for every wrong dimension, and
 two dimensions have none available.
 
-Consequence: `memo_id` in `milestones/CONTRACTS.md` section 2 stays unused.
+Consequence: `memo_id` stays unused on the settlement path.
 Hashless correlation relies on the tuple/window and provider-neutral Graph discovery owned
 by Coder C.
 

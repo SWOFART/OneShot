@@ -1,0 +1,33 @@
+name: Sync labels
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - .github/labels.yml
+      - scripts/sync-github-labels.mjs
+      - .github/workflows/sync-labels.yml
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync:
+    name: Create or update labels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Sync repository labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/sync-github-labels.mjs

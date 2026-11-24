@@ -43,5 +43,5 @@ signatures, credentials, model chain of thought, and private wallet data are for
       malformed, injected, multiple, contradictory, and invalid-model cases hold safely.
 - [ ] Restart/replay produces the same disposition without chain/database rewriting.
 
-After capture, run the sponsor-qualification skill. Until every applicable live
+After capture, compare the trace with the qualification report. Until every applicable live
 item is evidenced, keep the corresponding verdict `NOT VERIFIED`.

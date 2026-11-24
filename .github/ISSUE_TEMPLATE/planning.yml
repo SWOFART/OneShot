@@ -1,0 +1,69 @@
+name: Epic or plan
+description: A milestone outcome that will be split into issues and pull requests.
+title: '[Plan]: '
+labels:
+  - type:planning
+  - status:needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for a milestone or epic, not a single bug. See
+        `docs/planning/README.md` and `ROADMAP.md`.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: The result for operators or agents, not only the tasks.
+    validations:
+      required: true
+  - type: input
+    id: milestone
+    attributes:
+      label: Milestone
+      description: A roadmap milestone, or a proposed milestone name.
+      placeholder: More settlement chains
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: In scope
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Out of scope
+    validations:
+      required: true
+  - type: textarea
+    id: children
+    attributes:
+      label: Child work
+      description: Issues or pull requests this plan should contain, if you already know them.
+      placeholder: |
+        - [ ] #123
+  - type: textarea
+    id: risks
+    attributes:
+      label: Settlement, privacy, and operational risks
+      description: Call out any path that could pay twice, treat UNKNOWN as non-payment, or enable mainnet.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: How we will know it works
+      description: Tests, failure injection, or evidence. Do not treat a fixture as a live payment.
+    validations:
+      required: true

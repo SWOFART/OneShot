@@ -1,0 +1,40 @@
+name: Documentation
+description: A correction or missing explanation in the public docs.
+title: '[Docs]: '
+labels:
+  - type:documentation
+  - area:docs
+  - status:needs-triage
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      description: Path, page, or command that is wrong or missing.
+      placeholder: docs/DEVELOPER_GUIDE.md
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: The wording or section you want. Do not include secrets.
+    validations:
+      required: true
+  - type: dropdown
+    id: audience
+    attributes:
+      label: Audience
+      options:
+        - Operator or developer
+        - Agent integrator
+        - Contributor
+        - Release or sponsor evidence
+    validations:
+      required: true

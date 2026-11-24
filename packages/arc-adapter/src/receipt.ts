@@ -9,8 +9,8 @@
  * Transfer to somewhere else. Confirmation requires the receipt to prove the
  * specific movement of the specific amount to the specific recipient.
  *
- * `milestones/CONTRACTS.md`: "Arc receipt plus expected ERC-20 Transfer
- * evidence establishes committed settlement."
+ * An Arc receipt plus the expected ERC-20 Transfer evidence establishes a
+ * committed settlement.
  */
 
 /** keccak256("Transfer(address,address,uint256)"). */

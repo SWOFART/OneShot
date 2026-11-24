@@ -16,7 +16,7 @@ pnpm release:check
 
 The command checks the branch, exact optional identities, public release
 artifacts, and required package scripts. It does not read secrets, deploy, or
-replace Gate A, required CI, Gate B, sponsor evidence, or human review.
+replace required CI, sponsor evidence, or human review.
 
 ## Automated evidence
 
@@ -31,10 +31,9 @@ replace Gate A, required CI, Gate B, sponsor evidence, or human review.
 
 ## Required review evidence
 
-- [x] R4 PR #79 is open and ready for human review with green required CI and
-      FreePi Gate A/B evidence.
-- [ ] This R5 branch receives its own FreePi Gate A and Gate B verdicts bound to
-      the same exact tree.
+- [x] R4 PR #79 is open and ready for human review with green required CI.
+- [ ] This R5 branch receives green required CI on its own head, then human
+      review.
 - [ ] A human reviews the packet and performs any merge; agents do not merge.
 
 ## Sponsor-facing status

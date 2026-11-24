@@ -68,8 +68,7 @@ export function isPinned(profile: ArcProfile): profile is PinnedArcProfile {
 /**
  * Arc Testnet.
  *
- * Chain ID, CAIP-2, and the USDC interface address are fixed by
- * `milestones/CONTRACTS.md` section 2 and were verified on 2026-09-07 against
+ * Chain ID, CAIP-2, and the USDC interface address were verified on 2026-09-07 against
  * the official Arc documentation at docs.arc.io (`connect-to-arc` and
  * `contract-addresses`).
  *
