@@ -1,7 +1,7 @@
 /**
  * Provider response simulator (B03.2, B03.3).
  *
- * Emits every SettlementPort response family from `milestones/CONTRACTS.md`
+ * Emits every SettlementPort response family
  * without network access or credentials, so the harness closes offline.
  *
  * The simulator counts every broadcast it performs. That counter is the

@@ -2,7 +2,7 @@
  * Submission outcome classifier (B02.5).
  *
  * Maps a provider or RPC response to one of the three SettlementPort results
- * in `milestones/CONTRACTS.md` section 5. Pure: no network, no durable state,
+ * in the settlement port. Pure: no network, no durable state,
  * no clock.
  *
  * The whole module exists to make one bias structural: **doubt means
@@ -12,7 +12,7 @@
  * documented proofs, and every unrecognized shape falls through to
  * `POSSIBLY_SUBMITTED`.
  *
- * `.agent/SECURITY_INVARIANTS.md`: a timeout, crash, disconnect, lost response,
+ * A timeout, crash, disconnect, lost response,
  * or provider error after possible submission creates `UNKNOWN`.
  */
 

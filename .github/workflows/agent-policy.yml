@@ -1,4 +1,4 @@
-name: Agent policy
+name: Repository policy
 
 on:
   pull_request:
@@ -18,28 +18,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate canonical agent workflow
+      - name: Validate repository docs and diff
         shell: bash
         run: |
           set -euo pipefail
 
           required_paths=(
-            AGENTS.md
+            README.md
+            LICENSE
             CONTRIBUTING.md
             ROADMAP.md
             SECURITY.md
-            .agent/AGENTS.md
-            .agent/PROJECT_CONTEXT.md
-            .agent/SECURITY_INVARIANTS.md
-            .agent/SPONSOR_REQUIREMENTS.md
-            .agent/TEST_MATRIX.md
-            .agent/IMPLEMENTATION_LOOP.md
-            .agents/skills/oneshot-failure-injection/SKILL.md
-            .agents/skills/oneshot-idempotency/SKILL.md
-            .agents/skills/sponsor-qualification/SKILL.md
-            .agents/rules/repository-policy.md
-            .antigravity/README.md
-            .claude/CLAUDE.md
+            docs/DEVELOPER_GUIDE.md
+            docs/planning/README.md
             .github/BRANCH_POLICY.md
             .github/PULL_REQUEST_TEMPLATE.md
             .github/labels.yml
@@ -49,39 +40,13 @@ jobs:
             .github/ISSUE_TEMPLATE/chain-integration.yml
             .github/ISSUE_TEMPLATE/documentation.yml
             .github/ISSUE_TEMPLATE/planning.yml
-            docs/planning/README.md
+            .agents/skills/oneshot-arc-payment/SKILL.md
             scripts/sync-github-labels.mjs
           )
 
           for path in "${required_paths[@]}"; do
-            test -f "$path" || { echo "Missing required policy file: $path"; exit 1; }
+            test -f "$path" || { echo "Missing required file: $path"; exit 1; }
           done
-
-          obsolete_paths=(
-            .agent/MILESTONE_IMPLEMENTATION_LOOP.md
-            .agent/milestones/M0_UNIFIED_AGENT_WORKFLOW.md
-            .agent/review-prompts/draft-pr-review.md
-            .agent/review-prompts/implementation-review.md
-            .antigravity/review.md
-          )
-
-          for path in "${obsolete_paths[@]}"; do
-            test ! -e "$path" || { echo "Obsolete policy file must be removed: $path"; exit 1; }
-          done
-
-          if [[ -d .agent/review-prompts ]]; then
-            echo "Retired review-prompt directory must stay removed: .agent/review-prompts"
-            exit 1
-          fi
-
-          grep -Fq '@../../AGENTS.md' .agents/rules/repository-policy.md
-          grep -Fq '../AGENTS.md' .claude/CLAUDE.md
-          grep -Fq '.agents/rules/repository-policy.md' .antigravity/README.md
-          grep -Fq '.agent/IMPLEMENTATION_LOOP.md' AGENTS.md
-
-          test "$(wc -l < .agents/rules/repository-policy.md)" -le 12
-          test "$(wc -l < .claude/CLAUDE.md)" -le 12
-          test "$(wc -l < .antigravity/README.md)" -le 12
 
           if git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- . ':!*.lock'; then
             echo 'Unresolved merge marker found.'

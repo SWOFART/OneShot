@@ -770,7 +770,7 @@ export interface SponsorQualificationInput {
 }
 
 /**
- * B06.6 — Input for the `sponsor-qualification` skill.
+ * B06.6 — Input for a sponsor-qualification review.
  *
  * This reports what Lane B evidence supports, not a final verdict. A failing
  * section downgrades the sponsor to `NOT VERIFIED`; nothing here can promote a

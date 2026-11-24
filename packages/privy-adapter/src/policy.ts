@@ -2,7 +2,6 @@
  * Privy authorization policy model (B01.3).
  *
  * Verified 2026-09-07 against https://docs.privy.io/controls/policies/overview.
- * See `.agent/research/20260907-b01-arc-privy-verification.md`.
  *
  * A Privy policy is rules over conditions, and the condition field sources
  * relevant to settlement are:

@@ -11,7 +11,7 @@
 | Restart/replay                   | Offline PASS                            | `test/chaos-harness.test.ts`                                        |
 | Public recovery viewer           | Deployable synthetic demo               | `packages/recovery-ui`                                              |
 | Production Graph/model default   | Fails closed when live ports are absent | `src/disabled-ports.ts`, `apps/worker/src/composition.ts`           |
-| Arc Testnet USDC Subgraph source | Implemented; Studio deployment reported | `subgraph/`, `.agent/context/20260908T113831Z-live-arc-subgraph.md` |
+| Arc Testnet USDC Subgraph source | Implemented; Studio deployment reported | `subgraph/` |
 | Privy live authorization proof   | Live verified; testnet-qualified        | `docs/settlement/LIVE_EVIDENCE.md`                                  |
 | Arc Testnet real USDC proof      | Live verified; testnet-qualified        | `docs/settlement/LIVE_EVIDENCE.md`                                  |
 | Live pinned Subgraph MCP trace   | Missing                                 | `../live-value-gate.md`                                             |

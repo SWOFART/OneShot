@@ -29,4 +29,8 @@ create them.
 - Evidence limits in the [README](README.md) stay authoritative over a
   milestone marked "in the tree."
 
+Retired third-party purchasing and seller-proxy flows stay retired. A new
+settlement chain is a chain-integration issue with official parameters, not a
+guessed default.
+
 Details and the issue workflow are in [docs/planning/README.md](docs/planning/README.md).

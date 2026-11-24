@@ -79,7 +79,7 @@ All fixtures are verified free of sensitive keys and conform to the published JS
 
 ## Privy and Arc Testnet Evidence Status
 
-Per `plan.md` (procedure steps 8-13):
+Recorded Privy and Arc Testnet evidence:
 
 - **Verification Status**: `LIVE_VERIFIED` for Privy authorization and Arc settlement only. This is not an overall Gate P4 verdict.
 - **Human Provisioning (Step 8)**: Completed per `docs/settlement/PROVIDER_SETUP.md` with Privy app `cmtqbf5zo013w0cky3r0jqjca`, server execution wallet `0xfCC366c88A0c980e2FD5a7Cf7a36494E4457D943`, policy `balx3rtrpns3gnvhz3n32dml`, and funded Arc Testnet account.

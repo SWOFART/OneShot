@@ -4,9 +4,8 @@
  * B03.2 requires request identity to be persisted in ignored test runtime
  * state before submission. An in-memory map cannot satisfy that: it proves
  * concurrency inside one process and disappears on restart, which is exactly
- * the boundary `.agents/skills/oneshot-failure-injection/SKILL.md` requires be
- * exercised ("restart services between durable transitions and external
- * responses").
+ * the failure-injection boundary requires be exercised ("restart services
+ * between durable transitions and external responses").
  *
  * This writes to a JSON file under an ignored `tmp/` directory. It is a stand-in
  * for the PostgreSQL state Coder A owns, not a production store, and it exists
