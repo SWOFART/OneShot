@@ -14,7 +14,7 @@ Fix blockers left by earlier plans before continuing future work, using provider
 
 ## Assumptions
 
-- Credentials and API secrets remain outside Git and review prompts.
+- Credentials and API secrets remain outside Git, issues, and pull requests.
 - The current packet fixes the production recovery configuration boundary before any live MCP/model adapter or evidence claim.
 - A single configured sender and bounded block window are sufficient for the current live-value gate; per-intent window derivation is future work if multi-intent production recovery needs it.
 
@@ -22,7 +22,7 @@ Fix blockers left by earlier plans before continuing future work, using provider
 
 1. Remove placeholder Graph identity and unbounded recovery correlation values.
 2. Require explicit production recovery lookup configuration and reject invalid input before MCP lookup.
-3. Run repository checks and mandatory FreePi review gates, then open a draft PR.
+3. Run repository checks, then open a draft pull request.
 
 ## Key decisions
 
@@ -69,13 +69,8 @@ Fix blockers left by earlier plans before continuing future work, using provider
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Finish local checks and Gate A.
-2. Commit, push, open draft PR, wait for exact-head CI, and run Gate B.
+1. Finish local checks and CI.
+2. Commit, push, open draft PR, wait for exact-head CI, and run human review.
 3. After human merge, retrieve non-secret live identities and implement/admit the minimal MCP/model adapters only with live evidence.

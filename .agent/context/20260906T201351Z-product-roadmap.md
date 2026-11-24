@@ -44,7 +44,6 @@ contributes to the complete product.
 - Packet headers contain no planning-size metadata.
 - Mermaid CLI 11.17.0 rendered all 12 diagrams successfully.
 - `git diff --check` passes.
-- Gate A and Gate B were intentionally not run because the user explicitly
   requested skipping the two-review procedure for the planning phase.
 
 ## References
@@ -72,7 +71,6 @@ contributes to the complete product.
 - The Graph is the selected v1 hashless candidate-discovery layer. C01 must
   prove live value, freshness, multiple-candidate handling, and AI-track fit;
   Arc remains authoritative and a failed gate removes the Graph claim.
-- Gate A and Gate B are skipped for this follow-up planning change by explicit
   user instruction. Required repository CI and human review still apply.
 
 ## 2026-09-06 Graph and Arc Memo decision

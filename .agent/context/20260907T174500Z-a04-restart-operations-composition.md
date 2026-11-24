@@ -42,8 +42,3 @@ Implement Coder A Milestone A04: restart safety, safe operations disable, struct
 - `docs/SAFE_DISABLE_RUNBOOK.md`
 - `docs/GATE_P4_CHECKLIST.md`
 - `docs/SERVER_RUNTIME.md`
-
-## Review gates
-
-- Gate A: previous verdict invalidated by the supplementary server change; refresh pending
-- Gate B: previous verdict invalidated by the supplementary server change; refresh after CI

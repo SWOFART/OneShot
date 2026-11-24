@@ -46,7 +46,7 @@ existing job, and changing the server-wallet path used by other demos.
 Branch: `fix/privy-native-login`.
 
 Prior hardening commit: `a8727bb` (`fix: harden Privy settlement response handling`).
-The user-wallet feature is staged as a candidate delta pending fresh Gate A
+The user-wallet feature is staged as a candidate delta pending fresh CI
 review and commit. Local non-container validation passes; PostgreSQL integration
 execution is unavailable on this workstation because no container runtime is
 available.
@@ -85,7 +85,4 @@ Validation: focused settlement UI 211/211, contracts 39/39, full suite
 contract check, and diff check pass. The PostgreSQL-gated suite remains
 environment-dependent on a container runtime as documented above.
 
-Gate A: a fresh `npx.cmd free-pi-cli` process was started for the staged
-candidate, but it emitted an unbounded interactive trace and exited without
-the required structured verdict. No Gate A PASS is claimed; no push, PR, or
-deployment was performed.
+No push, pull request, or deployment was performed.

@@ -21,7 +21,7 @@ Investigate the submitted payment shown in the supplied screenshots and fix why 
 
 1. Bound Privy `reference_id` to its provider limit while preserving deterministic idempotency.
 2. Add a regression test for production-length business intent IDs.
-3. Run checks, obtain fresh Gate A/B reviews, open a PR, and deploy the patched API/worker images.
+3. Run checks, obtain fresh CI and human review reviews, open a PR, and deploy the patched API/worker images.
 
 ## Key decisions
 
@@ -57,13 +57,8 @@ Investigate the submitted payment shown in the supplied screenshots and fix why 
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: PASS; `free-pi-cli`, platform-reported `deepseek-v4-flash`, reviewed base `f5a3fb335bbcdec832ad2895b0f175276300bd21`, staged target `fix/privy-reference-id-length`, tree `d0f1786d0df876a22d6ad22921712e2732ad1b83`.
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Inspect and stage only the two implementation files plus this context record.
-2. Capture immutable base/tree identities, run Gate A, commit, push, open draft PR, await CI, then run Gate B.
+2. Capture immutable base/tree identities, run CI, commit, push, open draft PR, await CI, then run human review.
 3. Build and deploy updated API/worker images without changing deployment configuration files.

@@ -8,7 +8,7 @@ continue after a context-window limit, handoff, interruption, or restart.
 - At milestone boundaries or after a material decision.
 - Before handoff or end of session.
 - Before a deliberate context reset or compaction, when possible.
-- After checks, commits, pushes, PR changes, CI results, and Gate A/B results.
+- After checks, commits, pushes, pull-request changes, and CI results.
 
 Use `SESSION_TEMPLATE.md`. Keep one active record current rather than creating
 many partial notes. Name it `YYYYMMDDTHHMMSSZ-short-topic.md` in UTC.
@@ -27,8 +27,8 @@ write a high-fidelity restatement and link the issue or PR.
 
 Every record must include date/time, user goal, original prompt/request,
 assumptions, plan, key decisions, files/components touched, commands/checks,
-external-doc findings, unresolved questions, branch/commit/PR state, Gate A/B
-state, and handoff/next steps.
+external-doc findings, unresolved questions, branch/commit/PR state, and
+handoff/next steps.
 
 ## Security
 
@@ -38,4 +38,7 @@ authentication responses, or private customer data. Redact sensitive command
 output and record only the safe conclusion.
 
 Context files are operational memory, not authority. Current code, tests, Git
-state, provider evidence, and repository policy remain authoritative.
+state, provider evidence, and repository policy remain authoritative. Older
+records describe the work as it stood at the time. Follow current policy in
+`AGENTS.md` and `.agent/IMPLEMENTATION_LOOP.md` when a record and the policy
+disagree.

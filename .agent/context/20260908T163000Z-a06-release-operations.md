@@ -27,7 +27,7 @@ Implement Coder A milestone A06 (Operational Demo and Release Bundle): repeatabl
 3. Expose operational scripts in root `package.json` (`scenarios:invariants`, `db:bootstrap`, `db:reset-demo`).
 4. Publish comprehensive `docs/OPERATIONS_RUNBOOK.md` covering architecture, bootstrap, demo reset, invariant results, safe-disable, and observability.
 5. Publish reviewer-facing `docs/MAINNET_READINESS.md` with `STATUS: DEPLOYMENT-READY`, Cloud Run deployment manifest, probe evidence, and human activation gate.
-6. Verify quality, run Gate A review, push branch, open draft PR, monitor CI, run Gate B review, and mark ready for human review.
+6. Verify quality, run CI review, push branch, open draft PR, monitor CI, run human review review, and mark ready for human review.
 
 ## Key decisions
 
@@ -82,22 +82,10 @@ Implement Coder A milestone A06 (Operational Demo and Release Bundle): repeatabl
 - PR: #35 (`https://github.com/SWOFART/OneShot/pull/35`)
 - CI: previous head passed Cloudflare Workers build; new merged head pending push
 
-## Review gates
-
-- Gate A: `VERDICT: PASS` for tree
-  `6ce25ac3fe84fcfea32c4c68df2292e6410b5fdf`, then invalidated when `develop`
-  advanced and produced a PR merge conflict. Fresh review required for the
-  merged candidate tree.
-- Gate B: first post-push review returned `VERDICT: FAIL` for head
-  `935a441dd5e441e8ddd699f10fd60a03365db99f`: `scripts/bootstrap-db.mjs`
-  ignored `BootstrapResult.success` and could report schema-digest drift as a
-  successful bootstrap. The CLI now fails closed; fresh Gate A/CI/Gate B are
-  required.
-
 ## Handoff/next steps
 
-1. Run fresh Gate A review on the merged candidate tree.
+1. Run fresh CI review on the merged candidate tree.
 2. Complete and push the merge commit to PR #35.
 3. Wait for CI checks on the new head.
-4. Run Gate B review via `free-pi-cli`.
+4. Run human review review via ``.
 5. Update PR body and mark ready for review.

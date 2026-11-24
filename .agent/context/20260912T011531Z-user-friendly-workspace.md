@@ -38,7 +38,7 @@ technical panels.
 4. Make service/request/review cards human-readable and hide raw identifiers.
 5. Improve the legacy payment status surface without removing UNKNOWN from the
    domain or reconciliation behavior.
-6. Update focused tests, run web checks, and capture Gate A/PR state.
+6. Update focused tests, run web checks, and capture CI/PR state.
 
 ## Key decisions
 
@@ -96,13 +96,8 @@ technical panels.
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: skipped at the user's explicit request.
-- Gate B: skipped at the user's explicit request.
-
 ## Handoff/next steps
 
 1. Commit only the focused UI changes, push, and open a draft PR targeting
    `develop`.
-2. Human review and CI remain pending on the PR; no FreePi review gate was run.
+2. Human review and CI remain pending on the PR; no review gate was run.

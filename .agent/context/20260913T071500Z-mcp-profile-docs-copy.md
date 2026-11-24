@@ -73,12 +73,6 @@ the bearer token.
   `11981c12-6a81-4e4a-9ec9-819d6b52d458`; the public entry bundle contains the
   documentation link, bearer-copy action, and the preceding Buffer polyfill.
 
-## Review gates
-
-- Gate A: NOT RUN under the user's standing explicit instruction to continue
-  without FreePi; no PASS is claimed.
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Wait for the final PR check and leave both stacked PRs for human review;

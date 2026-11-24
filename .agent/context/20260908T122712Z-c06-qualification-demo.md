@@ -12,7 +12,7 @@
   be promoted into live evidence.
 - No external wallet, policy, funding, deployment, or real-value mutation is in
   scope without separate human provisioning and authorization.
-- FreePi policy: use `/model free-pi/glm-5.3-flash` first; do not stream noisy
+- policy: use `/model /glm-5.3-flash` first; do not stream noisy
   progress. If a quiet review is not practical, provide the exact prompt to the
   user for manual relay.
 
@@ -56,9 +56,8 @@ until a human provisions and returns the sanitized artifacts in
 ## Review state
 
 - Recorded base: `1250dec79bc702939fe2a3b0fd00e66bb34128af`.
-- Gate A passed tree `28b9445183b7d453ab813662ab3be0d15afbd2e3` and
   produced commit `41399ad18433116b71eb9ad910bec34e024f3f60`.
-- That Gate A is now invalidated by the user-requested merge of
+- That CI is now invalidated by the user-requested merge of
   `milestone/c06-live-subgraph` and the subsequent integration fixes. A new
   candidate review is required before another push.
 

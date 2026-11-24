@@ -36,7 +36,7 @@ into the OneShot operator experience and verify the frontend acceptance gate.
 
 - Branch: `feature/ethonline-2026-prize-audit`
 - Base: `develop` at the current checked-out commit
-- No formal Gate A/B run by the agent. A manual `free-pi-cli` review was
+- No formal CI and human review run by the agent. A manual `` review was
   supplied afterward; its FAIL was process-closed because the candidate is
   staged/uncommitted with no PR or CI, and it also identified missing loaded
   settlement no-action coverage and interactive browser smoke.
@@ -54,7 +54,7 @@ into the OneShot operator experience and verify the frontend acceptance gate.
 - Kept the browser smoke item open because this host exposes no browser
   provider; no gate was started after these changes.
 
-## Gate A follow-up fixes
+## CI follow-up fixes
 
 - Root Vitest now aliases `@oneshot/settlement-ui` and
   `@oneshot/recovery-ui` to workspace source, so the required clean-build
@@ -77,8 +77,6 @@ into the OneShot operator experience and verify the frontend acceptance gate.
 - Privy denial/cap and Graph degraded evidence remain fixture-driven UI states;
   no fixture can grant settlement permission.
 
-## Review instruction
+## Review
 
-Before every FreePi review prompt, issue `/model free-pi/glm-5.3-flash` first.
-Inspect the end of the output for an explicit `VERDICT: PASS` or
-`VERDICT: FAIL`; do not spend tokens following streamed reasoning.
+Follow `.agent/IMPLEMENTATION_LOOP.md`. Required CI must pass before a human merges.

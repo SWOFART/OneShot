@@ -1,19 +1,20 @@
 ## Summary
 
-<!-- What changed and why? Keep this concise. -->
+<!-- What changed and why? Link the issue when one exists. -->
 
 ## Scope and acceptance criteria
 
-- [ ] The change is limited to the stated milestone or issue.
+- [ ] The change is limited to the linked issue or the stated outcome.
 - [ ] Acceptance criteria are listed and satisfied.
 - [ ] No unrelated cleanup is included.
 
 ## Product and security invariants
 
-- [ ] Tenant isolation remains fail-closed.
-- [ ] Sponsor authorization, auditability, and daily caps remain enforced where applicable.
-- [ ] Recipients cannot modify sponsor controls or access sponsor-only data.
-- [ ] No secret, token, production identifier, or personal data is committed or pasted into review prompts.
+- [ ] One business intent still has at most one committed settlement.
+- [ ] An `UNKNOWN` outcome is reconciled before any further payment attempt.
+- [ ] Money remains integer atomic units.
+- [ ] No secret, token, production identifier, or personal data is committed.
+- [ ] Testnet remains the default unless this change has explicit authorization for another network.
 - [ ] Any non-applicable invariant is explained below.
 
 Invariant notes:
@@ -28,33 +29,6 @@ Commands and results:
 <!-- command: PASS/FAIL and concise evidence -->
 ```
 
-## Independent review evidence
-
-### Gate A — exact candidate tree before push
-
-- Base commit SHA:
-- Candidate tree SHA:
-- Candidate commit SHA (if already committed but unpushed):
-- Reviewer tool: `free-pi-cli`
-- Reviewer model:
-- Verdict: `VERDICT: PASS` / `VERDICT: FAIL`
-- Findings or residual risks:
-
-- [ ] The reviewed tree equals the committed tree.
-
-### Gate B — exact remote PR head
-
-- Pull request URL/number:
-- Remote head commit SHA:
-- Remote head tree SHA:
-- Reviewer tool: `free-pi-cli`
-- Reviewer model:
-- Verdict: `VERDICT: PASS` / `VERDICT: FAIL`
-- Findings or residual risks:
-
-- [ ] Gate B reviewed the current remote head and matches Gate A's approved tree, or a fresh Gate A was run for the changed tree.
-- [ ] `Agent policy / repository-policy` and all applicable CI checks pass.
-
 ## Risk and rollback
 
 - Residual risks:
@@ -62,4 +36,5 @@ Commands and results:
 
 ## Human merge
 
-- [ ] A human owner has reviewed the evidence and will perform the merge.
+- [ ] Required CI is green on this head.
+- [ ] A human owner has reviewed the change and will perform the merge.

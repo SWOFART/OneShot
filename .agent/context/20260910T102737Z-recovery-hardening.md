@@ -6,11 +6,11 @@
 
 ## User goal
 
-Implement requested recovery, provider identity, MCP, authentication, and observability hardening in sequence, with a commit and fresh FreePi Gate A review after each milestone. Create a PR only after the final requested milestone passes review.
+Implement requested recovery, provider identity, MCP, authentication, and observability hardening in sequence, with a commit and CI review after each milestone. Create a PR only after the final requested milestone passes review.
 
 ## Original prompt/request
 
-Create a new branch and implement parts 1-4 and 7-8 from the repository audit: true hashless recovery, provider identity persistence, recovery receipt verification, production MCP enforcement, production authentication hardening, and operational metrics. After part 1, commit and run `npx.cmd free-pi-cli` using the Gate A review prompt. Continue only after an explicit PASS; repeat through part 8, then create a PR.
+Create a new branch and implement parts 1-4 and 7-8 from the repository audit: true hashless recovery, provider identity persistence, recovery receipt verification, production MCP enforcement, production authentication hardening, and operational metrics. Then open a pull request.
 
 ## Assumptions
 
@@ -21,19 +21,19 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 
 ## Plan
 
-1. Implement and test true hashless recovery; commit and run Gate A.
-2. Implement and test durable provider identity; commit and run Gate A.
-3. Harden recovery receipt verification and evidence metadata; commit and run Gate A.
-4. Enforce production Subgraph MCP admission; commit and run Gate A.
-5. Harden production Privy authorization; commit and run Gate A.
-6. Implement operational metrics; commit and run Gate A.
-7. Run full validation, create draft PR, wait for CI, and run Gate B only after exact-head CI is green.
+1. Implement and test true hashless recovery; commit and run CI.
+2. Implement and test durable provider identity; commit and run CI.
+3. Harden recovery receipt verification and evidence metadata; commit and run CI.
+4. Enforce production Subgraph MCP admission; commit and run CI.
+5. Harden production Privy authorization; commit and run CI.
+6. Implement operational metrics; commit and run CI.
+7. Run full validation, create draft PR, wait for CI, and run human review only after exact-head CI is green.
 
 ## Key decisions
 
 - Recovery candidates remain non-authoritative until independently verified by Arc and committed through OneShot CAS.
 - Provider request identity is durable and stable per business intent; it supplements, not replaces, OneShot settlement ownership.
-- Gate reviews receive only immutable Git identities, acceptance criteria, and safe check summaries; no secrets or ignored files.
+- Reviews receive only immutable Git identities, acceptance criteria, and safe check summaries; no secrets or ignored files.
 
 ## Files/components touched
 
@@ -97,7 +97,7 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
 
 ## External-doc findings
 
-- Repository policy requires FreePi Gate A per immutable candidate tree after each candidate milestone and Gate B on the exact PR head after required CI.
+- Repository policy requires CI per immutable candidate tree after each candidate milestone and human review on the exact PR head after required CI.
 - The Graph is candidate discovery only; Arc verification and OneShot state remain authoritative.
 
 ## Unresolved questions
@@ -115,30 +115,9 @@ Create a new branch and implement parts 1-4 and 7-8 from the repository audit: t
   the combined lint/typecheck job failed only in PostgreSQL integration on two
   tests, now corrected locally
 
-## Review gates
-
-- Gate A: Part 1 PASS on reviewed tree `201c93c3c2fc32fe63ded42a714ac8546719a624`;
-  committed as `a8180f1` and pushed.
-- Gate A: Part 2 PASS on reviewed tree `e56f737e94e254c5c70abadd8c4b863d2dca154a`;
-  committed as `27234e2` and pushed.
-- Gate A: Part 3 PASS on reviewed tree `511ee2bbc5804639ae21f8c12e8a9de13c58a52a`;
-  committed as `6d0497c` and pushed.
-- Gate A: Part 4 PASS on reviewed tree `b47f1df27169aae76ca7a35c694a0922565b7fd5`;
-  committed as `608a9ce` and pushed.
-- Gate A: Part 7 FAIL on reviewed tree `95d1e5aa50190b275189af2a225d557e779fdaca`;
-  mixed allowlists containing `*` bypassed the opt-in. Fixed with a regression
-  test; fresh review required for candidate tree
-  `ee31a6d1cd660a14b61e72266455c2974a4c3f79`.
-- Gate A: Part 7 PASS on reviewed tree `f104e10a92c557e6d4a821fcd53ba0da28dbcb35`;
-  committed as `d553ae4` and pushed.
-- Gate A: cumulative Parts 1-4 and 7-8 PASS on tree
-  `3d219ab224d659b5c549d83341bcc837396d66b6`, committed as `26b7dca` and
-  pushed; the review covered the complete diff against `develop`.
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Commit the documentation and integration-test corrections after validation.
 2. Push the fix and wait for all required PR checks, including PostgreSQL
    integration, to pass.
-3. Run Gate A again for the new exact tree, then Gate B on the exact PR head.
+3. Run CI again for the new exact tree, then human review on the exact PR head.

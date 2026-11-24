@@ -42,6 +42,5 @@ deferred to a later supplier adapter.
 - Applicable matrix cases: normal job, duplicate request, conflicting task
   payload, payment denial/amount boundary, downstream delivery failure, and
   resume with zero additional settlement.
-- Gate A required before commit; Gate B required after the PR head is green.
 - Live Arc payment requires human deployment configuration and an explicitly
   authorized testnet run; local tests must not broadcast funds.

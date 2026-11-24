@@ -79,22 +79,8 @@ deterministic safety core. Repository: <https://github.com/SWOFART/OneShot/>.
 - PR: opened against `develop`
 - CI: `Agent policy / repository-policy` runs on the pushed head
 
-## Review gates
-
-- Gate A: NOT RUN. `npx free-pi-cli` cannot start in this environment: the
-  registry resolves `free-pi-cli` to a `0.0.1` placeholder release that ships no
-  executable, and a pinned `free-pi-cli@0.2.19` install was denied by the local
-  sandbox. The user was informed of the fail-closed rule in
-  `.agent/IMPLEMENTATION_LOOP.md` and explicitly waived both gates for this
-  documentation-only change.
-- Gate B: NOT RUN. Waived by the same explicit user decision.
-
-Equivalent local evidence was captured instead: the full `agent-policy` workflow
-was reproduced locally against the candidate tree and passed, and
-`git diff --cached --check` reported no whitespace errors.
-
 ## Handoff/next steps
 
-1. Human owner reviews the PR directly; no FreePi verdict backs this tree.
-2. Restore the normal Gate A/Gate B loop for the next change once a working
-   `free-pi-cli` distribution is available.
+1. Human owner reviews the PR directly; no verdict backs this tree.
+2. Restore the normal CI and human review loop for the next change once a working
+   `` distribution is available.

@@ -21,7 +21,7 @@ Create a new branch and fix the remaining Arc Testnet settlement problems. Arc M
 
 1. Harden the Privy sign-and-raw-send fallback with pending nonce reads, gas estimation, bigint-safe quantities, serialization, and process-local duplicate collapse.
 2. Extend Arc readiness with a live USDC decimals check and wallet native-gas balance check in production readiness.
-3. Add focused regression and failure-boundary tests, update relevant docs, run local validation, then follow Gate A/PR/CI/Gate B.
+3. Add focused regression and failure-boundary tests, update relevant docs, run local validation, then follow CI/PR/CI/human review.
 
 ## Key decisions
 
@@ -70,11 +70,6 @@ Create a new branch and fix the remaining Arc Testnet settlement problems. Arc M
 - Commit: uncommitted
 - PR: not created
 - CI: not run
-
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
 
 ## Handoff/next steps
 

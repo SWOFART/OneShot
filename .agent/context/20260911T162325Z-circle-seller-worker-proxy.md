@@ -34,8 +34,8 @@ payment challenge.
 
 1. Change the seller proxy redirect mode from `error` to `manual`.
 2. Run focused web checks and the full required local checks.
-3. Capture Gate A, commit, push, and open a draft PR targeting `develop`.
-4. Wait for required CI, run exact-head Gate B, then mark ready for human
+3. Capture CI, commit, push, and open a draft PR targeting `develop`.
+4. Wait for required CI, run exact-head human review, then mark ready for human
    review.
 5. Deploy the seller image to public Cloud Run and configure the Worker with
    its regional Cloud Run URL.
@@ -68,9 +68,7 @@ payment challenge.
   `redirect: 'manual'` returned HTTP 402 and reached Cloud Run.
 - Direct seller `/health/live` and `/health/ready`: HTTP 200.
 - Direct seller `/api/premium/dataset`: HTTP 402 with Arc Testnet challenge.
-- Gate A: PASS from `free-pi-cli` (`deepseek-v4-flash`) for the candidate tree,
   with no blocking findings; exact identities are recorded in PR #86.
-- Gate B: PASS from a fresh `free-pi-cli` (`deepseek-v4-flash`) for the exact
   PR #86 head and matching tree, with no blocking findings. Required CI was
   green; the PR is ready for human review. Exact identities are recorded in
   the PR description.

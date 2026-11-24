@@ -89,13 +89,8 @@ Clone `SWOFART/OneShot`, create a branch from `develop`, fix the session-details
 - PR: [#136](https://github.com/SWOFART/OneShot/pull/136), open against `develop`, currently at the previous commit.
 - CI: not run for the follow-up candidate yet.
 
-## Review gates
-
-- Gate A: fresh review required for the follow-up candidate before push.
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Stage only the follow-up web changes and this context record after reviewing the diff.
-2. Capture a fresh Gate A verdict for the exact candidate tree before pushing.
-3. Commit and push the candidate to PR #135 after Gate A passes; do not start Gate B unless the user explicitly requests it.
+2. Capture a fresh CI verdict for the exact candidate tree before pushing.
+3. Commit and push the candidate to PR #135 after CI passes; do not start human review unless the user explicitly requests it.

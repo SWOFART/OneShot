@@ -24,7 +24,7 @@ Create a new branch and fix the six correctness issues identified in the reposit
 2. Implement the smallest coherent durable-state changes for all six issues.
 3. Add focused tests covering safe-disable, authorization outage, safe failure retry policy, production fail-closed composition, provider identity binding, and metric failure isolation.
 4. Run formatting, lint, typecheck, build, unit tests, and applicable PostgreSQL/failure-injection matrix cases.
-5. Stage only intended files, capture Gate A identities, and prepare for human review; do not merge.
+5. Stage only intended files, capture CI identities, and prepare for human review; do not merge.
 
 ## Key decisions
 
@@ -59,7 +59,7 @@ Create a new branch and fix the six correctness issues identified in the reposit
 
 ## External-doc findings
 
-- Repository policy and the idempotency/failure-injection skills require durable state assertions, external-effect boundary tests, and fresh Gate A/B review before merge.
+- Repository policy and the idempotency/failure-injection skills require durable state assertions, external-effect boundary tests, and fresh CI and human review review before merge.
 
 ## Unresolved questions
 
@@ -73,12 +73,7 @@ Create a new branch and fix the six correctness issues identified in the reposit
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Complete implementation and focused tests.
-2. Re-run validation after every candidate-tree change, then follow Gate A and PR/CI/Gate B policy.
+2. Re-run validation after every candidate-tree change, then follow CI and PR/CI/human review policy.

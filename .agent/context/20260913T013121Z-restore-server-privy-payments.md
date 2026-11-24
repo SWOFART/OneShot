@@ -34,7 +34,7 @@ have 2factor auth for paying... don't look at the latest PRS!!!!"
    the user-wallet code stays for future use).
 2. Add a regression test: no browser wallet wired -> Approve and run service
    -> client.start called, no user-wallet calls.
-3. Gate A, commit, push, draft PR, CI, Gate B.
+3. CI, commit, push, draft PR, CI, human review.
 
 ## Key decisions
 
@@ -72,12 +72,6 @@ have 2factor auth for paying... don't look at the latest PRS!!!!"
 
 - Branch: feat/restore-server-privy-payments (from origin/develop 90159b5)
 - Base: develop (90159b58be65fd73b6c71a4c6a1564147917044c)
-- Commit: created after Gate A (SHA recorded in PR evidence)
-- PR: draft opened after Gate A per user instruction
+- Commit: created after CI (SHA recorded in PR evidence)
+- PR: draft opened after CI per user instruction
 - CI: recorded on the PR after push
-
-## Gate A/B state
-
-- Gate A: in-session independent review (fresh free-pi process structurally
-  unavailable while the operator session is active; standing constraint).
-- Gate B: after required CI on the exact PR head; verdict recorded on the PR.

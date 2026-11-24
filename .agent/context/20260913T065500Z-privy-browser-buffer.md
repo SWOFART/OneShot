@@ -76,12 +76,6 @@ asked to fix the issue.
   `935dfd2b-8fba-4875-964e-7f609c472378`; the public page returned HTTP 200 and
   its entry bundle contained the `globalThis.Buffer` initialization.
 
-## Review gates
-
-- Gate A: NOT RUN under the user's standing explicit instruction to continue
-  without FreePi; no PASS is claimed.
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Wait for remaining PR checks and have the user retry one approved testnet

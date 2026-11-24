@@ -20,8 +20,8 @@ Implementer handoff (restated): root cause fixed locally — MetaMask can
 authenticate, but the existing Privy embedded wallet remains the dedicated
 payer; MetaMask receives no payment request. Updated privy-session.tsx:223
 and privy-session.test.tsx:337. Checks passed: 12 tests, TypeScript, ESLint,
-diff check. Stopped before Gate A/B; not deployed. User instruction: review,
-run both gates, open the PR after Gate A.
+diff check. Stopped before CI and human review; not deployed. User instruction: review,
+run both gates, open the PR after CI.
 
 ## Assumptions
 
@@ -33,9 +33,9 @@ run both gates, open the PR after Gate A.
 ## Plan
 
 1. Independent review of the selection-logic reversion; reproduce all checks.
-2. Gate A on the staged candidate tree, then commit, push new branch
+2. CI on the staged candidate tree, then commit, push new branch
    fix/dedicated-privy-payer, and open a draft PR targeting develop.
-3. Wait for required CI, then Gate B, and record both verdicts on the PR.
+3. Wait for required CI, then human review, and record both verdicts on the PR.
 
 ## Key decisions
 
@@ -77,14 +77,6 @@ run both gates, open the PR after Gate A.
 - Branch: fix/dedicated-privy-payer (new; stacked on 0167e3dd5f344c388eaddca97ff6da2df25e1b6a)
 - Base: develop (1123107b3411110ac203d367c0cafaeb87fbcfc3 at candidate time;
   merge-base with 37e4615cc7a570f70f6f6ae9d49ac68d96549619)
-- Commit: created immediately after Gate A (SHA in PR evidence)
-- PR: draft opened after Gate A per user instruction
+- Commit: created immediately after CI (SHA in PR evidence)
+- PR: draft opened after CI per user instruction
 - CI: recorded on the PR after push
-
-## Gate A/B state
-
-- Gate A: fresh-process attempt first; if the environment blocks a second
-  free-pi session (one session per account), an in-session independent review
-  per freepi-prepush-review.md is recorded as compensating evidence by
-  explicit user instruction.
-- Gate B: after CI on the exact PR head; verdict recorded on the PR.

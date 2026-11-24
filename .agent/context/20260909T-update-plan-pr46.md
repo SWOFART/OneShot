@@ -28,5 +28,3 @@ authorize hashless recovery.
 
 - `npx.cmd markdownlint-cli2@0.18.1 "**/*.md" "#node_modules"`: PASS
 - `git diff --check`: PASS
-- Gate A: NOT RUN
-- Gate B: NOT RUN

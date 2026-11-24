@@ -63,11 +63,10 @@ README, derived from the front-end source rather than from a screenshot.
 - `pnpm lint` — clean.
 - `pnpm typecheck` — clean.
 
-## Gate state
+## Review
 
-The user explicitly waived FreePi Gate A and Gate B for this documentation-only
-change and asked for a draft pull request instead. No gate verdict exists, so
-the PR stays in draft until a human decides how to proceed.
+The user asked for a draft pull request for this documentation-only change.
+The pull request stays in draft until a human decides how to proceed.
 
 ## Remaining risk
 

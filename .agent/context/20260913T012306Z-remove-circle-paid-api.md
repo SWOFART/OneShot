@@ -28,10 +28,8 @@
 3. Remove user-facing Circle paid-API/proxy documentation while preserving context history and migration history.
 4. Run focused tests, full validation, generated checks, browser checks, conflict scan, and secret scan.
 
-## Gate state
+## Pull request
 
-- Gate A: not run.
-- Gate B: not run.
 - Commit/PR: not created.
 
 ## Local validation

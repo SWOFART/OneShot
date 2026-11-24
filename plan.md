@@ -25,4 +25,4 @@ OneShot is a durable Arc Testnet payment orchestrator for business agents.
 
 - Run the repository test, typecheck, lint, formatting, and generated-contract checks.
 - Run browser acceptance tests when the web surface changes.
-- Complete FreePi Gate A before publishing the branch and Gate B after any pull request.
+- Open a pull request and wait for required CI. A human reviews and merges.

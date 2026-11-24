@@ -30,7 +30,7 @@ circle via stacking PR'S of all stepps.”
    retries an ambiguous create/resume/payment request and emits sanitized trace.
 3. Test the durable UNKNOWN/no-second-submit invariant and update operations and
    plan documentation.
-4. Run local checks, Gate A, required CI, Gate B, then open the next stacked PR.
+4. Run local checks, CI, required CI, human review, then open the next stacked PR.
 
 ## Key decisions
 
@@ -82,13 +82,8 @@ circle via stacking PR'S of all stepps.”
 - Candidate staged tree: `c091319dd916edcca8513aa1b42ddd6f52fca502`.
 - Commit/PR: pending
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-Run local validation and inspect the staged scope, then capture Gate A for the
+Run local validation and inspect the staged scope, then capture CI for the
 exact candidate tree before pushing this stacked PR. Do not stage the user's
 `cloudbuild-worker.yaml`, `.gcloudignore` or `cloudbuild-api.yaml` work.

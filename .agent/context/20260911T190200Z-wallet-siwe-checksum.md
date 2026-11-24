@@ -38,8 +38,6 @@ configuration, payment flows, or any server-side authorization behavior.
 - Branch: `fix/wallet-siwe-checksum`
 - Base: `origin/develop` at `271b1afda4e4adf8f067def0f7775d06ae778318`
 - Commit: uncommitted during implementation
-- Gate A: not run
-- Gate B: not run
 
 ## Implementation
 
@@ -61,7 +59,6 @@ configuration, payment flows, or any server-side authorization behavior.
 - `pnpm format:check` — passed.
 - `pnpm build:frontend` — passed.
 - `markdownlint-cli2` — passed for this context record.
-- Gate A remains pending after the final diff is staged.
 
 ## External verification pending
 

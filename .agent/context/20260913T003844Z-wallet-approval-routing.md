@@ -34,8 +34,8 @@ Implementer then produced fix/wallet-approval-routing on top of develop
 ## Plan
 
 1. Independent review of the routing and conditional payload; reproduce checks.
-2. Gate A on the staged candidate tree, commit, push, open draft PR.
-3. Required CI green, then Gate B, verdict recorded on the PR.
+2. CI on the staged candidate tree, commit, push, open draft PR.
+3. Required CI green, then human review, verdict recorded on the PR.
 
 ## Key decisions
 
@@ -78,13 +78,6 @@ Implementer then produced fix/wallet-approval-routing on top of develop
 
 - Branch: fix/wallet-approval-routing (fresh from develop 23e4373)
 - Base: develop (23e4373d459e18a4be31b07397b1a7a8adae8521, origin/develop tip)
-- Commit: created after Gate A (SHA recorded in PR evidence)
-- PR: draft opened after Gate A per user instruction
+- Commit: created after CI (SHA recorded in PR evidence)
+- PR: draft opened after CI per user instruction
 - CI: recorded on the PR after push
-
-## Gate A/B state
-
-- Gate A: fresh-process attempt first; in-session independent review as
-  compensating evidence if the one-session-per-account constraint blocks the
-  second free-pi process (standing environment constraint, user-acknowledged).
-- Gate B: after required CI on the exact PR head; verdict recorded on the PR.

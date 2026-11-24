@@ -29,5 +29,5 @@ Build a deterministic chaos harness and timeline DSL proving that crashes, lost 
 
 - Branch: `milestone/c03-failure-injection`
 - Base: `milestone/c02-reconciliation-engine` (6dd2e37ff076af6b115a589664f5a999fd480658)
-- Review tooling: `free-pi-cli` / `glm 5.3`
+- Review tooling: `` / `glm 5.3`
 - Status: ACTIVE

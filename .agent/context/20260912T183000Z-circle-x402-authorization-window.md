@@ -16,14 +16,13 @@ High-fidelity restatement: a user-wallet Circle paid-API submit returned HTTP 50
 
 - The submitted Circle authorization was rejected before supplier forwarding because the adapter allowed exactly 600 seconds of `validAfter` clock skew while Circle's browser signer deliberately backdates by about 600 seconds; ordinary wallet approval latency then exceeds the bound.
 - No live authorization payload, token, wallet credential, or payment will be replayed during diagnosis or tests.
-- Aggregate activity metrics alone cannot identify or resolve a particular historical Team Report UNKNOWN record; a task key or business-intent ID is required for a targeted read-only reconciliation audit.
 
 ## Plan
 
 1. Extend the bounded `validAfter` allowance enough for Circle's standard backdating plus normal wallet-response latency, retaining all payer, quote, expiry, and receipt checks.
 2. Return a clear client error for a pre-forward refusal and display only that sanitized message in the browser.
 3. Add regression tests for accepted delayed authorization, refusal before forwarding, API status mapping, and UI notice.
-4. Run required checks, obtain fresh Gate A, commit/push a PR, then deploy only the approved merged API revision.
+4. Run required checks, obtain fresh CI, commit/push a PR, then deploy only the approved merged API revision.
 
 ## Key decisions
 
@@ -63,11 +62,6 @@ High-fidelity restatement: a user-wallet Circle paid-API submit returned HTTP 50
 - Commit: base checkout; implementation uncommitted
 - PR: not created
 - CI: not run for this branch
-
-## Review gates
-
-- Gate A: NOT RUN; candidate must be staged and reviewed after context update
-- Gate B: NOT RUN
 
 ## Handoff/next steps
 

@@ -26,8 +26,8 @@ only on the direct `arc_payment` flow.
 1. Rewrite the plan around one minimal server-wallet MCP milestone.
 2. Give every task dependencies, concrete work, and an exit condition.
 3. Preserve personal-wallet architecture as a separately gated milestone.
-4. Validate Markdown, obtain Gate A, update PR #112, wait for CI, then obtain
-   Gate B.
+4. Validate Markdown, obtain CI, update PR #112, wait for CI, then obtain
+   human review.
 
 ## Key decisions
 
@@ -66,11 +66,6 @@ only on the direct `arc_payment` flow.
 - Base: current `origin/develop` merged before editing.
 - PR: #112, draft.
 
-## Gate A/B state
-
-- Gate A: pending for the rewritten candidate tree.
-- Gate B: pending after push and CI.
-
 ## Handoff/next steps
 
-- Complete Gate A, commit, push, CI, and Gate B.
+- Complete CI, commit, push, CI, and human review.

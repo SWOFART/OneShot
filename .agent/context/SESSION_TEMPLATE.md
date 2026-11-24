@@ -48,11 +48,6 @@
 - PR: <URL/number/state or not created>
 - CI: <exact head SHA and status>
 
-## Review gates
-
-- Gate A: <NOT RUN | FAIL | PASS; reviewed base/target and fresh-session evidence>
-- Gate B: <NOT RUN | FAIL | PASS; PR head SHA and fresh-session evidence>
-
 ## Handoff/next steps
 
 1. <Exact next action.>

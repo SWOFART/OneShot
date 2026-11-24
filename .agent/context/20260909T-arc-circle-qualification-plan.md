@@ -42,11 +42,9 @@ Agent Stack qualification slice.
 
 - `git diff --check` and staged diff check.
 - `npx markdownlint-cli2@0.18.1 "**/*.md" "#node_modules"`.
-- FreePi Gate A against the exact staged tree.
-- Required CI and FreePi Gate B against the exact pushed head.
+- CI against the exact staged tree.
+- Required CI and human review against the exact pushed head.
 
-## Gate status
+## Commit
 
-- Gate A: NOT RUN
-- Gate B: NOT RUN
 - Commit: NOT CREATED

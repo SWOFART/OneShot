@@ -7,7 +7,7 @@
 ## User goal
 
 Repair the deployed OneShot flow that accepts intents but leaves them in
-`AUTHORIZING`, then finish the repository delivery loop with Gate A, CI, Gate B,
+`AUTHORIZING`, then finish the repository delivery loop with CI, CI, human review,
 and a pull request for human review.
 
 ## Diagnosis
@@ -78,6 +78,4 @@ and a pull request for human review.
 
 - Branch: `fix/worker-runtime-deployment`
 - Base: `origin/develop` at `cd7439058f94f1128bae70fac4017039a45d3d68` (PR #61)
-- Gate A: PENDING
 - Pull request: NOT OPEN
-- Gate B: NOT RUN

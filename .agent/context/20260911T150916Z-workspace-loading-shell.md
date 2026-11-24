@@ -82,14 +82,7 @@ the top left \"loading the console\" how to fix that?"
 - PR: not created
 - CI: not applicable yet
 
-## Review gates
-
-- Gate A: PASS; fresh `free-pi-cli` / `deepseek-v4-flash` review completed
-  against the recorded `develop` base with no blocking findings. The exact
-  final staged tree identity is captured in the PR review evidence.
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Stage only the loading-shell files, capture Gate A identities, and submit
+1. Stage only the loading-shell files, capture CI identities, and submit
    the focused PR after the repository review loop.

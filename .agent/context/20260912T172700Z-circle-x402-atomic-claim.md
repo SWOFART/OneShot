@@ -87,7 +87,7 @@ was rejected by Fastify with HTTP 400.
 - `pnpm.cmd check:generated`: passed.
 - Recorded base: `origin/develop` at `8f07bba648d9d270b3f3a2a99a5064237ffd8bd2`.
 - Candidate is being prepared on `fix/circle-x402-persistence`; recompute
-  `git write-tree` after the final staging and bind Gate A to that resulting
+  `git write-tree` after the final staging and bind CI to that resulting
   tree.
 - PostgreSQL integration remains gated by `TEST_POSTGRES=1` and requires a
   container runtime; the new integration assertion is included but not run

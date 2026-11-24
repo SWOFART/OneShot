@@ -206,7 +206,7 @@ the SVG component.
 
 - **Wallet auth moves into our code.** The SIWE flow is Privy's supported
   headless API, but the sign-in path is now ours to get right. It carries
-  tests, and it goes through Gate A and Gate B like any other change.
+  tests, and it follows the same CI and human review as any other change.
 - **Hero geometry.** Rounded acute corners are fiddly; the derived paths are
   covered by unit tests rather than checked by eye alone.
 - **Contrast.** Signal green on forest is bright. The contrast test runs over
@@ -215,5 +215,5 @@ the SVG component.
 ## Delivery
 
 Per `.agent/IMPLEMENTATION_LOOP.md`: local format, lint, typecheck, test and
-build; a single staged candidate tree; FreePi Gate A before push; required CI;
-FreePi Gate B on the draft-PR head. PR targets `develop`. A human merges.
+build; one scoped commit; required CI on the pull-request head. PR targets
+`develop`. A human merges.

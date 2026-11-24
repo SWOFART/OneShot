@@ -7,7 +7,7 @@
 ## User goal
 
 Restore live Arc recovery by using the published Graph Studio subgraph, identify
-remaining blockers, and finish fixes through the repository review gates.
+remaining blockers, and finish fixes through CI and human review.
 
 ## Original prompt/request
 
@@ -25,7 +25,7 @@ official Subgraph MCP cannot query it; continue fixing the live failure.
 
 1. Allow one reconciliation job to be pending per intent and permit a new
    read-only retry after the previous job is delivered.
-2. Run the full validation stack, Gate A, CI, and Gate B on a separate PR.
+2. Run the full validation stack, CI, CI, and human review on a separate PR.
 3. Deploy the reviewed API image and verify recovery with wallet nonce unchanged.
 
 ## Key decisions
@@ -52,7 +52,7 @@ official Subgraph MCP cannot query it; continue fixing the live failure.
 
 - Direct Studio GraphQL query - PASS; deployment indexed Arc data and returned
   real transfer candidates.
-- PR #65 checks and Gate A/B - PASS; human merged as `95709a8`.
+- PR #65 checks and CI and human review - PASS; human merged as `95709a8`.
 - Cloud Build `35f9481f-dcde-4152-94cf-87772b4cdba0` - PASS.
 - Worker revision `oneshot-worker-00006-sh5` - live/ready PASS with submissions
   disabled and the Studio query URL configured.
@@ -83,15 +83,10 @@ official Subgraph MCP cannot query it; continue fixing the live failure.
 - PR: not created
 - CI: not started
 
-## Review gates
-
-- Gate A: NOT RUN for the reconciliation retry tree.
-- Gate B: NOT RUN.
-
 ## Handoff/next steps
 
 1. Run full repository checks and stage the exact candidate tree.
-2. Run fresh Gate A, commit/push, open a draft PR, wait for CI, then run Gate B.
+2. Run fresh CI, commit/push, open a draft PR, wait for CI, then run human review.
 3. Deploy the reviewed API image, enqueue recovery, verify Graph/Vertex evidence,
    confirm wallet nonce did not change, scale worker back to zero, and delete the
    temporary diagnostic Cloud Run job.

@@ -54,7 +54,6 @@ transaction failed or was approved.”
 - Branch: `fix/graph-transaction-evidence`
 - Base: refreshed `origin/develop` at `65200cc2dfcf22912e532a157232e439d623044f`.
 - Commit/PR: not created.
-- Gate A/B: not started.
 
 ## Checks
 
@@ -66,7 +65,7 @@ transaction failed or was approved.”
 - `pnpm test:browser` passed: 8 browser tests.
 - `pnpm test:integration` loaded all integration suites but skipped them because
   this workstation has no container runtime.
-- No commit, push, PR, deployment, or FreePi Gate A/B run has been performed
+- No commit, push, PR, deployment, or CI and human review run has been performed
   yet; these are pending the explicit push/PR request.
 
 ## Unresolved questions
@@ -77,5 +76,5 @@ transaction failed or was approved.”
 
 ## Handoff/next steps
 
-Stage the scoped tree, run Gate A, commit, push, open the draft PR, wait for
-required CI, and run Gate B before handing off for human review.
+Stage the scoped tree, run CI, commit, push, open the draft PR, wait for
+required CI, and run human review before handing off for human review.

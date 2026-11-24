@@ -11,14 +11,14 @@ does not prove the new job workflow or current deployment health.
 
 ## New increment: R0–R3 delivered; R4/R5 remain evidence-gated
 
-| Gate | Missing work | Acceptance boundary |
+| Step | Missing work | Acceptance boundary |
 | --- | --- | --- |
 | R0 | Supplier/task/ownership/delivery/binding/route contracts | Delivered in the R0–R3 foundation; keep one supported supplier and scoped Privy execution |
 | R1 | Durable job/order/result and one connector | Delivered; two-agent/concurrency/restart tests share one intent/payment and delivery never repays |
 | R2 | Separate landing and cabinet | Delivered at `/` and `/app`; accessible job-centered UX over authenticated APIs |
 | R3 | Live bounded activity audit and job-aware triage | Delivered seam; fresh Studio evidence and ambiguous transfer binding remain runtime evidence |
 | R4 | Live interrupted-job demonstration | Reviewed testnet-only response-loss hook and sanitized runner; real payment, Studio capture and supplier result still require authorization |
-| R5 | Release and submission | `release:check` and checklist are delivered; exact-head FreePi A/B, fresh live evidence, optional video, correct pool, and human review remain |
+| R5 | Release and submission | `release:check` and checklist are delivered; exact-head CI, fresh live evidence, optional video, correct pool, and human review remain |
 
 ## Current limitations
 

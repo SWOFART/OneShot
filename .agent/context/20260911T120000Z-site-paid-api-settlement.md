@@ -10,7 +10,7 @@ Integrate the existing Circle x402 paid-API buyer flow into the OneShot website 
 
 ## Original prompt/request
 
-The user asked to create a new branch from `develop` and start integrating the paid API into the website instead of linking to the hardcoded `pnpm demo:402` tester. The site should demonstrate a real Circle payment visible on ArcScan, enforce one payment when the same transaction is sent twice, and expose recovery/activity via The Graph. The user explicitly asked not to start Gate A and requested a Gate A review prompt for later use.
+The user asked to create a new branch from `develop` and start integrating the paid API into the website instead of linking to the hardcoded `pnpm demo:402` tester. The site should demonstrate a real Circle payment visible on ArcScan, enforce one payment when the same transaction is sent twice, and expose recovery/activity via The Graph. The user explicitly asked not to start CI.
 
 ## Assumptions
 
@@ -26,7 +26,7 @@ The user asked to create a new branch from `develop` and start integrating the p
 3. Bind x402 provider hashes to recovery and The Graph candidate discovery, and include paid-API settlements in activity.
 4. Replace the runbook-only website card with a quote/start/status UI and ArcScan/recovery links.
 5. Add applicable duplicate, parallel, response-loss, Graph-delay, provider-policy, restart, and downstream-result tests; run local checks only.
-6. Stop before Gate A and leave a compact review prompt for a later fresh FreePi session.
+6. Stop before CI and leave the branch ready for a pull request.
 
 ## Key decisions
 
@@ -78,13 +78,8 @@ The user asked to create a new branch from `develop` and start integrating the p
 - CI: not run
 - Intended changes are staged; the final staged tree identity is reported in the handoff.
 
-## Review gates
-
-- Gate A: PASS — user-provided fresh FreePi read-only verdict; no blocking findings.
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Commit the staged implementation after the Gate A PASS.
+1. Commit the staged implementation after the CI PASS.
 2. Push the feature branch and open a PR targeting `develop`.
-3. Keep Gate B and live payment execution outside this handoff unless explicitly requested.
+3. Keep human review and live payment execution outside this handoff unless explicitly requested.

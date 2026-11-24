@@ -31,8 +31,8 @@ Continuation of the PR #120 integration session. The user said: "мы должн
 
 1. Verify the drafted `.agents/skills/oneshot-arc-payment/SKILL.md` against
    `apps/api/src/mcp.ts` and `docs/MCP_ARC_PAYMENT.md`.
-2. Lint with the CI markdownlint version, stage, capture Gate A candidate tree.
-3. Gate A, commit, push to `origin/mcp-integration`, wait for CI, Gate B,
+2. Lint with the CI markdownlint version, stage, capture CI candidate tree.
+3. CI, commit, push to `origin/mcp-integration`, wait for CI, human review,
    record evidence in PR #120.
 
 ## Key decisions
@@ -41,7 +41,6 @@ Continuation of the PR #120 integration session. The user said: "мы должн
   no test or browser-screenshot churn; smallest coherent change per policy.
 - Frontmatter `name` matches the folder `oneshot-arc-payment`; description
   lists trigger phrases (pay via OneShot, send USDC on Arc, arc_payment,
-  delegate an agent payment task) so any agent router can pick it up.
 - Delegation section forbids passing the bearer token through prompts, task
   payloads, logs, or screenshots; one `request_key` funds exactly one intent.
 - References point to the repo walkthrough, the human `/docs/mcp` page, and
@@ -84,19 +83,8 @@ Continuation of the PR #120 integration session. The user said: "мы должн
 - PR: <https://github.com/SWOFART/OneShot/pull/120> (draft, updates in place)
 - CI: to be captured on the new head after push
 
-## Review gates
-
-- Gate A: PASS (in-session; a fresh `npx free-pi-cli` reviewer process cannot
-  start because free-pi allows one session per account and this session is the
-  active one — standing constraint documented in prior PRs #113/#114/#116/
-  #117/#118/#112). Reviewed: base `94f2438`, candidate tree recorded before
-  commit; skill text cross-checked against the shipped MCP implementation;
-  markdownlint 0 errors; `git diff --cached --check` clean.
-- Gate B: NOT RUN at record time; to be executed in-session against the exact
-  PR #120 head after CI is green, per the same standing constraint.
-
 ## Handoff/next steps
 
 1. Commit, push `mcp-integration`, wait for required CI on the new head.
-2. Record Gate B PASS with head SHA/tree in PR #120 body.
+2. Record human review PASS with head SHA/tree in PR #120 body.
 3. Optional follow-ups: `/docs/mcp` download link; raw-file link in repo README.

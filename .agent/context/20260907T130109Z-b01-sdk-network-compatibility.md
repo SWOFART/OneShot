@@ -87,11 +87,6 @@ changes.
 - PR: not created
 - CI: out of scope this session by user instruction
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Scaffold and implement the three B-owned packages.

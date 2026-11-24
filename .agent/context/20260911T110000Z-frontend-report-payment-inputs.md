@@ -69,11 +69,6 @@ User asked to look at the plan and current codebase, explain what is still missi
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: PASS for candidate tree `93c4f7a0366d538c5473938a5518585098d6dbd4`, reviewed by `free-pi-cli` (`glm-5.3-flash`); this context-record update changes the candidate tree, so a fresh Gate A is required before commit.
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Re-stage this record update, run fresh Gate A for the resulting tree, then commit, push, create a draft PR, and complete Gate B.
+1. Re-stage this record update, run fresh CI for the resulting tree, then commit, push, create a draft PR, and complete human review.

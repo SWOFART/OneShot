@@ -34,11 +34,12 @@ These rules fail closed. A feature, demo, or deadline does not override them.
 - Keep secrets in approved runtime secret stores or ignored local environment
   files. Commit only safe examples with placeholder values.
 - Review staged and untracked files for secret material before every commit.
-- FreePi receives only code, intended diffs, tests, public documentation, and
-  non-sensitive validation evidence. It must not read or receive `.env*`, local
-  credentials, wallet files, ignored files, or sensitive runtime configuration.
-- If a review cannot be completed without sensitive data, the review fails. Do
-  not send the data.
+- Reviewers, issues, pull requests, CI logs, and external tools receive only
+  code, intended diffs, tests, public documentation, and non-sensitive
+  validation evidence. Do not send `.env*`, local credentials, wallet files,
+  ignored files, or sensitive runtime configuration.
+- If a review cannot be completed without sensitive data, stop. Do not send
+  the data.
 
 ## Dependencies and boundaries
 

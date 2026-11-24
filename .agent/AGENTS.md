@@ -11,8 +11,8 @@ work in this repository.
    `AGENTS.md`.
 4. Follow the narrowest applicable repository configuration.
 
-Surface conflicts. Never silently weaken an invariant, review gate, or security
-boundary.
+Surface conflicts. Never silently weaken an invariant, required check, or
+security boundary.
 
 ## Tool neutrality
 
@@ -20,10 +20,6 @@ boundary.
   work, but all tools follow the same canonical repository policy.
 - Tool adapters remain short pointers to root `AGENTS.md`; personal prompts,
   permissions, models, and machine-specific commands stay in ignored files.
-- Gate A and Gate B use separate fresh, read-only FreePi processes. Each verdict
-  records the reviewer tool, platform-reported model (or `not exposed by
-  platform`), and immutable Git identities required by
-  `.agent/IMPLEMENTATION_LOOP.md`.
 
 ## Product boundary
 
@@ -89,20 +85,18 @@ Read `.agent/PROJECT_CONTEXT.md`, `.agent/SECURITY_INVARIANTS.md`, and
 - `sponsor-qualification`: mandatory before sponsor, demo, or release claims.
 
 Personal workflow and review skills may supplement these rules. They never
-replace OneShot policy or FreePi Gate A/B.
+replace OneShot policy, required CI, or human review.
 
 ## Git and review policy
 
 - Never implement directly on `main` or `develop`.
 - Branch from current `develop`; target `develop` from short-lived
   `feature/*`, `fix/*`, or `milestone/*` branches unless the user explicitly
-  names another short-lived branch.
+  names another short-lived branch or base.
 - Never direct-push or force-push protected branches or rewrite shared history
   without explicit user authorization.
-- Follow `.agent/IMPLEMENTATION_LOOP.md` for local checks, staged-tree identity,
-  both independent FreePi reviews, CI, PR readiness, and invalidation rules.
-- Only explicit `VERDICT: PASS` passes a gate. Missing, ambiguous, truncated,
-  stale, unauthenticated, or failed review output fails closed.
+- Follow `.agent/IMPLEMENTATION_LOOP.md` for local checks, diff review, CI, and
+  pull-request readiness.
 - Agents never merge a PR. A human reviews and explicitly authorizes the merge.
 
 ## Context retention
@@ -113,8 +107,7 @@ compaction when possible. Never store secrets there.
 
 ## Agent-complete
 
-Handoff only after intended scope is complete, local checks pass, the diff is
-cleanly scoped, and current gate state is recorded. A change is ready for human
-review only after Gate A, required CI, and Gate B pass for the exact applicable
-tree/head. Report branch, commit, PR, checks, gate evidence, and remaining
-risks. Never merge.
+Handoff only after intended scope is complete, local checks pass, and the diff
+is cleanly scoped. A change is ready for human review only after required CI
+passes for the pull-request head. Report branch, commit, PR, checks, and
+remaining risks. Never merge.

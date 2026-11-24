@@ -62,13 +62,9 @@ ambiguous durable requests safely.
   normalized, and nested Privy HTTP status fields are classified as
   pre-broadcast rejection only for explicit 4xx statuses. All
   unrecognized/ambiguous responses remain `UNKNOWN` fail-closed.
-- Local implementation gates pass: focused Arc adapter 199/199 tests,
-  Privy adapter 131/131 tests, worker 49/49 tests, typechecks, full build,
-  lint, and formatting.
+- Local checks pass: focused Arc adapter 199/199 tests, Privy adapter 131/131
+  tests, worker 49/49 tests, typechecks, full build, lint, and formatting.
 - Deployment completed without submitting or approving a payment.
-- Gate A review was attempted with a fresh `free-pi-cli` process, but it did
-  not return an explicit structured verdict and was terminated; no PASS is
-  claimed.
 - The authoritative job list does not contain
   `report-teammate-wallet-f7b0ecb7`. Three other teammate keys exist, but they
   are distinct `UNKNOWN` intents with no committed settlement and must not be

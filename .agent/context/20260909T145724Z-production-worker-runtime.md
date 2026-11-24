@@ -39,7 +39,7 @@ implement it in a new branch.
    graceful shutdown.
 5. Add a dedicated worker container and documented environment surface.
 6. Add PostgreSQL API-to-worker end-to-end coverage plus failure-boundary tests.
-7. Run package and root validation, inspect scope/secrets, and prepare Gate A.
+7. Run package and root validation, inspect scope/secrets, and prepare CI.
 
 ## Key decisions
 
@@ -112,14 +112,8 @@ implement it in a new branch.
 - Workspace: all intended implementation and review-prompt files staged;
   implementation remains uncommitted
 
-## Review gates
-
-- Gate A: NOT RUN; staged candidate tree is captured immediately before the
-  review invocation with `git write-tree`.
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 - Run the PostgreSQL integration suite in a Docker-capable environment. If the
-  user requests a commit/PR, stage the exact tree and run fresh FreePi Gate A
+  user requests a commit/PR, stage the exact tree and run CI
   before committing or pushing.

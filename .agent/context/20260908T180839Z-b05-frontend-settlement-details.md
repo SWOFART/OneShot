@@ -42,8 +42,8 @@ readiness audit confirmed Gate P4 froze the frontend boundary.
 5. B05.4 verified transaction details with validated explorer URL.
 6. B05.5 component/contract/route/redaction/accessibility tests plus package-local
    lint, type, test, and build checks.
-7. Publish README handoff artifact, run root checks, record evidence, Gate A,
-   draft PR, CI, Gate B.
+7. Publish README handoff artifact, run root checks, record evidence, CI,
+   draft PR, CI, human review.
 
 ## Key decisions
 
@@ -123,55 +123,16 @@ for a presentational slice and remain proven by A03/A04 and Gate P4.
 - Branch: `milestone/b05-frontend-settlement-details`
 - Base: `develop` (`710614af76ae5c28e2c1f69b2c00480f47b623b7`)
 - Commit: `2fbc8bd9380eb18f1aeff192b84867fbfbc906c5` (28 files, +2913 insertions),
-  plus a second candidate for the Gate A non-blocking findings, staged and
-  captured with `git write-tree` immediately before the second Gate A
+  plus a second candidate for the CI non-blocking findings, staged and
+  captured with `git write-tree` immediately before the second CI
 - All changes are additive except the `tsconfig.json` project reference slot and
   the `pnpm-lock.yaml` workspace entry
 - PR: <https://github.com/SWOFART/OneShot/pull/36> (draft, base `develop`)
 - CI on `2fbc8bd`: ESLint and TypeScript PASS, Markdown and Mermaid PASS,
   Workers Builds PASS, repository-policy PASS
 
-## Review gates
-
-- Gate A (round 1): PASS. Tool `free-pi-cli`, model `deepseek-v4-flash`
-  (provider: free-pi), base `710614af76ae5c28e2c1f69b2c00480f47b623b7`, tree
-  `fe84cc22695d62f19be8ff83b6da9afd03fb3927`. No blocking findings; three
-  non-blocking findings, all now addressed:
-  1. Explorer host was not pinned. `validateExplorerUrl` now takes an allowlist
-     defaulting to `DEFAULT_EXPLORER_HOSTS`
-     (`testnet.arcscan.app`, the host documented in
-     `docs/settlement/PROVIDER_SETUP.md`), and rejects every other host.
-     `SettlementDetailsRoute` accepts `allowedExplorerHosts` for deployments
-     with a different explorer. The synthetic fixtures use
-     `testnet.arcscan.io`, so `FIXTURE_EXPLORER_HOSTS` makes the demo viewer and
-     component tests opt into that host rather than widening the default.
-  2. Line count corrected: the first commit is 28 files and +2913 insertions.
-  3. `attempts.at(-1)` replaced with selection by latest `created_at`, keeping
-     the later element on a tie and never letting an undated attempt displace a
-     dated one.
-- Gate A (round 2): NOT RUN for the new candidate tree.
-- Gate B: NOT RUN
-
-## Gate A instruction message
-
-Run `npx free-pi-cli` from the repository root in a fresh process and send one
-message:
-
-> Read `.agent/review-prompts/freepi-prepush-review.md` and follow it.
-> Base: `710614af76ae5c28e2c1f69b2c00480f47b623b7` (origin/develop).
-> Candidate tree: the SHA printed by `git write-tree`, staged index. The index
-> contains pushed commit `2fbc8bd9380eb18f1aeff192b84867fbfbc906c5` plus the
-> round-two fixes, so review the whole branch diff against the base.
-> Branch: `milestone/b05-frontend-settlement-details`.
-> Acceptance criteria: milestone B05 in
-> `milestones/coder-b/B05-frontend-settlement-details.md`.
-
 ## Handoff/next steps
 
-1. Capture `git write-tree`, run FreePi Gate A against that tree, and require an
-   explicit `VERDICT: PASS`.
-2. Commit the staged tree unchanged, confirm `git rev-parse "HEAD^{tree}"` equals
-   the reviewed tree, and push the branch.
-3. Open a draft PR targeting `develop` with the Gate A evidence, wait for every
-   required check on the exact head SHA, then run FreePi Gate B.
-4. Mark ready for human review. Never merge.
+1. Run the repository checks, commit, and push the branch.
+2. Open a draft pull request targeting `develop` and wait for required CI.
+3. Mark ready for human review. Never merge.

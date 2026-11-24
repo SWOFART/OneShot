@@ -2658,9 +2658,9 @@ git commit -m "feat(web): sign in through Privy's headless SIWE flow"
 **Interfaces:**
 
 - Consumes: everything above.
-- Produces: the evidence Gate A needs.
+- Produces: local check results recorded in the context file.
 
-- [ ] **Step 1: Run the full local gate**
+- [ ] **Step 1: Run the full local checks**
 
 ```bash
 pnpm format:check
@@ -2673,7 +2673,7 @@ pnpm test
 Expected: all pass. `pnpm test` runs `pnpm build` first, so a stale `dist` in the
 new brand package fails loudly rather than silently.
 
-- [ ] **Step 2: Run the browser gate**
+- [ ] **Step 2: Run the browser acceptance tests**
 
 Run: `pnpm --filter @oneshot/web test:browser`
 Expected: the P5 Playwright spec passes. It drives the console by role and text,
@@ -2715,7 +2715,7 @@ other, or the page flashes the wrong palette on load.
 
 Fill in `Commands/checks`, `Files/components touched`, and `Git and PR state` in
 `.agent/context/20260910T155019Z-brand-frontend.md` with the actual results and
-the head SHA. Leave Gate A and Gate B as `NOT RUN` until they run.
+the head SHA.
 
 - [ ] **Step 6: Commit**
 
@@ -2726,10 +2726,9 @@ git commit -m "docs(web): document the brand package and the theme guard"
 
 - [ ] **Step 7: Hand off to the implementation loop**
 
-Follow `.agent/IMPLEMENTATION_LOOP.md` from section 3: capture the immutable
-Gate A evidence, run FreePi Gate A in a fresh read-only process, push, open the
-draft PR against `develop`, wait for required CI, then run Gate B against the
-exact head SHA. Never merge — a human does that.
+Follow `.agent/IMPLEMENTATION_LOOP.md`: run the local checks, commit, push, open
+the pull request against `develop`, and wait for required CI. Never merge — a
+human does that.
 
 ---
 

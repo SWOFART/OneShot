@@ -26,7 +26,7 @@ User reported: `Payment activity is unavailable right now. Existing payment reco
 
 1. Confirm the live 400 cause from API code and Cloud Run logs.
 2. Add a route-scoped backend compatibility fix and regression test.
-3. Run API checks, capture Gate A evidence, then review/push/deploy per policy.
+3. Run API checks, capture CI evidence, then review/push/deploy per policy.
 
 ## Key decisions
 
@@ -65,11 +65,8 @@ User reported: `Payment activity is unavailable right now. Existing payment reco
 
 ## Unresolved questions
 
-- Whether to deploy immediately after Gate A/CI; prior user authorization covers
-  updating the live Cloud Run API, but human merge remains required by policy.
-- Gate A could not be completed: three fresh FreePi attempts either hit the
-  provider's `409 concurrent_session` or remained in `Working...` without a
-  structured verdict. No code or staged content was changed by those attempts.
+- Whether to deploy immediately after CI. Prior user authorization covers
+  updating the live Cloud Run API, but a human merge remains required.
 
 ## Git and PR state
 
@@ -79,18 +76,12 @@ User reported: `Payment activity is unavailable right now. Existing payment reco
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: BLOCKED — external FreePi provider returned no usable verdict after
-  repeated attempts (`409 concurrent_session`/indefinite `Working...`).
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Inspect/stage only the two implementation files and context record.
-2. Retry Gate A only when the external FreePi session is available; do not
+2. Retry CI only when the external session is available; do not
    claim a pass from a partial or timed-out response.
-3. After Gate A passes, commit, push, create a draft PR, wait for required CI,
-   then run Gate B.
+3. After CI passes, commit, push, create a draft PR, wait for required CI,
+   then run human review.
 4. Deploy the exact reviewed image to Cloud Run only after the review workflow
    permits it, then verify `/health/live` and the activity refresh behavior.

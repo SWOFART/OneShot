@@ -35,7 +35,7 @@ frontend fully, so it follows our design"
 3. Repoint all three stylesheets at the shared tokens.
 4. Repaint the shell; add the theme toggle and pre-paint guard.
 5. Build the searchable wallet picker on Privy's headless SIWE flow.
-6. Local checks, Gate A, push, CI, Gate B.
+6. Local checks, CI, push, CI, human review.
 
 ## Key decisions
 
@@ -173,15 +173,9 @@ every command below; none failed because of it.
   `.superpowers/sdd/2026-09-10-brand-frontend/`.
 - Working tree: clean at every commit made in this task; nothing left staged
   or unstaged.
-- PR: not created. Per the task-12 brief and `.agent/IMPLEMENTATION_LOOP.md`,
-  opening the draft PR against `develop`, pushing, and running FreePi Gate
-  A/B are handoff steps for a human at the end of this session, not run here.
+- PR: not created. Opening the draft pull request against `develop` and pushing
+  are handoff steps for a human at the end of this session, not run here.
 - CI: not run (no push).
-
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
 
 ## Handoff/next steps
 
@@ -192,7 +186,7 @@ every command below; none failed because of it.
    `e4b0c25`, with this record and the README Brand section landing in one
    more commit on top.
 3. Per `.agent/IMPLEMENTATION_LOOP.md` section 3 (not run in this task, by
-   instruction): capture immutable Gate A evidence, run FreePi Gate A in a
+   instruction): capture immutable CI evidence, run CI in a
    fresh read-only process, push `milestone/brand-frontend`, open the draft PR
-   against `develop`, wait for required CI, then run Gate B against the exact
+   against `develop`, wait for required CI, then run human review against the exact
    head SHA. A human authorizes the merge; no agent merges.

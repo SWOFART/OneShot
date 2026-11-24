@@ -71,13 +71,8 @@ future work. all of api's i have in google cloud, privy, the graph and etc."
 - PR: not created
 - CI: not started
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Run Markdown and repository validation.
-2. Stage the exact documentation tree and run Gate A.
-3. Commit, push, open a draft PR, await CI, and run Gate B.
+2. Stage the exact documentation tree and run CI.
+3. Commit, push, open a draft PR, await CI, and run human review.

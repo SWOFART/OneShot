@@ -43,8 +43,6 @@ deployed site is `oneshot.kapustazh.dev`; the intended dataset resource is
 - This session implements code and deployment instructions only. It does not
   deploy Cloud Run or mutate Cloudflare production configuration, because no
   deployment credentials or seller wallet address were supplied.
-- Gate A and Gate B are not started in this session unless explicitly requested
-  later; local verification and a review prompt handoff are still required.
 
 ## External documentation findings
 
@@ -71,7 +69,7 @@ deployed site is `oneshot.kapustazh.dev`; the intended dataset resource is
 2. Add Worker same-domain proxy support.
 3. Add Docker/deployment and environment documentation.
 4. Add focused tests and run format, lint, typecheck, build, and test checks.
-5. Record exact final tree/check evidence and hand off without starting Gate A.
+5. Record exact final tree/check evidence and hand off without starting CI.
 
 ## Files/components touched
 
@@ -123,10 +121,8 @@ outside this service.
   return HTTP 402 with a `PAYMENT-REQUIRED` header.
 - No live payment or ArcScan transaction was created by local tests.
 
-## Gate state and handoff
+## Handoff
 
-- Gate A: not started by request.
-- Gate B: not applicable before Gate A/PR/CI.
 - Current head: `dc128a733456c7f8e3e591df624fa8136a793881` with the seller
   implementation staged and no commit yet.
 - Next step: review the final diff, stage only intended files, and hand off the

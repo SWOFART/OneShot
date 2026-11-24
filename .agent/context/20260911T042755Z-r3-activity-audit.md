@@ -74,11 +74,6 @@ of per-agent wallets.
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Complete full checks, inspect scope, then decide whether to commit and open a

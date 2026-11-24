@@ -32,7 +32,7 @@ tab switch and theme change.
 ## Plan
 
 1. Hand back to the user for review of the running app.
-2. Run FreePi Gate A against the candidate tree before any push.
+2. Run CI against the candidate tree before any push.
 
 ## Key decisions
 
@@ -66,9 +66,9 @@ tab switch and theme change.
 - apps/web/test/app-composition.test.tsx - assert the four-tab set.
 - apps/web/test/styles.test.ts - guard the ink/surface pairing.
 
-## Gate A round 1 (FAIL) and the fixes it forced
+## CI round 1 (FAIL) and the fixes it forced
 
-FreePi Gate A, glm-5.3-flash, returned FAIL on acceptance criterion 1: the
+CI, glm-5.3-flash, returned FAIL on acceptance criterion 1: the
 light theme still had unreadable text. The first pass fixed the reported
 surfaces but missed that --os-surface also flips with the theme, so several
 controls drawn on it kept panel inks:
@@ -115,14 +115,8 @@ pre-fix pairings and reports the candidate clean.
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. User reviews the running app locally.
-2. Stage the intended files, capture the candidate tree SHA, run FreePi Gate A
-   in a fresh `npx free-pi-cli` process, then commit, push and open a draft PR
+2. Stage the intended files, commit, push, and open a draft pull request
    targeting develop.

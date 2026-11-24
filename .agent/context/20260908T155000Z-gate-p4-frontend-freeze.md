@@ -23,14 +23,14 @@ Execute Path 1 to unblock Milestone B05: freeze the Gate P4 frontend boundary, a
 4. Versioned OpenAPI mock server (`OPENAPI_MOCK_SERVER_VERSION = '1.0.0'`) implemented and exported from `@oneshot/contracts` with full route coverage and fail-closed `/retry` rejection.
 5. `docs/GATE_P4_MANIFEST.md` published and Step 4 marked `[COMPLETED]` in `docs/GATE_P4_CHECKLIST.md`.
 6. Full local validation passes (`pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `npx markdownlint-cli2`).
-7. Implementation loop followed: FreePi Gate A pre-push review, draft PR against `develop`, green CI, FreePi Gate B review, ready for human review.
+7. Implementation loop followed: CI pre-push review, draft PR against `develop`, green CI, human review review, ready for human review.
 
 ## Assumptions
 
 - Base commit is `origin/develop` (`4afd70916a84946aa3230cd29ccd3b68a2b2da58`).
 - All contract additions are strictly optional and additive; no existing backend or frontend call paths are broken.
 - Mock server does not expose or permit any payment retry endpoint.
-- Human review gates apply; agents never merge to `develop` or `main`.
+- A human reviews before any merge to `develop` or `main`. Agents never merge.
 
 ## Non-goals
 
@@ -62,8 +62,3 @@ Execute Path 1 to unblock Milestone B05: freeze the Gate P4 frontend boundary, a
 - `pnpm typecheck`: PASS
 - `pnpm test`: PASS (44 test files, 585 tests)
 - `npx markdownlint-cli2 "**/*.md" "#node_modules"`: PASS (95 files, 0 issues)
-
-## Review gates
-
-- Gate A: PENDING
-- Gate B: PENDING

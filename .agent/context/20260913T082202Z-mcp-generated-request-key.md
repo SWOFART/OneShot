@@ -31,7 +31,7 @@ without manual copying, and for MCP to be redeployed.
 1. Remove the deployment-wide request-key allowlist and profile key output.
 2. Tell MCP clients and the downloadable skill to generate and retain a random
    purpose-based key without asking the user.
-3. Run focused and full checks, required review gates, push a draft PR, then
+3. Run focused and full checks, push a draft PR, then
    redeploy and smoke-test the MCP API without sending a payment.
 
 ## Key decisions
@@ -91,11 +91,6 @@ without manual copying, and for MCP to be redeployed.
 - Commit: uncommitted
 - PR: not created
 - CI: not run
-
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
 
 ## Handoff/next steps
 

@@ -39,8 +39,8 @@ also asked to run the usual checks afterwards.
 1. Apply the copy edits to App.tsx, JobWorkspace.tsx, ReadinessBanner.tsx,
    McpDocsPage.tsx, McpProfile.tsx, styles.css.
 2. Branch `fix/frontend-copy-cleanup` from `origin/develop` (`6292052`).
-3. Run web tests, typecheck, lint, format, then Gate A, commit, push, PR, CI,
-   Gate B.
+3. Run web tests, typecheck, lint, format, then CI, commit, push, PR, CI,
+   human review.
 
 ## Key decisions
 
@@ -94,14 +94,9 @@ also asked to run the usual checks afterwards.
 - PR: to be created against develop
 - CI: pending
 
-## Review gates
-
-- Gate A: pending in-session review of the staged candidate tree.
-- Gate B: pending after CI.
-
 ## Handoff/next steps
 
-1. Stage, capture candidate tree, Gate A, commit, push, open draft PR.
-2. Wait for required CI, then Gate B, then record evidence in the PR.
+1. Stage, capture candidate tree, CI, commit, push, open draft PR.
+2. Wait for required CI, then human review, then record evidence in the PR.
 3. Operator: delete `wallet_activity_observations` rows in production SQL to
    clear the stored unmatched transfers (they return on next refresh).

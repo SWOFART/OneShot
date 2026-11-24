@@ -77,13 +77,8 @@ The Circle x402 workspace action remains `AUTHORIZING`/`FAILED_SAFE` and does no
 - PR: [#92](https://github.com/SWOFART/OneShot/pull/92), open against `develop`
 - CI: GitHub checks queued/in progress; local checks pass
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Review PR #92 and its queued GitHub checks.
 2. Leave user-owned `cloudbuild-worker.yaml`, `.gcloudignore`, and `cloudbuild-api.yaml` untouched/un-staged.
-3. Gates A/B remain skipped by explicit user authorization.
+3. A human still reviews the pull request.

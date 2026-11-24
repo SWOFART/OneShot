@@ -11,7 +11,7 @@ Make main README match develop via a new documentation-only PR.
 ## Original prompt/request
 
 User asked to make README the same as develop, then accepted updating main.
-Prior instruction: never reopen closed PRs; skip FreePi for this work.
+Prior instruction: never reopen closed PRs; skip for this work.
 
 ## Assumptions
 
@@ -53,11 +53,6 @@ Prior instruction: never reopen closed PRs; skip FreePi for this work.
 - Base main: 319b0758147622e8f25930e6663884a252f86dd1.
 - Commit/PR: created after validation; new draft targets main.
 - CI: pending at creation.
-
-## Review gates
-
-- Gate A and B: SKIPPED per explicit user instruction to omit FreePi.
-- No passing review claimed; remains draft.
 
 ## Handoff/next steps
 

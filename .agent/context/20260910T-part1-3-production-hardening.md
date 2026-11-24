@@ -3,7 +3,7 @@
 ## Goal
 
 Implement the three requested audit follow-ups on a short-lived branch, with
-one commit and one fresh Gate A review prompt after each part:
+one commit after each part:
 
 1. Complete worker deployment configuration and add production API rate limiting.
 2. Harden the Privy fallback boundary and PostgreSQL integration-test cleanup.

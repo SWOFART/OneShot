@@ -66,12 +66,7 @@ Reply in English and keep responses concise. Work as Coder C on the milestones u
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Resolve the live deployment/configuration choice, then run the C01 live MCP/agent value gate or retain the explicit fallback.
-2. Stage the exact candidate, run Gate A, and continue the implementation loop only after the decision is reflected in code and evidence.
+2. Stage the exact candidate, run CI, and continue the implementation loop only after the decision is reflected in code and evidence.

@@ -329,7 +329,7 @@ plus explicit human authorization.
 | [`docs/settlement/`](../docs/settlement/)                                   | Settlement config, provider setup, live evidence         |
 | [`packages/reconciliation/docs/c06/`](../packages/reconciliation/docs/c06/) | C06 demo and qualification evidence index                |
 | [`docs/RELEASE_CHECKLIST.md`](../docs/RELEASE_CHECKLIST.md)                 | R5 release evidence and submission checklist             |
-| [`AGENTS.md`](../AGENTS.md)                                                 | Contribution policy and review gates                     |
+| [`AGENTS.md`](../AGENTS.md)                                                 | Repository policy for contributors and agents            |
 
 ## License
 

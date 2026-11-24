@@ -33,7 +33,7 @@ through Privy and asked to keep the existing Privy wallet-selection capability.
    select the available embedded wallet and make it active. Fail closed when it
    is unavailable.
 4. Add regressions for simultaneous MetaMask and Privy wallets.
-5. Complete local checks and the mandatory review gates.
+5. Complete local checks.
 
 ## Key decisions
 
@@ -96,17 +96,9 @@ through Privy and asked to keep the existing Privy wallet-selection capability.
 - PR: not created
 - CI: not applicable yet
 
-## Review gates
-
-- Gate A: NOT RUN for the rebased candidate. The earlier PASS applied to tree
-  `2ba50c0acfc21840991883bb12c8e131da456a26` on the previous base and was
-  invalidated by the rebase and corrected wallet-creation requirement.
-- Gate B: NOT RUN. The user explicitly instructed this session not to launch
-  Gate B after Gate A passes; the PR must remain draft while Gate B is absent.
-
 ## Handoff/next steps
 
 1. Re-run local validation for this context-record update and record the new
    candidate tree SHA.
-2. Run fresh FreePi Gate A, then commit, push, and create a draft PR if it passes.
-3. Leave the PR draft after CI; do not launch Gate B in this session.
+2. Run CI, then commit, push, and create a draft PR if it passes.
+3. Leave the PR draft after CI; do not launch human review in this session.

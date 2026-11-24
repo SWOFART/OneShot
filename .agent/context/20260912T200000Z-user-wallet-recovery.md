@@ -60,13 +60,8 @@ The user reports a final Team Report transaction shown as UNKNOWN after refresh 
 - PR: not created
 - CI: not applicable
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Stage the scoped web recovery/preflight change, capture immutable Gate A evidence, and obtain fresh Gate A before any commit or push.
+1. Stage the scoped web recovery/preflight change, capture immutable CI evidence, and obtain fresh CI before any commit or push.
 2. After a human merges and the web Worker deploys, use Requests -> Check recorded transaction (no payment) for the known final Team Report transaction.
 3. Fund the connected wallet's Arc Testnet Circle Gateway balance before attempting a fresh Circle x402 authorization; do not reuse the old authorization.

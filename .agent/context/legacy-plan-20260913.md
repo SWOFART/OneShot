@@ -2,7 +2,7 @@
 
 Current 24-hour execution priority: [One-day rescue plan](docs/ONE_DAY_RESCUE.md)
 (2026-09-12). It records current code, sponsor research, demo cutoffs and UI fixes;
-the R0�R5 text below remains the historical planning baseline.
+the R0–R5 text below remains the historical planning baseline.
 
 Revision: 2026-09-10. Planning baseline: `develop` at `86c8f86`.
 This PR changes documentation only; new runtime and UX capabilities remain planned.
@@ -10,7 +10,7 @@ This PR changes documentation only; new runtime and UX capabilities remain plann
 This replaces the previous roadmap, not completed code or historical evidence.
 [A01–C06 packets](milestones/README.md) remain the original implementation record.
 P0–P6 refer to that settlement baseline. R0–R5 below cover the new product
-increment and do not replace mandatory FreePi Gate A, CI, and Gate B.
+increment. Completed packets and historical evidence stay in place.
 
 ## 1. Purpose and vision
 
@@ -214,14 +214,14 @@ Developer access may be a small settings section, not a new service.
 All R gates start **NOT STARTED**. One focused implementation branch/PR per
 gate or small acceptance slice. Reuse established package ownership.
 
-| Gate | Scope and dependency | Required exit evidence |
+| Step | Scope and dependency | Required exit evidence |
 | --- | --- | --- |
 | R0: feasibility and contracts | First: supplier semantics, task identity, ownership, delivery states, chain binding and routes | Additive contracts/fixtures; supplier proof; actual Arc Privy signing/fallback controls; correlation limitations documented |
 | R1: resumable job | After R0: durable job/order/result and one connector | Two agents, ten concurrent calls and restart share one intent/payment; conflicts denied; paid delivery failure resumes only delivery; isolated result access |
 | R2: landing and cabinet | After R0; mock work may parallel R1, integration follows R1 | Separate public/private routes; six scoped sections; job navigation; keyboard/mobile/deep-link/auth tests; no misleading controls |
 | R3: evidence and triage | After R1; cabinet integration after R2 | Live bounded activity query, coverage/freshness, job-aware citations; Graph lag cannot undo payment; ambiguous binding holds |
 | R4: live failure demo | After R1–R3 | Real testnet purchase, labelled response-loss fault, live Studio evidence, verified original settlement or explicit hold, no replacement payment, supplier result |
-| R5: release | After R4 | Exact-head checks, FreePi A/B, public docs/diagram, video, verified prize pool, sanitized evidence and human review |
+| R5: release | After R4 | Exact-head checks, public docs/diagram, video, verified prize pool, sanitized evidence and human review |
 
 R0 is not authorization to deploy contracts or change external wallet policy.
 External configuration, live effects and mainnet activation require appropriate

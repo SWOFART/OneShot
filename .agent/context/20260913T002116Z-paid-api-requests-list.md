@@ -61,17 +61,12 @@ The user asked whether API purchases should be added to Requests like ordinary t
 
 - Branch: `fix/paid-api-requests`
 - Base: `origin/develop` at `f225601de0ddf265ee3367fa5ef69972ab458c08`
-- Commit: uncommitted staged candidate pending Gate A
+- Commit: uncommitted staged candidate pending CI
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Stage the candidate and request a fresh Gate A review.
+1. Stage the candidate and request a fresh CI review.
 2. After approval, commit/merge and deploy the API image plus web assets.
 3. Reload Requests; select the paid-API row to reopen Payment Proof for the original intent.

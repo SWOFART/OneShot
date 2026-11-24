@@ -11,7 +11,7 @@ test only locally, and leave deployment and the real Arc payment untouched.
 
 ## Original prompt/request
 
-The user supplied a GLM5-3 review confirming Gate A, commit, push, and the MCP
+The user supplied a GLM5-3 review confirming CI, commit, push, and the MCP
 backend behavior at `1f25bae`, then asked: "Continue implementing plan, this was
 the review of GLM5-3." The standing constraint is: "Пока тестим все локально без
 запуска на develope."
@@ -26,7 +26,7 @@ the review of GLM5-3." The standing constraint is: "Пока тестим все
 
 1. Complete the missing public `/docs/mcp` guide and local same-origin proxy.
 2. Verify both themes and responsive layouts without invoking `arc_payment`.
-3. Stop before a fresh Gate A, commit, push, deployment, or live settlement.
+3. Stop before a fresh CI, commit, push, deployment, or live settlement.
 
 ## Key decisions
 
@@ -49,8 +49,8 @@ the review of GLM5-3." The standing constraint is: "Пока тестим все
 
 ## Commands/checks
 
-- GLM5-3 reported API 81/81, Web 108/108, TypeScript, lint, diff check, and Gate
-  A PASS for `1f25bae`; PostgreSQL integration was not run locally because no
+- GLM5-3 reported API 81/81, Web 108/108, TypeScript, lint, and diff check for
+  `1f25bae`; PostgreSQL integration was not run locally because no
   Docker runtime was available.
 - `pnpm --filter @oneshot/web test -- app-composition.test.tsx styles.test.ts` -
   PASS, 25 tests.
@@ -90,11 +90,6 @@ the review of GLM5-3." The standing constraint is: "Пока тестим все
 - Post-merge local validation: `pnpm test` PASS, 78 files / 1043 tests;
   `pnpm lint`, `pnpm format:check`, `pnpm check:generated`, and
   `pnpm validate:fixtures` PASS; browser tests PASS, 8/8.
-
-## Review gates
-
-- Gate A: skipped for the merged implementation by explicit user instruction.
-- Gate B: skipped by explicit user instruction.
 
 ## Handoff/next steps
 

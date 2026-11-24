@@ -77,12 +77,6 @@ this on a new branch.
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: FAIL on prior tree due stale recovery deployment docs; fresh review
-  pending for the corrected tree.
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Review the branch and deploy it through the normal Cloudflare workflow.

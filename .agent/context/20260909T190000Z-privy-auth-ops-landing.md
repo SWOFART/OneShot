@@ -6,7 +6,7 @@
 
 ## User goal
 
-Implement the Privy operator-authentication plan through validation, mandatory review gates, and a draft pull request.
+Implement the Privy operator-authentication plan through validation and a draft pull request.
 
 ## Original prompt/request
 
@@ -22,7 +22,7 @@ Complete `2026-09-09-privy-operator-auth.md` from the current Task 5/10 state th
 
 1. Implement and test missing API authentication Tasks 1–4.
 2. Complete web Tasks 7–8 and operator documentation.
-3. Run full validation, Gate A, draft PR CI, and Gate B.
+3. Run full validation, CI, draft PR CI, and human review.
 
 ## Key decisions
 
@@ -70,11 +70,6 @@ Complete `2026-09-09-privy-operator-auth.md` from the current Task 5/10 state th
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Commit operator documentation, run Gate A, push a draft PR, wait for CI, then run Gate B.
+1. Commit operator documentation, run CI, push a draft PR, wait for CI, then run human review.

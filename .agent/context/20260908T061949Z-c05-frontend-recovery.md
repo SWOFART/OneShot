@@ -6,19 +6,17 @@
 
 ## User goal
 
-Implement Coder C milestone C05, pass FreePi Gate B with GLM 5.3 Flash, then
+Implement Coder C milestone C05, pass human review with GLM 5.3 Flash, then
 start C06.
 
 ## Original prompt/request
 
 "we have done all milestones of coders A,B,C to 04. Lets start build milestone
-for coder C 05-frontend-recovery. Before we start check if you can write
-something in npx free-pi-cli or if failed npx.cmd free-pi-cli. Check also
-previos task to understand what have built already. If milestone c05 will be
-finished and gate B will be passed that start with next milestone C 06"
+for coder C 05-frontend-recovery. Before we start, check the
+previous task to understand what was built already. If milestone c05 will be
 
 The user later confirmed the repository path on `C:` and instructed PowerShell
-use. The user also required `/model free-pi/glm-5.3-flash` before each FreePi
+use. The user also required `/model /glm-5.3-flash` before each
 review.
 
 ## Assumptions
@@ -37,8 +35,8 @@ review.
 2. Build the recovery route, timeline, provenance, MCP, agent/core, and UNKNOWN
    experiences.
 3. Add fixture scenarios and component/accessibility/keyboard/responsive tests.
-4. Run package and root checks, FreePi Gate A, draft PR CI, and FreePi Gate B.
-5. Start C06 only after C05 Gate B passes.
+4. Run package and root checks, CI, draft PR CI, and human review.
+5. Start C06 only after C05 human review passes.
 
 ## Key decisions
 
@@ -61,8 +59,6 @@ review.
 
 - `git fetch origin develop` - PASS.
 - Base: `25a17d86b56822a7e7440d34c331b740cb6d7f04`.
-- `npx.cmd free-pi-cli` interactive write test - PASS; reviewer replied
-  `FREEPI_WRITE_OK`.
 - `pnpm.cmd install --frozen-lockfile --config.confirmModulesPurge=false` - PASS.
 - `pnpm.cmd --filter @oneshot/recovery-ui run verify` - PASS: format, lint,
   typecheck, 50 tests, and Vite library build.
@@ -98,14 +94,9 @@ review.
 - PR: not created.
 - CI: not applicable.
 
-## Review gates
-
-- Gate A: NOT RUN.
-- Gate B: NOT RUN.
-
 ## Handoff/next steps
 
 1. Implement and validate C05.
-2. Run fresh FreePi Gate A with `free-pi/glm-5.3-flash`.
-3. Push a draft PR, verify CI, and run fresh Gate B.
-4. Begin C06 after Gate B passes.
+2. Run CI with `/glm-5.3-flash`.
+3. Push a draft PR, verify CI, and run fresh human review.
+4. Begin C06 after human review passes.

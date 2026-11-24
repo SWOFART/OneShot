@@ -27,7 +27,7 @@ Implement the live Recovery Agent (Vertex AI Gemini) and Subgraph MCP Client for
 4. Add unit test suites for `VertexAiRecoveryAdvisor` and `LiveSubgraphMcpRecoveryPort`.
 5. Wire both into `apps/worker` composition and add integration tests in `p4-composition.test.ts`.
 6. Execute live recovery drill with real Vertex AI `gemini-2.5-flash` on GCP and real Arc Testnet receipt.
-7. Run repository validation checks and FreePi Gate A / Gate B.
+7. Run repository validation checks and CI / human review.
 
 ## Key decisions
 

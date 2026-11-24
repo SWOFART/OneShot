@@ -69,13 +69,8 @@ The user asked to remove the MCP 1 USDC boundary, provide the bearer required by
 - PR: <https://github.com/SWOFART/OneShot/pull/122> (draft)
 - CI: all required checks passed for 9aafe21d27e27a99ddb0586a0cff747bd36a38f2
 
-## Review gates
-
-- Gate A: SKIPPED by explicit user instruction to continue without FreePi.
-- Gate B: SKIPPED by explicit user instruction to continue without FreePi.
-
 ## Handoff/next steps
 
 1. Finish local checks and inspect the candidate diff.
-2. Commit, push, and open the PR without FreePi per user instruction.
+2. Commit, push, and open the pull request.
 3. Build/deploy the API image and configure `/mcp` through Google Cloud.

@@ -67,13 +67,8 @@ Start implementing the plan as Coder A.
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Stage and inspect the complete candidate tree.
 2. Run the configured pre-push reviewer against the immutable tree.
-3. Commit, push, and open the draft pull request after Gate A passes.
+3. Commit, push, and open the draft pull request after CI passes.

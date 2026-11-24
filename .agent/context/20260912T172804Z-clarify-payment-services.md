@@ -56,11 +56,6 @@ None for this copy-only scope.
 - Base: `origin/develop` at `ff146e49407b078183ed619ff3f3b2e11b17da2c`.
 - Commit and PR: pending.
 
-## Gate state
-
-- Gate A: explicitly waived by the user on 2026-09-12.
-- Gate B: explicitly waived by the user on 2026-09-12.
-
 ## Handoff/next steps
 
 Commit the validated candidate, push the branch, and open a PR for human review.

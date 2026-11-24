@@ -41,11 +41,6 @@ removing evidence or weakening settlement safety.
 3. Run focused tests, visual browser checks, the implementation loop, and review
    gates required for the final staged tree.
 
-## Review gates
-
-- Gate A: pending
-- Gate B: pending
-
 ## Base update
 
 - While the work was in progress, `origin/develop` advanced from `964d475` to

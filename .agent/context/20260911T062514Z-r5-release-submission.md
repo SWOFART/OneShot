@@ -30,8 +30,8 @@ circle via stacking PR'S of all stepps.”
 2. Publish a truthful R5 checklist covering automated checks, sponsor status,
    live evidence, video, prize-pool verification, and human review.
 3. Link the checklist from the README and update gap tracking.
-4. Run local checks, capture fresh Gate A, open the stacked PR, wait for CI,
-   capture fresh Gate B, and leave the PR ready for human review.
+4. Run local checks, capture fresh CI, open the stacked PR, wait for CI,
+   capture fresh human review, and leave the PR ready for human review.
 
 ## Key decisions
 
@@ -64,7 +64,7 @@ circle via stacking PR'S of all stepps.”
   (157 files).
 - `pnpm release:check` - PASS on the uncommitted parent head; exact identity
   binding will be rerun after commit.
-- FreePi Gate A/B and required CI - pending for this R5 tree.
+- CI and human review and required CI - pending for this R5 tree.
 
 ## External-doc findings
 
@@ -72,7 +72,7 @@ circle via stacking PR'S of all stepps.”
   `.agent/SPONSOR_REQUIREMENTS.md` require live Privy/Arc/Studio evidence and
   prohibit qualification claims from mocks or plans; the checklist preserves
   these boundaries.
-- `.agent/IMPLEMENTATION_LOOP.md` requires exact tree identities, fresh FreePi
+- `.agent/IMPLEMENTATION_LOOP.md` requires exact tree identities, fresh
   A/B, required CI, and human-only merge; the stacked PR follows that loop.
 
 ## Unresolved questions
@@ -85,20 +85,15 @@ circle via stacking PR'S of all stepps.”
 
 - Branch: `feature/r5-release-submission`
 - Base: `feature/r4-live-failure-demo` at `b22c79e03b1c6b441b7a58ba40402850e47baddf`
-- Candidate staged tree: captured separately for Gate A; this context record
+- Candidate staged tree: captured separately for CI; this context record
   intentionally does not duplicate the hash because changing this file would
   change the candidate tree.
 - Commit: uncommitted
 - PR: not created
 - CI: not run for this tree
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Capture Gate A for the current staged tree from `git write-tree`.
-2. Capture Gate A, commit, push, open the stacked PR, wait for CI, then capture
-   Gate B and stop for human review.
+1. Capture CI for the current staged tree from `git write-tree`.
+2. Capture CI, commit, push, open the stacked PR, wait for CI, then capture
+   human review and stop for human review.

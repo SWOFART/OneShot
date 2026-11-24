@@ -61,13 +61,11 @@ Implement Coder A milestone A05 after Gate P4: "Делай" in response to the i
 - Base: `origin/develop` at `1250dec79bc702939fe2a3b0fd00e66bb34128af`
 - Initial commit: `d3fbfacdee365d159807256a53011140442867ff`
 - PR: [#32](https://github.com/SWOFART/OneShot/pull/32)
-- Gate A: IN PROGRESS (free-pi-cli glm-5.3-flash)
-- Gate B: pending CI and exact-head review
 
 ## Handoff and next steps
 
 - Validate wrangler build integration locally.
-- Re-run Gate A, commit fix, push to PR #32.
+- Re-run CI, commit fix, push to PR #32.
 - Verify CI passes (including Workers Builds).
-- Run Gate B and mark PR ready for review.
+- Run human review and mark PR ready for review.
 - Project Gate P5 will compose B05/C05 UI packages after A05 closes.

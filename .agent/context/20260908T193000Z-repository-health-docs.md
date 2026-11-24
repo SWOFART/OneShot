@@ -10,7 +10,7 @@ Repair repository health failures, then make the published project status intern
 
 ## Original prompt/request
 
-Create a branch; first resolve repository health and commit it, then resolve contradictory documentation and commit it; provide a Gate A FreePi review prompt.
+Create a branch; first resolve repository health and commit it, then resolve contradictory documentation and commit it.
 
 ## Assumptions
 
@@ -22,7 +22,7 @@ Create a branch; first resolve repository health and commit it, then resolve con
 1. Regenerate contract artifacts, format the workspace, and validate the full local non-database suite.
 2. Commit only repository-health output.
 3. Update stale contradictory status documentation, validate it, and commit separately.
-4. Capture immutable Gate A candidate identities and obtain a fresh review before any push.
+4. Capture immutable CI candidate identities and obtain a fresh review before any push.
 
 ## Key decisions
 
@@ -57,12 +57,7 @@ Create a branch; first resolve repository health and commit it, then resolve con
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: PASS for tree `8577f5bb777b33b065c8fc797a91fed1bb127788` (FreePi / glm-5.3-flash); invalidated by the pending `.gitattributes` change
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Validate and commit the `.gitattributes` checkout fix.
-2. Capture a new candidate tree and obtain a fresh Gate A review before push.
+2. Capture a new candidate tree and obtain a fresh CI review before push.

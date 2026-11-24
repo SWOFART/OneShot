@@ -154,16 +154,14 @@ With submissions disabled:
 6. The worker consumes the outbox job without health-check traffic.
 7. Sanitized evidence contains no credential or personal data.
 
-## Review and release gates
+## Review and release
 
 1. Implement in one narrow branch after PR #66 is human-merged.
 2. Run local validation and stage only intended files.
-3. Run mandatory FreePi Gate A on the immutable candidate tree.
-4. Commit, push, and open a draft PR.
-5. Require all CI checks, including PostgreSQL integration, on the exact head.
-6. Run fresh FreePi Gate B on that head and identical Gate A tree.
-7. Mark ready for human review; never agent-merge.
-8. Deploy the reviewed image, run the live acceptance gate, scale the worker back
+3. Commit, push, and open a pull request.
+4. Require all CI checks, including PostgreSQL integration, on the exact head.
+5. Mark ready for human review; never agent-merge.
+6. Deploy the reviewed image, run the live acceptance check, scale the worker back
    to its normal minimum, and delete the temporary diagnostic Cloud Run job.
 
 ## Primary sources

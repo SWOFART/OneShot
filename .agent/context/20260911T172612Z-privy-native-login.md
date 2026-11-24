@@ -24,7 +24,7 @@ The user reported that wallet approval succeeds in MetaMask but the frontend sti
 2. Replace direct SIWE and wallet-provider calls with Privy's native `useLogin().login`.
 3. Remove the custom wallet discovery, catalogue, picker, and obsolete tests/styles.
 4. Validate web auth, full workspace tests, lint, typecheck, generated files, formatting, and frontend/browser builds.
-5. Stage one scoped candidate and request fresh Gate A review before any push.
+5. Stage one scoped candidate and request fresh CI review before any push.
 
 ## Key decisions
 
@@ -75,13 +75,8 @@ The user reported that wallet approval succeeds in MetaMask but the frontend sti
 - PR: not created
 - CI: not applicable yet
 
-## Review gates
-
-- Gate A: NOT RUN; staged candidate is ready for a fresh review
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Start a fresh Gate A review against the staged candidate tree and current base SHA.
-2. Request a fresh Gate A review only after the candidate is stable.
-3. Push/create a draft PR only after Gate A passes; do not merge or start Gate B in this session unless explicitly requested.
+1. Start a fresh CI review against the staged candidate tree and current base SHA.
+2. Request a fresh CI review only after the candidate is stable.
+3. Push/create a draft PR only after CI passes; do not merge or start human review in this session unless explicitly requested.

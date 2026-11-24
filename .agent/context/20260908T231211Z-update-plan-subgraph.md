@@ -32,7 +32,7 @@ Explorer; resolve the UI/query-status discrepancy; create branch
 2. Create the required branch from the current `origin/develop`.
 3. Update the canonical plan and align the missing-parts audit with the verified
    published-but-unallocated Subgraph status.
-4. Run documentation/repository checks, capture Gate A, commit, and report the
+4. Run documentation/repository checks, capture CI, commit, and report the
    exact tree and commit. Do not push or create a PR unless requested.
 
 ## Key decisions
@@ -91,14 +91,9 @@ Explorer; resolve the UI/query-status discrepancy; create branch
 - PR: not created
 - CI: not run for this branch
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT APPLICABLE; no PR requested or created
-
 ## Handoff/next steps
 
 1. Finish the focused documentation edits and validation.
-2. Stage only the plan, missing-parts audit, and context record; run Gate A.
+2. Stage only the plan, missing-parts audit, and context record; run CI.
 3. Commit the reviewed tree and report the branch, commit, and remaining live
    Graph/MCP/model gap.

@@ -7,14 +7,13 @@
 ## User goal
 
 Make The Graph evidence appear for every confirmed transaction, then commit,
-push, and open a draft PR. The PR must state that Gate A was not started.
+push, and open a draft PR. The PR must state that CI was not started.
 
 ## Original prompt/request
 
 "right know we use the graph only if payment failed or something got wrong. We
 want that the graph evidence will apear always, on every transaction. Implement
 this feature. Also make commit and push after you finished. And alos make a
-draft pr without starting gate A, but write in pr msg that GATE a wasn't
 started"
 
 ## Assumptions
@@ -37,7 +36,7 @@ started"
 3. Add focused worker/recovery coverage and update migration/integration
    expectations.
 4. Run local checks, inspect the exact staged tree, commit, push, and create a
-   draft PR without starting Gate A.
+   draft PR without starting CI.
 
 ## Key decisions
 
@@ -100,13 +99,8 @@ NOTHING`, so redelivery after a crash does not duplicate evidence.
 - PR head at creation: feature commit/tree above
 - CI: GitHub checks are pending/queued; local validation passed
 
-## Review gates
-
-- Gate A: NOT RUN (explicitly requested to skip)
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Keep the unrelated `.agent/context/20260912T-user-wallet-payment.md`
    modification unstaged.
-2. Human review and CI follow-up remain; do not start Gate A or Gate B.
+2. Human review and CI follow-up remain; do not start CI or human review.

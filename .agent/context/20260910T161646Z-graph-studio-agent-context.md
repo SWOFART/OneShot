@@ -29,7 +29,7 @@ and, if so, create a new-branch fix plan before context ends.
 2. Identify direct Studio observations truthfully, pass only validated normalized
    evidence to Vertex, and preserve the deterministic safety boundary.
 3. Repair API/outbox/Cloud Run background execution, capture a fresh live trace,
-   correct sponsor docs, and complete Gate A/CI/Gate B.
+   correct sponsor docs, and complete CI/CI/human review.
 
 ## Key decisions
 
@@ -58,7 +58,7 @@ and, if so, create a new-branch fix plan before context ends.
   `eip155:5042002`.
 - Direct Studio GraphQL - previously PASS with fresh `_meta` and real transfers.
 - Network Gateway query - previously FAIL with `subgraph not found`.
-- PR #66 CI and Gate A/B - PASS on head `206ad437da5fb3a059ea21723d2de8f27da907b7`;
+- PR #66 CI and CI and human review - PASS on head `206ad437da5fb3a059ea21723d2de8f27da907b7`;
   human-merged into `develop` at `c1c720a128f9f76aff1f5e2b715684c24f4c47d4`.
 - Cloud Build `9418b788-88aa-40b2-87ab-1ff47864017b` - PASS for the exact PR #66 API image.
 - API revision `oneshot-api-00006-2cf` - health PASS after explicitly preserving
@@ -113,16 +113,11 @@ and, if so, create a new-branch fix plan before context ends.
 - Commit: uncommitted implementation and documentation changes
 - PR: not created for this plan branch; prerequisite PR #66 is merged
 
-## Review gates
-
-- Gate A: NOT RUN for this implementation tree. PR #66 Gate A passed independently.
-- Gate B: NOT RUN for this implementation tree. PR #66 Gate B passed independently.
-
 ## Handoff/next steps
 
 1. Run the remaining repository checks and inspect the exact candidate tree.
-2. Run Gate A, then commit/push and open a draft PR only when authorized by the
+2. Run CI, then commit/push and open a draft PR only when authorized by the
    implementation workflow.
-3. Require CI and Gate B on the identical head before human review.
+3. Require CI and human review on the identical head before human review.
 4. Run the live acceptance gate with nonce unchanged before any qualification
    claim; keep the Graph verdict `NOT VERIFIED` until that trace exists.

@@ -9,7 +9,7 @@ never fund or substitute a server wallet.
 ## Branch
 
 - Branch: `fix/gateway-funding`
-- Base: refreshed `origin/develop` (record exact SHA during Gate A)
+- Base: refreshed `origin/develop` (record exact SHA during CI)
 - Worktree: `OneShot-gateway-funding`
 
 ## Acceptance criteria

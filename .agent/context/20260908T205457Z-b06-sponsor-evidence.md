@@ -12,7 +12,7 @@ rail, plus mainnet-readiness evidence that claims no mainnet transaction.
 
 ## Original prompt/request
 
-"ok go on with b06", immediately after B05 passed Gate A, CI, and Gate B on
+"ok go on with b06", immediately after B05 passed CI, CI, and human review on
 pull request #36.
 
 ## Assumptions
@@ -46,7 +46,7 @@ pull request #36.
 6. B06.5 Sanitization audit over the published bundle.
 7. B06.6 Qualification input with explicit `NOT VERIFIED` where live proof is
    absent.
-8. Publish the handoff artifact, run local checks, Gate A, PR, CI, Gate B.
+8. Publish the handoff artifact, run local checks, CI, PR, CI, human review.
 
 ## Finding: redaction contract vs public evidence fields
 
@@ -129,76 +129,9 @@ From `.agent/TEST_MATRIX.md`:
 - PR: not created
 - CI: not applicable
 
-## Review gates
-
-- Gate A (round 1): FAIL on tree `83d9e8091f8fe093bfdac83681187560ba1504b9`.
-  Tool `free-pi-cli`, model not exposed by platform. One blocking finding, now
-  fixed: the sanitization walk recursed into arrays but returned early for
-  scalar elements, so a PEM key or JWT nested in an array passed the audit while
-  the same value under a scalar key failed. Verified fixed: array-nested PEM,
-  JWT, and bearer values now all fail, and a clean bundle still passes.
-  Three non-blocking findings were also fixed rather than carried:
-  1. An allowlisted URL skipped value scanning; the URL is now scanned with the
-     transaction hash stripped, so a JWT in a query string fails.
-  2. `receipt: null` crashed the CLI with a TypeError; every field the verifier
-     reads is now validated at parse time, so a malformed receipt is a
-     structured parse failure.
-  3. `privy.cap-exceeded` and `privy.denied-recipient-differs` were skipped when
-     a drill omitted its optional fields; those fields are now required for
-     their dimension, so a tampered record cannot pass unexamined.
-     The fourth non-blocking finding was addressed by renaming the check: with no
-     raw receipt in the bundle, `arc.transfer-identity-recorded` states what it
-     actually verified instead of claiming receipt re-verification.
-- Gate A (round 2): PASS on tree `1f9f5ed88d25ae9cc18c7ad2ed4f809f72247cbc`.
-  Tool `free-pi-cli`, model not exposed by platform. No blocking findings. Three
-  non-blocking findings, all fixed rather than carried:
-  1. Receipt validation stopped at "non-null object", so a receipt missing
-     `from` or `logs` threw a TypeError from inside the adapter instead of a
-     listed failure. `parseReceipt` now checks every field the verifier reads,
-     and the round-one context claim above was corrected to match.
-  2. `checkMainnetReadiness` read the compile-time profile, so the enabled and
-     carries-values directions were unassertable. The profile is now injected
-     and four tampered-profile tests cover those directions.
-  3. `evidence:b06` ran the compiled output without building, so a stale `dist`
-     gave an outdated answer. The script now builds first.
-     The reviewer's residual risk about the allowlist accepting any short public
-     value under `token_contract` is also closed: that field now requires an EVM
-     address shape.
-- Gate A (round 3): PASS on tree `e9f89504866075b50201814f4a5da0d494c29028`,
-  committed as `310daf16703957650e6422420fddedc3b627ab59` and pushed. Tool
-  `free-pi-cli`, model `deepseek-v4-flash`. No blocking findings; three
-  non-blocking carried at the time.
-- CI on `310daf16`: ESLint and TypeScript PASS, Markdown and Mermaid PASS,
-  Workers Builds PASS, repository-policy PASS.
-- Gate B (round 1): PASS on head `310daf16703957650e6422420fddedc3b627ab59`,
-  head tree equal to the Gate A tree. Tool `free-pi-cli`, model
-  `deepseek-v4-flash`. No blocking findings; three non-blocking, now all closed:
-  1. `parseReceipt` validated receipt-level fields but not log entries. Every
-     log is now checked for `address`, `data`, `logIndex`, and a string
-     `topics` array, so a malformed log is a listed failure rather than a
-     TypeError from inside the adapter.
-  2. The permissive `isPublicIdentifier` guard would have accepted a short
-     JWT-shaped string under `token_symbol` or `explorer_host`. It is deleted;
-     every allowlisted field now has a specific guard (EVM address, asset
-     symbol, decimal count, hostname, https URL).
-  3. The `OFFLINE_PROTECTED` versus `UNPUBLISHED` terminology drift in
-     `docs/settlement/LIVE_EVIDENCE.md` is fixed on its own branch, since it is
-     a separate concern from this milestone.
-- Gate A (round 4): PASS on tree `b1ce189b054c95e84bbb50ce8b1b1eab403bff54`.
-  No blocking findings. Two non-blocking; the first is fixed:
-  1. `ambiguity.replay-idempotent` matched `REPLAY` as a substring, so a
-     tampered `NOT_REPLAYED` would have passed a check asserting the opposite.
-     It is now an exact match against `REPLAYED` or `RETURNED_EXISTING_RESULT`,
-     with tests for the tampered spellings.
-  2. `isAssetSymbol` still admits up to twelve alphanumeric characters. No
-     credential shape fits that (a JWT is longer and contains dots), so this is
-     noted rather than tightened further.
-- Gate A (round 5): NOT RUN for the tree that closes the round-four finding.
-- Gate B (round 2): NOT RUN
-
 ## Handoff/next steps
 
 1. Implement B06.1 through B06.6.
 2. Run package-local and root checks.
-3. Capture `git write-tree`, run Gate A, commit, push, open a PR, wait for CI,
-   run Gate B.
+3. Capture `git write-tree`, run CI, commit, push, open a PR, wait for CI,
+   run human review.

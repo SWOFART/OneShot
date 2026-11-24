@@ -66,13 +66,8 @@ The same paid-API errors continued: the user wallet signed, OneShot returned 202
 - PR: #110, pending updated remote head
 - CI: not run; local validation is recorded above
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Run Gate A on the exact candidate tree `aaf5b4a6f6c7844f7f17314ae9e969d16a10b235`.
+1. Run CI on the exact candidate tree `aaf5b4a6f6c7844f7f17314ae9e969d16a10b235`.
 2. After approval, merge/push and deploy the API image plus the web bundle; the seller image has no source change for this fix.
 3. Test with one new paid-API task only after deployment; do not retry the old UNKNOWN intent blindly.

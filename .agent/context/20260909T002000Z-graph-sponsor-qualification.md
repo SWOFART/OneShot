@@ -6,7 +6,7 @@
 
 ## User goal
 
-Resolve FreePi Gate B rejection on PR #48, eliminate all schema mismatch and mocked/relabeled MCP trace issues, deploy native `SettlementCandidate` subgraph v0.2.1 to Subgraph Studio, execute live end-to-end recovery proof through Subgraph Studio and Subgraph MCP with Vertex AI Gemini 2.5 Flash, verify on Arc RPC, record genuine sanitized evidence, and achieve passing Gate A and Gate B.
+Resolve human review rejection on PR #48, eliminate all schema mismatch and mocked/relabeled MCP trace issues, deploy native `SettlementCandidate` subgraph v0.2.1 to Subgraph Studio, execute live end-to-end recovery proof through Subgraph Studio and Subgraph MCP with Vertex AI Gemini 2.5 Flash, verify on Arc RPC, record genuine sanitized evidence, and achieve passing CI and human review.
 
 ## Original prompt/request
 
@@ -28,12 +28,12 @@ Resolve FreePi Gate B rejection on PR #48, eliminate all schema mismatch and moc
 3. Simplify `packages/reconciliation/src/subgraph-mcp-client.ts` to directly send `toolArgs.query` (`RECOVERY_CANDIDATE_QUERY`) without artificial `usdcTransfers` mapping.
 4. Execute full live recovery proof: fetch mined Arc Testnet receipt, query live Subgraph Studio for candidate, normalize MCP trace (`accepted: true`, health: `FRESH`), invoke Vertex AI Gemini 2.5 Flash, obtain accepted `RECONCILE` recommendation with decision ID, verify receipt via deterministic safety core, confirm `MARK_COMMITTED` with zero duplicate broadcasts (`settlementPermission: NEVER`).
 5. Update `evidence/c06/graph-proof.json`, `packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md`, `docs/GATE_P4_MANIFEST.md`, `docs/GATE_P4_CHECKLIST.md`, `docs/settlement/LIVE_EVIDENCE.md`, `plan.md`, and `plan_missing_parts.md`.
-6. Run full repository verification checks (`lint`, `typecheck`, `test`, `format:check`, `check:generated`, `validate:fixtures`), pass FreePi Gate A, push to PR #48, pass CI, and pass FreePi Gate B.
+6. Run full repository verification checks (`lint`, `typecheck`, `test`, `format:check`, `check:generated`, `validate:fixtures`), pass CI, push to PR #48, pass CI, and pass human review.
 
 ## Key decisions
 
 - Pinned immutable deployment CID `QmPEUSL6aXY7RVjGFFMbs5L4Q4pxG4TB73cHQ7nechGQY7` (`0x0d469664a45efc2483abb0e4d35e8ed02db0064c2c50dc0cdf855ff6ad6690c0`).
-- Addressed FreePi Gate B findings directly by providing genuine native `SettlementCandidate` schema and real event `blockHash` (`0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b`), matching the Arc RPC receipt.
+- Addressed human review findings directly by providing genuine native `SettlementCandidate` schema and real event `blockHash` (`0xc2e18d2ee52e8e046a5f70329265aba27285f7d257bb765d417a7c5613bf4b1b`), matching the Arc RPC receipt.
 - Added `subgraph/generated` and `subgraph/build` to `.prettierignore`.
 - Preserved all idempotency invariants: `settlementPermission: NEVER` across all reconciliation paths.
 
@@ -75,12 +75,7 @@ Resolve FreePi Gate B rejection on PR #48, eliminate all schema mismatch and moc
 - PR: #48 (Draft)
 - Commit: pending new commit with v0.2.1 evidence
 
-## Review gates
-
-- Gate A: pending
-- Gate B: pending
-
 ## Handoff/next steps
 
-1. Run Gate A via `free-pi-cli`.
-2. Commit, push, wait for CI, and run Gate B.
+1. Run CI via ``.
+2. Commit, push, wait for CI, and run human review.

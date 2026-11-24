@@ -42,7 +42,7 @@ Compare our updated plan.md against the current codebase to identify all unimple
 - Read canonical agent policy, implementation loop, project/security/test guidance, idempotency and failure-injection skills.
 - `git status --short --branch` - clean `develop...origin/develop` before branch creation.
 - `git switch -c feat/implement-plan-gap-analysis` - created successfully.
-- Initial Gate A review correctly found that a failed delivery could not be re-queued because the fulfilled outbox key was reused. The repair adds a fenced `delivery_attempt` generation to the job and the outbox key, so a resumed delivery uses a fresh task while preserving the original committed intent and supplier order. Stale generation workers cannot complete or fail a newer delivery attempt.
+- Initial CI review correctly found that a failed delivery could not be re-queued because the fulfilled outbox key was reused. The repair adds a fenced `delivery_attempt` generation to the job and the outbox key, so a resumed delivery uses a fresh task while preserving the original committed intent and supplier order. Stale generation workers cannot complete or fail a newer delivery attempt.
 - Runnable coverage now includes `JobLedger` fenced retry behavior, supplier idempotency, committed-delivery failure/retry with zero settlement submissions, all job/activity API routes, and Studio Graph validation.
 - `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm check:generated`, `pnpm validate:fixtures`, `pnpm build`, and `pnpm test` - PASS after the repair; root test: 69 files / 984 tests.
 - `TEST_POSTGRES=1 pnpm --filter @oneshot/storage-postgres test:integration` - blocked: this workspace has no working Testcontainers container runtime. The new real-PostgreSQL concurrent task-binding test is present but not executable here.
@@ -56,23 +56,18 @@ Compare our updated plan.md against the current codebase to identify all unimple
 
 ## Unresolved questions
 
-- R4 live Arc/Studio/supplier interruption evidence and R5 CI/FreePi/release/human-review evidence remain external gates. No qualification claim is made.
+- R4 live Arc/Studio/supplier interruption evidence and R5 CI//release/human-review evidence remain external gates. No qualification claim is made.
 
 ## Git and PR state
 
 - Branch: `feat/implement-plan-gap-analysis`
 - Base: `develop` at `f1298fa26b17b8a074bf4786dd714c57108eece3`
-- Commit: pending fresh Gate A for the frontend follow-up
+- Commit: pending fresh CI for the frontend follow-up
 - PR: #72 remains draft; frontend follow-up is not pushed yet
 - CI: not run for the frontend follow-up
-
-## Review gates
-
-- Gate A: prior implementation and CI fixes passed; fresh Gate A required for the frontend follow-up tree before commit/push.
-- Gate B: prior PR head passed; rerun after the frontend follow-up is pushed.
 
 ## Handoff/next steps
 
 1. Run PostgreSQL integration tests in an environment with a supported container runtime.
-2. Stage the frontend follow-up tree, obtain fresh Gate A before any commit/push, then follow the required CI/Gate B process for PR #72.
+2. Stage the frontend follow-up tree, obtain fresh CI before any commit/push, then follow the required CI/human review process for PR #72.
 3. Perform the human-authorized R4 live demo and R5 release evidence separately; do not treat local fixtures as proof.

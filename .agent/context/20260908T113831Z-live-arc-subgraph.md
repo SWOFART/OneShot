@@ -70,11 +70,6 @@ Graph. No credential values belong in the repository.
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN; the user requested no review gates for this configuration/integration step.
-- Gate B: NOT RUN; no PR exists.
-
 ## Handoff/next steps
 
 1. Obtain the canonical public Subgraph ID from Graph Explorer/Studio.

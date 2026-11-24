@@ -1,1 +1,8 @@
 blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/SWOFART/OneShot/security/advisories/new
+    about: Private vulnerability reports. Do not open a public issue for a security problem.
+  - name: Discuss a pilot or integration
+    url: mailto:work@kapustazh.dev
+    about: Partnership and pilot questions that are not a product defect.

@@ -29,7 +29,7 @@ Implement Gate P4 backend convergence: replace checked simulators in `apps/worke
    - Wire `RecoveryService` into `reconcile_intent` task.
 5. Add unit and integration test coverage for production composition and end-to-end reconciliation execution.
 6. Run full verification suite (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `TEST_POSTGRES=1 pnpm test:integration`, fixtures, markdownlint).
-7. Run FreePi Gate A review with `free-pi-cli` (`glm-5.3-flash`), commit, push, create draft PR, verify CI, and run FreePi Gate B review.
+7. Run CI review with `` (`glm-5.3-flash`), commit, push, create draft PR, verify CI, and run human review review.
 
 ## Key decisions
 
@@ -70,15 +70,10 @@ Implement Gate P4 backend convergence: replace checked simulators in `apps/worke
 - PR: not created
 - CI: not applicable
 
-## Review gates
-
-- Gate A: IN PROGRESS (running FreePi pre-push review)
-- Gate B: PENDING (runs after PR creation and CI)
-
 ## Handoff/next steps
 
 1. Stage candidate changes and compute candidate tree SHA via `git write-tree`.
-2. Run FreePi Gate A review (`glm-5.3-flash`) and verify `VERDICT: PASS`.
-3. Commit, push branch to GitHub, and open draft PR.
+2. Run the repository checks.
+3. Commit, push the branch, and open a draft pull request.
 4. Verify CI checks.
-5. Run FreePi Gate B review and mark PR ready for review.
+5. Run human review review and mark PR ready for review.

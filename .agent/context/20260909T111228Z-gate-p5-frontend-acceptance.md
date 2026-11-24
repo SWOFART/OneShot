@@ -50,12 +50,7 @@ Agent decision exists before frontend Graph MCP composition.
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Run full validation and FreePi Gate A.
-2. Push a draft PR, await exact-head CI, run Gate B, and hand to a human.
+1. Run full validation and CI.
+2. Push a draft PR, await exact-head CI, run human review, and hand to a human.

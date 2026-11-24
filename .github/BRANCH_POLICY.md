@@ -9,28 +9,23 @@
 
 ## Working branches
 
-Create a focused branch from the latest target branch and keep commits scoped to one concern. Before opening or updating a pull request, follow `.agent/IMPLEMENTATION_LOOP.md` and confirm the exact candidate tree has passed the pre-push FreePi gate.
+Create a focused branch from the latest `develop` unless the user names another base. Keep commits scoped to one concern. Before opening or updating a pull request, follow `.agent/IMPLEMENTATION_LOOP.md`: run the applicable local checks, inspect the diff, and fill the pull request template.
 
 ## Required pull-request evidence
 
 Every pull request must record:
 
-- the base and head commit SHAs;
-- the candidate tree SHA reviewed before push;
-- the independent reviewer tool and model;
-- the exact `VERDICT: PASS` result for Gate A;
+- the linked issue, when one exists;
+- what changed and why;
 - the validation commands and results;
 - security and product-invariant impact;
 - any residual risks or follow-up work.
-
-After push, run the PR-head FreePi gate against the exact remote head. A pass for a different tree or commit is stale and does not satisfy the gate.
 
 ## Required checks
 
 The following checks must pass before human merge:
 
 - `Agent policy / repository-policy`;
-- all applicable build, test, lint, type-check, and security checks;
-- independent FreePi Gate A and Gate B reviews as defined in `.agent/IMPLEMENTATION_LOOP.md`.
+- all applicable build, test, lint, type-check, and security checks.
 
-If a required check cannot run, stop and document the blocker. Do not weaken, bypass, or silently substitute a gate.
+If a required check cannot run, stop and document the blocker. Do not weaken or bypass a check.

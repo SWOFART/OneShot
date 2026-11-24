@@ -57,4 +57,3 @@ workspace while keeping the existing recovery API and settlement safety rules.
 - `pnpm build` — PASS; `pnpm build:frontend` — PASS, no `apps/web/dist/recovery` emitted.
 - `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, and
   `pnpm check:generated` — PASS.
-- Gate A/B: pending for the final staged tree and PR head.

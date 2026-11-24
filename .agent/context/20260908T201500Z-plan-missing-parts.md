@@ -59,11 +59,6 @@ Progress, dependencies/blockers, and immediate priorities.
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Markdown-lint and review the report, then commit the documentation-only audit.

@@ -23,7 +23,6 @@ Thumbs.db
 !.npmrc.example
 secrets/
 credentials/
-.free-pi/
 .pi/
 
 # Editor and IDE

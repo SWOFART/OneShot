@@ -62,11 +62,6 @@ The user reports `No Ethereum wallet is connected. Nothing was paid.` after sign
 - PR: not created
 - CI: not run
 
-## Review gates
-
-- Gate A: NOT RUN for the current tree. An earlier tree review produced no final verdict and identified the cross-account cache lifetime edge case; that tree was changed and invalidated.
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
-1. Stage the candidate tree and run mandatory Gate A.
+1. Stage the candidate tree and run mandatory CI.

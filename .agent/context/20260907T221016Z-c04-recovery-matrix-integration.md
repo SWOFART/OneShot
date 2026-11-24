@@ -7,7 +7,7 @@
 ## User goal
 
 Implement Coder C milestone C04 and review the finished candidate with fresh
-FreePi processes using GLM 5.3.
+processes using GLM 5.3.
 
 ## Original prompt/request
 
@@ -23,7 +23,7 @@ FreePi processes using GLM 5.3.
 1. Add the versioned recovery service and append-only evidence-command seam.
 2. Compose local, known-identity, Subgraph MCP, and advisor simulators behind public ports.
 3. Execute the complete C04 recovery matrix and publish replacement guidance.
-4. Run package/root checks, FreePi Gate A, draft PR CI, and FreePi Gate B.
+4. Run package/root checks, CI, draft PR CI, and human review.
 
 ## Key decisions
 
@@ -66,13 +66,8 @@ FreePi processes using GLM 5.3.
 - PR: not created
 - CI: not applicable
 
-## Review gates
-
-- Gate A: NOT RUN
-- Gate B: NOT RUN
-
 ## Handoff/next steps
 
 1. Stage candidate files and capture candidate tree SHA (`git write-tree`).
-2. Run FreePi Gate A pre-push review with `npx free-pi-cli` (GLM 5.3).
-3. Commit, push branch, open draft PR, verify CI, then run FreePi Gate B.
+2. Run the repository checks.
+3. Commit, push branch, open draft PR, verify CI, then run human review.

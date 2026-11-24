@@ -19,8 +19,8 @@ service', 'Requests', 'Payment proof'. Also dont forget that in overview tab
 there are 3 tabs, which refers/linked to previous tabs (Run an API service,
 View requests, See payment proof). Yes, tab themselves are fading, but content
 which is opened after pressing tab is not." Follow-up: branch fresh from remote
-develop, deliver only these two fixes, then commit, Gate A, and a ready PR with
-Gate B skipped.
+develop, deliver only these two fixes, then commit, CI, and a ready PR with
+human review skipped.
 
 ## Assumptions
 
@@ -32,7 +32,7 @@ Gate B skipped.
 
 ## Plan
 
-1. Commit, Gate A on the candidate tree, push, open a non-draft PR.
+1. Commit, CI on the candidate tree, push, open a non-draft PR.
 
 ## Key decisions
 
@@ -65,7 +65,7 @@ Gate B skipped.
 - `pnpm --filter @oneshot/web test` - PASS, 18 files / 86 tests. This is the
   run that covers the `.tsx` suites, including the new fade regression. CI
   runs only the root suite and the browser suite, so a `.tsx` regression is
-  not caught there; Gate A caught a stale copy assertion here that both the
+  not caught there; CI caught a stale copy assertion here that both the
   root suite and CI would have missed.
 - `pnpm --filter @oneshot/brand test` - PASS, 4 files / 18 tests
 - `pnpm test:browser` - PASS, 8 tests, light and dark at 390/1440 px
@@ -91,15 +91,8 @@ Gate B skipped.
 - PR: not created yet
 - CI: not run yet
 
-## Review gates
-
-- Gate A: NOT RUN at the time of writing; run against the final candidate tree
-  before pushing.
-- Gate B: skipped at the user's explicit instruction for this change; recorded
-  as a deliberate deviation from `.agent/IMPLEMENTATION_LOOP.md`, not a pass.
-
 ## Handoff/next steps
 
-1. Push after Gate A passes and open a non-draft PR against `develop` carrying
-   the Gate A evidence.
+1. Push after CI passes and open a non-draft PR against `develop` carrying
+   the CI evidence.
 2. A human owner reviews and merges.
