@@ -1,15 +1,12 @@
 /**
  * Production entry point (B04.5).
  *
- * Exports only the frozen port interfaces from `milestones/CONTRACTS.md`
- * section 5 and sanitized error shapes. Consumers compose against this surface,
- * never against adapter internals, so the internals can change without
- * breaking A's composition.
+ * Exports the frozen port interfaces and sanitized error shapes. Consumers
+ * compose against this surface, never against adapter internals.
  *
  * Import direction is one-way by design: this package depends on the contract
- * and on `@oneshot/arc-adapter`, and on nothing owned by Coder A or Coder C.
- * `milestones/README.md` forbids importing another owner's implementation
- * package, and a compatibility test asserts it rather than trusting review.
+ * and on `@oneshot/arc-adapter`, and not on another package's private
+ * implementation. A compatibility test asserts that.
  */
 
 import type { EvidenceResult, SubmissionOutcome } from '@oneshot/arc-adapter';

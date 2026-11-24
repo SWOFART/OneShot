@@ -51,10 +51,10 @@ deployment task. This milestone establishes the executable process and its datab
 contract without embedding cloud credentials or requiring Google-specific code in the
 domain.
 
-## Frontend and release gate
+## Frontend and release checks
 
 The A05/B05/C05 frontend implementation and automated Chromium coverage are complete
 in the current candidate. This runtime document does not by itself close the release:
-manual desktop/mobile click-through, fresh exact-tree Gate A/Gate B reviews, required
-CI, and human merge remain separate acceptance steps. The Graph sponsor claim remains
-`NOT VERIFIED` until its fresh live trace is captured.
+manual desktop/mobile click-through, required CI, and human merge remain separate
+acceptance steps. The Graph sponsor claim remains `NOT VERIFIED` until its fresh live
+trace is captured.

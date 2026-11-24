@@ -15,8 +15,8 @@ parameters are unpublished. See `docs/settlement/SETTLEMENT_CONFIG_V1.md`.
 You need a Privy account, a terminal, and somewhere to store secrets that is
 not this repository. Budget about 30 minutes.
 
-At no point paste a secret into a chat, an issue, a PR, a fixture, a log, or a
-review prompt. `.agent/SECURITY_INVARIANTS.md` treats that as a breach, and a
+At no point paste a secret into a chat, an issue, a pull request, a fixture, or a
+log. A committed secret is a breach, and a
 committed secret must be rotated, not deleted.
 
 ## 2. Privy application

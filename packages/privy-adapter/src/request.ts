@@ -6,8 +6,8 @@
  * fingerprint, the same idempotency key, and the same reference ID on every
  * process, every worker, and every restart.
  *
- * That determinism is the point. `.agent/SECURITY_INVARIANTS.md` requires a
- * stable identity across retries, and the provider idempotency key is only
+ * That determinism is the point. A stable identity across retries is required,
+ * and the provider idempotency key is only
  * useful if independent workers derive the identical key for the identical
  * obligation.
  */
@@ -57,7 +57,7 @@ export class RequestError extends Error {
   }
 }
 
-/** `milestones/CONTRACTS.md`: the intent id is an opaque, length-bounded string. */
+/** The intent id is an opaque, length-bounded string. */
 const MAX_INTENT_ID_LENGTH = 128;
 const PRIVY_REFERENCE_ID_MAX_LENGTH = 64;
 const PRIVY_REFERENCE_PREFIX = 'oneshot-';
@@ -109,8 +109,7 @@ function validate(intent: SettlementIntent): void {
  *
  * Uses the direct ERC-20 transfer path. The Arc Memo forwarded call is not
  * built: B01.3 recorded it `NOT_SUPPORTED` because Privy policy cannot
- * constrain the forwarded recipient and amount. See
- * `.agent/research/20260907-b01-arc-privy-verification.md`.
+ * constrain the forwarded recipient and amount.
  */
 export function buildCanonicalRequest(intent: SettlementIntent): CanonicalRequest {
   validate(intent);
@@ -152,8 +151,8 @@ export function buildCanonicalRequest(intent: SettlementIntent): CanonicalReques
 /**
  * Refuse reuse of one idempotency key with a different body.
  *
- * This is the `INTENT_PAYLOAD_CONFLICT` rule from `milestones/CONTRACTS.md`
- * section 3 at the adapter boundary. Sending a changed body under a previously
+ * This is the `INTENT_PAYLOAD_CONFLICT` rule at the adapter boundary.
+ * Sending a changed body under a previously
  * used key is how a second, different payment gets authorized under the
  * identity of the first.
  *

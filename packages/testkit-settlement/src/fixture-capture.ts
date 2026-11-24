@@ -95,8 +95,8 @@ export function captureResponseFixture(
 /**
  * Reject a fixture whose version this build does not know.
  *
- * Per `.agent/AGENTS.md`, simulators reject unknown fixture versions and schema
- * drift rather than guessing at their meaning.
+ * Simulators reject unknown fixture versions and schema drift rather than
+ * guessing at their meaning.
  */
 export function assertKnownFixtureVersion(fixture: { readonly version: string }): void {
   if (fixture.version !== 'settlement-fixture-v1') {

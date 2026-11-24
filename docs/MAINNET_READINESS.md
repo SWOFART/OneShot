@@ -31,7 +31,7 @@ The settlement profile configuration is codified in
 | **USDC Contract**       | `0x3600000000000000000000000000000000000000` | _Awaiting launch publication_ |
 | **USDC Decimals**       | `6` (settlement precision)                   | `6` (standard ERC-20)         |
 | **Native Gas Decimals** | `18` (gas precision)                         | `18` (gas precision)          |
-| **Activation Gate**     | Testnet default                              | Human authorization required  |
+| **Activation**          | Testnet default                              | Human authorization required  |
 
 ### Strict fail-closed policy (zero guessed constants)
 
@@ -209,7 +209,7 @@ All OneShot database migrations are strictly append-only and backward-compatible
 - An older application revision operates safely alongside the updated database
   schema without requiring a database downgrade or restore.
 
-## 6. Human gate for mainnet activation
+## 6. Human approval for mainnet activation
 
 Once Arc publishes official Mainnet network parameters, the following human
 procedure unlocks production settlement without changing application or domain
@@ -223,9 +223,9 @@ code:
      `verification: 'PINNED'` and `enabled: true`.
    - Update contract fixtures and run `pnpm test` and
      `pnpm scenarios:invariants`.
-3. **Execute Independent Review**:
-   - Pass FreePi Gate A and Gate B on the update.
-   - Human owner merges PR to `develop` and `main`.
+3. **Review the change**:
+   - Required CI is green on the update.
+   - A human owner merges the pull request to `develop` and `main`.
 4. **Deploy with Human Authorization**:
    - Set `ONESHOT_ARC_PROFILE=arc-mainnet`.
    - Set `ONESHOT_ALLOW_MAINNET_ACTIVATION=true`.

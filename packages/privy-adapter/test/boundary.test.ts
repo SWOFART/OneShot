@@ -39,8 +39,8 @@ describe('lane import boundary', () => {
 
   it('imports no lane package beyond the shared contract seam', () => {
     // Catches a package name added after this test was written.
-    // @oneshot/contracts is the sanctioned cross-lane seam per
-    // milestones/CONTRACTS.md; the others are owned implementations.
+    // @oneshot/contracts is the sanctioned shared seam; the others are owned
+    // implementations.
     const allowed = new Set(['@oneshot/arc-adapter', '@oneshot/contracts']);
     for (const file of sourceFiles()) {
       const matches = readFileSync(file, 'utf8').matchAll(/@oneshot\/[a-z-]+/g);

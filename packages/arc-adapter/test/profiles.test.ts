@@ -9,7 +9,7 @@ import {
 } from '../src/profiles.js';
 
 describe('Arc testnet profile', () => {
-  it('pins the constants frozen in milestones/CONTRACTS.md', () => {
+  it('pins the published Arc Testnet constants', () => {
     expect(ARC_TESTNET.chainId).toBe(5042002);
     expect(ARC_TESTNET.caip2).toBe('eip155:5042002');
     expect(ARC_TESTNET.tokenContract).toBe('0x3600000000000000000000000000000000000000');

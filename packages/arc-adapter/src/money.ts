@@ -1,12 +1,12 @@
 /**
  * Monetary values (B01.2 precision rules).
  *
- * `.agent/SECURITY_INVARIANTS.md`: money is stored, compared, calculated, and
+ * Money is stored, compared, calculated, and
  * serialized as integer atomic units or `bigint`. JavaScript floating point is
  * never used for a monetary value, so this module has no `number` arithmetic
  * and deliberately provides no parser from `number`.
  *
- * The canonical wire form from `milestones/CONTRACTS.md` section 2 is an
+ * The canonical wire form is an
  * unsigned base-10 integer string with no sign, decimal point, exponent, or
  * whitespace.
  */

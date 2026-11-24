@@ -1,0 +1,83 @@
+# Label catalog for OneShot.
+# Create or update these labels with:
+#   GH_TOKEN=... GITHUB_REPOSITORY=SWOFART/OneShot node scripts/sync-github-labels.mjs
+# The sync creates and updates this catalog. It does not delete other labels.
+
+- name: type:bug
+  color: d73a4a
+  description: Defect in current behavior
+- name: type:feature
+  color: 0e8a16
+  description: New product behavior
+- name: type:integration
+  color: '5319e7'
+  description: Settlement chain, rail, or external integration
+- name: type:documentation
+  color: 0075ca
+  description: Documentation correction or gap
+- name: type:planning
+  color: fbca04
+  description: Epic, milestone, or plan
+- name: type:security
+  color: b60205
+  description: Security report. Prefer a private advisory.
+
+- name: priority:p0
+  color: b60205
+  description: Settlement safety or outage. Do this first.
+- name: priority:p1
+  color: d93f0b
+  description: Important, blocks a milestone
+- name: priority:p2
+  color: fbca04
+  description: Normal product work
+- name: priority:p3
+  color: c5def5
+  description: Can wait
+
+- name: area:settlement
+  color: 006b75
+  description: Intent, attempt, and settlement state
+- name: area:reconciliation
+  color: 1d76db
+  description: UNKNOWN recovery and evidence
+- name: area:api
+  color: '0052cc'
+  description: HTTP API
+- name: area:worker
+  color: '5319e7'
+  description: Settlement or reconciliation worker
+- name: area:web
+  color: '7057ff'
+  description: Operator console and public site
+- name: area:mcp
+  color: 0e8a16
+  description: MCP agent payments
+- name: area:chain
+  color: 006b75
+  description: Chain profile, USDC, or RPC
+- name: area:storage
+  color: 1d76db
+  description: Postgres ledger and migrations
+- name: area:docs
+  color: 0075ca
+  description: Docs and contributor guidance
+- name: area:ci
+  color: c5def5
+  description: CI, lint, and repository automation
+
+- name: status:needs-triage
+  color: ededed
+  description: Not yet prioritized
+- name: status:ready
+  color: c2e0c6
+  description: Ready to implement
+- name: status:in-progress
+  color: fef2c0
+  description: Someone is doing this
+- name: status:blocked
+  color: f9d0c4
+  description: Waiting on a decision or external fact
+- name: status:needs-review
+  color: d4c5f9
+  description: Pull request is ready for a human
