@@ -1,7 +1,7 @@
 /**
  * Sanitized fixture and log boundary (B01.6).
  *
- * `.agent/SECURITY_INVARIANTS.md` forbids logging, persisting, committing, or
+ * Do not log, persist, commit, or
  * transmitting credentials or signing material. Fixtures are committed to a
  * public repository and are shown to external reviewers, so the redaction rule
  * is enforced in code and tested, not left to reviewer discipline.

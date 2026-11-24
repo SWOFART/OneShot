@@ -321,15 +321,15 @@ plus explicit human authorization.
 
 | Document                                                                    | Contents                                                 |
 | --------------------------------------------------------------------------- | -------------------------------------------------------- |
-| [`plan.md`](../plan.md)                                                     | Product plan, scope, and delivery gates                  |
+| [`ROADMAP.md`](../ROADMAP.md)                                               | Milestones and current scope                             |
+| [`CONTRIBUTING.md`](../CONTRIBUTING.md)                                     | Issues, checks, and pull requests                        |
 | [`docs/DOMAIN_ARCHITECTURE.md`](../docs/DOMAIN_ARCHITECTURE.md)             | Domain model and boundaries                              |
 | [`docs/MCP_ARC_PAYMENT.md`](../docs/MCP_ARC_PAYMENT.md)                     | MCP deployment and live walkthrough                      |
 | [`docs/RECOVERY_HARDENING.md`](../docs/RECOVERY_HARDENING.md)               | Recovery, runtime, authentication, and metrics contracts |
-| [`milestones/CONTRACTS.md`](../milestones/CONTRACTS.md)                     | Frozen v1 contract pack                                  |
+| [`packages/contracts`](../packages/contracts)                               | Frozen v1 contract pack, OpenAPI, and fixtures           |
 | [`docs/settlement/`](../docs/settlement/)                                   | Settlement config, provider setup, live evidence         |
 | [`packages/reconciliation/docs/c06/`](../packages/reconciliation/docs/c06/) | C06 demo and qualification evidence index                |
 | [`docs/RELEASE_CHECKLIST.md`](../docs/RELEASE_CHECKLIST.md)                 | R5 release evidence and submission checklist             |
-| [`AGENTS.md`](../AGENTS.md)                                                 | Contribution policy and review gates                     |
 
 ## License
 

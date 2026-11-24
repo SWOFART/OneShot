@@ -7,7 +7,7 @@
  * `NOT_FOUND` is the dangerous result and gets the strictest treatment. An
  * absent transaction can mean it was never broadcast, or that it is in a
  * mempool this node cannot see, or that the node is behind, or that it was
- * replaced. `.agent/SECURITY_INVARIANTS.md` is explicit: never infer
+ * replaced. Never infer
  * non-payment from an empty or delayed external result. So `NOT_FOUND` is an
  * observation, never a permission, and this module has no code path that turns
  * one into the other.

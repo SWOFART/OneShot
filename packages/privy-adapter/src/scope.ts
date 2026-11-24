@@ -3,8 +3,7 @@
  *
  * This mirrors, in OneShot code, the constraints the Privy policy enforces
  * remotely. Two independent checks of the same shape is deliberate: a policy
- * lives in Privy's configuration and can drift, and
- * `.agent/SECURITY_INVARIANTS.md` requires validating asset, network,
+ * lives in Privy's configuration and can drift. Validate asset, network,
  * recipient, amount, and policy scope before signing or submitting.
  *
  * The local check never grants permission. It can only refuse.

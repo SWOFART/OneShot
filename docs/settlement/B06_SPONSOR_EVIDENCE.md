@@ -139,7 +139,7 @@ adapter, so the shared redaction contract is not weakened for other callers.
 
 ## B06.6 — Qualification input
 
-Input for the `sponsor-qualification` skill. Lane B publishes no final verdict.
+Input for a sponsor-qualification review. This packet publishes no final verdict.
 
 | Sponsor   | Status         | Basis                                                                                                          |
 | --------- | -------------- | -------------------------------------------------------------------------------------------------------------- |

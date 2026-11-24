@@ -119,8 +119,7 @@ evidence bundle:
 - The Graph is `NOT VERIFIED`: the live Studio path exists, but a fresh trace
   showing meaningful data use by the model and deterministic core is pending.
 
-Per `.agents/skills/sponsor-qualification/SKILL.md`, the Privy and Arc claims
-are backed by the sanitized records in
+The Privy and Arc claims are backed by the sanitized records in
 [`LIVE_EVIDENCE.md`](LIVE_EVIDENCE.md) and the
 [C06 qualification report](../../packages/reconciliation/docs/c06/QUALIFICATION_REPORT.md).
 

@@ -127,8 +127,8 @@ payment responses, and discuss a technical integration or early pilot.
 | [Domain architecture](docs/DOMAIN_ARCHITECTURE.md) | Ownership, domain model, and system boundaries                                  |
 | [Agent connection guide](docs/MCP_ARC_PAYMENT.md)  | MCP deployment, client configuration, and walkthrough                           |
 | [Recovery hardening](docs/RECOVERY_HARDENING.md)   | Recovery, authentication, and operational contracts                             |
-| [Product plan](plan.md)                            | Scope, roadmap, and delivery gates                                              |
-| [Contribution policy](AGENTS.md)                   | Repository policies and review requirements                                     |
+| [Roadmap](ROADMAP.md)                              | Milestones and what is actually in the tree                                     |
+| [Contributing](CONTRIBUTING.md)                    | Issues, triage, labels, and the path to a pull request                          |
 
 ## License
 

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const requiredFiles = [
   'README.md',
-  'plan.md',
+  'ROADMAP.md',
   'docs/DOMAIN_ARCHITECTURE.md',
   'docs/DEMO_SCRIPT.md',
   'docs/RELEASE_CHECKLIST.md',

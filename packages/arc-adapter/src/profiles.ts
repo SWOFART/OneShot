@@ -5,7 +5,7 @@
  * with published network parameters, so it is the only one that carries values.
  *
  * The Mainnet profile deliberately carries no chain ID, RPC URL, explorer, or
- * token address. Arc has not published them, and `plan.md` forbids guessing:
+ * token address. Arc has not published them, and this repository does not guess:
  * an unpinned profile must be structurally present and inert, never a
  * plausible-looking default that could silently be used.
  */
@@ -71,8 +71,7 @@ export function isPinned(profile: ArcProfile): profile is PinnedArcProfile {
 /**
  * Arc Testnet.
  *
- * Chain ID, CAIP-2, and the USDC interface address are fixed by
- * `milestones/CONTRACTS.md` section 2 and were verified on 2026-09-07 against
+ * Chain ID, CAIP-2, and the USDC interface address were verified on 2026-09-07 against
  * the official Arc documentation at docs.arc.io (`connect-to-arc` and
  * `contract-addresses`).
  *

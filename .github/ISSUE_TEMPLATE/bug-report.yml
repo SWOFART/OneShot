@@ -1,30 +1,91 @@
 name: Bug report
-description: Create a report to help reproduce and fix a defect.
+description: A defect in settlement, recovery, payments, or the operator surfaces.
 title: '[Bug]: '
+labels:
+  - type:bug
+  - status:needs-triage
 body:
-  - type: textarea
-    id: description
+  - type: markdown
     attributes:
-      label: Problem description
-      description: Clear and concise description of what happened.
+      value: |
+        Describe a defect in current behavior. Do not include secrets, seed
+        phrases, access tokens, or private keys. Security vulnerabilities belong
+        in a private advisory, not this form.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened
+      description: One short description of the defect.
     validations:
       required: true
   - type: textarea
-    id: reproduction
+    id: steps
     attributes:
       label: Steps to reproduce
-      description: Exact steps to trigger the bug.
+      description: Exact steps, request, or job identity. Redact secrets.
+      placeholder: |
+        1.
+        2.
+        3.
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
       label: Expected behavior
-      description: What should have happened instead.
+      description: What should have happened, including the settlement state if this is a payment.
     validations:
       required: true
   - type: textarea
-    id: context
+    id: actual
     attributes:
-      label: Environment & context
-      description: OS, branch, commit, logs, or error messages.
+      label: Actual behavior
+      description: What happened instead. Include the business intent id when you have one.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Commit or deployment, OS, browser, API or worker version, and whether this is local or hosted.
+      placeholder: |
+        Commit:
+        Surface: API / worker / web / MCP
+        Runtime:
+    validations:
+      required: true
+  - type: dropdown
+    id: chain
+    attributes:
+      label: Chain / network
+      description: Arc Testnet is eip155:5042002. Mainnet settlement is disabled.
+      options:
+        - Arc Testnet (eip155:5042002)
+        - Another testnet
+        - Local or simulator
+        - Not applicable
+        - Unknown
+    validations:
+      required: true
+  - type: input
+    id: intent
+    attributes:
+      label: Business intent id
+      description: Optional. The stable intent id, not a wallet key.
+      placeholder: 'bi_...'
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and evidence
+      description: Redacted errors, receipt identifiers, or screenshots described in text. Remove tokens and keys.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: I removed secrets, tokens, seed phrases, and private keys from this report.
+          required: true
+        - label: This is not a security vulnerability. Security reports use private advisories.
+          required: true

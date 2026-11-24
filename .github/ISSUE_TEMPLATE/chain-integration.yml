@@ -1,0 +1,79 @@
+name: Settlement or chain integration
+description: Request a settlement chain, USDC rail, or recovery indexer.
+title: '[Chain]: '
+labels:
+  - type:integration
+  - area:chain
+  - status:needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        OneShot settles USDC once per business intent. Arc Testnet
+        (`eip155:5042002`) is the current rail. Mainnet stays disabled until
+        official parameters and an explicit human authorization exist. Do not
+        paste RPC credentials or private keys.
+  - type: input
+    id: chain
+    attributes:
+      label: Chain
+      description: Name the network, for example Arc Testnet or Base Sepolia.
+      placeholder: Base Sepolia
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Testnet
+        - Mainnet (must stay disabled until human authorization)
+        - Unknown
+    validations:
+      required: true
+  - type: input
+    id: identity
+    attributes:
+      label: Chain id and CAIP-2
+      description: Official values only. Leave blank if you do not have a primary source.
+      placeholder: 'eip155:...'
+  - type: input
+    id: usdc
+    attributes:
+      label: USDC contract
+      description: Official contract address and decimals, with the source URL if you have one.
+  - type: textarea
+    id: why
+    attributes:
+      label: Why this chain
+      description: The agent payment or operator workflow this rail would serve.
+    validations:
+      required: true
+  - type: dropdown
+    id: recovery
+    attributes:
+      label: Recovery evidence
+      description: Graph or another index is never settlement authority.
+      options:
+        - No indexer yet. Receipt checks only.
+        - An indexer exists and can be pinned.
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Chain id, USDC, and decimals come from an official source.
+        - [ ] A payment on this chain still settles at most once.
+        - [ ] Mainnet remains disabled unless this request is the authorized activation.
+    validations:
+      required: true
+  - type: checkboxes
+    id: bounds
+    attributes:
+      label: Bounds
+      options:
+        - label: I understand mainnet settlement stays disabled until a human authorizes it.
+          required: true
