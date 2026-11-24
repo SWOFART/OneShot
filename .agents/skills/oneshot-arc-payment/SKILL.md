@@ -10,20 +10,37 @@ description: >
 
 # OneShot arc_payment MCP skill
 
-Pay once, safely, through OneShot. This skill is written for any agent
-(primary or delegated) whose MCP client is already connected to the OneShot
-MCP endpoint. It never handles keys: the payer is the user's connected Privy
-embedded/external wallet or MetaMask wallet, and the bearer token lives only in
-the MCP client config.
+Pay once, safely, through OneShot. The canonical Streamable HTTP MCP endpoint
+is `https://oneshot.kapustazh.dev/mcp`; use it by default unless the user
+explicitly supplies an authorized alternative. The bearer is configured in the
+MCP client's secret headers and is never handled by this skill.
 
-## Prerequisites (user-provided, never invented)
+The payment is non-custodial: the payer is the user's connected Privy
+embedded/external wallet or MetaMask wallet. OneShot prepares the exact
+transaction and verifies the returned hash; it never signs or broadcasts a
+user-wallet payment.
 
-- MCP endpoint URL, e.g. `https://oneshot.kapustazh.dev/mcp` (Streamable HTTP).
-- A bearer generated from the user's OneShot Profile — configured in the MCP client as
-  `authorization: Bearer <token>`. It is a secret: never print, log, copy into
-  task prompts, or commit it.
+## Connection and wallet prerequisites
 
-If either is missing, stop and ask the operator. Do not guess values.
+- Configure the MCP client with the canonical endpoint above and the bearer
+  generated from the user's OneShot Profile:
+  `authorization: Bearer <token>`. The bearer is a secret: never print, log,
+  copy into task prompts, or commit it.
+- Installing this skill does not register an MCP server or create a bearer.
+  If the current agent host has no OneShot MCP connection, tell the operator to
+  add the canonical endpoint using the configuration in `docs/MCP_ARC_PAYMENT.md`
+  or `/docs/mcp`. Never ask the operator to paste the bearer into the task
+  prompt.
+- Before calling `arc_payment`, resolve the active payer address. If the agent
+  host exposes a connected wallet/account tool, query it and use the active
+  Ethereum wallet selected by the user. If the host has no wallet context, ask
+  the user to connect/select the wallet or provide its public EVM address once.
+  A payer address cannot be derived safely from the bearer, recipient, server
+  wallet, or an unrelated historical payment; never guess one.
+
+The current OneShot `arc_payment` schema requires `payer_wallet` because the
+intent and exact transaction are bound to the user's selected wallet before
+signing. The address is public, but the bearer is not.
 
 ## Tool contract: `arc_payment` then `arc_payment_submit`
 
@@ -52,8 +69,9 @@ checks the receipt and exact USDC `Transfer` log, and returns the durable state.
 
 ## How to execute a payment
 
-1. Generate the `request_key`, then call `arc_payment` once with that key, the
-   exact payer wallet, recipient, amount, and purpose the user approved.
+1. Resolve the active wallet address as described above. Generate the
+   `request_key`, then call `arc_payment` once with that key, the exact payer
+   wallet, recipient, amount, and purpose the user approved.
 2. Give the user the returned `signing_url`. The user must be signed into the
    matching OneShot workspace, review the recipient and amount, and click the
    wallet confirmation. Do not create a replacement transaction.
@@ -73,9 +91,10 @@ checks the receipt and exact USDC `Transfer` log, and returns the durable state.
 
 ## Delegating (outsourcing) the payment to another agent
 
-- Hand the delegate only the task arguments: endpoint URL, `payer_wallet`,
-  `recipient`, `amount_usdc`, `purpose`, and this skill. The delegate generates
-  and retains the request key.
+- Hand the delegate only the task arguments: the canonical endpoint (unless it
+  is already configured), the resolved `payer_wallet` when the delegate has no
+  wallet connector, `recipient`, `amount_usdc`, `purpose`, and this skill. The
+  delegate generates and retains the request key.
 - The delegate must use its own MCP client configuration; the bearer token
   must not travel through prompts, task payloads, logs, or screenshots.
 - One request key funds exactly one intent. Each delegate generates one key per

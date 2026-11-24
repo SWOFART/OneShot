@@ -37,7 +37,7 @@ const HASH = PROOF.settlement.transaction_hash;
 
 const ARTIFACTS = [
   { path: 'docs/SAFE_DISABLE_RUNBOOK.md', present: true },
-  { path: 'Dockerfile.api', present: true },
+  { path: 'Dockerfile', present: true },
 ];
 
 function mutate(patch: Record<string, unknown>): SanitizedSettlementProof {
@@ -337,7 +337,7 @@ describe('B06.3 ambiguity and recovery', () => {
 });
 
 describe('B06.4 mainnet readiness', () => {
-  it('passes with the disabled, valueless profile and present artifacts', () => {
+  it('passes with the pinned official mainnet profile and present artifacts', () => {
     expect(checkMainnetReadiness(ARTIFACTS).status).toBe('PASS');
   });
 
@@ -346,26 +346,14 @@ describe('B06.4 mainnet readiness', () => {
     expect(section.status).toBe('FAIL');
   });
 
-  it('fails an enabled mainnet profile', () => {
-    const enabled = { ...ARC_MAINNET, enabled: true } as typeof ARC_MAINNET;
-    expect(failed(checkMainnetReadiness(ARTIFACTS, enabled))).toContain('mainnet.disabled');
+  it('fails a mainnet profile whose chain id is not the published one', () => {
+    const wrong = { ...ARC_MAINNET, chainId: 1 as const, caip2: 'eip155:1' as const };
+    expect(failed(checkMainnetReadiness(ARTIFACTS, wrong))).toContain('mainnet.pinned-chain');
   });
 
-  it('fails a mainnet profile that carries network values', () => {
-    const pinned = {
-      ...ARC_MAINNET,
-      verification: 'PINNED',
-      chainId: 1,
-      tokenContract: '0x0000000000000000000000000000000000000001',
-    } as unknown as typeof ARC_MAINNET;
-    const ids = failed(checkMainnetReadiness(ARTIFACTS, pinned));
-    expect(ids).toContain('mainnet.no-values');
-    expect(ids).toContain('mainnet.unpublished');
-  });
-
-  it('fails a mainnet profile with no recorded reason', () => {
-    const silent = { ...ARC_MAINNET, reason: '' } as typeof ARC_MAINNET;
-    expect(failed(checkMainnetReadiness(ARTIFACTS, silent))).toContain('mainnet.reason-recorded');
+  it('fails a mainnet profile that stores an endpoint', () => {
+    const withEndpoint = { ...ARC_MAINNET, rpcUrl: 'https://rpc.example.invalid' } as typeof ARC_MAINNET;
+    expect(failed(checkMainnetReadiness(ARTIFACTS, withEndpoint))).toContain('mainnet.no-endpoint');
   });
 });
 

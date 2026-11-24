@@ -12,7 +12,13 @@ import {
   type SettlementBaseline,
 } from '@oneshot/privy-adapter';
 import { lookupEvidence } from '@oneshot/arc-adapter';
-import { LiveSubgraphMcpRecoveryPort, VertexAiRecoveryAdvisor } from '@oneshot/reconciliation';
+import {
+  LiveSubgraphMcpRecoveryPort,
+  UnavailableRecoveryAdvisorPort,
+  VertexAiRecoveryAdvisor,
+  type SubgraphMcpPolicy,
+} from '@oneshot/reconciliation';
+import { DisabledGraphRecoveryPort } from './disabled-graph.js';
 import { composeWorker, type ComposedWorker } from './composition.js';
 import { withResponseLossAfterBroadcast } from './failure-injection.js';
 import { RestartRunner } from './restart-runner.js';
@@ -31,6 +37,17 @@ export interface WorkerRuntimeDependencies {
     ledger: IntentLedger,
     config: WorkerRuntimeConfig,
   ) => Promise<ComposedWorker>;
+}
+
+function disabledGraphPolicy(): SubgraphMcpPolicy {
+  return {
+    retrieval: 'STUDIO_GRAPHQL',
+    deploymentId: `0x${'0'.repeat(64)}`,
+    manifestCid: `Qm${'a'.repeat(44)}`,
+    maxLagBlocks: '1',
+    maxCandidates: 1,
+    maxResultBytes: 1024,
+  };
 }
 
 function stableJson(value: unknown): string {
@@ -91,7 +108,7 @@ async function composeProduction(
     recipient: config.walletAddress as `0x${string}`,
     amount_atomic: '1',
     asset: 'USDC',
-    network: 'eip155:5042002',
+    network: config.settlement.profile.caip2,
     purpose: 'Runtime identity readiness probe',
   });
   if (startupDecision.kind !== 'AUTHORIZED') {
@@ -132,30 +149,61 @@ async function composeProduction(
       }
     },
   };
-  const subgraphMcp = new LiveSubgraphMcpRecoveryPort({
-    mcpEndpoint: config.recovery.mcpEndpoint,
-    graphQueryUrl: config.recovery.graphQueryUrl,
-    ...(config.recovery.graphApiKey ? { graphApiKey: config.recovery.graphApiKey } : {}),
-    fetchFn: boundedFetch,
-    getChainHead: async () => ({
-      blockNumber: (await provider.getBlockNumber()).toString(10),
-      observedAt: new Date().toISOString(),
-    }),
-  });
-  const googleAuth = new GoogleAuth({
-    scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-  });
-  const advisor = new VertexAiRecoveryAdvisor({
-    projectId: config.recovery.vertexProjectId,
-    location: config.recovery.vertexLocation,
-    modelName: config.recovery.vertexModel,
-    fetchFn: boundedFetch,
-    getAuthToken: async () => {
-      const token = await googleAuth.getAccessToken();
-      if (!token) throw new Error('Google Application Default Credentials returned no token');
-      return token;
-    },
-  });
+  const graph = config.recovery.graphEnabled
+    ? {
+        subgraphMcp: new LiveSubgraphMcpRecoveryPort({
+          mcpEndpoint: config.recovery.mcpEndpoint,
+          graphQueryUrl: config.recovery.graphQueryUrl,
+          ...(config.recovery.graphApiKey ? { graphApiKey: config.recovery.graphApiKey } : {}),
+          fetchFn: boundedFetch,
+          getChainHead: async () => ({
+            blockNumber: (await provider.getBlockNumber()).toString(10),
+            observedAt: new Date().toISOString(),
+          }),
+        }),
+        advisor: new VertexAiRecoveryAdvisor({
+          projectId: config.recovery.vertexProjectId,
+          location: config.recovery.vertexLocation,
+          modelName: config.recovery.vertexModel,
+          fetchFn: boundedFetch,
+          getAuthToken: async () => {
+            const token = await new GoogleAuth({
+              scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+            }).getAccessToken();
+            if (!token) throw new Error('Google Application Default Credentials returned no token');
+            return token;
+          },
+        }),
+        localState: {
+          tokenContract: config.settlement.profile.tokenContract,
+          correlationSender: config.walletAddress,
+          fromBlock: config.recovery.fromBlock,
+          toBlock: config.recovery.toBlock,
+          getToBlock: async () => (await provider.getBlockNumber()).toString(10),
+          mcpPolicy: config.recovery.policy,
+        },
+      }
+    : {
+        subgraphMcp: new DisabledGraphRecoveryPort(config.recovery.graphDisabledReason),
+        advisor: new UnavailableRecoveryAdvisorPort(),
+        localState: {
+          tokenContract: config.settlement.profile.tokenContract,
+          correlationSender: config.walletAddress,
+          fromBlock: '0',
+          toBlock: '0',
+          getToBlock: async () => (await provider.getBlockNumber()).toString(10),
+          mcpPolicy: disabledGraphPolicy(),
+        },
+      };
+  if (!config.recovery.graphEnabled) {
+    process.stderr.write(
+      `${JSON.stringify({
+        event: 'graph_recovery_disabled',
+        chain: config.settlement.profile.id,
+        message: config.recovery.graphDisabledReason,
+      })}\n`,
+    );
+  }
   const evidencePort = {
     lookup: async (request: {
       businessIntentId: string;
@@ -185,23 +233,17 @@ async function composeProduction(
     settlementPort,
     authorizationPort,
     submissionsDisabled: config.submissionsDisabled,
+    expectedNetwork: config.settlement.profile.caip2,
     recovery: {
-      localState: {
-        tokenContract: config.settlement.profile.tokenContract,
-        correlationSender: config.walletAddress,
-        fromBlock: config.recovery.fromBlock,
-        toBlock: config.recovery.toBlock,
-        getToBlock: async () => (await provider.getBlockNumber()).toString(10),
-        mcpPolicy: config.recovery.policy,
-      },
+      localState: graph.localState,
       bridge: {
         evidencePort,
         receiptSource: provider,
         walletAddress: config.walletAddress,
         chainId: config.settlement.profile.chainId,
       },
-      subgraphMcp,
-      advisor,
+      subgraphMcp: graph.subgraphMcp,
+      advisor: graph.advisor,
     },
   });
   return {
@@ -220,7 +262,7 @@ async function composeProduction(
           recipient: config.walletAddress as `0x${string}`,
           amount_atomic: '1',
           asset: 'USDC',
-          network: 'eip155:5042002',
+          network: config.settlement.profile.caip2,
           purpose: 'Runtime identity readiness probe',
         });
         if (driftCheck.kind !== 'AUTHORIZED') {
@@ -229,7 +271,10 @@ async function composeProduction(
         await provider.getBlockNumber();
         const nativeBalance = await provider.getNativeBalance();
         if (nativeBalance <= 0n) {
-          return { ready: false, reason: 'Arc settlement wallet has no native USDC gas balance' };
+          return {
+            ready: false,
+            reason: `Settlement wallet on ${config.settlement.profile.displayName} has no native gas balance`,
+          };
         }
         const readinessTransaction = buildCanonicalRequest({
           businessIntentId: 'runtime-readiness-probe',
@@ -249,11 +294,15 @@ async function composeProduction(
       } catch {
         return { ready: false, reason: 'Privy or Arc provider is unavailable' };
       }
-      try {
-        const token = await googleAuth.getAccessToken();
-        if (!token) return { ready: false, reason: 'Vertex credentials are unavailable' };
-      } catch {
-        return { ready: false, reason: 'Vertex credentials are unavailable' };
+      if (config.recovery.graphEnabled) {
+        try {
+          const token = await new GoogleAuth({
+            scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+          }).getAccessToken();
+          if (!token) return { ready: false, reason: 'Vertex credentials are unavailable' };
+        } catch {
+          return { ready: false, reason: 'Vertex credentials are unavailable' };
+        }
       }
       return { ready: true };
     },

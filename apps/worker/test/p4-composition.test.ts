@@ -58,6 +58,21 @@ describe('Gate P4: Backend Convergence and Adapter Replacement', () => {
     usdcContract: '0x3333333333333333333333333333333333333333',
     maxPaymentAtomic: 10000000n,
     allowedRecipients: ['0x1111111111111111111111111111111111111111'],
+    profile: {
+      id: 'arc-testnet',
+      displayName: 'Arc Testnet',
+      verification: 'PINNED',
+      enabled: true,
+      isMainnet: false,
+      chainId: 5042002,
+      caip2: 'eip155:5042002',
+      tokenContract: '0x3333333333333333333333333333333333333333',
+      tokenSymbol: 'USDC',
+      tokenDecimals: 6,
+      nativeDecimals: 18,
+      nativeSymbol: 'USDC',
+      settlementMethod: 'erc20-transfer',
+    },
   };
 
   const realTxHash = '0x' + 'e'.repeat(64);

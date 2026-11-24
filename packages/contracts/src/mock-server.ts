@@ -1,3 +1,4 @@
+import { isEnabledSettlementNetwork } from './chains.js';
 import type {
   CreateIntentRequest,
   IntentResponse,
@@ -426,7 +427,7 @@ export function handleOpenApiMockRequest(
       typeof candidate.recipient !== 'string' ||
       typeof candidate.amount_atomic !== 'string' ||
       candidate.asset !== 'USDC' ||
-      candidate.network !== 'eip155:5042002' ||
+      !isEnabledSettlementNetwork(candidate.network) ||
       typeof candidate.purpose !== 'string'
     ) {
       return {

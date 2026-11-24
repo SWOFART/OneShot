@@ -27,7 +27,10 @@ const toolInput = `{
 
 export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleTheme: () => void }) {
   return (
-    <main className="app-shell docs-page" aria-label="OneShot MCP documentation">
+    <main id="main-content" className="app-shell docs-page" aria-label="OneShot MCP documentation">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <nav className="top-nav" aria-label="Documentation navigation">
         <a className="brand-group" href="/">
           <CommitRing size={36} title="OneShot" />
@@ -65,6 +68,11 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
           <li>Exact retries return the original intent; changed fields return a conflict.</li>
           <li>The payer is the wallet address selected by the user, never a server wallet.</li>
           <li>
+            The payment uses the deployment&apos;s selected settlement chain. Arc Testnet is the
+            default. The connected wallet must be on that chain. See{' '}
+            <a href="/#chains">settlement chains</a>.
+          </li>
+          <li>
             The second tool verifies the exact receipt and Transfer log for the returned hash.
           </li>
         </ul>
@@ -100,7 +108,10 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
             Connect, then confirm that the tool list contains arc_payment and arc_payment_submit.
           </li>
           <li>Review the recipient, purpose, and amount before giving them to the agent.</li>
-          <li>Pass the connected Privy or MetaMask wallet address as payer_wallet.</li>
+          <li>
+            The agent reads the active Privy or MetaMask address from its wallet connector when one
+            is available; otherwise provide the public address as payer_wallet once.
+          </li>
           <li>
             The agent generates a request key from the purpose plus eight random hex characters; you
             do not need to provide or copy it.

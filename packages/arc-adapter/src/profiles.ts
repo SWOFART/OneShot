@@ -1,13 +1,10 @@
 /**
  * Arc deployment profiles (B01.2).
  *
- * Exactly one profile may be enabled at a time. Arc Testnet is the only profile
- * with published network parameters, so it is the only one that carries values.
- *
- * The Mainnet profile deliberately carries no chain ID, RPC URL, explorer, or
- * token address. Arc has not published them, and this repository does not guess:
- * an unpinned profile must be structurally present and inert, never a
- * plausible-looking default that could silently be used.
+ * Arc Mainnet is the default rail. Its chain id, CAIP-2, and USDC address are
+ * pinned from official Arc and Circle documentation. Settlement still refuses
+ * to run until ONESHOT_ALLOW_MAINNET_ACTIVATION=true. Testnet profiles stay
+ * selectable. No profile stores an RPC or explorer URL.
  */
 
 /** Verification state of a deployment profile's network constants. */
@@ -96,22 +93,23 @@ export const ARC_TESTNET: PinnedArcProfile = {
 };
 
 /**
- * Arc Mainnet.
- *
- * Intentionally valueless. Commit `d6758dd` on `develop` removed a previously
- * asserted mainnet chain ID and launch date because neither was verified
- * against official Arc documentation. Populating this profile requires B01 to
- * pin published values and a human to authorize activation.
+ * Arc Mainnet. Constants match `ARC_MAINNET_CHAIN`, which is pinned from
+ * official Arc documentation (chain id 5042, CAIP-2 eip155:5042, USDC
+ * 0x3600…0000 at 6 decimals, native gas at 18). Activation still requires
+ * ONESHOT_ALLOW_MAINNET_ACTIVATION=true.
  */
-export const ARC_MAINNET: UnpublishedArcProfile = {
+export const ARC_MAINNET: PinnedArcProfile = {
   id: 'arc-mainnet',
-  verification: 'UNPUBLISHED',
-  enabled: false,
+  verification: 'PINNED',
+  enabled: true,
   isMainnet: true,
-  reason:
-    'Arc has not published mainnet network parameters. This profile carries no ' +
-    'chain ID, RPC, explorer, or token value by design. Pinning requires ' +
-    'official Arc documentation plus explicit human authorization.',
+  chainId: 5042,
+  caip2: 'eip155:5042',
+  tokenContract: '0x3600000000000000000000000000000000000000',
+  tokenSymbol: 'USDC',
+  tokenDecimals: 6,
+  nativeDecimals: 18,
+  nativeSymbol: 'USDC',
 };
 
 export const ARC_PROFILES: readonly ArcProfile[] = [ARC_TESTNET, ARC_MAINNET];

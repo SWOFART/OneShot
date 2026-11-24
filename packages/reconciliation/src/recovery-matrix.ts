@@ -213,28 +213,3 @@ export async function runRecoveryMatrix(): Promise<readonly RecoveryMatrixRow[]>
 
   return [...(await runServiceRows()), ...chaosRows];
 }
-
-export function renderRecoveryMatrixMarkdown(rows: readonly RecoveryMatrixRow[]): string {
-  const header =
-    '| Scenario | Stable intent | Start | Final | Evidence | Authority | Freshness | Decision | External submissions | Pass |';
-  const divider = '| --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- |';
-  const body = rows.map((row) =>
-    [
-      row.scenario,
-      row.stableIntent,
-      row.startingState,
-      row.finalState,
-      row.evidenceSources.join(' + ') || 'NONE',
-      row.authorityClasses.join(' + ') || 'NONE',
-      row.freshness,
-      row.decision,
-      String(row.externalSubmissionCount),
-      row.passed ? 'PASS' : 'FAIL',
-    ]
-      .map((cell) => cell.replaceAll('|', '\\|'))
-      .join(' | ')
-      .replace(/^/u, '| ')
-      .replace(/$/u, ' |'),
-  );
-  return [header, divider, ...body].join('\n');
-}

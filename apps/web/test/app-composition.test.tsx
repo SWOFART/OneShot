@@ -1,4 +1,4 @@
-import { createInMemoryRecoveryClient, recoveryScenarioPages } from '@oneshot/recovery-ui';
+import { createInMemoryRecoveryClient } from '@oneshot/recovery-ui';
 import {
   createInMemorySettlementClient,
   SETTLEMENT_SCENARIO_INTENTS,
@@ -20,7 +20,9 @@ afterEach(() => {
 describe('Gate P5 shell composition', () => {
   it('separates the public landing page from the authenticated cabinet route', () => {
     const landing = render(<App route="/" />);
-    expect(screen.getByRole('heading', { name: /Resume the job, not the payment/u })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: /One payment identity across every retry/u }),
+    ).toBeTruthy();
     expect(screen.getAllByRole('link', { name: /Open workspace/u })[0]?.getAttribute('href')).toBe(
       '/app',
     );
@@ -190,7 +192,7 @@ describe('Gate P5 shell composition', () => {
     );
 
     await user.click(screen.getByRole('tab', { name: 'Payment services' }));
-    expect(screen.getByRole('heading', { name: 'Direct Arc payment' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Direct Arc Mainnet payment' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Requests and results', level: 2 })).toBeNull();
     await user.click(screen.getByRole('tab', { name: 'Requests' }));
     expect(
@@ -310,63 +312,11 @@ describe('Gate P5 shell composition', () => {
     expect(loadedFade).not.toBe(waitingFade);
 
     cabinet.unmount();
-
-    // The console route's own tab panel was the one that never faded at all.
-    const { container } = render(
-      <App
-        useOperatorSession={() => signedInSession()}
-        apiClient={
-          new OneShotApiClient({
-            fetchFn: async () =>
-              new Response(JSON.stringify({ status: 'ok' }), {
-                status: 200,
-                headers: { 'content-type': 'application/json' },
-              }),
-          })
-        }
-        settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
-        recoveryClient={createInMemoryRecoveryClient('lagging')}
-      />,
-    );
-    expect(container.querySelector('main[role="tabpanel"]')?.className).toContain('tab-fade');
   });
 
-  it('mounts A05, B05, and C05 without a settlement bypass', async () => {
-    const settlementIntent = Object.values(SETTLEMENT_SCENARIO_INTENTS)[0];
-    if (!settlementIntent) throw new Error('Settlement fixture missing');
-    const apiClient = new OneShotApiClient({
-      fetchFn: async () =>
-        new Response(JSON.stringify({ status: 'ok' }), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-    });
-    const user = userEvent.setup();
-    render(
-      <App
-        apiClient={apiClient}
-        settlementClient={createInMemorySettlementClient(SETTLEMENT_SCENARIO_INTENTS)}
-        recoveryClient={createInMemoryRecoveryClient('lagging')}
-        useOperatorSession={() => signedInSession()}
-      />,
-    );
-    expect(screen.getByRole('heading', { name: 'Your payment workspace', level: 2 })).toBeTruthy();
-
-    await user.type(
-      screen.getByLabelText('Request identifier'),
-      settlementIntent.business_intent_id,
-    );
-    await user.click(screen.getByRole('tab', { name: 'Payment proof' }));
-    expect(await screen.findByText('Authorization')).toBeTruthy();
-
-    await user.clear(screen.getByLabelText('Request identifier'));
-    await user.type(
-      screen.getByLabelText('Request identifier'),
-      recoveryScenarioPages.lagging[0]?.businessIntentId ?? '',
-    );
-    await user.click(screen.getByRole('tab', { name: 'Recovery control' }));
-    expect(await screen.findByText('Subgraph MCP')).toBeTruthy();
-    expect(screen.getByText('LAGGING')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /force|pay|submit settlement/iu })).toBeNull();
+  it('unknown routes show the public landing instead of the retired console', () => {
+    render(<App route="/unknown" />);
+    expect(screen.getByRole('main', { name: 'OneShot public landing page' })).toBeTruthy();
+    expect(screen.queryByRole('tablist')).toBeNull();
   });
 });

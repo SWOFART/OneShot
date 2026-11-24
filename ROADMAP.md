@@ -1,9 +1,9 @@
 # Roadmap
 
 OneShot is an early-stage settlement engine: one business intent, many retries,
-at most one committed USDC settlement. Arc Testnet (`eip155:5042002`) is the
-rail in this tree. Mainnet is disabled. There are no customers or paying pilots
-yet.
+at most one committed USDC settlement. Arc Mainnet is the pinned default rail
+and stays inactive until `ONESHOT_ALLOW_MAINNET_ACTIVATION=true`. Arc Testnet
+and Base Sepolia are selectable. There are no customers or paying pilots yet.
 
 This is a planning list, not a claim that later milestones are implemented.
 Status words describe the repository as it stands, not a release promise.
@@ -13,11 +13,11 @@ create them.
 | Milestone                  | What it means                                                                                                                                                          | State                                                                                          |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Settlement core            | Durable intent, atomic submit ownership, integer USDC amounts, and at most one committed settlement                                                                   | In the tree. Keep it from regressing.                                                          |
-| Operator recovery          | `UNKNOWN` stays unresolved until receipt evidence or a human decision. Graph discovery is not settlement authority.                                                    | In the tree. Fresh live Graph qualification is still not claimed.                              |
-| Agent payments             | Browser workspace and MCP tools pay on the configured testnet and record the same intent.                                                                             | In the tree. A live end-to-end MCP payment trace is still pending.                             |
+| Operator recovery          | `UNKNOWN` stays unresolved until receipt evidence or a human decision. Graph discovery is not settlement authority.                                                    | In the tree for Arc Testnet. Arc Mainnet and Base Sepolia have no indexer in this build.       |
+| Agent payments             | Browser workspace and MCP tools pay on the selected chain and record the same intent.                                                                                 | In the tree. A live end-to-end MCP payment trace is still pending.                             |
 | Resumable paid work        | A team-operated testnet supplier can return a result without a second payment when delivery fails after settlement.                                                   | In the tree for that supplier. Third-party suppliers are not demonstrated.                    |
-| More settlement chains     | A chain record selects another pinned USDC testnet without a second settlement for the same intent. Official chain id, token, and decimals only.                     | Not in this tree. Track it with a chain-integration issue.                                    |
-| Mainnet                    | Official Arc mainnet parameters, an explicit human authorization, and a settlement cap. No guessed addresses.                                                         | Disabled. Do not treat testnet evidence as mainnet readiness.                                 |
+| Settlement chains          | A chain record selects Arc Mainnet, Arc Testnet, or Base Sepolia. Official chain id, token, and decimals only.                                                        | In the tree. See [CHAINS.md](docs/settlement/CHAINS.md). Another chain is a chain-integration issue. |
+| Mainnet activation         | Arc Mainnet parameters are pinned. Settlement still requires `ONESHOT_ALLOW_MAINNET_ACTIVATION=true`.                                                                  | Not automatically active. Do not treat testnet evidence as a production claim.                |
 | Pilots                     | Learn how agent teams handle a lost payment response, then run one narrow pilot.                                                                                      | Not started. Pricing is undecided.                                                             |
 
 ## How to use this

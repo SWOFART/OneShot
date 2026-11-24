@@ -47,24 +47,55 @@ describe('loadSettlementConfig', () => {
     );
   });
 
-  it('refuses the mainnet profile because it carries no pinned values', () => {
-    expect(() => loadSettlementConfig(withEnv({ ONESHOT_ARC_PROFILE: 'arc-mainnet' }))).toThrow(
-      expect.objectContaining({ code: 'PROFILE_UNPUBLISHED' }),
+  it('refuses the default mainnet rail until an operator confirms it', () => {
+    expect(() => loadSettlementConfig(withEnv({ ONESHOT_ARC_PROFILE: undefined }))).toThrow(
+      expect.objectContaining({ code: 'MAINNET_NOT_AUTHORIZED' }),
     );
   });
 
-  it('refuses the mainnet profile even when activation is authorized', () => {
-    // Human authorization alone is not enough. Without pinned values there is
-    // nothing safe to authorize.
-    expect(() =>
-      loadSettlementConfig(
-        withEnv({
-          ONESHOT_ARC_PROFILE: 'arc-mainnet',
-          ONESHOT_ALLOW_MAINNET_ACTIVATION: 'true',
-        }),
-      ),
-    ).toThrow(expect.objectContaining({ code: 'PROFILE_UNPUBLISHED' }));
+  it('loads Arc Mainnet when the operator confirms activation', () => {
+    const config = loadSettlementConfig(
+      withEnv({
+        ONESHOT_ARC_PROFILE: 'arc-mainnet',
+        ONESHOT_ALLOW_MAINNET_ACTIVATION: 'true',
+      }),
+    );
+    expect(config.profile.chainId).toBe(5042);
+    expect(config.profile.caip2).toBe('eip155:5042');
+    expect(config.profile.tokenContract).toBe('0x3600000000000000000000000000000000000000');
+    expect(config.profile.graphQueryEnv).toBeUndefined();
   });
+
+  it('selects Base Sepolia when ONESHOT_CHAIN names it', () => {
+    const config = loadSettlementConfig(
+      withEnv({ ONESHOT_ARC_PROFILE: undefined, ONESHOT_CHAIN: 'base-sepolia' }),
+    );
+    expect(config.profile.id).toBe('base-sepolia');
+    expect(config.profile.caip2).toBe('eip155:84532');
+    expect(config.profile.nativeSymbol).toBe('ETH');
+    expect(config.profile.tokenDecimals).toBe(6);
+    expect(config.profile.nativeDecimals).toBe(18);
+  });
+
+  it('accepts ONESHOT_CHAIN=arc-testnet without the legacy profile variable', () => {
+    const config = loadSettlementConfig(
+      withEnv({ ONESHOT_ARC_PROFILE: undefined, ONESHOT_CHAIN: 'arc-testnet' }),
+    );
+    expect(config.profile.chainId).toBe(5042002);
+  });
+
+  it('refuses conflicting chain selectors', () => {
+    expect(() =>
+      loadSettlementConfig(withEnv({ ONESHOT_CHAIN: 'base-sepolia' })),
+    ).toThrow(expect.objectContaining({ code: 'CHAIN_SELECTION_CONFLICT' }));
+  });
+
+  it('refuses an unknown chain instead of defaulting', () => {
+    expect(() =>
+      loadSettlementConfig(withEnv({ ONESHOT_ARC_PROFILE: undefined, ONESHOT_CHAIN: 'ethereum' })),
+    ).toThrow(expect.objectContaining({ code: 'UNKNOWN_PROFILE' }));
+  });
+
 });
 
 describe('URL validation', () => {

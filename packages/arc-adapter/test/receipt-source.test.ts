@@ -101,9 +101,12 @@ describe('Arc receipt source', () => {
     expect(requests).toBe(1);
   });
 
-  it('requires Arc Testnet rather than accepting a caller-selected chain', () => {
+  it('accepts an enabled settlement chain and rejects an unknown chain id', () => {
     expect(() =>
-      createArcReceiptSource({ rpcUrl: 'http://127.0.0.1:1', chainId: 1 }),
-    ).toThrow('User-wallet receipt verification requires Arc Testnet');
+      createArcReceiptSource({ rpcUrl: 'http://127.0.0.1:1', chainId: 84532 }),
+    ).not.toThrow();
+    expect(() => createArcReceiptSource({ rpcUrl: 'http://127.0.0.1:1', chainId: 1 })).toThrow(
+      /does not support chain 1/u,
+    );
   });
 });

@@ -1,3 +1,4 @@
+import { settlementChainRegistry } from '@oneshot/contracts';
 import { createPublicClient, http, type Chain, type Hash } from 'viem';
 import { ARC_TESTNET } from './profiles.js';
 import type { ReceiptLog, TransactionReceipt } from './receipt.js';
@@ -7,13 +8,6 @@ export interface ArcReceiptSourceOptions {
   readonly chainId?: number;
   readonly rpcTimeoutMs?: number;
 }
-
-const arcTestnetChain: Chain = {
-  id: ARC_TESTNET.chainId,
-  name: 'Arc Testnet',
-  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: ARC_TESTNET.nativeDecimals },
-  rpcUrls: { default: { http: [] } },
-};
 
 function asReceiptLog(log: {
   readonly address: string;
@@ -39,11 +33,23 @@ function asReceiptLog(log: {
  * signer and exposes only transaction receipts; it cannot submit a transaction.
  */
 export function createArcReceiptSource(options: ArcReceiptSourceOptions) {
-  if ((options.chainId ?? ARC_TESTNET.chainId) !== ARC_TESTNET.chainId) {
-    throw new Error('User-wallet receipt verification requires Arc Testnet');
+  const chainId = options.chainId ?? ARC_TESTNET.chainId;
+  const chain = settlementChainRegistry.enabled().find((candidate) => candidate.chainId === chainId);
+  if (!chain) {
+    throw new Error(`User-wallet receipt verification does not support chain ${chainId}`);
   }
+  const viemChain: Chain = {
+    id: chain.chainId,
+    name: chain.displayName,
+    nativeCurrency: {
+      name: chain.nativeAsset.symbol,
+      symbol: chain.nativeAsset.symbol,
+      decimals: chain.nativeAsset.decimals,
+    },
+    rpcUrls: { default: { http: [] } },
+  };
   const client = createPublicClient({
-    chain: arcTestnetChain,
+    chain: viemChain,
     transport: http(options.rpcUrl, { timeout: options.rpcTimeoutMs ?? 10_000 }),
   });
 
@@ -60,7 +66,7 @@ export function createArcReceiptSource(options: ArcReceiptSourceOptions) {
         if (logs.length !== receipt.logs.length || receipt.to === null) return null;
         return {
           transactionHash: receipt.transactionHash.toLowerCase(),
-          chainId: ARC_TESTNET.chainId,
+          chainId: chain.chainId,
           from: receipt.from,
           to: receipt.to,
           status: receipt.status === 'success' ? 1 : 0,

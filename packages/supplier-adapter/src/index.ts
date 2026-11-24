@@ -1,10 +1,12 @@
 import { createHash } from 'node:crypto';
 import {
+  ARC_TESTNET_CHAIN,
   asAtomicAmount,
   asEvmAddress,
   ContractValidationError,
   parseCreateJobRequest,
   type CreateJobRequest,
+  type SettlementNetwork,
   type SupplierOrder,
   type SupplierPort,
   type SupplierResult,
@@ -23,10 +25,15 @@ function reference(prefix: string, value: string): string {
  */
 export class TeamReportSupplier implements SupplierPort {
   readonly name = 'TeamReportSupplier';
+  readonly network: SettlementNetwork;
   #orders = new Map<
     string,
     { request: CreateJobRequest; order: SupplierOrder; result?: SupplierResult }
   >();
+
+  constructor(network: SettlementNetwork = ARC_TESTNET_CHAIN.caip2) {
+    this.network = network;
+  }
 
   async createOrder(value: CreateJobRequest, idempotencyKey: string): Promise<SupplierOrder> {
     const request = parseCreateJobRequest(value);
@@ -46,7 +53,7 @@ export class TeamReportSupplier implements SupplierPort {
       recipient: asEvmAddress(request.recipient),
       amount_atomic: asAtomicAmount(request.amount_atomic),
       asset: 'USDC',
-      network: 'eip155:5042002',
+      network: this.network,
       expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
       supplier_payload_fingerprint: jobFingerprint(request),
     };

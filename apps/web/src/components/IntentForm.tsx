@@ -3,6 +3,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 
 import type { CreateIntentResult, OneShotApiClient } from '../api/client.js';
 import { usdcToAtomicUnits } from '../utils/money.js';
+import { browserSettlementChain } from '../wallet-chain.js';
 
 interface Props {
   readonly client: OneShotApiClient;
@@ -191,7 +192,7 @@ export function IntentForm({ client, onIntentCreatedOrSelected }: Props) {
         </div>
         <div>
           <span className="field-label">Settlement profile</span>
-          <output>Arc Testnet · USDC</output>
+          <output>{browserSettlementChain().displayName} · USDC</output>
           <small>Fixed by the active workspace settlement profile.</small>
         </div>
       </div>

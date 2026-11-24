@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { JobView, SupplierQuote } from '@oneshot/contracts';
 import type { JobApiClient } from '../api/job-client.js';
 import type { UserWalletSession } from '../auth/session.js';
+import { browserSettlementChain } from '../wallet-chain.js';
 import { usdcToAtomicUnits } from '../utils/money.js';
 import {
   deliveryStatusCopy,
@@ -404,15 +405,16 @@ export function JobWorkspace(props: {
   return (
     <section
       className="panel job-workspace"
-      aria-label="Direct Arc payment"
+      aria-label={`Direct ${browserSettlementChain().displayName} payment`}
       aria-busy={quoteLoading || starting || mcpJobLoading}
     >
       <header>
         <p className="eyebrow">DIRECT PAYMENT</p>
-        <h2>Direct Arc payment</h2>
+        <h2>Direct {browserSettlementChain().displayName} payment</h2>
         <p>
-          Send USDC directly to a reviewed recipient on Arc Testnet. OneShot keeps the payment and
-          its team-operated sample result bound to one request across retries.
+          Send USDC directly to a reviewed recipient on {browserSettlementChain().displayName}.
+          OneShot keeps the payment and its team-operated sample result bound to one request across
+          retries.
         </p>
       </header>
       <label htmlFor="report-subject">Payment purpose</label>
@@ -442,8 +444,8 @@ export function JobWorkspace(props: {
         aria-describedby="report-recipient-help"
       />
       <small id="report-recipient-help" className="field-help">
-        The connected Privy Ethereum wallet will pay this exact recipient on Arc Testnet. OneShot
-        verifies the receipt and never replaces the user wallet payment.
+        The connected wallet will pay this exact recipient on {browserSettlementChain().displayName}
+        . OneShot verifies the receipt and never replaces the user wallet payment.
       </small>
       <label htmlFor="report-amount">Amount (USDC)</label>
       <input
@@ -720,9 +722,7 @@ export function JobList(props: {
                       <button
                         type="button"
                         className="secondary compact"
-                        disabled={
-                          loading || checkingPaymentJobId !== null
-                        }
+                        disabled={loading || checkingPaymentJobId !== null}
                         onClick={() => void checkRecordedPayment(job)}
                       >
                         {checkingPaymentJobId === job.job_id

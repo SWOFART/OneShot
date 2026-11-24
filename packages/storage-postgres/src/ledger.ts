@@ -17,6 +17,7 @@ import {
   type ReconcileResponse,
   type AuthorizationResult,
   type SettlementResult,
+  type SettlementNetwork,
   type SettlementView,
 } from '@oneshot/contracts';
 import { fingerprintIntent, type SystemMetrics } from '@oneshot/domain';
@@ -123,7 +124,7 @@ interface IntentRow {
   readonly recipient: string;
   readonly amount_atomic: string;
   readonly asset: 'USDC';
-  readonly network: 'eip155:5042002';
+  readonly network: SettlementNetwork;
   readonly purpose: string;
   readonly state: IntentState;
   readonly version: number;
@@ -1291,7 +1292,7 @@ export class IntentLedger {
         recipient: string;
         amount_atomic: string;
         asset: 'USDC';
-        network: 'eip155:5042002';
+        network: SettlementNetwork;
         purpose: string;
       }>(
         `SELECT state, version, payload_fingerprint, recipient, amount_atomic,

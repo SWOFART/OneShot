@@ -110,7 +110,7 @@ Activation requires all of:
 
 Deployment and rollback artifacts verified present: `docs/SAFE_DISABLE_RUNBOOK.md`,
 `docs/SERVER_RUNTIME.md`, `docs/settlement/SETTLEMENT_CONFIG_V1.md`,
-`docs/settlement/PROVIDER_SETUP.md`, and `Dockerfile.api`.
+`docs/settlement/PROVIDER_SETUP.md`, and `Dockerfile`.
 
 ## B06.5 — Sanitization audit
 

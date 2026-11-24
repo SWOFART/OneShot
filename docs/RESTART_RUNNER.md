@@ -26,5 +26,4 @@ flowchart TD
 ## Methods
 
 - `runStartupRecovery(options, leaseDurationMs)`: Scans for orphaned `SUBMITTING` records older than the lease threshold (default 30 seconds), transitions them to `UNKNOWN`, and enqueues a `reconcile_intent` outbox job.
-- `resumeSafeJobs(options, maxJobs)`: Combines startup recovery and outbox draining in one call.
 - `RestartRunner.start()`: Runs startup recovery on initialization and starts a non-blocking background timer for ongoing lease enforcement.

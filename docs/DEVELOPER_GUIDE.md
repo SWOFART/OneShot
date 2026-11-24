@@ -93,7 +93,7 @@ These are enforced in code and tests, not by convention:
 | System        | Role                                                                                                                                                          |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Privy**     | Corporate wallet, scoped authorization, and spending policy                                                                                                   |
-| **Arc**       | USDC settlement rail (Arc Testnet, chain `5042002`)                                                                                                           |
+| **Arc**       | Default USDC settlement rail (Arc Testnet, chain `5042002`). Base Sepolia is the other enabled testnet. See [settlement chains](settlement/CHAINS.md).        |
 | **The Graph** | Arc USDC Subgraph discovery through the admitted Studio GraphQL path (optional MCP for Network-served deployments); evidence only, never settlement authority |
 
 Privy authorizes and constrains the wallet action. It is not the duplicate
@@ -326,6 +326,7 @@ plus explicit human authorization.
 | [`docs/DOMAIN_ARCHITECTURE.md`](../docs/DOMAIN_ARCHITECTURE.md)             | Domain model and boundaries                              |
 | [`docs/MCP_ARC_PAYMENT.md`](../docs/MCP_ARC_PAYMENT.md)                     | MCP deployment and live walkthrough                      |
 | [`docs/RECOVERY_HARDENING.md`](../docs/RECOVERY_HARDENING.md)               | Recovery, runtime, authentication, and metrics contracts |
+| [`docs/settlement/CHAINS.md`](settlement/CHAINS.md)                         | Chain selection and how to add a USDC rail               |
 | [`packages/contracts`](../packages/contracts)                               | Frozen v1 contract pack, OpenAPI, and fixtures           |
 | [`docs/settlement/`](../docs/settlement/)                                   | Settlement config, provider setup, live evidence         |
 | [`packages/reconciliation/docs/c06/`](../packages/reconciliation/docs/c06/) | C06 demo and qualification evidence index                |

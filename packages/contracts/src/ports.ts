@@ -156,7 +156,3 @@ export function parseRecoveryAction(value: unknown): RecoveryAction {
       throw new ContractValidationError(`unknown recovery action: ${String(value)}`);
   }
 }
-
-export function assertNever(value: never, context: string): never {
-  throw new ContractValidationError(`${context}: ${String(value)}`);
-}
