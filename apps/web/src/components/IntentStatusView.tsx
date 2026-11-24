@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 
 import type { OneShotApiClient } from '../api/client.js';
 import { atomicUnitsToUsdc } from '../utils/money.js';
-import { maskIdentifier, paymentStatusCopy } from './workspace-copy.js';
+import { maskIdentifier, networkLabel, paymentStatusCopy } from './workspace-copy.js';
 
 interface Props {
   readonly client: OneShotApiClient;
@@ -187,7 +187,7 @@ export function IntentStatusView({ client, initialIntentId = '' }: Props) {
             </div>
             <div>
               <dt>Network</dt>
-              <dd>Arc Testnet</dd>
+              <dd>{networkLabel(intent.network)}</dd>
             </div>
             <div>
               <dt>Request</dt>

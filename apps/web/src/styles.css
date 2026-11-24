@@ -116,6 +116,27 @@ a:hover {
   text-decoration: underline;
 }
 
+a:focus-visible {
+  outline: 2px solid var(--os-signal);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 10;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: var(--os-signal);
+  color: var(--os-on-signal);
+  transform: translateY(-160%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
 /* ==========================================================================
    App Shell & Top Navigation
    ========================================================================== */
@@ -318,6 +339,7 @@ a:hover {
   gap: 0.5rem;
   min-height: 48px;
   padding: 0.75rem 1.75rem;
+  white-space: nowrap;
   border-radius: 999px;
   background: var(--os-signal);
   border: 0;
@@ -337,6 +359,7 @@ a:hover {
   align-items: center;
   min-height: 48px;
   padding: 0.75rem 1.5rem;
+  white-space: nowrap;
   border-radius: 999px;
   background: transparent;
   border: 1px solid var(--os-line-strong);
@@ -433,6 +456,118 @@ a:hover {
   line-height: 1.55;
   color: var(--os-panel-ink-muted);
   margin-bottom: 0;
+}
+
+.guarantee-section,
+.chains-section {
+  margin: 0 0 4.5rem;
+}
+
+.guarantee-section {
+  max-width: 720px;
+  margin-inline: auto;
+  margin-bottom: 4.5rem;
+  text-align: center;
+}
+
+.guarantee-section h2,
+.chains-section h2 {
+  margin-bottom: 0.8rem;
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+
+.guarantee-section p,
+.section-header p,
+.chains-note,
+.chain-card p {
+  color: var(--os-ink-muted);
+  line-height: 1.6;
+}
+
+.chains-section .section-header {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.chains-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.chain-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1.25rem 1.2rem;
+  border: 1px solid var(--os-line);
+  border-radius: var(--os-radius-lg);
+  background: var(--os-surface);
+}
+
+.chain-status {
+  margin: 0;
+  color: var(--os-accent-ink);
+  font-family: var(--os-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.chain-card h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 300;
+}
+
+.chain-card dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.chain-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.chain-card dt {
+  color: var(--os-ink-muted);
+  font-size: 0.78rem;
+}
+
+.chain-card dd {
+  margin: 0;
+  font-family: var(--os-font-mono);
+  font-size: 0.78rem;
+}
+
+.chains-note {
+  max-width: 720px;
+  margin: 1.25rem auto 0;
+  text-align: center;
+}
+
+.site-footer {
+  display: grid;
+  gap: 0.85rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--os-line);
+  text-align: center;
+}
+
+.site-footer p {
+  margin: 0;
+  color: var(--os-ink-muted);
+}
+
+.site-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem 1.25rem;
 }
 
 /* ========================================================================

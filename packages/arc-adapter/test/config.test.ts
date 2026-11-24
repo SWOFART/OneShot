@@ -53,6 +53,36 @@ describe('loadSettlementConfig', () => {
     );
   });
 
+  it('selects Base Sepolia when ONESHOT_CHAIN names it', () => {
+    const config = loadSettlementConfig(
+      withEnv({ ONESHOT_ARC_PROFILE: undefined, ONESHOT_CHAIN: 'base-sepolia' }),
+    );
+    expect(config.profile.id).toBe('base-sepolia');
+    expect(config.profile.caip2).toBe('eip155:84532');
+    expect(config.profile.nativeSymbol).toBe('ETH');
+    expect(config.profile.tokenDecimals).toBe(6);
+    expect(config.profile.nativeDecimals).toBe(18);
+  });
+
+  it('accepts ONESHOT_CHAIN=arc-testnet without the legacy profile variable', () => {
+    const config = loadSettlementConfig(
+      withEnv({ ONESHOT_ARC_PROFILE: undefined, ONESHOT_CHAIN: 'arc-testnet' }),
+    );
+    expect(config.profile.chainId).toBe(5042002);
+  });
+
+  it('refuses conflicting chain selectors', () => {
+    expect(() =>
+      loadSettlementConfig(withEnv({ ONESHOT_CHAIN: 'base-sepolia' })),
+    ).toThrow(expect.objectContaining({ code: 'CHAIN_SELECTION_CONFLICT' }));
+  });
+
+  it('refuses an unknown chain instead of defaulting', () => {
+    expect(() =>
+      loadSettlementConfig(withEnv({ ONESHOT_ARC_PROFILE: undefined, ONESHOT_CHAIN: 'ethereum' })),
+    ).toThrow(expect.objectContaining({ code: 'UNKNOWN_PROFILE' }));
+  });
+
   it('refuses the mainnet profile even when activation is authorized', () => {
     // Human authorization alone is not enough. Without pinned values there is
     // nothing safe to authorize.

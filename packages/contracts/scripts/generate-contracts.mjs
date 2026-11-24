@@ -45,6 +45,10 @@ const authorizationStatuses = [
 const policyStatuses = ['CONFIGURED', 'EXCEEDED', 'NOT_CONFIGURED', 'UNKNOWN'];
 const deliveryStates = ['NOT_REQUESTED', 'PENDING', 'AVAILABLE', 'RETRIEVAL_FAILED'];
 const paymentModes = ['SERVER_PRIVY', 'USER_WALLET'];
+// Keep this list identical to ENABLED_SETTLEMENT_NETWORKS in src/chains.ts.
+const settlementNetworks = ['eip155:5042002', 'eip155:84532'];
+const settlementNetworkType = settlementNetworks.map((network) => `'${network}'`).join(' | ');
+const settlementNetworkSchema = { type: 'string', enum: settlementNetworks };
 
 const boundedId = {
   type: 'string',
@@ -75,7 +79,7 @@ const schemas = {
       recipient: evmAddress,
       amount_atomic: amountAtomic,
       asset: { type: 'string', const: 'USDC' },
-      network: { type: 'string', const: 'eip155:5042002' },
+      network: settlementNetworkSchema,
       purpose: { type: 'string', minLength: 1, maxLength: 256, examples: ['Invoice INV-1001'] },
     },
   },
@@ -156,7 +160,7 @@ const schemas = {
       recipient: evmAddress,
       amount_atomic: amountAtomic,
       asset: { type: 'string', const: 'USDC' },
-      network: { type: 'string', const: 'eip155:5042002' },
+      network: settlementNetworkSchema,
       purpose: { type: 'string', minLength: 1, maxLength: 256 },
       state: { type: 'string', enum: intentStates },
       version: { type: 'integer', minimum: 1 },
@@ -310,7 +314,7 @@ const schemas = {
       token_contract: evmAddress,
       block_number: amountAtomic,
       block_timestamp: { type: 'string', format: 'date-time' },
-      network: { type: 'string', const: 'eip155:5042002' },
+      network: settlementNetworkSchema,
       recipient: evmAddress,
       amount_atomic: amountAtomic,
       match: { type: 'string', enum: ['RECORDED_SETTLEMENT', 'UNMATCHED'] },
@@ -834,7 +838,7 @@ export interface CreateIntentRequest {
   readonly recipient: string;
   readonly amount_atomic: string;
   readonly asset: 'USDC';
-  readonly network: 'eip155:5042002';
+  readonly network: ${settlementNetworkType};
   readonly purpose: string;
 }
 
@@ -953,7 +957,7 @@ export interface ActivityTransferView {
   readonly token_contract?: string;
   readonly block_number?: string;
   readonly block_timestamp?: string;
-  readonly network?: 'eip155:5042002';
+  readonly network?: ${settlementNetworkType};
   readonly recipient: string;
   readonly amount_atomic: string;
   readonly match: 'RECORDED_SETTLEMENT' | 'UNMATCHED';

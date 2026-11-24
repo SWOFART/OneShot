@@ -3,6 +3,7 @@ import {
   asBusinessIntentId,
   asEvmAddress,
   asTransactionHash,
+  isEnabledSettlementNetwork,
   type ActivityResponse,
   type ActivityTransactionView,
   type ActivityTransferView,
@@ -12,6 +13,7 @@ import {
   type DeliveryState,
   type JobView,
   type PaymentMode,
+  type SettlementNetwork,
   type SettlementView,
   type SupplierOrder,
   type SupplierResult,
@@ -133,7 +135,7 @@ interface ActivityTransferInput {
   readonly token_contract?: string;
   readonly block_number?: string;
   readonly block_timestamp?: string;
-  readonly network?: 'eip155:5042002';
+  readonly network?: SettlementNetwork;
   readonly recipient: string;
   readonly amount_atomic: string;
 }
@@ -179,7 +181,7 @@ function parseActivityTransfers(payload: unknown): readonly ActivityTransferInpu
             }),
         ...(row.network === undefined
           ? {}
-          : row.network === 'eip155:5042002'
+          : isEnabledSettlementNetwork(row.network)
             ? { network: row.network }
             : (() => {
                 throw new Error('invalid network');

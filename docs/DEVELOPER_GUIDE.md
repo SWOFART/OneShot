@@ -93,7 +93,7 @@ These are enforced in code and tests, not by convention:
 | System        | Role                                                                                                                                                          |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Privy**     | Corporate wallet, scoped authorization, and spending policy                                                                                                   |
-| **Arc**       | USDC settlement rail (Arc Testnet, chain `5042002`)                                                                                                           |
+| **Arc**       | Default USDC settlement rail (Arc Testnet, chain `5042002`). Base Sepolia is the other enabled testnet. See [settlement chains](settlement/CHAINS.md).        |
 | **The Graph** | Arc USDC Subgraph discovery through the admitted Studio GraphQL path (optional MCP for Network-served deployments); evidence only, never settlement authority |
 
 Privy authorizes and constrains the wallet action. It is not the duplicate

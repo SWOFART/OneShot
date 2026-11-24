@@ -1,4 +1,4 @@
-import type { DeliveryState, IntentState } from '@oneshot/contracts';
+import { settlementChainByNetwork, type DeliveryState, type IntentState } from '@oneshot/contracts';
 
 export interface StatusCopy {
   readonly label: string;
@@ -85,7 +85,7 @@ export function serviceLabel(toolId: string): string {
 }
 
 export function networkLabel(network: string): string {
-  return network === 'eip155:5042002' ? 'Arc Testnet' : network;
+  return settlementChainByNetwork(network)?.displayName ?? network;
 }
 
 export function maskIdentifier(value: string, visible = 6): string {

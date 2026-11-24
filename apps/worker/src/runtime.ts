@@ -91,7 +91,7 @@ async function composeProduction(
     recipient: config.walletAddress as `0x${string}`,
     amount_atomic: '1',
     asset: 'USDC',
-    network: 'eip155:5042002',
+    network: config.settlement.profile.caip2,
     purpose: 'Runtime identity readiness probe',
   });
   if (startupDecision.kind !== 'AUTHORIZED') {
@@ -185,6 +185,7 @@ async function composeProduction(
     settlementPort,
     authorizationPort,
     submissionsDisabled: config.submissionsDisabled,
+    expectedNetwork: config.settlement.profile.caip2,
     recovery: {
       localState: {
         tokenContract: config.settlement.profile.tokenContract,
@@ -220,7 +221,7 @@ async function composeProduction(
           recipient: config.walletAddress as `0x${string}`,
           amount_atomic: '1',
           asset: 'USDC',
-          network: 'eip155:5042002',
+          network: config.settlement.profile.caip2,
           purpose: 'Runtime identity readiness probe',
         });
         if (driftCheck.kind !== 'AUTHORIZED') {
@@ -229,7 +230,10 @@ async function composeProduction(
         await provider.getBlockNumber();
         const nativeBalance = await provider.getNativeBalance();
         if (nativeBalance <= 0n) {
-          return { ready: false, reason: 'Arc settlement wallet has no native USDC gas balance' };
+          return {
+            ready: false,
+            reason: `Settlement wallet on ${config.settlement.profile.displayName} has no native gas balance`,
+          };
         }
         const readinessTransaction = buildCanonicalRequest({
           businessIntentId: 'runtime-readiness-probe',

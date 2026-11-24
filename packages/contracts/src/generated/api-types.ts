@@ -32,7 +32,7 @@ export interface CreateIntentRequest {
   readonly recipient: string;
   readonly amount_atomic: string;
   readonly asset: 'USDC';
-  readonly network: 'eip155:5042002';
+  readonly network: 'eip155:5042002' | 'eip155:84532';
   readonly purpose: string;
 }
 
@@ -151,7 +151,7 @@ export interface ActivityTransferView {
   readonly token_contract?: string;
   readonly block_number?: string;
   readonly block_timestamp?: string;
-  readonly network?: 'eip155:5042002';
+  readonly network?: 'eip155:5042002' | 'eip155:84532';
   readonly recipient: string;
   readonly amount_atomic: string;
   readonly match: 'RECORDED_SETTLEMENT' | 'UNMATCHED';

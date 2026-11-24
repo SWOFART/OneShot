@@ -71,10 +71,11 @@ requires the supplier to support stable order identity and result retrieval.
 ```
 
 OneShot owns intent and settlement state. Privy provides wallet access and
-scoped authorization on the worker-owned settlement path; Arc provides the
-USDC settlement rail. The Graph discovers recovery candidates and supplies
-observations, while Arc verifies them. Index results and model advice cannot
-authorize settlement.
+scoped authorization on the worker-owned settlement path. A settlement chain
+adapter names the USDC rail. Arc Testnet is the first implementation and the
+default. The Graph discovers recovery candidates on Arc and supplies
+observations, while the chain adapter verifies them. Index results and model
+advice cannot authorize settlement.
 
 Browser and MCP user-wallet flows use a separate payer-bound path: the user's
 wallet signs and broadcasts the transaction, and OneShot verifies its receipt.
@@ -84,7 +85,7 @@ An MCP bearer authenticates a workspace; it cannot sign or broadcast payments.
 
 | Area                         | Current evidence and limits                                                                                                                                                                                          |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Settlement engine            | Durable intent ledger, API, settlement workers, and reconciliation core are implemented.                                                                                                                             |
+| Settlement engine            | Durable intent ledger, API, settlement workers, and reconciliation core are implemented. Direct settlement can target Arc Testnet or Base Sepolia.                                                                   |
 | Testnet payment and recovery | Repository evidence records a live 1.00 USDC Privy-authorized Arc Testnet settlement, policy denials with zero broadcasts, and a lost-response drill that recovered the original settlement without another payment. |
 | Agent and operator access    | Browser workspace and MCP tools `arc_payment` and `arc_payment_submit` are implemented. A live end-to-end MCP payment trace remains pending in the documented status.                                                |
 | Paid job delivery            | A team-operated testnet report supplier supports task/order binding and separate delivery/result retrieval. Third-party supplier execution is not demonstrated.                                                      |
@@ -124,6 +125,7 @@ payment responses, and discuss a technical integration or early pilot.
 | Resource                                           | Purpose                                                                         |
 | -------------------------------------------------- | ------------------------------------------------------------------------------- |
 | [Developer guide](docs/DEVELOPER_GUIDE.md)         | Local setup, operator sign-in, repository layout, API routes, and state machine |
+| [Settlement chains](docs/settlement/CHAINS.md)     | How to select a chain and add another USDC rail                                 |
 | [Domain architecture](docs/DOMAIN_ARCHITECTURE.md) | Ownership, domain model, and system boundaries                                  |
 | [Agent connection guide](docs/MCP_ARC_PAYMENT.md)  | MCP deployment, client configuration, and walkthrough                           |
 | [Recovery hardening](docs/RECOVERY_HARDENING.md)   | Recovery, authentication, and operational contracts                             |

@@ -263,4 +263,25 @@ describe('API runtime configuration', () => {
       }),
     ).toThrow();
   });
+
+  it('defaults the advertised settlement chain to Arc Testnet', () => {
+    expect(loadApiRuntimeConfig({ ...base }).settlementNetwork).toBe('eip155:5042002');
+  });
+
+  it('selects Base Sepolia when ONESHOT_CHAIN names it', () => {
+    const config = loadApiRuntimeConfig({ ...base, ONESHOT_CHAIN: 'base-sepolia' });
+    expect(config.settlementChainId).toBe(84532);
+    expect(config.settlementNetwork).toBe('eip155:84532');
+  });
+
+  it('refuses MCP on a non-Arc settlement chain', () => {
+    expect(() =>
+      loadApiRuntimeConfig({
+        ...base,
+        ONESHOT_CHAIN: 'base-sepolia',
+        ONESHOT_WORKSPACE_ID: 'workspace-1',
+        ONESHOT_MCP_BEARER_TOKEN: 'mcp-bearer-token-123456789012345',
+      }),
+    ).toThrow(/Arc Testnet/u);
+  });
 });

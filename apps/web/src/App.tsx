@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ActivityResponse } from '@oneshot/contracts';
+import {
+  isPinnedChain,
+  SETTLEMENT_CHAINS,
+  type ActivityResponse,
+  type SettlementChain,
+} from '@oneshot/contracts';
 import { createSettlementClient, type SettlementClient } from '@oneshot/settlement-ui';
 import type { RecoveryClient } from '@oneshot/recovery-ui';
 import { CommitRing } from '@oneshot/brand';
@@ -38,9 +43,33 @@ export interface AppProps {
   readonly route?: string;
 }
 
+function chainStatus(chain: SettlementChain): string {
+  if (!isPinnedChain(chain)) return 'Unpublished';
+  if (chain.id === 'arc-testnet') return 'Default rail';
+  if (chain.isMainnet) return 'Mainnet disabled';
+  return chain.enabled ? 'Selectable testnet' : 'Disabled';
+}
+
+function SiteFooter() {
+  return (
+    <footer className="site-footer">
+      <p>One job. Many retries. At most one committed settlement.</p>
+      <nav aria-label="Footer">
+        <a href="#how-it-works">How it works</a>
+        <a href="#chains">Settlement chains</a>
+        <a href="/docs/mcp">Agent docs</a>
+        <a href="mailto:work@kapustazh.dev">work@kapustazh.dev</a>
+      </nav>
+    </footer>
+  );
+}
+
 function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () => void }) {
   return (
-    <main className="app-shell" aria-label="OneShot public landing page">
+    <main id="main-content" className="app-shell" aria-label="OneShot public landing page">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <nav className="top-nav" aria-label="Public navigation">
         <div className="brand-group">
           <CommitRing size={36} title="OneShot" />
@@ -116,6 +145,60 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
           </article>
         </div>
       </section>
+      <section className="guarantee-section" aria-labelledby="guarantee-heading">
+        <p className="eyebrow">THE GUARANTEE</p>
+        <h2 id="guarantee-heading">One intent. Many attempts. One settlement.</h2>
+        <p>
+          Retries, crashes, and lost receipts keep the same business intent. An uncertain payment
+          stays <code>UNKNOWN</code> until it is reconciled. A missing index result is never treated
+          as proof that the payment did not happen.
+        </p>
+      </section>
+      <section id="chains" className="chains-section" aria-labelledby="chains-heading">
+        <div className="section-header">
+          <h2 id="chains-heading">Settlement chains</h2>
+          <p>
+            The settlement library takes a chain adapter. Arc Testnet is the first implementation
+            and the rail this workspace, the browser wallet, and MCP payments use. Operators select
+            another enabled testnet with <code>ONESHOT_CHAIN</code>. The same intent still settles
+            at most once.
+          </p>
+        </div>
+        <div className="chains-grid">
+          {SETTLEMENT_CHAINS.map((chain) => (
+            <article key={chain.id} className="chain-card">
+              <p className="chain-status">{chainStatus(chain)}</p>
+              <h3>{chain.displayName}</h3>
+              {isPinnedChain(chain) ? (
+                <dl>
+                  <div>
+                    <dt>Chain id</dt>
+                    <dd>{chain.chainId}</dd>
+                  </div>
+                  <div>
+                    <dt>Network</dt>
+                    <dd>{chain.caip2}</dd>
+                  </div>
+                  <div>
+                    <dt>Asset</dt>
+                    <dd>
+                      {chain.settlementAsset.symbol} · {chain.settlementAsset.decimals} decimals
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <p>{chain.reason}</p>
+              )}
+            </article>
+          ))}
+        </div>
+        <p className="chains-note">
+          Hashless Graph recovery and the team-report supplier stay on Arc Testnet. Base Sepolia is
+          a pinned public testnet for direct USDC settlement. Arc Mainnet is unpublished and cannot
+          be selected.
+        </p>
+      </section>
+      <SiteFooter />
     </main>
   );
 }
@@ -174,7 +257,10 @@ function CabinetPage(props: {
     setSection('protection');
   }
   return (
-    <main className="app-shell" aria-label="OneShot workspace cabinet">
+    <main id="main-content" className="app-shell" aria-label="OneShot workspace cabinet">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <nav className="top-nav" aria-label="Workspace navigation">
         <a className="brand-group" href="/">
           <CommitRing size={36} title="OneShot" />

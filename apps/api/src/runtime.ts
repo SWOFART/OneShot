@@ -12,6 +12,7 @@ import {
   type ServiceAuthenticator,
 } from './auth.js';
 import { loadApiRuntimeConfig, type ApiRuntimeConfig } from './config.js';
+import { ARC_TESTNET_CHAIN } from '@oneshot/contracts';
 import { createPrivyAccessTokenAuthenticator, isJwtCredential } from './privy-auth.js';
 import { PostgresRateLimiter } from './rate-limit.js';
 
@@ -98,8 +99,8 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
       rateLimiter: new PostgresRateLimiter(pool, config.rateLimit),
       config: {
         submissionsDisabled: config.submissionsDisabled,
-        chainId: '5042002',
-        network: 'eip155:5042002',
+        chainId: String(config.settlementChainId ?? ARC_TESTNET_CHAIN.chainId),
+        network: config.settlementNetwork ?? ARC_TESTNET_CHAIN.caip2,
         contractVersion: '1.0.0',
         ...(config.workspaceId ? { workspaceId: config.workspaceId } : {}),
       },

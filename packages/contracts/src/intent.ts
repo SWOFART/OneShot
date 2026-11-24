@@ -1,3 +1,4 @@
+import { isEnabledSettlementNetwork } from './chains.js';
 import type { CreateIntentRequest } from './generated/api-types.js';
 import { asBusinessIntentId, asEvmAddress, ContractValidationError } from './ids.js';
 import { asAtomicAmount } from './money.js';
@@ -24,8 +25,8 @@ export function parseCreateIntentRequest(value: unknown): CreateIntentRequest {
     throw new ContractValidationError('intent request has missing or unexpected fields');
   }
   if (candidate.asset !== 'USDC') throw new ContractValidationError('asset must be USDC');
-  if (candidate.network !== 'eip155:5042002') {
-    throw new ContractValidationError('network must be the enabled Arc Testnet profile');
+  if (!isEnabledSettlementNetwork(candidate.network)) {
+    throw new ContractValidationError('network must be an enabled settlement chain');
   }
   if (
     typeof candidate.purpose !== 'string' ||
@@ -42,7 +43,7 @@ export function parseCreateIntentRequest(value: unknown): CreateIntentRequest {
     recipient: asEvmAddress(candidate.recipient),
     amount_atomic: asAtomicAmount(candidate.amount_atomic),
     asset: 'USDC',
-    network: 'eip155:5042002',
+    network: candidate.network,
     purpose: candidate.purpose.normalize('NFC'),
   };
 }

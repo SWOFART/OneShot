@@ -1,4 +1,9 @@
-import { asEvmAddress, asTransactionHash } from '@oneshot/contracts';
+import {
+  asEvmAddress,
+  asTransactionHash,
+  isEnabledSettlementNetwork,
+  type SettlementNetwork,
+} from '@oneshot/contracts';
 
 export interface WalletActivitySnapshot {
   readonly freshness: 'FRESH' | 'LAGGING' | 'UNHEALTHY' | 'UNAVAILABLE' | 'UNKNOWN_FRESHNESS';
@@ -12,7 +17,7 @@ export interface WalletActivitySnapshot {
       readonly token_contract?: string;
       readonly block_number?: string;
       readonly block_timestamp?: string;
-      readonly network?: 'eip155:5042002';
+      readonly network?: SettlementNetwork;
       readonly recipient: string;
       readonly amount_atomic: string;
     }[];
@@ -121,7 +126,7 @@ export class StudioWalletActivityPort implements WalletActivityPort {
         ...(row.blockTimestamp === undefined
           ? {}
           : { block_timestamp: graphBlockTimestamp(row.blockTimestamp)! }),
-        ...(row.network === 'eip155:5042002' ? { network: 'eip155:5042002' as const } : {}),
+        ...(isEnabledSettlementNetwork(row.network) ? { network: row.network } : {}),
         recipient: asEvmAddress(row.recipient),
         amount_atomic: row.amountAtomic,
       };

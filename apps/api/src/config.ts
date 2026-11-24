@@ -1,4 +1,9 @@
 import { createPublicKey } from 'node:crypto';
+import {
+  isEnabledSettlementNetwork,
+  selectSettlementChain,
+  type SettlementNetwork,
+} from '@oneshot/contracts';
 import type { PoolConfig } from 'pg';
 import { PRIVY_ALLOW_ALL, PRIVY_DID_PREFIX } from './privy-auth.js';
 
@@ -28,6 +33,9 @@ export interface ApiRuntimeConfig {
   };
   /** Credential-free read-only RPC used to verify user-submitted receipts. */
   readonly userWalletRpcUrl?: string;
+  /** Chain selected by ONESHOT_CHAIN or ONESHOT_ARC_PROFILE. Defaults to Arc Testnet. */
+  readonly settlementChainId: number;
+  readonly settlementNetwork: SettlementNetwork;
   readonly mcp?: {
     readonly bearerToken?: string;
     readonly workspaceId: string;
@@ -216,6 +224,14 @@ export function loadApiRuntimeConfig(
   const activityWallet = environment.ONESHOT_ACTIVITY_WALLET_ADDRESS?.trim();
   const userWalletRpcUrl = optionalRpcUrl(environment, 'ONESHOT_ARC_RPC_URL');
   const mcp = mcpConfig(environment, workspaceId);
+  const chain = selectSettlementChain(environment);
+  const settlementNetwork = chain.caip2;
+  if (!isEnabledSettlementNetwork(settlementNetwork)) {
+    throw new Error(`Settlement chain "${chain.id}" is not an enabled settlement network.`);
+  }
+  if (settlementNetwork !== 'eip155:5042002' && mcp) {
+    throw new Error('MCP user-wallet payments require the Arc Testnet settlement chain.');
+  }
   if (!activityEndpoint && activityWallet) {
     throw new Error(
       'A Graph query URL is required when ONESHOT_ACTIVITY_WALLET_ADDRESS is configured',
@@ -255,5 +271,7 @@ export function loadApiRuntimeConfig(
       : {}),
     ...(userWalletRpcUrl ? { userWalletRpcUrl } : {}),
     ...(mcp ? { mcp } : {}),
+    settlementChainId: chain.chainId,
+    settlementNetwork,
   };
 }

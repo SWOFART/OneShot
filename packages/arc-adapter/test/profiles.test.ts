@@ -1,3 +1,4 @@
+import { ARC_MAINNET_CHAIN, ARC_TESTNET_CHAIN } from '@oneshot/contracts';
 import { describe, expect, it } from 'vitest';
 import {
   ARC_MAINNET,
@@ -14,6 +15,11 @@ describe('Arc testnet profile', () => {
     expect(ARC_TESTNET.tokenContract).toBe('0x3600000000000000000000000000000000000000');
     expect(ARC_TESTNET.tokenSymbol).toBe('USDC');
     expect(ARC_TESTNET.tokenDecimals).toBe(6);
+    expect(ARC_TESTNET.chainId).toBe(ARC_TESTNET_CHAIN.chainId);
+    expect(ARC_TESTNET.caip2).toBe(ARC_TESTNET_CHAIN.caip2);
+    expect(ARC_TESTNET.tokenContract).toBe(ARC_TESTNET_CHAIN.settlementAsset.contract);
+    expect(ARC_MAINNET.id).toBe(ARC_MAINNET_CHAIN.id);
+    expect(ARC_MAINNET.enabled).toBe(ARC_MAINNET_CHAIN.enabled);
   });
 
   it('is the only enabled profile', () => {

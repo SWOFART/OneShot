@@ -5,6 +5,8 @@ import {
   asProviderReferenceId,
   asTransactionHash,
   ContractValidationError,
+  ENABLED_SETTLEMENT_NETWORKS,
+  isEnabledSettlementNetwork,
   parseCreateJobRequest,
   parseCreateUserWalletJobRequest,
   type SupplierPort,
@@ -87,7 +89,7 @@ const createIntentBodySchema = {
     recipient: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
     amount_atomic: { type: 'string', pattern: '^(0|[1-9][0-9]*)$', maxLength: 78 },
     asset: { type: 'string', const: 'USDC' },
-    network: { type: 'string', const: 'eip155:5042002' },
+    network: { type: 'string', enum: [...ENABLED_SETTLEMENT_NETWORKS] },
     purpose: { type: 'string', minLength: 1, maxLength: 256 },
   },
 } as const;
@@ -205,6 +207,27 @@ export function buildApi(dependencies: ApiDependencies) {
     const value = asCorrelationId(typeof inbound === 'string' ? inbound : nextCorrelationId());
     correlations.set(request, value);
     return value;
+  };
+
+  // The team-report supplier, user-wallet flow, and MCP payment tool settle on
+  // Arc Testnet. A process configured for another chain must not create those
+  // orders. Direct settlement intents use the selected chain instead.
+  const arcProductPath = (
+    config: ServiceConfig | undefined,
+    reply: FastifyReply,
+    request: FastifyRequest,
+  ): boolean => {
+    if (config?.network && config.network !== 'eip155:5042002') {
+      sendError(
+        reply,
+        409,
+        'INVALID_REQUEST',
+        'Team-report and user-wallet payments stay on Arc Testnet. Use a direct settlement intent for the selected chain.',
+        correlationFor(request),
+      );
+      return false;
+    }
+    return true;
   };
 
   app.addHook('onRequest', async (request, reply) => {
@@ -409,6 +432,7 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
+    if (!arcProductPath(dependencies.config, reply, request)) return;
     const parsed = parseCreateJobRequest(request.body);
     // Supplier creation is non-chargeable and uses the same durable task scope
     // as its idempotency key. The database transaction binds that order and the
@@ -439,6 +463,7 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
+    if (!arcProductPath(dependencies.config, reply, request)) return;
     const parsed = parseCreateJobRequest(request.body);
     // Quoting is deliberately non-chargeable: no intent, attempt, settlement,
     // or outbox row is created until the caller explicitly approves via POST /v1/jobs.
@@ -464,6 +489,7 @@ export function buildApi(dependencies: ApiDependencies) {
         jobsUnavailable(reply, request);
         return;
       }
+      if (!arcProductPath(dependencies.config, reply, request)) return;
       const parsed = parseCreateUserWalletJobRequest(request.body);
       const jobRequest = {
         task_key: parsed.task_key,
@@ -529,6 +555,7 @@ export function buildApi(dependencies: ApiDependencies) {
         userWalletUnavailable(reply, request);
         return;
       }
+      if (!arcProductPath(dependencies.config, reply, request)) return;
       const job = await dependencies.jobs.get(workspaceFor(request), request.params.jobId);
       if (!job) {
         sendError(
@@ -664,6 +691,7 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
+    if (!arcProductPath(dependencies.config, reply, request)) return;
     const job = await dependencies.jobs.resumeDelivery(workspaceFor(request), request.params.jobId);
     if (!job) {
       sendError(
@@ -796,7 +824,10 @@ export function buildApi(dependencies: ApiDependencies) {
       await dependencies.ledger.ping();
 
       if (dependencies.config) {
-        if (dependencies.config.network && dependencies.config.network !== 'eip155:5042002') {
+        if (
+          dependencies.config.network &&
+          !isEnabledSettlementNetwork(dependencies.config.network)
+        ) {
           sendError(
             reply,
             503,

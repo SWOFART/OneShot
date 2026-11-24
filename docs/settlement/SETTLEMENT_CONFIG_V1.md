@@ -7,6 +7,10 @@ Implemented by `packages/arc-adapter` and `packages/privy-adapter`. Both install
 lint, typecheck, test, and build independently with no root workspace
 composition and no credential.
 
+Chain selection beyond the Arc profiles below is documented in
+[CHAINS.md](CHAINS.md). `ONESHOT_CHAIN` selects `arc-testnet` or
+`base-sepolia`. `ONESHOT_ARC_PROFILE` remains the original selector.
+
 ## 1. Arc deployment profiles
 
 Verified 2026-09-07 against official Arc documentation. Evidence and source URLs
@@ -75,13 +79,13 @@ placeholders only.
 `probeReadiness(config, probe)` returns `{ ready, hasMismatch, checks }` and is
 ready only when every check passes. There is no partial-ready state.
 
-| Check | Asserts |
-| --- | --- |
-| `profile.consistency` | CAIP-2 matches chain ID; settlement precision is 6; gas precision is 18 and differs from settlement |
-| `privy.identityFormat` | Wallet and policy identifier shape, printing neither value |
-| `rpc.chainId` | Live `eth_chainId` equals the profile chain ID |
-| `token.bytecode` | The configured USDC address holds contract bytecode |
-| `token.decimals` | Live `decimals()` equals the profile's six-decimal ERC-20 settlement precision |
+| Check                  | Asserts                                                                                             |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| `profile.consistency`  | CAIP-2 matches chain ID; settlement precision is 6; gas precision is 18 and differs from settlement |
+| `privy.identityFormat` | Wallet and policy identifier shape, printing neither value                                          |
+| `rpc.chainId`          | Live `eth_chainId` equals the profile chain ID                                                      |
+| `token.bytecode`       | The configured USDC address holds contract bytecode                                                 |
+| `token.decimals`       | Live `decimals()` equals the profile's six-decimal ERC-20 settlement precision                      |
 
 ### `UNAVAILABLE` versus `MISMATCH`
 

@@ -1157,7 +1157,10 @@
           },
           "network": {
             "type": "string",
-            "const": "eip155:5042002"
+            "enum": [
+              "eip155:5042002",
+              "eip155:84532"
+            ]
           },
           "purpose": {
             "type": "string",
@@ -1414,7 +1417,10 @@
           },
           "network": {
             "type": "string",
-            "const": "eip155:5042002"
+            "enum": [
+              "eip155:5042002",
+              "eip155:84532"
+            ]
           },
           "purpose": {
             "type": "string",
@@ -1883,7 +1889,10 @@
           },
           "network": {
             "type": "string",
-            "const": "eip155:5042002"
+            "enum": [
+              "eip155:5042002",
+              "eip155:84532"
+            ]
           },
           "recipient": {
             "type": "string",
