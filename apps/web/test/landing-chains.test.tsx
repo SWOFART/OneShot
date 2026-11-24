@@ -10,7 +10,7 @@ afterEach(() => {
 describe('public settlement chains', () => {
   it('shows Arc Testnet as the default rail and Base Sepolia as a selectable testnet', () => {
     render(<App route="/" />);
-    expect(screen.getByRole('heading', { name: 'Settlement chains' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Rails a company can select' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Arc Testnet' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Base Sepolia' })).toBeTruthy();
     expect(screen.getByText('Default rail')).toBeTruthy();

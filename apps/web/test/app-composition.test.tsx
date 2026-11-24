@@ -20,7 +20,9 @@ afterEach(() => {
 describe('Gate P5 shell composition', () => {
   it('separates the public landing page from the authenticated cabinet route', () => {
     const landing = render(<App route="/" />);
-    expect(screen.getByRole('heading', { name: /Resume the job, not the payment/u })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: /One payment identity across every retry/u }),
+    ).toBeTruthy();
     expect(screen.getAllByRole('link', { name: /Open workspace/u })[0]?.getAttribute('href')).toBe(
       '/app',
     );

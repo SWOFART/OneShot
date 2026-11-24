@@ -34,7 +34,7 @@ The owner asked for two things: review and improve the website (design, UX, resp
 - Arc Mainnet stays an unpublished record with no network values.
 - The browser wallet, MCP payments, and the team-report supplier follow `ONESHOT_CHAIN`. The site build reads `VITE_ONESHOT_CHAIN`.
 - Graph recovery runs only when the selected chain sets `graphQueryEnv`. Arc Testnet keeps `ONESHOT_SUBGRAPH_QUERY_URL`. Base Sepolia has no indexer, so Graph recovery is logged as disabled and settlement continues.
-- The public site keeps the existing brand and adds the guarantee, chain catalog, footer, skip link, and focus rings. The hero buttons no longer wrap.
+- The public site uses IBM Plex Sans and IBM Plex Mono, a neutral slate palette, and B2B landing copy. Mainnet is still described as disabled.
 
 ## Files/components touched
 

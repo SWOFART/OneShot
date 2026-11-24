@@ -27,8 +27,8 @@ export function PrivyOperatorProvider(props: {
         defaultChain: SETTLEMENT_VIEM_CHAIN,
         supportedChains: [SETTLEMENT_VIEM_CHAIN],
         appearance: {
-          theme: '#0a0a0a',
-          accentColor: '#00dc5f',
+          theme: '#101318',
+          accentColor: '#1a4b8c',
           walletList: ['detected_ethereum_wallets', 'wallet_connect'],
           walletChainType: 'ethereum-only',
         },

@@ -22,7 +22,8 @@
   color: var(--os-ink);
   background-color: var(--os-ground);
   font-family: var(--os-font-primary);
-  font-weight: 300;
+  font-weight: 400;
+  line-height: 1.55;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -39,7 +40,7 @@ body {
   background: var(--os-ground);
   color: var(--os-ink);
   font-family: var(--os-font-primary);
-  font-weight: 300;
+  font-weight: 400;
 }
 
 button,
@@ -61,8 +62,8 @@ button {
   color: var(--os-on-signal);
   background: var(--os-signal);
   font-family: var(--os-font-primary);
-  font-weight: 300;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   cursor: pointer;
   transition:
     background-color 160ms ease,
@@ -104,6 +105,27 @@ h2,
 h3,
 p {
   margin-top: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+p,
+li {
+  line-height: 1.6;
+}
+
+code,
+kbd,
+pre,
+.mono,
+.docs-code {
+  font-family: var(--os-font-mono);
 }
 
 a {
@@ -212,16 +234,16 @@ a:focus-visible {
 }
 
 .brand-name {
-  font-size: 1rem;
-  font-weight: 300;
-  letter-spacing: 0.1em;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--os-ink);
 }
 
 .brand-tag {
-  font-size: 0.65rem;
-  font-weight: 300;
-  letter-spacing: 0.12em;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
   color: var(--os-accent-ink);
   font-family: var(--os-font-mono);
 }
@@ -239,7 +261,7 @@ a:focus-visible {
   padding: 0.3rem 0.75rem;
   border-radius: 999px;
   font-size: 0.75rem;
-  font-weight: 300;
+  font-weight: 400;
   background: transparent;
   border: 1px solid var(--os-line);
   color: var(--os-ink-muted);
@@ -253,7 +275,7 @@ a:focus-visible {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background-color: var(--os-state-committed);
+  background-color: var(--os-accent-ink);
 }
 
 .status-badge.token-badge {
@@ -268,7 +290,7 @@ a:focus-visible {
   padding: 0.45rem 1rem;
   border-radius: 999px;
   font-size: 0.8rem;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--os-ink);
   background: transparent;
   border: 1px solid var(--os-line);
@@ -293,21 +315,21 @@ a:focus-visible {
 }
 
 .eyebrow {
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
   color: var(--os-accent-ink);
-  font-size: 0.8rem;
-  font-weight: 300;
-  letter-spacing: 0.2em;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
   font-family: var(--os-font-mono);
   text-transform: uppercase;
 }
 
 .app-header h1 {
-  margin-bottom: 1.25rem;
-  font-size: clamp(2.4rem, 5.5vw, 3.8rem);
+  margin-bottom: 1.1rem;
+  font-size: clamp(2.35rem, 5vw, 3.5rem);
   line-height: 1.08;
-  font-weight: 300;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.03em;
   color: var(--os-ink);
 }
 
@@ -344,7 +366,7 @@ a:focus-visible {
   background: var(--os-signal);
   border: 0;
   color: var(--os-on-signal);
-  font-weight: 300;
+  font-weight: 500;
   font-size: 0.95rem;
   transition: opacity 0.2s ease;
 }
@@ -364,7 +386,7 @@ a:focus-visible {
   background: transparent;
   border: 1px solid var(--os-line-strong);
   color: var(--os-ink);
-  font-weight: 300;
+  font-weight: 500;
   font-size: 0.95rem;
   transition: opacity 0.2s ease;
 }
@@ -385,7 +407,7 @@ a:focus-visible {
   padding: 0.6rem 1.2rem;
   border-radius: 999px;
   font-size: 0.82rem;
-  font-weight: 300;
+  font-weight: 400;
   background: var(--os-surface);
   border: 1px solid var(--os-line);
   color: var(--os-ink-muted);
@@ -418,7 +440,7 @@ a:focus-visible {
 
 .section-header h2 {
   font-size: clamp(1.6rem, 3.5vw, 2.2rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.01em;
   color: var(--os-ink);
 }
@@ -445,7 +467,7 @@ a:focus-visible {
 
 .invariant-card h3 {
   font-size: 1.15rem;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--os-panel-ink);
   margin-bottom: 0.6rem;
   line-height: 1.25;
@@ -459,6 +481,7 @@ a:focus-visible {
 }
 
 .guarantee-section,
+.audience-section,
 .chains-section {
   margin: 0 0 4.5rem;
 }
@@ -474,7 +497,7 @@ a:focus-visible {
 .chains-section h2 {
   margin-bottom: 0.8rem;
   font-size: clamp(1.6rem, 3.5vw, 2.2rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.01em;
 }
 
@@ -518,7 +541,7 @@ a:focus-visible {
 .chain-card h3 {
   margin: 0;
   font-size: 1.2rem;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .chain-card dl {
@@ -593,7 +616,7 @@ a:focus-visible {
   margin-bottom: 1rem;
   color: var(--os-ink);
   font-size: clamp(2.2rem, 5vw, 3.4rem);
-  font-weight: 300;
+  font-weight: 400;
   line-height: 1.08;
   letter-spacing: -0.02em;
 }
@@ -685,7 +708,7 @@ a:focus-visible {
 
 .gate-action-box h2 {
   font-size: 1.35rem;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--os-panel-ink);
   margin-bottom: 0.25rem;
 }
@@ -731,7 +754,7 @@ a:focus-visible {
 
 .loading-text {
   color: var(--os-accent-ink);
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .operator-identity {
@@ -753,7 +776,7 @@ a:focus-visible {
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
   font-size: 0.7rem;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.1em;
   background: var(--os-signal);
   border: 0;
@@ -825,7 +848,7 @@ a:focus-visible {
 
 .machine-token summary {
   cursor: pointer;
-  font-weight: 300;
+  font-weight: 400;
   font-size: 0.85rem;
   color: var(--os-panel-ink-muted);
   transition: color 0.2s ease;
@@ -849,7 +872,7 @@ a:focus-visible {
   display: block;
   margin: 0.75rem 0 0.35rem;
   font-size: 0.85rem;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--os-panel-ink);
 }
 
@@ -961,7 +984,7 @@ a:focus-visible {
 .panel-heading h2,
 .panel-heading h3 {
   margin: 0;
-  font-weight: 300;
+  font-weight: 400;
   font-size: 1.3rem;
 }
 
@@ -971,7 +994,7 @@ a:focus-visible {
 
 .panel header h2 {
   font-size: 1.35rem;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--os-panel-ink);
   margin-bottom: 0.3rem;
 }
@@ -990,7 +1013,7 @@ a:focus-visible {
 .form label,
 .lookup label {
   font-size: 0.85rem;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--os-panel-ink);
 }
 
@@ -1053,7 +1076,7 @@ a:focus-visible {
    same treatment as .form label above: plain panel ink, not muted. */
 .field-label {
   font-size: 0.85rem;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--os-panel-ink);
 }
 
@@ -1094,7 +1117,7 @@ a:focus-visible {
 
 .polling {
   color: var(--os-accent-ink);
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .intent-details {
@@ -1121,7 +1144,7 @@ a:focus-visible {
 }
 
 .state-card strong {
-  font-weight: 300;
+  font-weight: 400;
   font-size: 1.4rem;
 }
 
@@ -1156,7 +1179,7 @@ a:focus-visible {
 .facts dt {
   color: var(--os-panel-ink-muted);
   font-size: 0.85rem;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .facts dd {
@@ -1263,7 +1286,7 @@ a:focus-visible {
 .job-workspace > label {
   color: var(--os-panel-ink);
   font-size: 0.85rem;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 /* .advanced-fields is the one control group drawn on --os-surface rather than
@@ -1271,7 +1294,7 @@ a:focus-visible {
 .advanced-fields label {
   color: var(--os-ink);
   font-size: 0.85rem;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .job-workspace > input,
@@ -1346,7 +1369,7 @@ a.secondary:hover {
   color: var(--os-ink-muted);
   cursor: pointer;
   font-size: 0.82rem;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .job-settlement-summary {
@@ -1417,7 +1440,7 @@ a.secondary:hover {
   display: grid;
   gap: 0.25rem;
   color: var(--os-state-unknown);
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .fixture-toolbar select {

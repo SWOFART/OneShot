@@ -94,16 +94,17 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
         </a>
       </nav>
       <header className="app-header hero-section">
-        <Hero height={460}>
-          <p className="eyebrow">RESUMABLE PAID SERVICES / ARC TESTNET</p>
-          <h1>Resume the job, not the payment.</h1>
+        <Hero>
+          <p className="eyebrow">Settlement infrastructure</p>
+          <h1>One payment identity across every retry.</h1>
           <p className="hero-lead">
-            Approve one direct Arc payment. If an agent restarts, the original task, payment
-            evidence and result stay together.
+            OneShot is settlement infrastructure for companies whose agents buy services. An
+            approved obligation keeps one USDC payment, even when the agent crashes, retries, or is
+            replaced.
           </p>
           <p className="hero-sublead">
-            One job. Many retries. At most one committed settlement. Team-operated testnet
-            integration.
+            Arc Testnet is the default rail. Base Sepolia is a selectable testnet. Mainnet is not
+            enabled.
           </p>
           <div className="hero-actions">
             <a className="btn-hero-cta" href="/app">
@@ -120,49 +121,71 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
       </header>
       <section id="how-it-works" className="invariants-section" aria-labelledby="how-heading">
         <div className="section-header">
-          <h2 id="how-heading">A safe paid-tool workflow</h2>
+          <h2 id="how-heading">How an operator stays in control</h2>
+          <p>The same business intent survives retries. The payment does not.</p>
         </div>
         <div className="invariants-grid">
           <article className="invariant-card">
-            <h3>Approve the exact purchase</h3>
+            <h3>Name the obligation</h3>
             <p>
-              Review the service, destination, amount, network and wallet rule before payment can
-              start.
+              One stable request key covers the service, recipient, amount, and chain. A changed
+              detail is held for review instead of becoming a second payment.
             </p>
           </article>
           <article className="invariant-card">
-            <h3>Keep one task key</h3>
+            <h3>Grant one settlement</h3>
             <p>
-              Retries reuse the same request key and supplier order. Changed details are held for
-              review.
+              Durable state decides who may submit. Wallet policy can only narrow that. A crash
+              after broadcast becomes <code>UNKNOWN</code> until it is reconciled.
             </p>
           </article>
           <article className="invariant-card">
-            <h3>Retrieve the existing result</h3>
+            <h3>Read the evidence</h3>
             <p>
-              Payment checks are read-only. If delivery is delayed, the original supplier request
-              resumes without another charge.
+              Operators and replacement agents see the same payment record. A delayed index is not
+              treated as proof that the payment never happened.
             </p>
           </article>
         </div>
       </section>
       <section className="guarantee-section" aria-labelledby="guarantee-heading">
-        <p className="eyebrow">THE GUARANTEE</p>
+        <p className="eyebrow">The guarantee</p>
         <h2 id="guarantee-heading">One intent. Many attempts. One settlement.</h2>
         <p>
-          Retries, crashes, and lost receipts keep the same business intent. An uncertain payment
-          stays <code>UNKNOWN</code> until it is reconciled. A missing index result is never treated
-          as proof that the payment did not happen.
+          OneShot owns the payment record. Retries, restarts, and parallel workers converge on that
+          record. An uncertain payment stays <code>UNKNOWN</code> until receipt evidence resolves
+          it.
         </p>
+      </section>
+      <section className="audience-section" aria-labelledby="audience-heading">
+        <div className="section-header">
+          <h2 id="audience-heading">Who it is for</h2>
+          <p>Two kinds of company, one payment record.</p>
+        </div>
+        <div className="invariants-grid">
+          <article className="invariant-card">
+            <h3>Businesses running agents</h3>
+            <p>
+              Approve a purchase once. If the agent or the worker restarts, the workspace shows the
+              same intent, attempt history, and settlement evidence.
+            </p>
+          </article>
+          <article className="invariant-card">
+            <h3>Platforms selling to agents</h3>
+            <p>
+              Connect an agent with the MCP payment tools. The user wallet signs on the selected
+              chain. OneShot prepares the request and verifies the receipt.
+            </p>
+          </article>
+        </div>
       </section>
       <section id="chains" className="chains-section" aria-labelledby="chains-heading">
         <div className="section-header">
-          <h2 id="chains-heading">Settlement chains</h2>
+          <h2 id="chains-heading">Rails a company can select</h2>
           <p>
-            The settlement library takes a chain adapter. Arc Testnet is the first implementation
-            and the rail this workspace, the browser wallet, and MCP payments use. Operators select
-            another enabled testnet with <code>ONESHOT_CHAIN</code>. The same intent still settles
-            at most once.
+            The library settles USDC through a chain adapter. Operators choose the rail with{' '}
+            <code>ONESHOT_CHAIN</code>. The browser wallet, MCP tools, and team-report supplier
+            follow that choice. The guarantee does not change with the chain.
           </p>
         </div>
         <div className="chains-grid">

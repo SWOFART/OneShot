@@ -5,7 +5,7 @@
     color: var(--ink);
     background: var(--os-panel);
     font-family: var(--os-font-primary);
-    font-weight: 300;
+    font-weight: 400;
     font-synthesis: none;
     --ink: var(--os-panel-ink);
     --muted: var(--os-panel-ink-muted);

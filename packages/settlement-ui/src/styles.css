@@ -13,7 +13,7 @@
     --cyan: var(--os-signal);
     color: var(--ink);
     font-family: var(--os-font-primary);
-    font-weight: 300;
+    font-weight: 400;
     display: flex;
     flex-direction: column;
     gap: 16px;
