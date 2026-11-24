@@ -39,6 +39,35 @@ export interface AppProps {
   readonly route?: string;
 }
 
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+      <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.1 5.1l1.6 1.6M17.3 17.3l1.6 1.6M18.9 5.1l-1.6 1.6M6.7 17.3l-1.6 1.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+      <path
+        d="M15.5 3.2a8.2 8.2 0 1 0 5.3 14.2A8.4 8.4 0 0 1 15.5 3.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function SiteFooter() {
   return (
     <footer className="site-footer">
@@ -66,15 +95,19 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
             <span className="brand-tag">SETTLEMENT ENGINE</span>
           </div>
         </div>
-        <div className="nav-status-group">
-          <span className="status-badge token-badge">USDC</span>
-          <button type="button" className="theme-toggle" onClick={props.onToggleTheme}>
-            {props.theme === 'dark' ? 'Light theme' : 'Dark theme'}
+        <div className="nav-end">
+          <button
+            type="button"
+            className="theme-icon"
+            onClick={props.onToggleTheme}
+            aria-label={props.theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          >
+            {props.theme === 'dark' ? <SunIcon /> : <MoonIcon />}
           </button>
+          <a className="nav-console-link" href="/app">
+            Open workspace
+          </a>
         </div>
-        <a className="nav-console-link" href="/app">
-          Open workspace
-        </a>
       </nav>
       <header className="app-header hero-section">
         <Hero>

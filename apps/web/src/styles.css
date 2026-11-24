@@ -22,8 +22,10 @@
   color: var(--os-ink);
   background-color: var(--os-ground);
   font-family: var(--os-font-primary);
-  font-weight: 400;
-  line-height: 1.55;
+  font-weight: 450;
+  line-height: 1.5;
+  letter-spacing: -0.011em;
+  font-optical-sizing: auto;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -40,7 +42,7 @@ body {
   background: var(--os-ground);
   color: var(--os-ink);
   font-family: var(--os-font-primary);
-  font-weight: 400;
+  font-weight: 450;
 }
 
 button,
@@ -63,7 +65,7 @@ button {
   background: var(--os-signal);
   font-family: var(--os-font-primary);
   font-weight: 500;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.011em;
   cursor: pointer;
   transition:
     background-color 160ms ease,
@@ -111,13 +113,19 @@ h1,
 h2,
 h3 {
   font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
+  letter-spacing: -0.034em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+h1 {
+  letter-spacing: -0.045em;
+  line-height: 0.98;
 }
 
 p,
 li {
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 code,
@@ -236,7 +244,7 @@ a:focus-visible {
 .brand-name {
   font-size: 1.05rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   color: var(--os-ink);
 }
 
@@ -284,10 +292,36 @@ a:focus-visible {
   font-family: var(--os-font-mono);
 }
 
+.nav-end {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.theme-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--os-line);
+  background: transparent;
+  color: var(--os-ink);
+}
+
+.theme-icon:hover:not(:disabled) {
+  opacity: 0.86;
+}
+
 .nav-console-link {
   display: inline-flex;
   align-items: center;
-  padding: 0.45rem 1rem;
+  height: 36px;
+  padding: 0 1rem;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 400;
@@ -326,32 +360,41 @@ a:focus-visible {
 
 .app-header h1 {
   margin-bottom: 1.1rem;
-  font-size: clamp(2.35rem, 5vw, 3.5rem);
-  line-height: 1.08;
+  font-size: clamp(2.55rem, 5.2vw, 3.85rem);
+  line-height: 0.98;
   font-weight: 600;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.048em;
   color: var(--os-ink);
+  max-width: 11em;
+  margin-inline: auto;
 }
 
 .hero-lead {
-  font-size: clamp(1.05rem, 2vw, 1.25rem);
-  line-height: 1.6;
+  font-size: 1.125rem;
+  font-weight: 450;
+  line-height: 1.5;
+  letter-spacing: -0.016em;
   color: var(--os-ink-muted);
-  max-width: 680px;
+  max-width: 36rem;
   margin: 0 auto 0.75rem;
 }
 
 .hero-sublead {
-  font-size: 0.95rem;
+  font-size: 0.98rem;
+  font-weight: 450;
+  line-height: 1.5;
+  letter-spacing: -0.011em;
   color: var(--os-ink-muted);
-  margin-bottom: 2rem;
+  max-width: 34rem;
+  margin: 0 auto 1.75rem;
 }
 
 .hero-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  gap: 0.65rem;
   margin-bottom: 2.5rem;
 }
 
@@ -439,9 +482,10 @@ a:focus-visible {
 }
 
 .section-header h2 {
-  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-size: clamp(1.7rem, 3.4vw, 2.35rem);
+  font-weight: 600;
+  letter-spacing: -0.036em;
+  line-height: 1.08;
   color: var(--os-ink);
 }
 
@@ -466,8 +510,9 @@ a:focus-visible {
 }
 
 .invariant-card h3 {
-  font-size: 1.15rem;
-  font-weight: 400;
+  font-size: 1.12rem;
+  font-weight: 600;
+  letter-spacing: -0.024em;
   color: var(--os-panel-ink);
   margin-bottom: 0.6rem;
   line-height: 1.25;
@@ -494,9 +539,10 @@ a:focus-visible {
 
 .guarantee-section h2 {
   margin-bottom: 0.8rem;
-  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-size: clamp(1.7rem, 3.4vw, 2.35rem);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.036em;
+  line-height: 1.08;
 }
 
 .guarantee-section p,
@@ -554,9 +600,10 @@ a:focus-visible {
   max-width: 720px;
   margin-bottom: 1rem;
   color: var(--os-ink);
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  font-weight: 400;
-  line-height: 1.08;
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
   letter-spacing: -0.02em;
 }
 
@@ -590,8 +637,9 @@ a:focus-visible {
 .docs-section h2 {
   margin-bottom: 0.75rem;
   color: var(--os-ink);
-  font-size: 1.35rem;
-  font-weight: 400;
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.028em;
 }
 
 .docs-facts,
@@ -646,8 +694,9 @@ a:focus-visible {
 }
 
 .gate-action-box h2 {
-  font-size: 1.35rem;
-  font-weight: 400;
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.028em;
   color: var(--os-panel-ink);
   margin-bottom: 0.25rem;
 }
@@ -923,8 +972,9 @@ a:focus-visible {
 .panel-heading h2,
 .panel-heading h3 {
   margin: 0;
-  font-weight: 400;
-  font-size: 1.3rem;
+  font-weight: 600;
+  font-size: 1.25rem;
+  letter-spacing: -0.026em;
 }
 
 .panel-heading .eyebrow {
@@ -932,8 +982,9 @@ a:focus-visible {
 }
 
 .panel header h2 {
-  font-size: 1.35rem;
-  font-weight: 400;
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.028em;
   color: var(--os-panel-ink);
   margin-bottom: 0.3rem;
 }
@@ -1459,9 +1510,13 @@ a.secondary:hover {
   flex-direction: column;
   justify-content: center;
   gap: 0.6rem;
-  width: 50%;
+  /* Stays left of the diagonal. The panel's top edge is at 65% of the hero;
+     52% plus wrapping keeps the copy and the buttons on the dark panel. */
+  width: 52%;
+  max-width: 100%;
   min-height: 268px;
-  padding: 2rem;
+  padding: 2rem 1.75rem 2rem 2rem;
+  box-sizing: border-box;
 }
 
 /* Both hero modes sit on --os-panel, which is the same forest in both themes.
@@ -1480,8 +1535,9 @@ a.secondary:hover {
      headline a different size on every monitor, which is what pushed the lead
      paragraph out of the panel on some of them. The root font-size below is
      what scales type with the viewport, once, for the whole page. */
-  font-size: 2rem;
-  line-height: 1.15;
+  font-size: 2.15rem;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
   color: var(--os-panel-ink);
 }
 
@@ -1504,6 +1560,7 @@ a.secondary:hover {
 .hero-copy .hero-actions,
 .hero-plain .hero-actions {
   justify-content: flex-start;
+  width: 100%;
   margin: 0.4rem 0 0;
 }
 
@@ -1587,7 +1644,12 @@ a.secondary:hover {
     justify-content: space-between;
   }
 
+  .nav-end {
+    width: 100%;
+  }
+
   .nav-console-link {
+    flex: 1;
     justify-content: center;
   }
 
@@ -2035,7 +2097,8 @@ button:active:not(:disabled) {
 .panel-heading h3 {
   margin: 0;
   font-size: 1.15rem;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.024em;
 }
 
 .quote-panel .facts div,

@@ -209,6 +209,6 @@ describe('web stylesheet', () => {
     const css = await readFile(stylesheet, 'utf8');
     expect(css).toMatch(/body\s*\{[^}]*background:\s*var\(--os-ground\)/u);
     expect(css).toMatch(/body\s*\{[^}]*font-family:\s*var\(--os-font-primary\)/u);
-    expect(css).toMatch(/body\s*\{[^}]*font-weight:\s*400/u);
+    expect(css).toMatch(/body\s*\{[^}]*font-weight:\s*450/u);
   });
 });

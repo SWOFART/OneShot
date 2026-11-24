@@ -216,7 +216,7 @@
   }
 
   .mono {
-    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+    font-family: var(--os-font-mono);
   }
 
   .break-all {

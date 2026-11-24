@@ -52,9 +52,9 @@
   --os-radius: 12px;
   --os-radius-lg: 18px;
 
-  --os-font-primary: 'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --os-font-secondary: 'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --os-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --os-font-primary: Inter, 'Inter Fallback', sans-serif;
+  --os-font-secondary: Inter, 'Inter Fallback', sans-serif;
+  --os-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /**

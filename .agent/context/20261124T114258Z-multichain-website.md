@@ -35,6 +35,7 @@ The owner asked for two things: review and improve the website (design, UX, resp
 - The browser wallet, MCP payments, and the team-report supplier follow `ONESHOT_CHAIN`. The site build reads `VITE_ONESHOT_CHAIN`.
 - Graph recovery runs only when the selected chain sets `graphQueryEnv`. Arc Testnet keeps `ONESHOT_SUBGRAPH_QUERY_URL`. Base Sepolia has no indexer, so Graph recovery is logged as disabled and settlement continues.
 - Arc Mainnet is the default rail. Chain id 5042, CAIP-2 eip155:5042, and USDC 0x3600…0000 are pinned from docs.arc.io and Circle on 2026-11-24. Settlement still requires ONESHOT_ALLOW_MAINNET_ACTIVATION=true. Testnets stay selectable. The landing page does not catalog chains.
+- Interface type is self-hosted Inter (optical size axis) and JetBrains Mono. IBM Plex is gone.
 
 ## Files/components touched
 
