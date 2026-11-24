@@ -272,12 +272,14 @@ describe('API runtime configuration', () => {
   });
 
   it('refuses the default Arc Mainnet rail until an operator confirms it', () => {
-    const { ONESHOT_CHAIN: _ignored, ...withoutChain } = base;
+    const { ONESHOT_CHAIN, ...withoutChain } = base;
+    expect(ONESHOT_CHAIN).toBe('arc-testnet');
     expect(() => loadApiRuntimeConfig(withoutChain)).toThrow(/ONESHOT_ALLOW_MAINNET_ACTIVATION/u);
   });
 
   it('loads Arc Mainnet after the operator confirms activation', () => {
-    const { ONESHOT_CHAIN: _ignored, ...withoutChain } = base;
+    const { ONESHOT_CHAIN, ...withoutChain } = base;
+    expect(ONESHOT_CHAIN).toBe('arc-testnet');
     const config = loadApiRuntimeConfig({
       ...withoutChain,
       ONESHOT_ALLOW_MAINNET_ACTIVATION: 'true',

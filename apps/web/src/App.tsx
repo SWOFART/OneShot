@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { type ActivityResponse } from '@oneshot/contracts';
+import type { ActivityResponse } from '@oneshot/contracts';
 import { createSettlementClient, type SettlementClient } from '@oneshot/settlement-ui';
 import type { RecoveryClient } from '@oneshot/recovery-ui';
 import { CommitRing } from '@oneshot/brand';

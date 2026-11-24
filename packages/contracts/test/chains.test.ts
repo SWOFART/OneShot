@@ -3,7 +3,6 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   ARC_MAINNET_CHAIN,
-  ARC_TESTNET_CHAIN,
   BASE_SEPOLIA_CHAIN,
   ENABLED_SETTLEMENT_NETWORKS,
   createChainRegistry,
