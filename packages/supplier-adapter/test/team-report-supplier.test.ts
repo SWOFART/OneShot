@@ -70,4 +70,19 @@ describe('TeamReportSupplier', () => {
       'greater than zero',
     );
   });
+
+  it('quotes the selected settlement chain', async () => {
+    const supplier = new TeamReportSupplier('eip155:84532');
+    const order = await supplier.createOrder(
+      {
+        task_key: 'base-demo',
+        tool_id: 'team-report-v1',
+        report_subject: 'Base demo',
+        recipient: '0x2222222222222222222222222222222222222222',
+        amount_atomic: '10000',
+      },
+      'job_base_demo',
+    );
+    expect(order.network).toBe('eip155:84532');
+  });
 });

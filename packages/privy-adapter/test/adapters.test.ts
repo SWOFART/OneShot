@@ -334,3 +334,36 @@ describe('provider data is validated at the boundary', () => {
     expect(Number.isSafeInteger(0) && 0 >= 0).toBe(true);
   });
 });
+
+describe('selected settlement chain', () => {
+  const baseConfig = loadSettlementConfig({
+    ...ENV,
+    ONESHOT_ARC_PROFILE: undefined,
+    ONESHOT_CHAIN: 'base-sepolia',
+  });
+
+  it('binds the adapter to the selected chain and refuses the Arc network', async () => {
+    const wallet = provider();
+    const adapter = new ArcSettlementAdapter(baseConfig, wallet);
+    expect(adapter.network).toBe('eip155:84532');
+    expect(baseConfig.profile.chainId).toBe(84532);
+    expect(baseConfig.profile.tokenContract).toBe('0x036CbD53842c5426634e7929541eC2318f3dCF7e');
+
+    const refused = await adapter.submit(intent());
+    expect(refused.kind).toBe('DEFINITELY_NOT_SUBMITTED');
+    expect(wallet.sends).toBe(0);
+
+    const sent = await adapter.submit(intent({ network: 'eip155:84532' }));
+    expect(sent.kind).not.toBe('DEFINITELY_NOT_SUBMITTED');
+    expect(wallet.sends).toBe(1);
+  });
+
+  it('denies authorization for a network other than the selected chain', async () => {
+    const decision = await new PrivyAuthorizationAdapter(baseConfig, BASELINE, () => ({
+      ...BASELINE,
+      chainId: 84532,
+      tokenContract: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+    })).authorize(intent());
+    expect(decision.kind).toBe('DENIED');
+  });
+});

@@ -19,7 +19,7 @@ export interface UserWalletSession {
   readonly address: string | null;
   connect(): Promise<string | null>;
   sendTransfer(payment: {
-    readonly chain_id: 5042002;
+    readonly chain_id: 5042 | 5042002 | 84532;
     readonly token_contract: string;
     readonly payer_wallet: string;
     readonly recipient: string;

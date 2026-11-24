@@ -1,3 +1,4 @@
+import { isEnabledSettlementNetwork } from './chains.js';
 import { asAtomicAmount } from './money.js';
 import { asEvmAddress, ContractValidationError } from './ids.js';
 import type {
@@ -127,7 +128,7 @@ export function validateSupplierOrder(order: SupplierOrder): SupplierOrder {
   if (
     order.supplier_id !== 'team-report-v1' ||
     order.asset !== 'USDC' ||
-    order.network !== 'eip155:5042002'
+    !isEnabledSettlementNetwork(order.network)
   ) {
     throw new ContractValidationError(
       'supplier quote is incompatible with the enabled tool and network',

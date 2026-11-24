@@ -28,12 +28,33 @@ describe('production worker configuration', () => {
   it('loads all effect and recovery identities without exposing secret defaults', () => {
     const config = loadWorkerRuntimeConfig(environment());
     expect(config.settlement.profile.chainId).toBe(5042002);
-    expect(config.recovery.policy.retrieval).toBe('STUDIO_GRAPHQL');
-    expect(config.recovery.policy.queryUrl).toBe('https://api.studio.thegraph.com/query/example');
-    expect(config.recovery.graphQueryUrl).toBe('https://api.studio.thegraph.com/query/example');
-    expect(config.recovery.vertexModel).toBe('gemini-2.5-flash');
+    expect(config.recovery.graphEnabled).toBe(true);
+    if (config.recovery.graphEnabled) {
+      expect(config.recovery.policy.retrieval).toBe('STUDIO_GRAPHQL');
+      expect(config.recovery.policy.queryUrl).toBe('https://api.studio.thegraph.com/query/example');
+      expect(config.recovery.graphQueryUrl).toBe('https://api.studio.thegraph.com/query/example');
+      expect(config.recovery.vertexModel).toBe('gemini-2.5-flash');
+    }
     expect(config.pollIntervalMs).toBe(1000);
     expect(config.demoResponseLossAfterBroadcast).toBe(false);
+  });
+
+  it('skips Graph recovery when the selected chain has no indexer', () => {
+    const env = environment();
+    delete env.ONESHOT_ARC_PROFILE;
+    env.ONESHOT_CHAIN = 'base-sepolia';
+    delete env.ONESHOT_SUBGRAPH_QUERY_URL;
+    delete env.ONESHOT_SUBGRAPH_DEPLOYMENT_ID;
+    delete env.ONESHOT_SUBGRAPH_MANIFEST_CID;
+    delete env.ONESHOT_VERTEX_PROJECT_ID;
+    delete env.ONESHOT_RECOVERY_FROM_BLOCK;
+    delete env.ONESHOT_RECOVERY_TO_BLOCK;
+    const config = loadWorkerRuntimeConfig(env);
+    expect(config.settlement.profile.chainId).toBe(84532);
+    expect(config.recovery.graphEnabled).toBe(false);
+    if (!config.recovery.graphEnabled) {
+      expect(config.recovery.graphDisabledReason).toMatch(/Base Sepolia/u);
+    }
   });
 
   it('uses the Studio query URL when no MCP server is available for Arc', () => {

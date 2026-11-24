@@ -27,7 +27,10 @@ const toolInput = `{
 
 export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleTheme: () => void }) {
   return (
-    <main className="app-shell docs-page" aria-label="OneShot MCP documentation">
+    <main id="main-content" className="app-shell docs-page" aria-label="OneShot MCP documentation">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <nav className="top-nav" aria-label="Documentation navigation">
         <a className="brand-group" href="/">
           <CommitRing size={36} title="OneShot" />
@@ -64,6 +67,11 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
           <li>The agent generates one random request key for each new approved payment.</li>
           <li>Exact retries return the original intent; changed fields return a conflict.</li>
           <li>The payer is the wallet address selected by the user, never a server wallet.</li>
+          <li>
+            The payment uses the deployment&apos;s selected settlement chain. Arc Testnet is the
+            default. The connected wallet must be on that chain. See{' '}
+            <a href="/#chains">settlement chains</a>.
+          </li>
           <li>
             The second tool verifies the exact receipt and Transfer log for the returned hash.
           </li>

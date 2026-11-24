@@ -14,7 +14,14 @@
  * settlement configuration is how a payment reaches the wrong chain or token.
  */
 
-import { ARC_PROFILE_IDS, getProfile, isPinned, type PinnedArcProfile } from './profiles.js';
+import {
+  getSettlementChain,
+  isEnabledSettlementNetwork,
+  isPinnedChain,
+  type PinnedSettlementChain,
+  type SettlementNetwork,
+} from '@oneshot/contracts';
+import { ARC_PROFILE_IDS, getProfile, isPinned } from './profiles.js';
 import { parseAmountAtomic, type AmountAtomic } from './money.js';
 
 export type VariableClass = 'public' | 'secret' | 'optional' | 'human-only';
@@ -30,9 +37,19 @@ export interface VariableSpec {
 /** The declared surface of `settlement-config-v1`. */
 export const CONFIG_VARIABLES: readonly VariableSpec[] = [
   {
+    name: 'ONESHOT_CHAIN',
+    classification: 'optional',
+    description:
+      'Settlement chain id. When set, it selects the chain. When ONESHOT_ARC_PROFILE ' +
+      'is also set, the two values must match. When omitted, ONESHOT_ARC_PROFILE is required.',
+    examplePlaceholder: 'arc-testnet',
+  },
+  {
     name: 'ONESHOT_ARC_PROFILE',
     classification: 'public',
-    description: `Enabled Arc deployment profile. One of: ${ARC_PROFILE_IDS.join(', ')}.`,
+    description:
+      `Arc profile id used when ONESHOT_CHAIN is omitted. One of: ${ARC_PROFILE_IDS.join(', ')}. ` +
+      'Must equal ONESHOT_CHAIN when both are set.',
     examplePlaceholder: 'arc-testnet',
   },
   {
@@ -105,8 +122,27 @@ export const SECRET_VARIABLE_NAMES: readonly string[] = CONFIG_VARIABLES.filter(
   (variable) => variable.classification === 'secret',
 ).map((variable) => variable.name);
 
+/** Flat view of the selected pinned chain. Amounts use `tokenDecimals`, never `nativeDecimals`. */
+export interface SettlementProfile {
+  readonly id: string;
+  readonly displayName: string;
+  readonly verification: 'PINNED';
+  readonly enabled: true;
+  readonly isMainnet: boolean;
+  readonly chainId: number;
+  readonly caip2: SettlementNetwork;
+  readonly tokenContract: `0x${string}`;
+  readonly tokenSymbol: 'USDC';
+  readonly tokenDecimals: number;
+  readonly nativeDecimals: number;
+  readonly nativeSymbol: string;
+  readonly settlementMethod: 'erc20-transfer';
+  /** Set only when this chain has a Graph indexer. The value is an env var name, not a URL. */
+  readonly graphQueryEnv?: 'ONESHOT_SUBGRAPH_QUERY_URL';
+}
+
 export interface SettlementConfig {
-  readonly profile: PinnedArcProfile;
+  readonly profile: SettlementProfile;
   readonly rpcUrl: string;
   readonly explorerUrl?: string | undefined;
   readonly privyAppId: string;
@@ -125,6 +161,7 @@ export class ConfigError extends Error {
       | 'PROFILE_UNPUBLISHED'
       | 'PROFILE_DISABLED'
       | 'MAINNET_NOT_AUTHORIZED'
+      | 'CHAIN_SELECTION_CONFLICT'
       | 'INVALID_URL'
       | 'INVALID_TIMEOUT'
       | 'INVALID_CAP',
@@ -161,6 +198,113 @@ function parseHttpsUrl(candidate: string, label: string): string {
   return parsed.toString();
 }
 
+function profileFromChain(chain: PinnedSettlementChain): SettlementProfile {
+  if (chain.settlementAsset.symbol !== 'USDC') {
+    throw new ConfigError(
+      `Settlement chain "${chain.id}" does not settle USDC.`,
+      'PROFILE_DISABLED',
+    );
+  }
+  if (!chain.enabled) {
+    throw new ConfigError(`Settlement chain "${chain.id}" is disabled.`, 'PROFILE_DISABLED');
+  }
+  const caip2 = chain.caip2;
+  if (!isEnabledSettlementNetwork(caip2)) {
+    throw new ConfigError(
+      `Settlement chain "${chain.id}" is not an enabled settlement network.`,
+      'PROFILE_DISABLED',
+    );
+  }
+  return {
+    id: chain.id,
+    displayName: chain.displayName,
+    verification: 'PINNED',
+    enabled: true,
+    isMainnet: chain.isMainnet,
+    chainId: chain.chainId,
+    caip2,
+    tokenContract: chain.settlementAsset.contract,
+    tokenSymbol: 'USDC',
+    tokenDecimals: chain.settlementAsset.decimals,
+    nativeDecimals: chain.nativeAsset.decimals,
+    nativeSymbol: chain.nativeAsset.symbol,
+    settlementMethod: chain.settlementMethod,
+    ...(chain.graphQueryEnv ? { graphQueryEnv: chain.graphQueryEnv } : {}),
+  };
+}
+
+/**
+ * Resolve the selected chain.
+ *
+ * `ONESHOT_CHAIN` selects any registered chain. `ONESHOT_ARC_PROFILE` remains
+ * the original selector. Setting both to different ids fails closed. Omitting
+ * both fails closed: a missing chain is never implied.
+ */
+function selectConfiguredChain(env: RawEnv): PinnedSettlementChain {
+  const chainId = env.ONESHOT_CHAIN?.trim();
+  const arcProfileId = env.ONESHOT_ARC_PROFILE?.trim();
+  if (chainId && arcProfileId && chainId !== arcProfileId) {
+    throw new ConfigError(
+      `ONESHOT_CHAIN="${chainId}" and ONESHOT_ARC_PROFILE="${arcProfileId}" select different chains.`,
+      'CHAIN_SELECTION_CONFLICT',
+    );
+  }
+
+  if (!chainId && arcProfileId) {
+    const profile = getProfile(arcProfileId);
+    if (!profile) {
+      throw new ConfigError(
+        `Unknown Arc profile "${arcProfileId}". Known profiles: ${ARC_PROFILE_IDS.join(', ')}.`,
+        'UNKNOWN_PROFILE',
+      );
+    }
+    if (!isPinned(profile)) {
+      throw new ConfigError(
+        `Arc profile "${arcProfileId}" carries no pinned network values. ${profile.reason}`,
+        'PROFILE_UNPUBLISHED',
+      );
+    }
+    if (!profile.enabled) {
+      throw new ConfigError(`Arc profile "${arcProfileId}" is disabled.`, 'PROFILE_DISABLED');
+    }
+    if (profile.isMainnet && env.ONESHOT_ALLOW_MAINNET_ACTIVATION?.trim() !== 'true') {
+      throw new ConfigError(
+        `Arc Mainnet is the default settlement rail and moves real value. Confirm it with ` +
+          'ONESHOT_ALLOW_MAINNET_ACTIVATION=true, or select a testnet with ' +
+          'ONESHOT_CHAIN=arc-testnet or ONESHOT_CHAIN=base-sepolia.',
+        'MAINNET_NOT_AUTHORIZED',
+      );
+    }
+  }
+
+  const selectedId = chainId || arcProfileId || 'arc-mainnet';
+  const chain = getSettlementChain(selectedId);
+  if (!chain) {
+    throw new ConfigError(
+      `Unknown settlement chain "${selectedId}".`,
+      'UNKNOWN_PROFILE',
+    );
+  }
+  if (!isPinnedChain(chain)) {
+    throw new ConfigError(
+      `Settlement chain "${selectedId}" carries no pinned network values. ${chain.reason}`,
+      'PROFILE_UNPUBLISHED',
+    );
+  }
+  if (!chain.enabled) {
+    throw new ConfigError(`Settlement chain "${selectedId}" is disabled.`, 'PROFILE_DISABLED');
+  }
+  if (chain.isMainnet && env.ONESHOT_ALLOW_MAINNET_ACTIVATION?.trim() !== 'true') {
+    throw new ConfigError(
+      `Arc Mainnet is the default settlement rail and moves real value. Confirm it with ` +
+        'ONESHOT_ALLOW_MAINNET_ACTIVATION=true, or select a testnet with ' +
+        'ONESHOT_CHAIN=arc-testnet or ONESHOT_CHAIN=base-sepolia.',
+      'MAINNET_NOT_AUTHORIZED',
+    );
+  }
+  return chain;
+}
+
 /**
  * Build a validated settlement configuration, or throw.
  *
@@ -169,37 +313,7 @@ function parseHttpsUrl(candidate: string, label: string): string {
  * activation flag. Any one missing fails closed.
  */
 export function loadSettlementConfig(env: RawEnv): SettlementConfig {
-  const profileId = required(env, 'ONESHOT_ARC_PROFILE');
-  const profile = getProfile(profileId);
-
-  if (!profile) {
-    throw new ConfigError(
-      `Unknown Arc profile "${profileId}". Known profiles: ${ARC_PROFILE_IDS.join(', ')}.`,
-      'UNKNOWN_PROFILE',
-    );
-  }
-
-  if (!isPinned(profile)) {
-    throw new ConfigError(
-      `Arc profile "${profileId}" carries no pinned network values. ${profile.reason}`,
-      'PROFILE_UNPUBLISHED',
-    );
-  }
-
-  if (!profile.enabled) {
-    throw new ConfigError(`Arc profile "${profileId}" is disabled.`, 'PROFILE_DISABLED');
-  }
-
-  if (profile.isMainnet) {
-    const authorized = env.ONESHOT_ALLOW_MAINNET_ACTIVATION?.trim() === 'true';
-    if (!authorized) {
-      throw new ConfigError(
-        `Arc profile "${profileId}" moves real value and requires explicit human ` +
-          'authorization via ONESHOT_ALLOW_MAINNET_ACTIVATION=true.',
-        'MAINNET_NOT_AUTHORIZED',
-      );
-    }
-  }
+  const profile = profileFromChain(selectConfiguredChain(env));
 
   const rpcUrl = parseHttpsUrl(required(env, 'ONESHOT_ARC_RPC_URL'), 'ONESHOT_ARC_RPC_URL');
 

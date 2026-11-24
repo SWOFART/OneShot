@@ -205,6 +205,9 @@ importers:
 
   packages/arc-adapter:
     dependencies:
+      '@oneshot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       viem:
         specifier: 2.56.3
         version: 2.56.3(typescript@6.0.3)(zod@4.2.1)

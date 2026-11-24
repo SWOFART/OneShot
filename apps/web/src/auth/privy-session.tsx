@@ -6,20 +6,13 @@ import {
   useWallets,
 } from '@privy-io/react-auth';
 import type { BaseConnectedWalletType } from '@privy-io/react-auth';
-import { defineChain } from 'viem';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { OperatorSession, OperatorSessionStatus, UserWalletSession } from './session.js';
+import { browserSettlementChain, browserViemChain } from '../wallet-chain.js';
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
-const ARC_TESTNET_CHAIN_ID = 'eip155:5042002' as const;
-const ARC_TESTNET = defineChain({
-  id: 5042002,
-  name: 'Arc Testnet',
-  testnet: true,
-  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
-  rpcUrls: { default: { http: ['https://rpc.testnet.arc.network'] } },
-  blockExplorers: { default: { name: 'Arcscan', url: 'https://testnet.arcscan.app' } },
-});
+const SETTLEMENT_CHAIN = browserSettlementChain();
+const SETTLEMENT_VIEM_CHAIN = browserViemChain(SETTLEMENT_CHAIN);
 
 export function PrivyOperatorProvider(props: {
   readonly appId: string;
@@ -31,11 +24,11 @@ export function PrivyOperatorProvider(props: {
       config={{
         loginMethods: ['email', 'wallet'],
         embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
-        defaultChain: ARC_TESTNET,
-        supportedChains: [ARC_TESTNET],
+        defaultChain: SETTLEMENT_VIEM_CHAIN,
+        supportedChains: [SETTLEMENT_VIEM_CHAIN],
         appearance: {
-          theme: '#0a0a0a',
-          accentColor: '#00dc5f',
+          theme: '#101318',
+          accentColor: '#1a4b8c',
           walletList: ['detected_ethereum_wallets', 'wallet_connect'],
           walletChainType: 'ethereum-only',
         },
@@ -140,14 +133,16 @@ export function usePrivyUserWallet(): UserWalletSession {
     return wallet;
   }
 
-  async function resolveArcWallet(): Promise<EthereumWallet> {
+  async function resolveSettlementWallet(): Promise<EthereumWallet> {
     const current = await resolveWallet();
-    if (current.chainId !== ARC_TESTNET_CHAIN_ID) await current.switchChain(5042002);
+    if (current.chainId !== SETTLEMENT_CHAIN.caip2) {
+      await current.switchChain(SETTLEMENT_CHAIN.chainId);
+    }
     return current;
   }
 
   async function sendTransfer(payment: Parameters<UserWalletSession['sendTransfer']>[0]) {
-    const current = await resolveArcWallet();
+    const current = await resolveSettlementWallet();
     if (current.address.toLowerCase() !== payment.payer_wallet.toLowerCase()) {
       throw new Error('The active wallet changed; review the payment again');
     }

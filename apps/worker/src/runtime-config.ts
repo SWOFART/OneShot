@@ -10,17 +10,23 @@ export interface WorkerRuntimeConfig {
   readonly privyAppSecret: string;
   readonly walletAddress: `0x${string}`;
   readonly policyDigest: string;
-  readonly recovery: {
-    readonly mcpEndpoint?: string;
-    readonly graphQueryUrl?: string;
-    readonly graphApiKey?: string;
-    readonly fromBlock: string;
-    readonly toBlock: string;
-    readonly policy: SubgraphMcpPolicy;
-    readonly vertexProjectId: string;
-    readonly vertexLocation: string;
-    readonly vertexModel: string;
-  };
+  readonly recovery:
+    | {
+        readonly graphEnabled: false;
+        readonly graphDisabledReason: string;
+      }
+    | {
+        readonly graphEnabled: true;
+        readonly mcpEndpoint?: string;
+        readonly graphQueryUrl?: string;
+        readonly graphApiKey?: string;
+        readonly fromBlock: string;
+        readonly toBlock: string;
+        readonly policy: SubgraphMcpPolicy;
+        readonly vertexProjectId: string;
+        readonly vertexLocation: string;
+        readonly vertexModel: string;
+      };
   readonly pollIntervalMs: number;
   readonly submissionLeaseMs: number;
   readonly maxJobsPerCycle: number;
@@ -99,19 +105,9 @@ function databaseConfig(environment: NodeJS.ProcessEnv): PoolConfig {
   };
 }
 
-export function loadWorkerRuntimeConfig(
-  environment: NodeJS.ProcessEnv = process.env,
-): WorkerRuntimeConfig {
-  const settlement = loadSettlementConfig(environment);
-  const walletAddress = required(environment, 'ONESHOT_PRIVY_WALLET_ADDRESS');
-  if (!/^0x[0-9a-fA-F]{40}$/.test(walletAddress)) {
-    throw new Error('Invalid environment variable: ONESHOT_PRIVY_WALLET_ADDRESS');
-  }
-  const policyDigest = required(environment, 'ONESHOT_PRIVY_POLICY_DIGEST').toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(policyDigest)) {
-    throw new Error('Invalid environment variable: ONESHOT_PRIVY_POLICY_DIGEST');
-  }
-
+function loadGraphRecovery(
+  environment: NodeJS.ProcessEnv,
+): Extract<WorkerRuntimeConfig['recovery'], { graphEnabled: true }> {
   const mcpEndpoint = environment.ONESHOT_SUBGRAPH_MCP_ENDPOINT?.trim()
     ? httpsUrl(environment, 'ONESHOT_SUBGRAPH_MCP_ENDPOINT')
     : undefined;
@@ -183,6 +179,42 @@ export function loadWorkerRuntimeConfig(
   if (!/^[A-Za-z0-9._-]{1,128}$/.test(vertexModel)) {
     throw new Error('Invalid environment variable: ONESHOT_VERTEX_MODEL');
   }
+  return {
+    graphEnabled: true,
+    ...(retrieval === 'SUBGRAPH_MCP' && mcpEndpoint ? { mcpEndpoint } : {}),
+    ...(retrieval === 'STUDIO_GRAPHQL' && graphQueryUrl ? { graphQueryUrl } : {}),
+    ...(environment.ONESHOT_GRAPH_API_KEY?.trim()
+      ? { graphApiKey: environment.ONESHOT_GRAPH_API_KEY.trim() }
+      : {}),
+    fromBlock,
+    toBlock,
+    policy,
+    vertexProjectId,
+    vertexLocation,
+    vertexModel,
+  };
+}
+
+export function loadWorkerRuntimeConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): WorkerRuntimeConfig {
+  const settlement = loadSettlementConfig(environment);
+  const walletAddress = required(environment, 'ONESHOT_PRIVY_WALLET_ADDRESS');
+  if (!/^0x[0-9a-fA-F]{40}$/.test(walletAddress)) {
+    throw new Error('Invalid environment variable: ONESHOT_PRIVY_WALLET_ADDRESS');
+  }
+  const policyDigest = required(environment, 'ONESHOT_PRIVY_POLICY_DIGEST').toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(policyDigest)) {
+    throw new Error('Invalid environment variable: ONESHOT_PRIVY_POLICY_DIGEST');
+  }
+
+  const graphConfigured = settlement.profile.graphQueryEnv !== undefined;
+  const graphRecovery = graphConfigured
+    ? loadGraphRecovery(environment)
+    : {
+        graphEnabled: false as const,
+        graphDisabledReason: `Graph recovery disabled: ${settlement.profile.displayName} has no indexer configured.`,
+      };
 
   const demoResponseLoss = environment.ONESHOT_DEMO_RESPONSE_LOSS_AFTER_BROADCAST?.trim();
   if (
@@ -212,19 +244,7 @@ export function loadWorkerRuntimeConfig(
     privyAppSecret: required(environment, 'ONESHOT_PRIVY_APP_SECRET'),
     walletAddress: walletAddress.toLowerCase() as `0x${string}`,
     policyDigest,
-    recovery: {
-      ...(retrieval === 'SUBGRAPH_MCP' && mcpEndpoint ? { mcpEndpoint } : {}),
-      ...(retrieval === 'STUDIO_GRAPHQL' && graphQueryUrl ? { graphQueryUrl } : {}),
-      ...(environment.ONESHOT_GRAPH_API_KEY?.trim()
-        ? { graphApiKey: environment.ONESHOT_GRAPH_API_KEY.trim() }
-        : {}),
-      fromBlock,
-      toBlock,
-      policy,
-      vertexProjectId,
-      vertexLocation,
-      vertexModel,
-    },
+    recovery: graphRecovery,
     pollIntervalMs: integer(environment, 'ONESHOT_WORKER_POLL_INTERVAL_MS', 1_000, 100, 60_000),
     submissionLeaseMs: integer(
       environment,

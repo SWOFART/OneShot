@@ -12,12 +12,14 @@ describe('API runtime configuration', () => {
   const base = {
     DATABASE_URL: 'postgresql://oneshot:secret@localhost:5432/oneshot',
     SERVICE_BEARER_TOKEN: 'service-token-1234',
+    ONESHOT_CHAIN: 'arc-testnet',
   };
 
   it('uses DATABASE_URL for local and managed TCP PostgreSQL', () => {
     const config = loadApiRuntimeConfig({
       DATABASE_URL: 'postgresql://oneshot:secret@localhost:5432/oneshot',
       SERVICE_BEARER_TOKEN: 'service-token-1234',
+      ONESHOT_CHAIN: 'arc-testnet',
       PORT: '8080',
     });
 
@@ -36,6 +38,7 @@ describe('API runtime configuration', () => {
       DB_PASS: 'secret',
       DB_NAME: 'oneshot',
       SERVICE_BEARER_TOKEN: 'service-token-1234',
+      ONESHOT_CHAIN: 'arc-testnet',
     });
 
     expect(config.database).toEqual({
@@ -262,5 +265,45 @@ describe('API runtime configuration', () => {
         PRIVY_AUTH_ALLOWED_SUBJECTS: 'did:privy:one',
       }),
     ).toThrow();
+  });
+
+  it('uses Arc Testnet when that testnet is selected', () => {
+    expect(loadApiRuntimeConfig({ ...base }).settlementNetwork).toBe('eip155:5042002');
+  });
+
+  it('refuses the default Arc Mainnet rail until an operator confirms it', () => {
+    const { ONESHOT_CHAIN, ...withoutChain } = base;
+    expect(ONESHOT_CHAIN).toBe('arc-testnet');
+    expect(() => loadApiRuntimeConfig(withoutChain)).toThrow(/ONESHOT_ALLOW_MAINNET_ACTIVATION/u);
+  });
+
+  it('loads Arc Mainnet after the operator confirms activation', () => {
+    const { ONESHOT_CHAIN, ...withoutChain } = base;
+    expect(ONESHOT_CHAIN).toBe('arc-testnet');
+    const config = loadApiRuntimeConfig({
+      ...withoutChain,
+      ONESHOT_ALLOW_MAINNET_ACTIVATION: 'true',
+    });
+    expect(config.settlementChainId).toBe(5042);
+    expect(config.settlementNetwork).toBe('eip155:5042');
+    expect(config.graphIndexerConfigured).toBe(false);
+  });
+
+  it('selects Base Sepolia when ONESHOT_CHAIN names it', () => {
+    const config = loadApiRuntimeConfig({ ...base, ONESHOT_CHAIN: 'base-sepolia' });
+    expect(config.settlementChainId).toBe(84532);
+    expect(config.settlementNetwork).toBe('eip155:84532');
+  });
+
+  it('allows MCP payments on Base Sepolia and reports that Graph is not configured', () => {
+    const config = loadApiRuntimeConfig({
+      ...base,
+      ONESHOT_CHAIN: 'base-sepolia',
+      ONESHOT_WORKSPACE_ID: 'workspace-1',
+      ONESHOT_MCP_BEARER_TOKEN: 'mcp-bearer-token-123456789012345',
+    });
+    expect(config.settlementNetwork).toBe('eip155:84532');
+    expect(config.mcp?.workspaceId).toBe('workspace-1');
+    expect(config.graphIndexerConfigured).toBe(false);
   });
 });

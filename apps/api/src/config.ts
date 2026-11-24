@@ -1,4 +1,9 @@
 import { createPublicKey } from 'node:crypto';
+import {
+  isEnabledSettlementNetwork,
+  selectSettlementChain,
+  type SettlementNetwork,
+} from '@oneshot/contracts';
 import type { PoolConfig } from 'pg';
 import { PRIVY_ALLOW_ALL, PRIVY_DID_PREFIX } from './privy-auth.js';
 
@@ -28,6 +33,12 @@ export interface ApiRuntimeConfig {
   };
   /** Credential-free read-only RPC used to verify user-submitted receipts. */
   readonly userWalletRpcUrl?: string;
+  /** Chain selected by ONESHOT_CHAIN or ONESHOT_ARC_PROFILE. Defaults to Arc Testnet. */
+  readonly settlementChainId: number;
+  readonly settlementNetwork: SettlementNetwork;
+  readonly settlementTokenContract: `0x${string}`;
+  /** False when the selected chain has no Graph indexer. Activity then stays empty. */
+  readonly graphIndexerConfigured: boolean;
   readonly mcp?: {
     readonly bearerToken?: string;
     readonly workspaceId: string;
@@ -214,8 +225,22 @@ export function loadApiRuntimeConfig(
   const activityEndpoint =
     environment.ONESHOT_GRAPH_QUERY_URL?.trim() || environment.ONESHOT_SUBGRAPH_QUERY_URL?.trim();
   const activityWallet = environment.ONESHOT_ACTIVITY_WALLET_ADDRESS?.trim();
+  const serviceBearerToken = required(environment, 'SERVICE_BEARER_TOKEN', 16);
+  const database = databaseConfig(environment);
   const userWalletRpcUrl = optionalRpcUrl(environment, 'ONESHOT_ARC_RPC_URL');
   const mcp = mcpConfig(environment, workspaceId);
+  const chain = selectSettlementChain(environment);
+  if (chain.isMainnet && environment.ONESHOT_ALLOW_MAINNET_ACTIVATION?.trim() !== 'true') {
+    throw new Error(
+      'Arc Mainnet is the default settlement rail and moves real value. Set ' +
+        'ONESHOT_ALLOW_MAINNET_ACTIVATION=true after confirming the pinned chain, or select a ' +
+        'testnet with ONESHOT_CHAIN=arc-testnet or ONESHOT_CHAIN=base-sepolia.',
+    );
+  }
+  const settlementNetwork = chain.caip2;
+  if (!isEnabledSettlementNetwork(settlementNetwork)) {
+    throw new Error(`Settlement chain "${chain.id}" is not an enabled settlement network.`);
+  }
   if (!activityEndpoint && activityWallet) {
     throw new Error(
       'A Graph query URL is required when ONESHOT_ACTIVITY_WALLET_ADDRESS is configured',
@@ -230,8 +255,8 @@ export function loadApiRuntimeConfig(
   return {
     host: environment.HOST?.trim() || '0.0.0.0',
     port: integer(environment, 'PORT', 3000, 1, 65_535),
-    serviceBearerToken: required(environment, 'SERVICE_BEARER_TOKEN', 16),
-    database: databaseConfig(environment),
+    serviceBearerToken,
+    database,
     submissionsDisabled: environment.ONESHOT_SUBMISSIONS_DISABLED === 'true',
     // One fixed workspace is safer than accepting a caller-selected tenant.
     // Deployments should configure this explicit value; the default keeps local
@@ -242,7 +267,7 @@ export function loadApiRuntimeConfig(
       windowMs: integer(environment, 'ONESHOT_API_RATE_LIMIT_WINDOW_MS', 60_000, 1_000, 3_600_000),
     },
     ...(privyAuth ? { privyAuth } : {}),
-    ...(activityEndpoint
+    ...(activityEndpoint && chain.graphQueryEnv
       ? {
           walletActivity: {
             endpoint: activityEndpoint,
@@ -255,5 +280,9 @@ export function loadApiRuntimeConfig(
       : {}),
     ...(userWalletRpcUrl ? { userWalletRpcUrl } : {}),
     ...(mcp ? { mcp } : {}),
+    settlementChainId: chain.chainId,
+    settlementNetwork,
+    settlementTokenContract: chain.settlementAsset.contract,
+    graphIndexerConfigured: chain.graphQueryEnv !== undefined,
   };
 }

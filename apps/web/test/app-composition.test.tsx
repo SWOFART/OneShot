@@ -20,7 +20,9 @@ afterEach(() => {
 describe('Gate P5 shell composition', () => {
   it('separates the public landing page from the authenticated cabinet route', () => {
     const landing = render(<App route="/" />);
-    expect(screen.getByRole('heading', { name: /Resume the job, not the payment/u })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: /One payment identity across every retry/u }),
+    ).toBeTruthy();
     expect(screen.getAllByRole('link', { name: /Open workspace/u })[0]?.getAttribute('href')).toBe(
       '/app',
     );
@@ -190,7 +192,7 @@ describe('Gate P5 shell composition', () => {
     );
 
     await user.click(screen.getByRole('tab', { name: 'Payment services' }));
-    expect(screen.getByRole('heading', { name: 'Direct Arc payment' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Direct Arc Mainnet payment' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Requests and results', level: 2 })).toBeNull();
     await user.click(screen.getByRole('tab', { name: 'Requests' }));
     expect(

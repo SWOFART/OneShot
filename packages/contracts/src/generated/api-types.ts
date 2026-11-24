@@ -32,7 +32,7 @@ export interface CreateIntentRequest {
   readonly recipient: string;
   readonly amount_atomic: string;
   readonly asset: 'USDC';
-  readonly network: 'eip155:5042002';
+  readonly network: 'eip155:5042' | 'eip155:5042002' | 'eip155:84532';
   readonly purpose: string;
 }
 
@@ -99,8 +99,8 @@ export interface CreateUserWalletJobRequest extends CreateJobRequest {
 }
 
 export interface UserWalletPayment {
-  readonly chain_id: 5042002;
-  readonly network: 'eip155:5042002';
+  readonly chain_id: 5042 | 5042002 | 84532;
+  readonly network: 'eip155:5042' | 'eip155:5042002' | 'eip155:84532';
   readonly token_contract: string;
   readonly payer_wallet: string;
   readonly recipient: string;
@@ -114,7 +114,7 @@ export interface SupplierQuote {
   readonly recipient: string;
   readonly amount_atomic: string;
   readonly asset: 'USDC';
-  readonly network: 'eip155:5042002';
+  readonly network: 'eip155:5042' | 'eip155:5042002' | 'eip155:84532';
   readonly expires_at: string;
 }
 
@@ -151,7 +151,7 @@ export interface ActivityTransferView {
   readonly token_contract?: string;
   readonly block_number?: string;
   readonly block_timestamp?: string;
-  readonly network?: 'eip155:5042002';
+  readonly network?: 'eip155:5042' | 'eip155:5042002' | 'eip155:84532';
   readonly recipient: string;
   readonly amount_atomic: string;
   readonly match: 'RECORDED_SETTLEMENT' | 'UNMATCHED';

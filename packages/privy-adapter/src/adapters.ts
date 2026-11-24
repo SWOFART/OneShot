@@ -46,7 +46,11 @@ import { assertNoDrift, type SettlementBaseline } from './hardening.js';
  */
 export const WORKER_PORT_CONTRACT_VERSION = '1.0.0';
 
-/** The only network these adapters will act on. */
+/**
+ * Arc Testnet CAIP-2. Kept for callers that still name the original rail.
+ * Adapters act on `config.profile.caip2`, which is Arc Testnet unless a
+ * caller selects another enabled chain.
+ */
 export const SUPPORTED_NETWORK = 'eip155:5042002';
 
 export interface SettlementContext {
@@ -105,10 +109,10 @@ export class PrivyAuthorizationAdapter {
   ) {}
 
   authorize(request: CreateIntentRequest): Promise<AuthorizationResult> {
-    if (request.network !== SUPPORTED_NETWORK) {
+    if (request.network !== this.config.profile.caip2) {
       return Promise.resolve({
         kind: 'DENIED',
-        reason: `Network ${request.network} is not the enabled Arc profile`,
+        reason: `Network ${request.network} is not the configured settlement chain ${this.config.profile.caip2}`,
       });
     }
 
@@ -183,12 +187,16 @@ export class PrivyAuthorizationAdapter {
 export class ArcSettlementAdapter {
   readonly name = 'ArcSettlementAdapter';
   readonly contractVersion = WORKER_PORT_CONTRACT_VERSION;
-  readonly network = SUPPORTED_NETWORK;
 
   constructor(
     private readonly config: SettlementConfig,
     private readonly provider: WalletProvider,
   ) {}
+
+  /** The chain this adapter will submit on. Comes from the selected profile. */
+  get network(): string {
+    return this.config.profile.caip2;
+  }
 
   getSubmissionIdentity(request: CreateIntentRequest) {
     const canonical = buildCanonicalRequest({
@@ -216,10 +224,10 @@ export class ArcSettlementAdapter {
    * that a retry under a new attempt id still derives the same idempotency key.
    */
   async submit(request: CreateIntentRequest): Promise<SettlementResult> {
-    if (request.network !== SUPPORTED_NETWORK) {
+    if (request.network !== this.config.profile.caip2) {
       return {
         kind: 'DEFINITELY_NOT_SUBMITTED',
-        reason: `Network ${request.network} is not the enabled Arc profile`,
+        reason: `Network ${request.network} is not the configured settlement chain ${this.config.profile.caip2}`,
       };
     }
 

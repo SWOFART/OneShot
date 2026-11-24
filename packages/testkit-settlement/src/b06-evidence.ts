@@ -535,44 +535,43 @@ export interface MainnetArtifactCheck {
 }
 
 /**
- * B06.4 — Mainnet readiness without a mainnet transaction.
+ * B06.4 — Mainnet identity is pinned, and settlement still needs a human flag.
  *
- * Readiness here means the disabled profile carries no usable values. A profile
- * that is merely flagged `enabled: false` while holding a chain ID and RPC is
- * one config edit away from spending real money.
+ * Official Arc documentation publishes the chain id, CAIP-2, and USDC address.
+ * Those values live on the profile. The profile does not store an RPC URL, and
+ * `isMainnet` keeps `ONESHOT_ALLOW_MAINNET_ACTIVATION` in front of any
+ * settlement. A profile that is not mainnet, or that carries a different chain
+ * id, fails this check.
  */
 export function checkMainnetReadiness(
   artifacts: readonly MainnetArtifactCheck[],
   mainnetProfile: typeof ARC_MAINNET = ARC_MAINNET,
 ): EvidenceSection {
   const profile = mainnetProfile as unknown as Record<string, unknown>;
-  const valueKeys = ['chainId', 'caip2', 'tokenContract', 'rpcUrl', 'explorerUrl'];
-  const carriedValues = valueKeys.filter((key) => profile[key] !== undefined);
-
   const checks: EvidenceCheck[] = [
     check(
-      'mainnet.disabled',
-      'Arc Mainnet profile is disabled',
-      mainnetProfile.enabled === false,
-      `enabled=${String(mainnetProfile.enabled)}`,
+      'mainnet.pinned-chain',
+      'Arc Mainnet profile pins the published chain id and CAIP-2',
+      isPinned(mainnetProfile) &&
+        mainnetProfile.isMainnet === true &&
+        mainnetProfile.chainId === 5042 &&
+        mainnetProfile.caip2 === 'eip155:5042',
+      `chainId=${String(mainnetProfile.chainId)} caip2=${String(mainnetProfile.caip2)}`,
     ),
     check(
-      'mainnet.unpublished',
-      'Arc Mainnet profile is marked unpublished',
-      mainnetProfile.verification === 'UNPUBLISHED' && !isPinned(mainnetProfile),
-      mainnetProfile.verification,
+      'mainnet.pinned-token',
+      'Arc Mainnet profile pins the published USDC interface',
+      isPinned(mainnetProfile) &&
+        mainnetProfile.tokenContract === '0x3600000000000000000000000000000000000000' &&
+        mainnetProfile.tokenDecimals === 6 &&
+        mainnetProfile.nativeDecimals === 18,
+      `token=${String(mainnetProfile.tokenContract)}`,
     ),
     check(
-      'mainnet.no-values',
-      'Arc Mainnet profile carries no chain, RPC, explorer, or token value',
-      carriedValues.length === 0,
-      carriedValues.length === 0 ? 'no network values present' : `carries ${carriedValues.join(', ')}`,
-    ),
-    check(
-      'mainnet.reason-recorded',
-      'Profile records why it stays disabled',
-      typeof mainnetProfile.reason === 'string' && mainnetProfile.reason.length > 0,
-      mainnetProfile.reason,
+      'mainnet.no-endpoint',
+      'Arc Mainnet profile does not store an RPC or explorer URL',
+      profile.rpcUrl === undefined && profile.explorerUrl === undefined,
+      'endpoints stay in operator configuration',
     ),
   ];
 

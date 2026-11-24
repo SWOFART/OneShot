@@ -16,6 +16,7 @@ import {
   type UserWalletSession,
 } from './auth/session.js';
 import { Hero } from './components/Hero.js';
+import { browserSettlementChain } from './wallet-chain.js';
 import { LoginGate } from './components/LoginGate.js';
 import { McpDocsPage } from './components/McpDocsPage.js';
 import { McpProfile } from './components/McpProfile.js';
@@ -38,9 +39,54 @@ export interface AppProps {
   readonly route?: string;
 }
 
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+      <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.1 5.1l1.6 1.6M17.3 17.3l1.6 1.6M18.9 5.1l-1.6 1.6M6.7 17.3l-1.6 1.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+      <path
+        d="M15.5 3.2a8.2 8.2 0 1 0 5.3 14.2A8.4 8.4 0 0 1 15.5 3.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="site-footer">
+      <p>One job. Many retries. At most one committed settlement.</p>
+      <nav aria-label="Footer">
+        <a href="#how-it-works">How it works</a>
+        <a href="/docs/mcp">Agent docs</a>
+        <a href="mailto:work@kapustazh.dev">work@kapustazh.dev</a>
+      </nav>
+    </footer>
+  );
+}
+
 function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () => void }) {
   return (
-    <main className="app-shell" aria-label="OneShot public landing page">
+    <main id="main-content" className="app-shell" aria-label="OneShot public landing page">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <nav className="top-nav" aria-label="Public navigation">
         <div className="brand-group">
           <CommitRing size={36} title="OneShot" />
@@ -49,31 +95,32 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
             <span className="brand-tag">SETTLEMENT ENGINE</span>
           </div>
         </div>
-        <div className="nav-status-group">
-          <span className="status-badge network-badge">
-            <span className="status-dot" />
-            Arc Testnet
-          </span>
-          <span className="status-badge token-badge">USDC</span>
-          <button type="button" className="theme-toggle" onClick={props.onToggleTheme}>
-            {props.theme === 'dark' ? 'Light theme' : 'Dark theme'}
+        <div className="nav-end">
+          <button
+            type="button"
+            className="theme-icon"
+            onClick={props.onToggleTheme}
+            aria-label={props.theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          >
+            {props.theme === 'dark' ? <SunIcon /> : <MoonIcon />}
           </button>
+          <a className="nav-console-link" href="/app">
+            Open workspace
+          </a>
         </div>
-        <a className="nav-console-link" href="/app">
-          Open workspace
-        </a>
       </nav>
       <header className="app-header hero-section">
-        <Hero height={460}>
-          <p className="eyebrow">RESUMABLE PAID SERVICES / ARC TESTNET</p>
-          <h1>Resume the job, not the payment.</h1>
+        <Hero>
+          <p className="eyebrow">Settlement infrastructure</p>
+          <h1>One payment identity across every retry.</h1>
           <p className="hero-lead">
-            Approve one direct Arc payment. If an agent restarts, the original task, payment
-            evidence and result stay together.
+            OneShot is settlement infrastructure for companies whose agents buy services. An
+            approved obligation keeps one USDC payment, even when the agent crashes, retries, or is
+            replaced.
           </p>
           <p className="hero-sublead">
-            One job. Many retries. At most one committed settlement. Team-operated testnet
-            integration.
+            Built for businesses and the platforms that sell to their agents. The settlement rail
+            is chosen per deployment.
           </p>
           <div className="hero-actions">
             <a className="btn-hero-cta" href="/app">
@@ -90,32 +137,69 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
       </header>
       <section id="how-it-works" className="invariants-section" aria-labelledby="how-heading">
         <div className="section-header">
-          <h2 id="how-heading">A safe paid-tool workflow</h2>
+          <h2 id="how-heading">How an operator stays in control</h2>
+          <p>The same business intent survives retries. The payment does not.</p>
         </div>
         <div className="invariants-grid">
           <article className="invariant-card">
-            <h3>Approve the exact purchase</h3>
+            <h3>Name the obligation</h3>
             <p>
-              Review the service, destination, amount, network and wallet rule before payment can
-              start.
+              One stable request key covers the service, recipient, amount, and chain. A changed
+              detail is held for review instead of becoming a second payment.
             </p>
           </article>
           <article className="invariant-card">
-            <h3>Keep one task key</h3>
+            <h3>Grant one settlement</h3>
             <p>
-              Retries reuse the same request key and supplier order. Changed details are held for
-              review.
+              Durable state decides who may submit. Wallet policy can only narrow that. A crash
+              after broadcast becomes <code>UNKNOWN</code> until it is reconciled.
             </p>
           </article>
           <article className="invariant-card">
-            <h3>Retrieve the existing result</h3>
+            <h3>Read the evidence</h3>
             <p>
-              Payment checks are read-only. If delivery is delayed, the original supplier request
-              resumes without another charge.
+              Operators and replacement agents see the same payment record. A delayed index is not
+              treated as proof that the payment never happened.
             </p>
           </article>
         </div>
       </section>
+      <section className="guarantee-section" aria-labelledby="guarantee-heading">
+        <p className="eyebrow">The guarantee</p>
+        <h2 id="guarantee-heading">One intent. Many attempts. One settlement.</h2>
+        <p>
+          OneShot owns the payment record. Retries, restarts, and parallel workers converge on that
+          record. An uncertain payment stays <code>UNKNOWN</code> until receipt evidence resolves
+          it.
+        </p>
+      </section>
+      <section className="audience-section" aria-labelledby="audience-heading">
+        <div className="section-header">
+          <h2 id="audience-heading">Who it is for</h2>
+          <p>Two kinds of company, one payment record.</p>
+        </div>
+        <div className="invariants-grid">
+          <article className="invariant-card">
+            <h3>Businesses running agents</h3>
+            <p>
+              Approve a purchase once. If the agent or the worker restarts, the workspace shows the
+              same intent, attempt history, and settlement evidence.
+            </p>
+          </article>
+          <article className="invariant-card">
+            <h3>Platforms selling to agents</h3>
+            <p>
+              Connect an agent with the MCP payment tools. The user wallet signs the payment.
+              OneShot prepares the request and verifies the receipt.
+            </p>
+          </article>
+        </div>
+      </section>
+      <p className="chains-note">
+        OneShot is chain-agnostic. Each deployment settles on the rail its operator selects, and
+        the payment identity stays the same. Chain configuration is documented for operators.
+      </p>
+      <SiteFooter />
     </main>
   );
 }
@@ -174,7 +258,10 @@ function CabinetPage(props: {
     setSection('protection');
   }
   return (
-    <main className="app-shell" aria-label="OneShot workspace cabinet">
+    <main id="main-content" className="app-shell" aria-label="OneShot workspace cabinet">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <nav className="top-nav" aria-label="Workspace navigation">
         <a className="brand-group" href="/">
           <CommitRing size={36} title="OneShot" />
@@ -183,7 +270,7 @@ function CabinetPage(props: {
         <div className="nav-status-group">
           <span className="status-badge network-badge">
             <span className="status-dot" />
-            Arc Testnet
+            {browserSettlementChain().displayName}
           </span>
           <span className="status-badge token-badge">USDC</span>
           <button type="button" className="theme-toggle" onClick={props.onToggleTheme}>
@@ -224,8 +311,8 @@ function CabinetPage(props: {
             </li>
             <li>
               <strong>Approve deliberately.</strong> Read “Recipient receives”, the destination and
-              Arc Testnet network. Keep the request key. Only the explicit approval button starts a
-              payment request.
+              {browserSettlementChain().displayName} network. Keep the request key. Only the
+              explicit approval button starts a payment request.
             </li>
             <li>
               <strong>Read the result.</strong> Open Requests and inspect the actual payment state
@@ -269,9 +356,9 @@ function CabinetPage(props: {
               <p className="eyebrow">ONE JOB · ONE PAYMENT</p>
               <h2>What would you like to do?</h2>
               <p>
-                Send one direct USDC payment on Arc Testnet: review the exact quote, approve once,
-                and follow the same durable request from approval to proof. Payment evidence stays
-                available whenever you need it.
+                Send one direct USDC payment on {browserSettlementChain().displayName}: review the
+                exact quote, approve once, and follow the same durable request from approval to
+                proof. Payment evidence stays available whenever you need it.
               </p>
               <div className="workspace-action-grid">
                 <button type="button" onClick={() => setSection('services')}>

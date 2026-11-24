@@ -5,6 +5,8 @@ import {
   asProviderReferenceId,
   asTransactionHash,
   ContractValidationError,
+  ENABLED_SETTLEMENT_NETWORKS,
+  isEnabledSettlementNetwork,
   parseCreateJobRequest,
   parseCreateUserWalletJobRequest,
   type SupplierPort,
@@ -87,7 +89,7 @@ const createIntentBodySchema = {
     recipient: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
     amount_atomic: { type: 'string', pattern: '^(0|[1-9][0-9]*)$', maxLength: 78 },
     asset: { type: 'string', const: 'USDC' },
-    network: { type: 'string', const: 'eip155:5042002' },
+    network: { type: 'string', enum: [...ENABLED_SETTLEMENT_NETWORKS] },
     purpose: { type: 'string', minLength: 1, maxLength: 256 },
   },
 } as const;
@@ -796,7 +798,10 @@ export function buildApi(dependencies: ApiDependencies) {
       await dependencies.ledger.ping();
 
       if (dependencies.config) {
-        if (dependencies.config.network && dependencies.config.network !== 'eip155:5042002') {
+        if (
+          dependencies.config.network &&
+          !isEnabledSettlementNetwork(dependencies.config.network)
+        ) {
           sendError(
             reply,
             503,
