@@ -4,6 +4,7 @@ import {
   asEvmAddress,
   asTransactionHash,
   isEnabledSettlementNetwork,
+  settlementChainByNetwork,
   type ActivityResponse,
   type ActivityTransactionView,
   type ActivityTransferView,
@@ -73,6 +74,37 @@ function quoteForView(order: SupplierOrder) {
   };
 }
 
+function settlementPaymentIdentity(network: string): {
+  readonly chain_id: 5042002 | 84532;
+  readonly network: 'eip155:5042002' | 'eip155:84532';
+  readonly token_contract: `0x${string}`;
+} {
+  const chain = settlementChainByNetwork(network);
+  if (chain?.caip2 === 'eip155:84532' && chain.chainId === 84532) {
+    return {
+      chain_id: 84532,
+      network: 'eip155:84532',
+      token_contract: chain.settlementAsset.contract,
+    };
+  }
+  if (chain?.caip2 === 'eip155:5042002' && chain.chainId === 5042002) {
+    return {
+      chain_id: 5042002,
+      network: 'eip155:5042002',
+      token_contract: chain.settlementAsset.contract,
+    };
+  }
+  throw new Error('invalid network');
+}
+
+function explorerTransactionUrl(network: string, transactionHash: string): string {
+  const prefix =
+    network === 'eip155:84532'
+      ? 'https://sepolia.basescan.org/tx/'
+      : 'https://testnet.arcscan.app/tx/';
+  return `${prefix}${transactionHash}`;
+}
+
 function settlementForView(row: JobRow): SettlementView | undefined {
   if (
     !row.settlement_provider_reference_id ||
@@ -88,7 +120,10 @@ function settlementForView(row: JobRow): SettlementView | undefined {
     transaction_hash: row.settlement_transaction_hash,
     block_number: row.settlement_block_number,
     transfer_log_index: row.settlement_transfer_log_index,
-    explorer_url: `https://testnet.arcscan.app/tx/${row.settlement_transaction_hash}`,
+    explorer_url: explorerTransactionUrl(
+      row.supplier_quote.network,
+      row.settlement_transaction_hash,
+    ),
   };
 }
 
@@ -98,9 +133,7 @@ function asView(row: JobRow): JobView {
   const userPayment =
     paymentMode === 'USER_WALLET' && row.payer_wallet
       ? {
-          chain_id: 5042002 as const,
-          network: 'eip155:5042002' as const,
-          token_contract: '0x3600000000000000000000000000000000000000',
+          ...settlementPaymentIdentity(row.supplier_quote.network),
           payer_wallet: row.payer_wallet,
           recipient: row.supplier_quote.recipient,
           amount_atomic: row.supplier_quote.amount_atomic,

@@ -49,6 +49,9 @@ const paymentModes = ['SERVER_PRIVY', 'USER_WALLET'];
 const settlementNetworks = ['eip155:5042002', 'eip155:84532'];
 const settlementNetworkType = settlementNetworks.map((network) => `'${network}'`).join(' | ');
 const settlementNetworkSchema = { type: 'string', enum: settlementNetworks };
+const settlementChainIds = [5042002, 84532];
+const settlementChainIdType = settlementChainIds.join(' | ');
+const settlementChainIdSchema = { type: 'integer', enum: settlementChainIds };
 
 const boundedId = {
   type: 'string',
@@ -225,8 +228,8 @@ const schemas = {
       'amount_atomic',
     ],
     properties: {
-      chain_id: { type: 'integer', const: 5042002 },
-      network: { type: 'string', const: 'eip155:5042002' },
+      chain_id: settlementChainIdSchema,
+      network: settlementNetworkSchema,
       token_contract: evmAddress,
       payer_wallet: evmAddress,
       recipient: evmAddress,
@@ -252,7 +255,7 @@ const schemas = {
       recipient: evmAddress,
       amount_atomic: amountAtomic,
       asset: { type: 'string', const: 'USDC' },
-      network: { type: 'string', const: 'eip155:5042002' },
+      network: settlementNetworkSchema,
       expires_at: { type: 'string', format: 'date-time' },
     },
   },
@@ -905,8 +908,8 @@ export interface CreateUserWalletJobRequest extends CreateJobRequest {
 }
 
 export interface UserWalletPayment {
-  readonly chain_id: 5042002;
-  readonly network: 'eip155:5042002';
+  readonly chain_id: ${settlementChainIdType};
+  readonly network: ${settlementNetworkType};
   readonly token_contract: string;
   readonly payer_wallet: string;
   readonly recipient: string;
@@ -920,7 +923,7 @@ export interface SupplierQuote {
   readonly recipient: string;
   readonly amount_atomic: string;
   readonly asset: 'USDC';
-  readonly network: 'eip155:5042002';
+  readonly network: ${settlementNetworkType};
   readonly expires_at: string;
 }
 

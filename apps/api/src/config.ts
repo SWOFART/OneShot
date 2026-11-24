@@ -36,6 +36,9 @@ export interface ApiRuntimeConfig {
   /** Chain selected by ONESHOT_CHAIN or ONESHOT_ARC_PROFILE. Defaults to Arc Testnet. */
   readonly settlementChainId: number;
   readonly settlementNetwork: SettlementNetwork;
+  readonly settlementTokenContract: `0x${string}`;
+  /** False when the selected chain has no Graph indexer. Activity then stays empty. */
+  readonly graphIndexerConfigured: boolean;
   readonly mcp?: {
     readonly bearerToken?: string;
     readonly workspaceId: string;
@@ -229,9 +232,6 @@ export function loadApiRuntimeConfig(
   if (!isEnabledSettlementNetwork(settlementNetwork)) {
     throw new Error(`Settlement chain "${chain.id}" is not an enabled settlement network.`);
   }
-  if (settlementNetwork !== 'eip155:5042002' && mcp) {
-    throw new Error('MCP user-wallet payments require the Arc Testnet settlement chain.');
-  }
   if (!activityEndpoint && activityWallet) {
     throw new Error(
       'A Graph query URL is required when ONESHOT_ACTIVITY_WALLET_ADDRESS is configured',
@@ -258,7 +258,7 @@ export function loadApiRuntimeConfig(
       windowMs: integer(environment, 'ONESHOT_API_RATE_LIMIT_WINDOW_MS', 60_000, 1_000, 3_600_000),
     },
     ...(privyAuth ? { privyAuth } : {}),
-    ...(activityEndpoint
+    ...(activityEndpoint && chain.graphQueryEnv
       ? {
           walletActivity: {
             endpoint: activityEndpoint,
@@ -273,5 +273,7 @@ export function loadApiRuntimeConfig(
     ...(mcp ? { mcp } : {}),
     settlementChainId: chain.chainId,
     settlementNetwork,
+    settlementTokenContract: chain.settlementAsset.contract,
+    graphIndexerConfigured: chain.graphQueryEnv !== undefined,
   };
 }

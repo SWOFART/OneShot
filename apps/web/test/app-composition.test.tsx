@@ -190,7 +190,7 @@ describe('Gate P5 shell composition', () => {
     );
 
     await user.click(screen.getByRole('tab', { name: 'Payment services' }));
-    expect(screen.getByRole('heading', { name: 'Direct Arc payment' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Direct Arc Testnet payment' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Requests and results', level: 2 })).toBeNull();
     await user.click(screen.getByRole('tab', { name: 'Requests' }));
     expect(

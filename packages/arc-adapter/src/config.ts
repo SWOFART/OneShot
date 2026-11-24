@@ -137,6 +137,8 @@ export interface SettlementProfile {
   readonly nativeDecimals: number;
   readonly nativeSymbol: string;
   readonly settlementMethod: 'erc20-transfer';
+  /** Set only when this chain has a Graph indexer. The value is an env var name, not a URL. */
+  readonly graphQueryEnv?: 'ONESHOT_SUBGRAPH_QUERY_URL';
 }
 
 export interface SettlementConfig {
@@ -227,6 +229,7 @@ function profileFromChain(chain: PinnedSettlementChain): SettlementProfile {
     nativeDecimals: chain.nativeAsset.decimals,
     nativeSymbol: chain.nativeAsset.symbol,
     settlementMethod: chain.settlementMethod,
+    ...(chain.graphQueryEnv ? { graphQueryEnv: chain.graphQueryEnv } : {}),
   };
 }
 

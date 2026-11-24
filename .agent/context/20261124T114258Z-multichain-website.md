@@ -32,7 +32,8 @@ The owner asked for two things: review and improve the website (design, UX, resp
 - The chain catalog lives in `@oneshot/contracts` so the API, ledger, and website share one list. `@oneshot/arc-adapter` turns a selected record into the settlement profile.
 - `ONESHOT_CHAIN` selects `arc-testnet` or `base-sepolia`. `ONESHOT_ARC_PROFILE` still works and must match when both are set. Omitting both still fails settlement configuration. API startup with neither set still advertises Arc Testnet.
 - Arc Mainnet stays an unpublished record with no network values.
-- Team-report, user-wallet, and MCP routes refuse a non-Arc process instead of creating an Arc order on a Base deployment.
+- The browser wallet, MCP payments, and the team-report supplier follow `ONESHOT_CHAIN`. The site build reads `VITE_ONESHOT_CHAIN`.
+- Graph recovery runs only when the selected chain sets `graphQueryEnv`. Arc Testnet keeps `ONESHOT_SUBGRAPH_QUERY_URL`. Base Sepolia has no indexer, so Graph recovery is logged as disabled and settlement continues.
 - The public site keeps the existing brand and adds the guarantee, chain catalog, footer, skip link, and focus rings. The hero buttons no longer wrap.
 
 ## Files/components touched
@@ -52,12 +53,11 @@ The owner asked for two things: review and improve the website (design, UX, resp
 
 ## External-doc findings
 
-- Circle USDC contract addresses, checked 2026-11-24: Arc Testnet `0x3600000000000000000000000000000000000000`, Base Sepolia `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, chain id 84532, 6 decimals. https://developers.circle.com/stablecoins/usdc-contract-addresses
+- Circle USDC contract addresses, checked 2026-11-24: Arc Testnet `0x3600000000000000000000000000000000000000`, Base Sepolia `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, chain id 84532, 6 decimals. [USDC contract addresses](https://developers.circle.com/stablecoins/usdc-contract-addresses)
 
 ## Unresolved questions
 
-- Should a later milestone move the browser wallet and Graph recovery onto the selected chain, or keep those Arc-only?
-- Should Base Sepolia stay enabled by default in the catalog, or require an extra operator flag before it can be selected?
+- The owner chose to move the wallet, MCP, and supplier onto the selected chain, keep Base Sepolia selectable without an extra flag, and skip Graph recovery on chains with no indexer. Those choices are implemented on this branch.
 
 ## Git and PR state
 

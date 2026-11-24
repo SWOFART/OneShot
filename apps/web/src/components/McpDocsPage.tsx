@@ -68,8 +68,9 @@ export function McpDocsPage(props: { readonly theme: Theme; readonly onToggleThe
           <li>Exact retries return the original intent; changed fields return a conflict.</li>
           <li>The payer is the wallet address selected by the user, never a server wallet.</li>
           <li>
-            This MCP payment stays on Arc Testnet. Direct server settlement can select another
-            enabled testnet. See <a href="/#chains">settlement chains</a>.
+            The payment uses the deployment&apos;s selected settlement chain. Arc Testnet is the
+            default. The connected wallet must be on that chain. See{' '}
+            <a href="/#chains">settlement chains</a>.
           </li>
           <li>
             The second tool verifies the exact receipt and Transfer log for the returned hash.

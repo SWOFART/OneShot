@@ -42,6 +42,11 @@ export function buildApiAuthenticator(
 }
 
 export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRuntime> {
+  if (config.graphIndexerConfigured === false) {
+    process.stderr.write(
+      `Graph recovery disabled: ${config.settlementNetwork ?? 'the selected chain'} has no indexer configured.\n`,
+    );
+  }
   const pool = new Pool(config.database);
   try {
     await migrate(pool);
@@ -50,7 +55,7 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
       nextAttemptId: randomUUID,
     });
     const jobs = new JobLedger(pool, { now: () => new Date(), nextAttemptId: randomUUID });
-    const supplier = new TeamReportSupplier();
+    const supplier = new TeamReportSupplier(config.settlementNetwork ?? ARC_TESTNET_CHAIN.caip2);
     const mcpCredentials = new McpCredentialStore(pool);
     const app = buildApi({
       ledger,
@@ -63,6 +68,9 @@ export async function startApiRuntime(config: ApiRuntimeConfig): Promise<ApiRunt
         ? {
             userWalletVerifier: createUserWalletVerificationPort({
               rpcUrl: config.userWalletRpcUrl,
+              chainId: config.settlementChainId ?? ARC_TESTNET_CHAIN.chainId,
+              tokenContract:
+                config.settlementTokenContract ?? ARC_TESTNET_CHAIN.settlementAsset.contract,
             }),
           }
         : {}),

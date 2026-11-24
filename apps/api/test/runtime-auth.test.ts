@@ -26,6 +26,8 @@ function config(privyEnabled: boolean): ApiRuntimeConfig {
     submissionsDisabled: false,
     settlementChainId: 5042002,
     settlementNetwork: 'eip155:5042002',
+    settlementTokenContract: '0x3600000000000000000000000000000000000000',
+    graphIndexerConfigured: true,
     rateLimit: { maxRequests: 60, windowMs: 60_000 },
     ...(privyEnabled
       ? { privyAuth: { appId: APP_ID, verificationKey, allowedSubjects: [OPERATOR] } }

@@ -43,6 +43,11 @@ export interface PinnedSettlementChain {
   readonly caip2: `eip155:${number}`;
   readonly settlementAsset: SettlementAsset;
   readonly nativeAsset: NativeAsset;
+  /**
+   * Env var that holds this chain's GraphQL indexer URL. Absent means Graph
+   * recovery is not available and must be skipped.
+   */
+  readonly graphQueryEnv?: 'ONESHOT_SUBGRAPH_QUERY_URL';
 }
 
 /**
@@ -86,6 +91,7 @@ export const ARC_TESTNET_CHAIN = {
     contract: '0x3600000000000000000000000000000000000000',
   },
   nativeAsset: { symbol: 'USDC', decimals: 18 },
+  graphQueryEnv: 'ONESHOT_SUBGRAPH_QUERY_URL',
 } as const satisfies PinnedSettlementChain;
 
 /**

@@ -209,27 +209,6 @@ export function buildApi(dependencies: ApiDependencies) {
     return value;
   };
 
-  // The team-report supplier, user-wallet flow, and MCP payment tool settle on
-  // Arc Testnet. A process configured for another chain must not create those
-  // orders. Direct settlement intents use the selected chain instead.
-  const arcProductPath = (
-    config: ServiceConfig | undefined,
-    reply: FastifyReply,
-    request: FastifyRequest,
-  ): boolean => {
-    if (config?.network && config.network !== 'eip155:5042002') {
-      sendError(
-        reply,
-        409,
-        'INVALID_REQUEST',
-        'Team-report and user-wallet payments stay on Arc Testnet. Use a direct settlement intent for the selected chain.',
-        correlationFor(request),
-      );
-      return false;
-    }
-    return true;
-  };
-
   app.addHook('onRequest', async (request, reply) => {
     let correlationId: string;
     try {
@@ -432,7 +411,6 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
-    if (!arcProductPath(dependencies.config, reply, request)) return;
     const parsed = parseCreateJobRequest(request.body);
     // Supplier creation is non-chargeable and uses the same durable task scope
     // as its idempotency key. The database transaction binds that order and the
@@ -463,7 +441,6 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
-    if (!arcProductPath(dependencies.config, reply, request)) return;
     const parsed = parseCreateJobRequest(request.body);
     // Quoting is deliberately non-chargeable: no intent, attempt, settlement,
     // or outbox row is created until the caller explicitly approves via POST /v1/jobs.
@@ -489,7 +466,6 @@ export function buildApi(dependencies: ApiDependencies) {
         jobsUnavailable(reply, request);
         return;
       }
-      if (!arcProductPath(dependencies.config, reply, request)) return;
       const parsed = parseCreateUserWalletJobRequest(request.body);
       const jobRequest = {
         task_key: parsed.task_key,
@@ -555,7 +531,6 @@ export function buildApi(dependencies: ApiDependencies) {
         userWalletUnavailable(reply, request);
         return;
       }
-      if (!arcProductPath(dependencies.config, reply, request)) return;
       const job = await dependencies.jobs.get(workspaceFor(request), request.params.jobId);
       if (!job) {
         sendError(
@@ -691,7 +666,6 @@ export function buildApi(dependencies: ApiDependencies) {
       jobsUnavailable(reply, request);
       return;
     }
-    if (!arcProductPath(dependencies.config, reply, request)) return;
     const job = await dependencies.jobs.resumeDelivery(workspaceFor(request), request.params.jobId);
     if (!job) {
       sendError(

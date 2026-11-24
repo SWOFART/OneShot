@@ -1,5 +1,4 @@
 import {
-  ARC_TESTNET,
   createArcReceiptSource,
   verifyReceipt,
   type TransactionReceipt,
@@ -30,11 +29,13 @@ export interface UserWalletVerificationPort {
 function verifyReceiptResult(
   receipt: TransactionReceipt,
   request: UserWalletVerificationRequest,
+  chainId: number,
+  tokenContract: `0x${string}`,
 ): UserWalletVerificationResult {
   const verdict = verifyReceipt(receipt, {
-    chainId: ARC_TESTNET.chainId,
+    chainId,
     walletAddress: request.walletAddress,
-    tokenContract: ARC_TESTNET.tokenContract,
+    tokenContract,
     recipient: request.recipient,
     amountAtomic: BigInt(request.amountAtomic),
   });
@@ -54,13 +55,21 @@ function verifyReceiptResult(
 
 export function createUserWalletVerificationPort(options: {
   readonly rpcUrl: string;
+  readonly chainId: number;
+  readonly tokenContract: `0x${string}`;
   readonly rpcTimeoutMs?: number;
 }): UserWalletVerificationPort {
-  const source = createArcReceiptSource(options);
+  const source = createArcReceiptSource({
+    rpcUrl: options.rpcUrl,
+    chainId: options.chainId,
+    ...(options.rpcTimeoutMs === undefined ? {} : { rpcTimeoutMs: options.rpcTimeoutMs }),
+  });
   return {
     async verify(request) {
       const receipt = await source.getReceipt(request.transactionHash);
-      return receipt ? verifyReceiptResult(receipt, request) : { kind: 'PENDING' };
+      return receipt
+        ? verifyReceiptResult(receipt, request, options.chainId, options.tokenContract)
+        : { kind: 'PENDING' };
     },
   };
 }

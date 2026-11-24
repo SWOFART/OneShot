@@ -9,9 +9,9 @@ Arc Testnet is the first implementation and the default. Base Sepolia is a
 second pinned testnet. Arc Mainnet is present and unpublished: it carries no
 chain id, token, RPC, or explorer, and it cannot be selected.
 
-The browser wallet, MCP `arc_payment` tools, team-report supplier, and Graph
-recovery stay on Arc Testnet. Those paths refuse to run when the process is
-configured for another chain. Direct settlement intents use the selected chain.
+The browser wallet, MCP payments, the team-report supplier, and direct
+settlement intents all use the selected chain. A site build sets
+`VITE_ONESHOT_CHAIN` to the same id so the wallet switches with the server.
 
 ## Select a chain
 
@@ -66,6 +66,22 @@ chain record.
 | `base-sepolia` | `eip155:84532`   | `84532`   | USDC `0x036CbD53842c5426634e7929541eC2318f3dCF7e`, 6 decimals | Selectable testnet. Native gas is ETH at 18 decimals. Address from Circle's published USDC list. |
 | `arc-mainnet`  | none             | none      | none                                                          | Unpublished and disabled.                                                                        |
 
+## Graph recovery
+
+Graph recovery is optional per chain. Arc Testnet sets `graphQueryEnv` to
+`ONESHOT_SUBGRAPH_QUERY_URL`, so an Arc deployment keeps its existing subgraph.
+Base Sepolia does not set `graphQueryEnv`.
+
+When the selected chain has no indexer, the API and worker log
+`Graph recovery disabled` and continue. Settlement, receipt verification, MCP
+payments, and the team-report supplier do not wait on Graph. A chain that has
+an indexer still requires that indexer's URL and the existing recovery
+settings. The Arc subgraph is not queried for a different chain.
+
+The browser wallet uses a public endpoint in `apps/web/src/wallet-chain.ts`.
+That endpoint is for the wallet only. Settlement still uses
+`ONESHOT_ARC_RPC_URL`.
+
 ## Add a chain
 
 1. Add a pinned record to `SETTLEMENT_CHAINS` in `packages/contracts/src/chains.ts`.
@@ -78,9 +94,9 @@ chain record.
    OpenAPI enum and `ENABLED_SETTLEMENT_NETWORKS` disagree.
 4. Confirm the readiness probe passes against a fixture whose `eth_chainId`
    and `decimals()` match the record.
-5. Keep supplier orders, user-wallet payments, and Graph recovery on Arc until
-   those paths have their own chain-specific evidence. Direct intents accept
-   the new network automatically.
+5. Set `graphQueryEnv` only when that chain has its own indexer. Leave it unset
+   to skip Graph recovery. Add a public wallet endpoint in
+   `apps/web/src/wallet-chain.ts` when the browser should pay on the new chain.
 
 `createChainRegistry` builds a registry from a list. Tests use it to try an
 extra chain without changing the catalog the process loads.

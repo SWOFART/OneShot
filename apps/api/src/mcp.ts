@@ -7,6 +7,7 @@ import {
   asProviderReferenceId,
   asTransactionHash,
   ContractValidationError,
+  ENABLED_SETTLEMENT_NETWORKS,
   type JobView,
   type SupplierPort,
 } from '@oneshot/contracts';
@@ -15,9 +16,6 @@ import type { IntentLedger, JobLedger } from '@oneshot/storage-postgres';
 import { z } from 'zod';
 import type { UserWalletVerificationPort } from './user-wallet.js';
 
-const ARC_NETWORK = 'eip155:5042002' as const;
-const ARC_CHAIN_ID = 5042002 as const;
-const ARC_USDC = '0x3600000000000000000000000000000000000000' as const;
 const USDC_DECIMALS = 6;
 const REQUEST_KEY_MAX_LENGTH = 128;
 const TRANSFER_SELECTOR = 'a9059cbb';
@@ -78,7 +76,7 @@ const outputSchema = z.strictObject({
   amount_usdc: z.string(),
   amount_atomic: z.string(),
   asset: z.literal('USDC'),
-  network: z.literal(ARC_NETWORK),
+  network: z.enum(ENABLED_SETTLEMENT_NETWORKS),
   replayed: z.boolean(),
   quote: z.strictObject({
     supplier_id: z.literal('team-report-v1'),
@@ -86,12 +84,12 @@ const outputSchema = z.strictObject({
     recipient: z.string(),
     amount_atomic: z.string(),
     asset: z.literal('USDC'),
-    network: z.literal(ARC_NETWORK),
+    network: z.enum(ENABLED_SETTLEMENT_NETWORKS),
     expires_at: z.string(),
   }),
   transaction: z
     .strictObject({
-      chain_id: z.literal(ARC_CHAIN_ID),
+      chain_id: z.union([z.literal(5042002), z.literal(84532)]),
       from: z.string(),
       to: z.string(),
       data: z.string(),
@@ -207,11 +205,8 @@ function nextAction(
 function transactionFor(job: JobView) {
   const payment = job.user_payment;
   if (!payment) throw new Error('User-wallet payment binding is missing');
-  if (payment.token_contract !== ARC_USDC) {
-    throw new Error('User-wallet payment is bound to an unsupported token contract');
-  }
   return {
-    chain_id: ARC_CHAIN_ID,
+    chain_id: payment.chain_id,
     from: payment.payer_wallet,
     to: payment.token_contract,
     data: transferCalldata(payment.recipient, payment.amount_atomic),

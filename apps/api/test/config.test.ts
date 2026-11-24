@@ -274,14 +274,15 @@ describe('API runtime configuration', () => {
     expect(config.settlementNetwork).toBe('eip155:84532');
   });
 
-  it('refuses MCP on a non-Arc settlement chain', () => {
-    expect(() =>
-      loadApiRuntimeConfig({
-        ...base,
-        ONESHOT_CHAIN: 'base-sepolia',
-        ONESHOT_WORKSPACE_ID: 'workspace-1',
-        ONESHOT_MCP_BEARER_TOKEN: 'mcp-bearer-token-123456789012345',
-      }),
-    ).toThrow(/Arc Testnet/u);
+  it('allows MCP payments on Base Sepolia and reports that Graph is not configured', () => {
+    const config = loadApiRuntimeConfig({
+      ...base,
+      ONESHOT_CHAIN: 'base-sepolia',
+      ONESHOT_WORKSPACE_ID: 'workspace-1',
+      ONESHOT_MCP_BEARER_TOKEN: 'mcp-bearer-token-123456789012345',
+    });
+    expect(config.settlementNetwork).toBe('eip155:84532');
+    expect(config.mcp?.workspaceId).toBe('workspace-1');
+    expect(config.graphIndexerConfigured).toBe(false);
   });
 });

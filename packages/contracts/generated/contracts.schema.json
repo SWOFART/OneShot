@@ -503,11 +503,17 @@
       "properties": {
         "chain_id": {
           "type": "integer",
-          "const": 5042002
+          "enum": [
+            5042002,
+            84532
+          ]
         },
         "network": {
           "type": "string",
-          "const": "eip155:5042002"
+          "enum": [
+            "eip155:5042002",
+            "eip155:84532"
+          ]
         },
         "token_contract": {
           "type": "string",
@@ -590,7 +596,10 @@
         },
         "network": {
           "type": "string",
-          "const": "eip155:5042002"
+          "enum": [
+            "eip155:5042002",
+            "eip155:84532"
+          ]
         },
         "expires_at": {
           "type": "string",

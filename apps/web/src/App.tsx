@@ -21,6 +21,7 @@ import {
   type UserWalletSession,
 } from './auth/session.js';
 import { Hero } from './components/Hero.js';
+import { browserSettlementChain } from './wallet-chain.js';
 import { LoginGate } from './components/LoginGate.js';
 import { McpDocsPage } from './components/McpDocsPage.js';
 import { McpProfile } from './components/McpProfile.js';
@@ -81,7 +82,7 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
         <div className="nav-status-group">
           <span className="status-badge network-badge">
             <span className="status-dot" />
-            Arc Testnet
+            {browserSettlementChain().displayName}
           </span>
           <span className="status-badge token-badge">USDC</span>
           <button type="button" className="theme-toggle" onClick={props.onToggleTheme}>
@@ -193,9 +194,10 @@ function LandingPage(props: { readonly theme: Theme; readonly onToggleTheme: () 
           ))}
         </div>
         <p className="chains-note">
-          Hashless Graph recovery and the team-report supplier stay on Arc Testnet. Base Sepolia is
-          a pinned public testnet for direct USDC settlement. Arc Mainnet is unpublished and cannot
-          be selected.
+          The browser wallet, MCP payments, and the team-report supplier use the chain selected by{' '}
+          <code>ONESHOT_CHAIN</code>. Graph recovery runs only where that chain has an indexer. Arc
+          Testnet keeps its subgraph. Base Sepolia has none, so Graph recovery is skipped and
+          settlement still runs. Arc Mainnet is unpublished and cannot be selected.
         </p>
       </section>
       <SiteFooter />
@@ -269,7 +271,7 @@ function CabinetPage(props: {
         <div className="nav-status-group">
           <span className="status-badge network-badge">
             <span className="status-dot" />
-            Arc Testnet
+            {browserSettlementChain().displayName}
           </span>
           <span className="status-badge token-badge">USDC</span>
           <button type="button" className="theme-toggle" onClick={props.onToggleTheme}>
@@ -310,8 +312,8 @@ function CabinetPage(props: {
             </li>
             <li>
               <strong>Approve deliberately.</strong> Read “Recipient receives”, the destination and
-              Arc Testnet network. Keep the request key. Only the explicit approval button starts a
-              payment request.
+              {browserSettlementChain().displayName} network. Keep the request key. Only the
+              explicit approval button starts a payment request.
             </li>
             <li>
               <strong>Read the result.</strong> Open Requests and inspect the actual payment state
@@ -355,9 +357,9 @@ function CabinetPage(props: {
               <p className="eyebrow">ONE JOB · ONE PAYMENT</p>
               <h2>What would you like to do?</h2>
               <p>
-                Send one direct USDC payment on Arc Testnet: review the exact quote, approve once,
-                and follow the same durable request from approval to proof. Payment evidence stays
-                available whenever you need it.
+                Send one direct USDC payment on {browserSettlementChain().displayName}: review the
+                exact quote, approve once, and follow the same durable request from approval to
+                proof. Payment evidence stays available whenever you need it.
               </p>
               <div className="workspace-action-grid">
                 <button type="button" onClick={() => setSection('services')}>
